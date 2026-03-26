@@ -7,12 +7,11 @@ import {
   customerAddresses,
   locations,
   locationSettings,
-  packages,
-  addOns,
 } from '@trayloop/database';
 import { eq, and, gte, lte, desc, sql } from 'drizzle-orm';
 import postgres from 'postgres';
 import { ValidationError, NotFoundError } from '../../lib/errors.js';
+import { calculatePricing } from '../../lib/pricing.js';
 import type { EventBus } from '../../lib/event-bus/index.js';
 import type { CreateOrderInput, UpdateOrderStatusInput, OrderListQuery, SendPaymentLinkInput } from './orders.schema.js';
 
@@ -324,85 +323,16 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
     );
   }
 
-  // 5. Fetch and validate packages — server-side pricing
-  const packageIds = input.packages.map((p) => p.packageId);
-  const packageRows = await db
-    .select()
-    .from(packages)
-    .where(eq(packages.isActive, true));
+  // 5. Calculate pricing via centralized pricing service
+  // Validates packages, headcount constraints, add-ons, and minimum order amount
+  const pricing = await calculatePricing({
+    headcount: input.headcount,
+    packages: input.packages,
+    addOns: input.addOns,
+    locationId: input.locationId,
+  });
 
-  const selectedPackages = packageRows.filter((p) => packageIds.includes(p.id));
-
-  if (selectedPackages.length !== packageIds.length) {
-    throw new ValidationError('One or more selected packages not found or inactive');
-  }
-
-  for (const pkg of selectedPackages) {
-    if (pkg.minHeadCount && input.headcount < pkg.minHeadCount) {
-      throw new ValidationError(`Package "${pkg.name}" requires minimum ${pkg.minHeadCount} headcount`);
-    }
-    if (pkg.maxHeadCount && input.headcount > pkg.maxHeadCount) {
-      throw new ValidationError(`Package "${pkg.name}" allows maximum ${pkg.maxHeadCount} headcount`);
-    }
-  }
-
-  // 6. Calculate pricing — NEVER trust frontend prices
-  const lineItems: Array<{
-    packageId: string | null;
-    name: string;
-    description: string | null;
-    quantity: number;
-    unitPrice: number;
-    totalPrice: number;
-  }> = [];
-
-  for (const selection of input.packages) {
-    const pkg = selectedPackages.find((p) => p.id === selection.packageId)!;
-    const unitPrice = pkg.price;
-    const quantity = pkg.pricing === 'per_head' ? input.headcount * selection.quantity : selection.quantity;
-    const totalPrice = unitPrice * quantity;
-
-    lineItems.push({
-      packageId: pkg.id,
-      name: pkg.name,
-      description: pkg.description,
-      quantity,
-      unitPrice,
-      totalPrice,
-    });
-  }
-
-  // 7. Fetch and price add-ons
-  if (input.addOns && input.addOns.length > 0) {
-    const addOnIds = input.addOns.map((a) => a.addOnId);
-    const addOnRows = await db.select().from(addOns).where(eq(addOns.isActive, true));
-    const selectedAddOns = addOnRows.filter((a) => addOnIds.includes(a.id));
-
-    if (selectedAddOns.length !== addOnIds.length) {
-      throw new ValidationError('One or more selected add-ons not found or inactive');
-    }
-
-    for (const selection of input.addOns) {
-      const addOn = selectedAddOns.find((a) => a.id === selection.addOnId)!;
-      lineItems.push({
-        packageId: null,
-        name: addOn.name,
-        description: addOn.description,
-        quantity: selection.quantity,
-        unitPrice: addOn.price,
-        totalPrice: addOn.price * selection.quantity,
-      });
-    }
-  }
-
-  const totalAmount = lineItems.reduce((sum, item) => sum + item.totalPrice, 0);
-
-  // 8. Validate minimum order amount
-  if (settings?.minOrderAmount && totalAmount < settings.minOrderAmount) {
-    throw new ValidationError(
-      `Order total ($${(totalAmount / 100).toFixed(2)}) is below minimum ($${(settings.minOrderAmount / 100).toFixed(2)})`,
-    );
-  }
+  const { lineItems, total: totalAmount } = pricing;
 
   // 9. Execute in transaction
   const connectionString = process.env.DATABASE_URL!;
@@ -482,11 +412,11 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
         })
         .returning();
 
-      // 9d. Create order items
+      // 9d. Create order items from pricing result
       await txDb.insert(orderItems).values(
         lineItems.map((item) => ({
           orderId: order.id,
-          packageId: item.packageId,
+          packageId: item.type === 'package' ? item.referenceId : null,
           name: item.name,
           description: item.description,
           quantity: item.quantity,
@@ -532,8 +462,6 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
     return {
       id: result.order.id,
       status: result.order.status,
-      totalAmount: result.order.totalAmount,
-      currency: result.order.currency,
       headCount: result.order.headCount,
       scheduledAt: result.order.scheduledAt,
       customer: {
@@ -541,7 +469,14 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
         lastName: input.customer.lastName,
         email: input.customer.email,
       },
+      pricing: {
+        packageSubtotal: pricing.packageSubtotal,
+        addOnSubtotal: pricing.addOnSubtotal,
+        total: pricing.total,
+        currency: pricing.currency,
+      },
       items: lineItems.map((item) => ({
+        type: item.type,
         name: item.name,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
