@@ -1,8 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { validateBody } from '../../lib/middleware/validate.js';
-import { requireAuth } from '../../lib/middleware/auth.js';
-import { registerSchema, loginSchema } from './users.schema.js';
-import * as service from './users.service.js';
+import { registerSchema, loginSchema } from './auth.schema.js';
+import * as service from './auth.service.js';
 
 export function registerRoutes(app: FastifyInstance) {
   app.post('/register', { preHandler: [validateBody(registerSchema)] }, async (request, reply) => {
@@ -15,8 +14,13 @@ export function registerRoutes(app: FastifyInstance) {
     return reply.send({ data: result });
   });
 
-  app.get('/me', { preHandler: [requireAuth] }, async (request) => {
-    const user = await service.getProfile((request as any).user.sub);
-    return { data: user };
+  app.post('/refresh', async (request, reply) => {
+    // TODO: Token refresh
+    return reply.send({ data: { message: 'Not implemented' } });
+  });
+
+  app.post('/logout', async (request, reply) => {
+    // TODO: Session invalidation
+    return reply.send({ data: { message: 'Logged out' } });
   });
 }

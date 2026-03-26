@@ -10,7 +10,13 @@ export function registerRoutes(app: FastifyInstance) {
   });
 
   app.post('/webhooks/stripe', async (request, reply) => {
-    await service.handleWebhook(request, (app as any).eventBus);
+    await service.handleStripeWebhook(request, (app as any).eventBus);
     return reply.status(200).send({ received: true });
+  });
+
+  app.get('/order/:orderId', { preHandler: [requireAuth] }, async (request) => {
+    const { orderId } = request.params as { orderId: string };
+    const payments = await service.listByOrder(orderId);
+    return { data: payments };
   });
 }

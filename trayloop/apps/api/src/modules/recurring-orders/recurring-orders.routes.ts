@@ -1,8 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import { requireAuth } from '../../lib/middleware/auth.js';
 import { validateBody } from '../../lib/middleware/validate.js';
-import { createOrderSchema, updateOrderStatusSchema } from './orders.schema.js';
-import * as service from './orders.service.js';
+import { createRecurringOrderSchema, updateRecurringOrderSchema } from './recurring-orders.schema.js';
+import * as service from './recurring-orders.service.js';
 
 export function registerRoutes(app: FastifyInstance) {
   app.get('/org/:orgId', { preHandler: [requireAuth] }, async (request) => {
@@ -23,14 +23,20 @@ export function registerRoutes(app: FastifyInstance) {
     return { data: order };
   });
 
-  app.post('/', { preHandler: [requireAuth, validateBody(createOrderSchema)] }, async (request, reply) => {
+  app.post('/', { preHandler: [requireAuth, validateBody(createRecurringOrderSchema)] }, async (request, reply) => {
     const result = await service.create((request as any).validatedBody, (app as any).eventBus);
     return reply.status(201).send({ data: result });
   });
 
-  app.patch('/:id/status', { preHandler: [requireAuth, validateBody(updateOrderStatusSchema)] }, async (request, reply) => {
+  app.patch('/:id', { preHandler: [requireAuth, validateBody(updateRecurringOrderSchema)] }, async (request, reply) => {
     const { id } = request.params as { id: string };
-    const result = await service.updateStatus(id, (request as any).validatedBody, (app as any).eventBus);
+    const result = await service.update(id, (request as any).validatedBody);
     return reply.send({ data: result });
+  });
+
+  app.post('/:id/cancel', { preHandler: [requireAuth] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    await service.cancel(id, (app as any).eventBus);
+    return reply.send({ data: { message: 'Cancelled' } });
   });
 }

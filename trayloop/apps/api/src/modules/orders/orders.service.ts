@@ -1,39 +1,26 @@
-import { db } from '@trayloop/database';
-import { orders, orderItems, products } from '@trayloop/database';
-import { generateId } from '@trayloop/utils';
-import { NotFoundError } from '../../lib/errors.js';
 import type { EventBus } from '../../lib/event-bus/index.js';
-import type { CreateOrderInput } from './orders.schema.js';
-import { eq } from 'drizzle-orm';
+import type { CreateOrderInput, UpdateOrderStatusInput } from './orders.schema.js';
 
-export async function listOrders(customerId: string) {
-  return db.select().from(orders).where(eq(orders.customerId, customerId));
+export async function listByOrg(orgId: string) {
+  throw new Error('Not implemented');
 }
 
-export async function getOrder(id: string) {
-  const [order] = await db.select().from(orders).where(eq(orders.id, id)).limit(1);
-  if (!order) throw new NotFoundError('Order');
-  return order;
+export async function listByCustomer(customerId: string) {
+  throw new Error('Not implemented');
 }
 
-export async function createOrder(customerId: string, input: CreateOrderInput, eventBus: EventBus) {
-  const orderId = generateId();
+export async function getById(id: string) {
+  throw new Error('Not implemented');
+}
 
-  // Fetch product prices
-  let totalAmount = 0;
-  const itemValues = [];
-  for (const item of input.items) {
-    const [product] = await db.select().from(products).where(eq(products.id, item.productId)).limit(1);
-    if (!product) throw new NotFoundError('Product');
-    const lineTotal = product.price * item.quantity;
-    totalAmount += lineTotal;
-    itemValues.push({ id: generateId(), orderId, productId: item.productId, quantity: item.quantity, unitPrice: product.price });
-  }
+export async function create(input: CreateOrderInput, eventBus: EventBus) {
+  // TODO: Create order, calculate totals from catalog items
+  // await eventBus.emit('order.created', { ... });
+  throw new Error('Not implemented');
+}
 
-  const [order] = await db.insert(orders).values({ id: orderId, customerId, merchantId: input.merchantId, totalAmount }).returning();
-  await db.insert(orderItems).values(itemValues);
-
-  await eventBus.emit('order.created', { orderId, customerId, merchantId: input.merchantId });
-
-  return order;
+export async function updateStatus(id: string, input: UpdateOrderStatusInput, eventBus: EventBus) {
+  // TODO: Update status, emit event
+  // await eventBus.emit('order.status_updated', { ... });
+  throw new Error('Not implemented');
 }
