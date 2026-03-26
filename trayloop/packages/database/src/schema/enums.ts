@@ -3,7 +3,7 @@ import { pgEnum } from 'drizzle-orm/pg-core';
 export const userRoleEnum = pgEnum('user_role', ['customer', 'merchant', 'admin']);
 export const memberRoleEnum = pgEnum('member_role', ['owner', 'admin', 'manager', 'staff']);
 export const memberStatusEnum = pgEnum('member_status', ['invited', 'active', 'suspended', 'removed']);
-export const orderStatusEnum = pgEnum('order_status', ['draft', 'pending', 'confirmed', 'in_progress', 'completed', 'cancelled', 'refunded']);
+export const orderStatusEnum = pgEnum('order_status', ['draft', 'submitted', 'awaiting_deposit', 'confirmed', 'in_progress', 'completed', 'cancelled', 'refunded']);
 export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'processing', 'succeeded', 'failed', 'refunded', 'partially_refunded']);
 export const paymentMethodEnum = pgEnum('payment_method', ['card', 'ach', 'cash', 'check', 'other']);
 export const depositStatusEnum = pgEnum('deposit_status', ['pending', 'collected', 'applied', 'refunded']);

@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+// --- Order creation (storefront submission) ---
+
 export const serviceType = z.enum(['delivery', 'pickup']);
 
 export const customerInfoSchema = z.object({
@@ -51,9 +53,14 @@ export const createOrderSchema = z.object({
   { message: 'Delivery address required for delivery orders', path: ['deliveryAddress'] },
 );
 
+export type CreateOrderInput = z.infer<typeof createOrderSchema>;
+
+// --- Merchant dashboard ---
+
 export const orderStatus = z.enum([
   'draft',
-  'pending',
+  'submitted',
+  'awaiting_deposit',
   'confirmed',
   'in_progress',
   'completed',
@@ -66,5 +73,21 @@ export const updateOrderStatusSchema = z.object({
   reason: z.string().optional(),
 });
 
-export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 export type UpdateOrderStatusInput = z.infer<typeof updateOrderStatusSchema>;
+
+export const orderListQuerySchema = z.object({
+  status: orderStatus.optional(),
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
+  page: z.coerce.number().int().positive().default(1),
+  pageSize: z.coerce.number().int().positive().max(100).default(20),
+});
+
+export type OrderListQuery = z.infer<typeof orderListQuerySchema>;
+
+export const sendPaymentLinkSchema = z.object({
+  orderId: z.string().uuid(),
+  depositAmount: z.number().int().positive().optional(),
+});
+
+export type SendPaymentLinkInput = z.infer<typeof sendPaymentLinkSchema>;

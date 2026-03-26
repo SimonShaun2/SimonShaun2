@@ -10,33 +10,96 @@ import {
   packages,
   addOns,
 } from '@trayloop/database';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, gte, lte, desc, sql } from 'drizzle-orm';
 import postgres from 'postgres';
 import { ValidationError, NotFoundError } from '../../lib/errors.js';
 import type { EventBus } from '../../lib/event-bus/index.js';
-import type { CreateOrderInput, UpdateOrderStatusInput } from './orders.schema.js';
+import type { CreateOrderInput, UpdateOrderStatusInput, OrderListQuery, SendPaymentLinkInput } from './orders.schema.js';
 
-// --- List / Get (existing stubs, now implemented) ---
+// --- Status transition rules ---
 
-export async function listByOrg(orgId: string) {
-  return db
-    .select({
-      id: orders.id,
-      status: orders.status,
-      totalAmount: orders.totalAmount,
-      currency: orders.currency,
-      headCount: orders.headCount,
-      scheduledAt: orders.scheduledAt,
-      notes: orders.notes,
-      createdAt: orders.createdAt,
-      customerFirstName: customers.firstName,
-      customerLastName: customers.lastName,
-      customerEmail: customers.email,
-    })
-    .from(orders)
-    .innerJoin(customers, eq(customers.id, orders.customerId))
-    .where(eq(orders.organizationId, orgId))
-    .orderBy(orders.createdAt);
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  submitted: ['awaiting_deposit', 'confirmed', 'cancelled'],
+  awaiting_deposit: ['confirmed', 'cancelled'],
+  confirmed: ['in_progress', 'cancelled'],
+  in_progress: ['completed', 'cancelled'],
+  completed: ['refunded'],
+  cancelled: [],
+  refunded: [],
+};
+
+// --- List orders (merchant dashboard) ---
+
+export async function listByOrg(orgId: string, query: OrderListQuery) {
+  const conditions = [eq(orders.organizationId, orgId)];
+
+  if (query.status) {
+    conditions.push(eq(orders.status, query.status));
+  }
+  if (query.from) {
+    conditions.push(gte(orders.scheduledAt, new Date(query.from)));
+  }
+  if (query.to) {
+    conditions.push(lte(orders.scheduledAt, new Date(query.to)));
+  }
+
+  const where = conditions.length === 1 ? conditions[0] : and(...conditions)!;
+  const offset = (query.page - 1) * query.pageSize;
+
+  const [rows, countResult] = await Promise.all([
+    db
+      .select({
+        id: orders.id,
+        status: orders.status,
+        totalAmount: orders.totalAmount,
+        currency: orders.currency,
+        headCount: orders.headCount,
+        scheduledAt: orders.scheduledAt,
+        createdAt: orders.createdAt,
+        locationName: locations.name,
+        customerFirstName: customers.firstName,
+        customerLastName: customers.lastName,
+        customerEmail: customers.email,
+        customerCompany: customers.companyName,
+      })
+      .from(orders)
+      .innerJoin(customers, eq(customers.id, orders.customerId))
+      .leftJoin(locations, eq(locations.id, orders.locationId))
+      .where(where)
+      .orderBy(desc(orders.createdAt))
+      .limit(query.pageSize)
+      .offset(offset),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(orders)
+      .where(where),
+  ]);
+
+  const total = countResult[0]?.count ?? 0;
+
+  return {
+    orders: rows.map((r) => ({
+      id: r.id,
+      status: r.status,
+      totalAmount: r.totalAmount,
+      currency: r.currency,
+      headCount: r.headCount,
+      scheduledAt: r.scheduledAt,
+      createdAt: r.createdAt,
+      location: r.locationName,
+      customer: {
+        name: `${r.customerFirstName} ${r.customerLastName}`,
+        email: r.customerEmail,
+        company: r.customerCompany,
+      },
+    })),
+    pagination: {
+      page: query.page,
+      pageSize: query.pageSize,
+      total,
+      totalPages: Math.ceil(total / query.pageSize),
+    },
+  };
 }
 
 export async function listByCustomer(customerId: string) {
@@ -52,33 +115,52 @@ export async function listByCustomer(customerId: string) {
     })
     .from(orders)
     .where(eq(orders.customerId, customerId))
-    .orderBy(orders.createdAt);
+    .orderBy(desc(orders.createdAt));
 }
 
-export async function getById(id: string) {
+// --- Get order detail ---
+
+export async function getById(id: string, orgId: string) {
   const [order] = await db
     .select()
     .from(orders)
-    .where(eq(orders.id, id))
+    .where(and(eq(orders.id, id), eq(orders.organizationId, orgId)))
     .limit(1);
 
   if (!order) throw new NotFoundError('Order');
 
-  const items = await db
-    .select()
-    .from(orderItems)
-    .where(eq(orderItems.orderId, id));
+  const [items, [customer], [location]] = await Promise.all([
+    db.select().from(orderItems).where(eq(orderItems.orderId, id)),
+    db
+      .select({
+        firstName: customers.firstName,
+        lastName: customers.lastName,
+        email: customers.email,
+        phone: customers.phone,
+        companyName: customers.companyName,
+      })
+      .from(customers)
+      .where(eq(customers.id, order.customerId))
+      .limit(1),
+    order.locationId
+      ? db
+          .select({ name: locations.name, address: locations.address, city: locations.city, state: locations.state })
+          .from(locations)
+          .where(eq(locations.id, order.locationId))
+          .limit(1)
+      : Promise.resolve([null]),
+  ]);
 
-  const [customer] = await db
+  // Fetch delivery address if exists
+  const [address] = await db
     .select({
-      firstName: customers.firstName,
-      lastName: customers.lastName,
-      email: customers.email,
-      phone: customers.phone,
-      companyName: customers.companyName,
+      address: customerAddresses.address,
+      city: customerAddresses.city,
+      state: customerAddresses.state,
+      zipCode: customerAddresses.zipCode,
     })
-    .from(customers)
-    .where(eq(customers.id, order.customerId))
+    .from(customerAddresses)
+    .where(eq(customerAddresses.customerId, order.customerId))
     .limit(1);
 
   return {
@@ -88,9 +170,20 @@ export async function getById(id: string) {
     currency: order.currency,
     headCount: order.headCount,
     scheduledAt: order.scheduledAt,
+    completedAt: order.completedAt,
     notes: order.notes,
     createdAt: order.createdAt,
-    customer,
+    updatedAt: order.updatedAt,
+    location: location
+      ? { name: location.name, address: location.address, city: location.city, state: location.state }
+      : null,
+    customer: {
+      name: `${customer.firstName} ${customer.lastName}`,
+      email: customer.email,
+      phone: customer.phone,
+      company: customer.companyName,
+    },
+    deliveryAddress: address ?? null,
     items: items.map((i) => ({
       name: i.name,
       description: i.description,
@@ -101,7 +194,93 @@ export async function getById(id: string) {
   };
 }
 
-// --- Create Order (full business logic) ---
+// --- Update order status ---
+
+export async function updateStatus(id: string, orgId: string, input: UpdateOrderStatusInput, eventBus: EventBus) {
+  const [existing] = await db
+    .select({ status: orders.status })
+    .from(orders)
+    .where(and(eq(orders.id, id), eq(orders.organizationId, orgId)))
+    .limit(1);
+
+  if (!existing) throw new NotFoundError('Order');
+
+  const allowed = VALID_TRANSITIONS[existing.status];
+  if (!allowed || !allowed.includes(input.status)) {
+    throw new ValidationError(
+      `Cannot transition from "${existing.status}" to "${input.status}"`,
+    );
+  }
+
+  const completedAt = input.status === 'completed' ? new Date() : undefined;
+
+  const [updated] = await db
+    .update(orders)
+    .set({
+      status: input.status,
+      completedAt,
+      updatedAt: new Date(),
+    })
+    .where(eq(orders.id, id))
+    .returning();
+
+  await eventBus.emit('order.status_updated', {
+    orderId: id,
+    oldStatus: existing.status,
+    newStatus: input.status,
+  });
+
+  return {
+    id: updated.id,
+    status: updated.status,
+    previousStatus: existing.status,
+    updatedAt: updated.updatedAt,
+  };
+}
+
+// --- Send payment link (stub) ---
+
+export async function sendPaymentLink(orgId: string, input: SendPaymentLinkInput) {
+  const [order] = await db
+    .select({
+      id: orders.id,
+      status: orders.status,
+      totalAmount: orders.totalAmount,
+      customerId: orders.customerId,
+    })
+    .from(orders)
+    .where(and(eq(orders.id, input.orderId), eq(orders.organizationId, orgId)))
+    .limit(1);
+
+  if (!order) throw new NotFoundError('Order');
+
+  if (order.status !== 'submitted' && order.status !== 'awaiting_deposit') {
+    throw new ValidationError('Payment link can only be sent for submitted or awaiting_deposit orders');
+  }
+
+  const [customer] = await db
+    .select({ email: customers.email, firstName: customers.firstName })
+    .from(customers)
+    .where(eq(customers.id, order.customerId))
+    .limit(1);
+
+  // Update status to awaiting_deposit
+  await db
+    .update(orders)
+    .set({ status: 'awaiting_deposit', updatedAt: new Date() })
+    .where(eq(orders.id, order.id));
+
+  // TODO: Create Stripe payment link and send email
+  return {
+    orderId: order.id,
+    status: 'awaiting_deposit',
+    depositAmount: input.depositAmount ?? order.totalAmount,
+    sentTo: customer.email,
+    message: `Payment link will be sent to ${customer.firstName} at ${customer.email}`,
+  };
+}
+
+// --- Create Order (storefront submission) ---
 
 export async function create(orgId: string, input: CreateOrderInput, eventBus: EventBus) {
   // 1. Validate location belongs to org and is active
@@ -158,23 +337,18 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
     throw new ValidationError('One or more selected packages not found or inactive');
   }
 
-  // Validate headcount against package constraints
   for (const pkg of selectedPackages) {
     if (pkg.minHeadCount && input.headcount < pkg.minHeadCount) {
-      throw new ValidationError(
-        `Package "${pkg.name}" requires minimum ${pkg.minHeadCount} headcount`,
-      );
+      throw new ValidationError(`Package "${pkg.name}" requires minimum ${pkg.minHeadCount} headcount`);
     }
     if (pkg.maxHeadCount && input.headcount > pkg.maxHeadCount) {
-      throw new ValidationError(
-        `Package "${pkg.name}" allows maximum ${pkg.maxHeadCount} headcount`,
-      );
+      throw new ValidationError(`Package "${pkg.name}" allows maximum ${pkg.maxHeadCount} headcount`);
     }
   }
 
   // 6. Calculate pricing — NEVER trust frontend prices
   const lineItems: Array<{
-    packageId: string;
+    packageId: string | null;
     name: string;
     description: string | null;
     quantity: number;
@@ -184,7 +358,7 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
 
   for (const selection of input.packages) {
     const pkg = selectedPackages.find((p) => p.id === selection.packageId)!;
-    const unitPrice = pkg.price; // price per head from DB
+    const unitPrice = pkg.price;
     const quantity = pkg.pricing === 'per_head' ? input.headcount * selection.quantity : selection.quantity;
     const totalPrice = unitPrice * quantity;
 
@@ -199,49 +373,43 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
   }
 
   // 7. Fetch and price add-ons
-  let addOnLineItems: typeof lineItems = [];
   if (input.addOns && input.addOns.length > 0) {
     const addOnIds = input.addOns.map((a) => a.addOnId);
-    const addOnRows = await db
-      .select()
-      .from(addOns)
-      .where(eq(addOns.isActive, true));
-
+    const addOnRows = await db.select().from(addOns).where(eq(addOns.isActive, true));
     const selectedAddOns = addOnRows.filter((a) => addOnIds.includes(a.id));
 
     if (selectedAddOns.length !== addOnIds.length) {
       throw new ValidationError('One or more selected add-ons not found or inactive');
     }
 
-    addOnLineItems = input.addOns.map((selection) => {
+    for (const selection of input.addOns) {
       const addOn = selectedAddOns.find((a) => a.id === selection.addOnId)!;
-      return {
-        packageId: null as unknown as string,
+      lineItems.push({
+        packageId: null,
         name: addOn.name,
         description: addOn.description,
         quantity: selection.quantity,
         unitPrice: addOn.price,
         totalPrice: addOn.price * selection.quantity,
-      };
-    });
+      });
+    }
   }
 
-  const allItems = [...lineItems, ...addOnLineItems];
-  const totalAmount = allItems.reduce((sum, item) => sum + item.totalPrice, 0);
+  const totalAmount = lineItems.reduce((sum, item) => sum + item.totalPrice, 0);
 
   // 8. Validate minimum order amount
   if (settings?.minOrderAmount && totalAmount < settings.minOrderAmount) {
     throw new ValidationError(
-      `Order total ($${(totalAmount / 100).toFixed(2)}) is below the minimum order amount ($${(settings.minOrderAmount / 100).toFixed(2)})`,
+      `Order total ($${(totalAmount / 100).toFixed(2)}) is below minimum ($${(settings.minOrderAmount / 100).toFixed(2)})`,
     );
   }
 
   // 9. Execute in transaction
   const connectionString = process.env.DATABASE_URL!;
-  const sql = postgres(connectionString);
+  const txSql = postgres(connectionString);
 
   try {
-    const result = await sql.begin(async (tx) => {
+    const result = await txSql.begin(async (tx) => {
       const { drizzle } = await import('drizzle-orm/postgres-js');
       const txDb = drizzle(tx);
 
@@ -255,7 +423,6 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
       let customerId: string;
       if (existingCustomer) {
         customerId = existingCustomer.id;
-        // Update customer info if changed
         await txDb
           .update(customers)
           .set({
@@ -281,7 +448,7 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
         customerId = newCustomer.id;
       }
 
-      // 9b. Save delivery address if provided
+      // 9b. Save delivery address
       if (input.deliveryAddress) {
         const [existingAddr] = await txDb
           .select({ id: customerAddresses.id })
@@ -299,14 +466,14 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
         }
       }
 
-      // 9c. Create order
+      // 9c. Create order with status=submitted
       const [order] = await txDb
         .insert(orders)
         .values({
           organizationId: orgId,
           locationId: input.locationId,
           customerId,
-          status: 'pending',
+          status: 'submitted',
           totalAmount,
           currency: 'USD',
           headCount: input.headcount,
@@ -317,9 +484,9 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
 
       // 9d. Create order items
       await txDb.insert(orderItems).values(
-        allItems.map((item) => ({
+        lineItems.map((item) => ({
           orderId: order.id,
-          packageId: item.packageId || null,
+          packageId: item.packageId,
           name: item.name,
           description: item.description,
           quantity: item.quantity,
@@ -356,14 +523,12 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
       return { order, customerId, recurringOrderId };
     });
 
-    // 10. Emit events (outside transaction)
     await eventBus.emit('order.created', {
       orderId: result.order.id,
       customerId: result.customerId,
       orgId,
     });
 
-    // 11. Return order summary
     return {
       id: result.order.id,
       status: result.order.status,
@@ -376,7 +541,7 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
         lastName: input.customer.lastName,
         email: input.customer.email,
       },
-      items: allItems.map((item) => ({
+      items: lineItems.map((item) => ({
         name: item.name,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
@@ -386,42 +551,6 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
       createdAt: result.order.createdAt,
     };
   } finally {
-    await sql.end();
+    await txSql.end();
   }
-}
-
-// --- Update Status ---
-
-export async function updateStatus(id: string, input: UpdateOrderStatusInput, eventBus: EventBus) {
-  const [existing] = await db
-    .select({ status: orders.status })
-    .from(orders)
-    .where(eq(orders.id, id))
-    .limit(1);
-
-  if (!existing) throw new NotFoundError('Order');
-
-  const completedAt = input.status === 'completed' ? new Date() : undefined;
-
-  const [updated] = await db
-    .update(orders)
-    .set({
-      status: input.status,
-      completedAt,
-      updatedAt: new Date(),
-    })
-    .where(eq(orders.id, id))
-    .returning();
-
-  await eventBus.emit('order.status_updated', {
-    orderId: id,
-    oldStatus: existing.status,
-    newStatus: input.status,
-  });
-
-  return {
-    id: updated.id,
-    status: updated.status,
-    updatedAt: updated.updatedAt,
-  };
 }

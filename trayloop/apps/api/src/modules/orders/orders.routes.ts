@@ -2,39 +2,66 @@ import type { FastifyInstance } from 'fastify';
 import { requireAuth } from '../../lib/middleware/auth.js';
 import { requireTenant } from '../../lib/middleware/tenant.js';
 import { validateBody } from '../../lib/middleware/validate.js';
-import { createOrderSchema, updateOrderStatusSchema } from './orders.schema.js';
+import {
+  createOrderSchema,
+  updateOrderStatusSchema,
+  orderListQuerySchema,
+  sendPaymentLinkSchema,
+} from './orders.schema.js';
 import * as service from './orders.service.js';
 
 export function registerRoutes(app: FastifyInstance) {
-  // All order routes require auth + tenant context
   app.addHook('preHandler', requireAuth);
   app.addHook('preHandler', requireTenant);
 
+  // List orders with filtering + pagination
   app.get('/', async (request) => {
-    const orders = await service.listByOrg(request.ctx.tenant!.organizationId);
-    return { data: orders };
+    const query = orderListQuerySchema.parse(request.query);
+    const result = await service.listByOrg(request.ctx.tenant!.organizationId, query);
+    return { data: result.orders, meta: result.pagination };
   });
 
+  // List orders by customer
   app.get('/customer/:customerId', async (request) => {
     const { customerId } = request.params as { customerId: string };
-    const orders = await service.listByCustomer(customerId);
-    return { data: orders };
+    const result = await service.listByCustomer(customerId);
+    return { data: result };
   });
 
+  // Get order detail
   app.get('/:id', async (request) => {
     const { id } = request.params as { id: string };
-    const order = await service.getById(id);
+    const order = await service.getById(id, request.ctx.tenant!.organizationId);
     return { data: order };
   });
 
+  // Create order
   app.post('/', { preHandler: [validateBody(createOrderSchema)] }, async (request, reply) => {
-    const result = await service.create(request.ctx.tenant!.organizationId, (request as any).validatedBody, (app as any).eventBus);
+    const result = await service.create(
+      request.ctx.tenant!.organizationId,
+      (request as any).validatedBody,
+      (app as any).eventBus,
+    );
     return reply.status(201).send({ data: result });
   });
 
+  // Update order status
   app.patch('/:id/status', { preHandler: [validateBody(updateOrderStatusSchema)] }, async (request, reply) => {
     const { id } = request.params as { id: string };
-    const result = await service.updateStatus(id, (request as any).validatedBody, (app as any).eventBus);
+    const result = await service.updateStatus(
+      id,
+      request.ctx.tenant!.organizationId,
+      (request as any).validatedBody,
+      (app as any).eventBus,
+    );
+    return reply.send({ data: result });
+  });
+
+  // Send payment link (stub)
+  app.post('/:id/payment-link', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = sendPaymentLinkSchema.parse({ orderId: id, ...(request.body as object) });
+    const result = await service.sendPaymentLink(request.ctx.tenant!.organizationId, body);
     return reply.send({ data: result });
   });
 }
