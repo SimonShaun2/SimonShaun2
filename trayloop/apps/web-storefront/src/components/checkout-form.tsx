@@ -121,7 +121,8 @@ export default function CheckoutForm({ data }: Props) {
   if (confirmation) {
     return (
       <div style={{ border: '2px solid #10b981', borderRadius: '0.75rem', padding: '2rem', marginTop: '2rem' }}>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#10b981', marginBottom: '1rem' }}>Order Submitted!</h2>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#10b981', marginBottom: '0.25rem' }}>Order Submitted!</h2>
+        <p style={{ fontSize: '1.1rem', fontWeight: 600, fontFamily: 'monospace', color: '#374151', marginBottom: '1rem' }}>{confirmation.orderNumber}</p>
         <div style={{ display: 'grid', gap: '0.5rem', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
           <p><strong>Status:</strong> {confirmation.status}</p>
           <p><strong>Event Date:</strong> {new Date(confirmation.scheduledAt).toLocaleDateString()}</p>

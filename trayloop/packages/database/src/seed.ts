@@ -281,6 +281,7 @@ async function seed() {
   // --- Sample Order ---
   console.log('Creating sample order...');
   const [order] = await db.insert(orders).values({
+    orderNumber: 'TL-000001',
     organizationId: org.id,
     locationId: location.id,
     customerId: customer1.id,

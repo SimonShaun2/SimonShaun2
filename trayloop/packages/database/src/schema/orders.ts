@@ -7,6 +7,7 @@ import { orderStatusEnum, recurrenceIntervalEnum } from './enums.js';
 
 export const orders = pgTable('orders', {
   id: uuid('id').primaryKey().defaultRandom(),
+  orderNumber: varchar('order_number', { length: 20 }).notNull(),
   organizationId: uuid('organization_id').notNull().references(() => organizations.id),
   locationId: uuid('location_id').references(() => locations.id),
   customerId: uuid('customer_id').notNull().references(() => customers.id),

@@ -6,6 +6,7 @@ import SetupChecklist from '../components/setup-checklist';
 
 interface Order {
   id: string;
+  orderNumber: string;
   status: string;
   eventDate: string;
   headCount: number;
@@ -101,6 +102,7 @@ export default function OrdersPage() {
               <div style={{ border: '1px solid #e5e7eb', borderRadius: '0.5rem', padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
+                    <span style={{ fontSize: '0.8rem', color: '#6b7280', fontFamily: 'monospace' }}>{order.orderNumber}</span>
                     <span style={{ fontWeight: 600 }}>{order.customer.name}</span>
                     <span style={{
                       fontSize: '0.7rem', padding: '0.1rem 0.5rem', borderRadius: '9999px',

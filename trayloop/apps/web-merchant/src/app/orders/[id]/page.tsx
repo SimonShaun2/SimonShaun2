@@ -6,6 +6,7 @@ import { apiFetch } from '../../../lib/api';
 
 interface OrderDetail {
   id: string;
+  orderNumber: string;
   status: string;
   depositRequired: boolean;
   allowedTransitions: string[];
@@ -110,7 +111,7 @@ export default function OrderDetailPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: '1rem', marginBottom: '1.5rem' }}>
         <div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.25rem' }}>
-            Order from {order.customer.name}
+            {order.orderNumber} — {order.customer.name}
           </h1>
           <span style={{
             fontSize: '0.8rem', padding: '0.15rem 0.6rem', borderRadius: '9999px',

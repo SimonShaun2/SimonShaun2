@@ -118,6 +118,7 @@ export interface OrderSubmission {
 
 export interface OrderConfirmation {
   id: string;
+  orderNumber: string;
   status: string;
   headCount: number;
   scheduledAt: string;

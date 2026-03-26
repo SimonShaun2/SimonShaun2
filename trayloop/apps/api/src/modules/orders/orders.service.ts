@@ -55,6 +55,19 @@ async function getDepositRequired(locationId: string | null): Promise<boolean> {
   return settings?.depositRequired ?? true;
 }
 
+// --- Order number generation ---
+
+async function generateOrderNumber(orgId: string, txDb?: typeof db): Promise<string> {
+  const database = txDb ?? db;
+  const [result] = await database
+    .select({ count: sql<number>`count(*)::int` })
+    .from(orders)
+    .where(eq(orders.organizationId, orgId));
+
+  const next = (result?.count ?? 0) + 1;
+  return `TL-${next.toString().padStart(6, '0')}`;
+}
+
 // --- List orders (merchant dashboard) ---
 
 export async function listByOrg(orgId: string, query: OrderListQuery) {
@@ -77,6 +90,7 @@ export async function listByOrg(orgId: string, query: OrderListQuery) {
     db
       .select({
         id: orders.id,
+        orderNumber: orders.orderNumber,
         status: orders.status,
         totalAmount: orders.totalAmount,
         currency: orders.currency,
@@ -116,6 +130,7 @@ export async function listByOrg(orgId: string, query: OrderListQuery) {
   return {
     orders: rows.map((r) => ({
       id: r.id,
+      orderNumber: r.orderNumber,
       status: r.status,
       eventDate: r.scheduledAt,
       headCount: r.headCount,
@@ -241,6 +256,7 @@ export async function getById(id: string, orgId: string) {
 
   return {
     id: order.id,
+    orderNumber: order.orderNumber,
     status: order.status,
     depositRequired,
     allowedTransitions,
@@ -349,6 +365,7 @@ export async function updateStatus(id: string, orgId: string, input: UpdateOrder
 
   return {
     id: updated.id,
+    orderNumber: updated.orderNumber,
     status: updated.status,
     previousStatus: existing.status,
     depositRequired,
@@ -712,9 +729,11 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
       }
 
       // 5c. Create order — status always starts as "submitted"
+      const orderNumber = await generateOrderNumber(orgId, txDb);
       const [order] = await txDb
         .insert(orders)
         .values({
+          orderNumber,
           organizationId: orgId,
           locationId: input.locationId,
           customerId,
@@ -777,6 +796,7 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
     // 7. Return order summary with full pricing breakdown
     return {
       id: result.order.id,
+      orderNumber: result.order.orderNumber,
       status: result.order.status,
       headCount: result.order.headCount,
       scheduledAt: result.order.scheduledAt,
@@ -909,9 +929,11 @@ export async function reorder(sourceOrderId: string, orgId: string, input: Reord
       const { drizzle } = await import('drizzle-orm/postgres-js');
       const txDb = drizzle(tx);
 
+      const orderNumber = await generateOrderNumber(orgId, txDb);
       const [newOrder] = await txDb
         .insert(orders)
         .values({
+          orderNumber,
           organizationId: orgId,
           locationId: sourceOrder.locationId,
           customerId: sourceOrder.customerId,
@@ -956,6 +978,7 @@ export async function reorder(sourceOrderId: string, orgId: string, input: Reord
 
     return {
       id: result.id,
+      orderNumber: result.orderNumber,
       reorderedFrom: sourceOrderId,
       status: result.status,
       eventDate: result.scheduledAt,
