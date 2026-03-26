@@ -27,6 +27,7 @@ export const locationSettings = pgTable('location_settings', {
   deliveryEnabled: boolean('delivery_enabled').notNull().default(true),
   pickupEnabled: boolean('pickup_enabled').notNull().default(false),
   deliveryRadius: integer('delivery_radius_miles'),
+  depositRequired: boolean('deposit_required').notNull().default(true),
   operatingHours: jsonb('operating_hours').$type<Record<string, { open: string; close: string }>>(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

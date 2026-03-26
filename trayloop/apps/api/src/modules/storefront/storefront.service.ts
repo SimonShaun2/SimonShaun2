@@ -56,6 +56,7 @@ export async function getStorefront(slug: string) {
     deliveryEnabled: row.location_settings?.deliveryEnabled ?? true,
     pickupEnabled: row.location_settings?.pickupEnabled ?? false,
     deliveryRadiusMiles: row.location_settings?.deliveryRadius ?? null,
+    depositRequired: row.location_settings?.depositRequired ?? true,
     operatingHours: row.location_settings?.operatingHours ?? null,
   }));
 

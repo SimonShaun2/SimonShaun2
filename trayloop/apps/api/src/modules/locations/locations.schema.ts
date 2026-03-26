@@ -17,6 +17,7 @@ export const createLocationSchema = z.object({
   deliveryEnabled: z.boolean().default(true),
   pickupEnabled: z.boolean().default(false),
   deliveryRadiusMiles: z.number().int().positive().optional(),
+  depositRequired: z.boolean().default(true),
   isActive: z.boolean().default(true),
 });
 

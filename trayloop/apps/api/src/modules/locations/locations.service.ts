@@ -20,6 +20,7 @@ interface LocationDto {
   deliveryEnabled: boolean;
   pickupEnabled: boolean;
   deliveryRadiusMiles: number | null;
+  depositRequired: boolean;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -45,6 +46,7 @@ function toDto(
     deliveryEnabled: settings?.deliveryEnabled ?? true,
     pickupEnabled: settings?.pickupEnabled ?? false,
     deliveryRadiusMiles: settings?.deliveryRadius ?? null,
+    depositRequired: settings?.depositRequired ?? true,
     isActive: loc.isActive,
     createdAt: loc.createdAt,
     updatedAt: loc.updatedAt,
@@ -84,6 +86,7 @@ export async function create(orgId: string, input: CreateLocationInput) {
     deliveryEnabled,
     pickupEnabled,
     deliveryRadiusMiles,
+    depositRequired,
     ...locationData
   } = input;
 
@@ -105,6 +108,7 @@ export async function create(orgId: string, input: CreateLocationInput) {
       deliveryEnabled: deliveryEnabled ?? true,
       pickupEnabled: pickupEnabled ?? false,
       deliveryRadius: deliveryRadiusMiles ?? null,
+      depositRequired: depositRequired ?? true,
     })
     .returning();
 
@@ -119,6 +123,7 @@ export async function update(id: string, input: UpdateLocationInput) {
     deliveryEnabled,
     pickupEnabled,
     deliveryRadiusMiles,
+    depositRequired,
     ...locationData
   } = input;
 
@@ -141,6 +146,7 @@ export async function update(id: string, input: UpdateLocationInput) {
   if (deliveryEnabled !== undefined) settingsUpdate.deliveryEnabled = deliveryEnabled;
   if (pickupEnabled !== undefined) settingsUpdate.pickupEnabled = pickupEnabled;
   if (deliveryRadiusMiles !== undefined) settingsUpdate.deliveryRadius = deliveryRadiusMiles;
+  if (depositRequired !== undefined) settingsUpdate.depositRequired = depositRequired;
 
   if (Object.keys(settingsUpdate).length > 0) {
     settingsUpdate.updatedAt = new Date();

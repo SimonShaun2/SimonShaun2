@@ -16,23 +16,42 @@ import type { EventBus } from '../../lib/event-bus/index.js';
 import type { CreateOrderInput, UpdateOrderStatusInput, OrderListQuery, SendPaymentLinkInput } from './orders.schema.js';
 
 // --- Status transition rules ---
-// Linear flow: submitted → awaiting_deposit → confirmed → completed
+// Deposit required:  submitted → awaiting_deposit → confirmed → completed
+// No deposit:        submitted → confirmed → completed
 // Cancellation allowed from any non-terminal state
-
-const FORWARD_TRANSITIONS: Record<string, string> = {
-  submitted: 'awaiting_deposit',
-  awaiting_deposit: 'confirmed',
-  confirmed: 'completed',
-};
 
 const TERMINAL_STATUSES = new Set(['completed', 'cancelled']);
 
-function getAllowedTransitions(currentStatus: string): string[] {
+function getAllowedTransitions(currentStatus: string, depositRequired: boolean): string[] {
   const allowed: string[] = [];
-  const forward = FORWARD_TRANSITIONS[currentStatus];
-  if (forward) allowed.push(forward);
-  if (!TERMINAL_STATUSES.has(currentStatus)) allowed.push('cancelled');
+
+  if (currentStatus === 'submitted') {
+    if (depositRequired) {
+      allowed.push('awaiting_deposit');
+    } else {
+      allowed.push('confirmed');
+    }
+  } else if (currentStatus === 'awaiting_deposit') {
+    allowed.push('confirmed');
+  } else if (currentStatus === 'confirmed') {
+    allowed.push('completed');
+  }
+
+  if (!TERMINAL_STATUSES.has(currentStatus)) {
+    allowed.push('cancelled');
+  }
+
   return allowed;
+}
+
+async function getDepositRequired(locationId: string | null): Promise<boolean> {
+  if (!locationId) return true;
+  const [settings] = await db
+    .select({ depositRequired: locationSettings.depositRequired })
+    .from(locationSettings)
+    .where(eq(locationSettings.locationId, locationId))
+    .limit(1);
+  return settings?.depositRequired ?? true;
 }
 
 // --- List orders (merchant dashboard) ---
@@ -215,12 +234,14 @@ export async function getById(id: string, orgId: string) {
   const packageSubtotal = packageItems.reduce((sum, i) => sum + i.totalPrice, 0);
   const addOnSubtotal = addOnItems.reduce((sum, i) => sum + i.totalPrice, 0);
 
-  // Determine allowed status transitions for UI
-  const allowedTransitions = getAllowedTransitions(order.status);
+  // Determine allowed status transitions based on location deposit setting
+  const depositRequired = await getDepositRequired(order.locationId);
+  const allowedTransitions = getAllowedTransitions(order.status, depositRequired);
 
   return {
     id: order.id,
     status: order.status,
+    depositRequired,
     allowedTransitions,
     eventDate: order.scheduledAt,
     headCount: order.headCount,
@@ -276,7 +297,7 @@ export async function getById(id: string, orgId: string) {
 
 export async function updateStatus(id: string, orgId: string, input: UpdateOrderStatusInput, eventBus: EventBus) {
   const [existing] = await db
-    .select({ status: orders.status })
+    .select({ status: orders.status, locationId: orders.locationId })
     .from(orders)
     .where(and(eq(orders.id, id), eq(orders.organizationId, orgId)))
     .limit(1);
@@ -290,8 +311,11 @@ export async function updateStatus(id: string, orgId: string, input: UpdateOrder
     );
   }
 
-  // Validate transition
-  const allowed = getAllowedTransitions(existing.status);
+  // Look up deposit requirement from location settings
+  const depositRequired = await getDepositRequired(existing.locationId);
+
+  // Validate transition against deposit-aware rules
+  const allowed = getAllowedTransitions(existing.status, depositRequired);
   if (!allowed.includes(input.status)) {
     throw new ValidationError(
       `Cannot transition from "${existing.status}" to "${input.status}". ` +
@@ -326,7 +350,8 @@ export async function updateStatus(id: string, orgId: string, input: UpdateOrder
     id: updated.id,
     status: updated.status,
     previousStatus: existing.status,
-    allowedTransitions: getAllowedTransitions(updated.status),
+    depositRequired,
+    allowedTransitions: getAllowedTransitions(updated.status, depositRequired),
     updatedAt: updated.updatedAt,
   };
 }
@@ -340,12 +365,18 @@ export async function sendPaymentLink(orgId: string, input: SendPaymentLinkInput
       status: orders.status,
       totalAmount: orders.totalAmount,
       customerId: orders.customerId,
+      locationId: orders.locationId,
     })
     .from(orders)
     .where(and(eq(orders.id, input.orderId), eq(orders.organizationId, orgId)))
     .limit(1);
 
   if (!order) throw new NotFoundError('Order');
+
+  const depositRequired = await getDepositRequired(order.locationId);
+  if (!depositRequired) {
+    throw new ValidationError('This location does not require deposits. Confirm the order directly.');
+  }
 
   if (order.status !== 'submitted' && order.status !== 'awaiting_deposit') {
     throw new ValidationError('Payment link can only be sent for submitted or awaiting_deposit orders');
