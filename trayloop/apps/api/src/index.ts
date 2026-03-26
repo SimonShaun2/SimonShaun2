@@ -2,6 +2,8 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { EventBus } from './lib/event-bus/index.js';
 import { errorHandler } from './lib/middleware/error-handler.js';
+import { registerRequestLogger } from './lib/middleware/request-logger.js';
+import { registerIdempotencyHook } from './lib/middleware/idempotency.js';
 import type './lib/context.js';
 import { authModule } from './modules/auth/index.js';
 import { organizationsModule } from './modules/organizations/index.js';
@@ -21,10 +23,13 @@ import { adminModule } from './modules/admin/index.js';
 import { storefrontModule } from './modules/storefront/index.js';
 
 export async function buildApp() {
-  const app = Fastify({ logger: true });
+  const app = Fastify({ logger: false }); // We use our own logger
   const eventBus = new EventBus();
 
+  // Global middleware
   await app.register(cors, { origin: true });
+  registerRequestLogger(app);
+  registerIdempotencyHook(app);
 
   app.decorate('eventBus', eventBus);
   app.setErrorHandler(errorHandler);

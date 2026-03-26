@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { requireAuth } from '../../lib/middleware/auth.js';
 import { requireTenant } from '../../lib/middleware/tenant.js';
 import { validateBody } from '../../lib/middleware/validate.js';
+import { requireIdempotency } from '../../lib/middleware/idempotency.js';
 import {
   createOrderSchema,
   updateOrderStatusSchema,
@@ -36,8 +37,8 @@ export function registerRoutes(app: FastifyInstance) {
     return { data: order };
   });
 
-  // Create order
-  app.post('/', { preHandler: [validateBody(createOrderSchema)] }, async (request, reply) => {
+  // Create order (idempotent)
+  app.post('/', { preHandler: [requireIdempotency(), validateBody(createOrderSchema)] }, async (request, reply) => {
     const result = await service.create(
       request.ctx.tenant!.organizationId,
       (request as any).validatedBody,
@@ -71,7 +72,7 @@ export function registerRoutes(app: FastifyInstance) {
     return reply.status(201).send({ data: result });
   });
 
-  // Mark order as paid (deposit collected)
+  // Mark order as paid
   app.patch('/:id/mark-paid', async (request, reply) => {
     const { id } = request.params as { id: string };
     const result = await service.markPaid(
@@ -82,8 +83,8 @@ export function registerRoutes(app: FastifyInstance) {
     return reply.send({ data: result });
   });
 
-  // Reorder from existing order
-  app.post('/:id/reorder', async (request, reply) => {
+  // Reorder from existing order (idempotent)
+  app.post('/:id/reorder', { preHandler: [requireIdempotency()] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = reorderSchema.parse(request.body);
     const result = await service.reorder(
