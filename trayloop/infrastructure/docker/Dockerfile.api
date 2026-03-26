@@ -1,0 +1,24 @@
+FROM node:20-slim AS base
+RUN corepack enable
+
+FROM base AS builder
+WORKDIR /app
+COPY package.json package-lock.json* turbo.json ./
+COPY apps/api/package.json ./apps/api/
+COPY packages/*/package.json ./packages/
+RUN find packages -name "package.json" -exec sh -c 'mkdir -p $(dirname /app/$1) && cp $1 /app/$1' _ {} \;
+
+RUN npm ci
+COPY . .
+RUN npx turbo build --filter=@trayloop/api
+
+FROM base AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 api
+COPY --from=builder /app/apps/api/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/api/package.json ./
+USER api
+EXPOSE 3001
+CMD ["node", "dist/server.js"]

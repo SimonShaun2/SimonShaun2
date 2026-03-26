@@ -1,0 +1,27 @@
+FROM node:20-slim AS base
+RUN corepack enable
+
+ARG APP_NAME=web-marketing
+
+FROM base AS builder
+WORKDIR /app
+COPY package.json package-lock.json* turbo.json ./
+COPY apps/${APP_NAME}/package.json ./apps/${APP_NAME}/
+COPY packages/*/package.json ./packages/
+RUN find packages -name "package.json" -exec sh -c 'mkdir -p $(dirname /app/$1) && cp $1 /app/$1' _ {} \;
+
+RUN npm ci
+COPY . .
+RUN npx turbo build --filter=@trayloop/${APP_NAME}
+
+FROM base AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
+COPY --from=builder /app/apps/${APP_NAME}/.next/standalone ./
+COPY --from=builder /app/apps/${APP_NAME}/.next/static ./apps/${APP_NAME}/.next/static
+COPY --from=builder /app/apps/${APP_NAME}/public ./apps/${APP_NAME}/public
+USER nextjs
+EXPOSE 3000
+ENV PORT=3000
+CMD ["node", "apps/${APP_NAME}/server.js"]
