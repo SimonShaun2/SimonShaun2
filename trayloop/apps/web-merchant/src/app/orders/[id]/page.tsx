@@ -31,6 +31,8 @@ export default function OrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [reorderWarnings, setReorderWarnings] = useState<string[]>([]);
+  const [reorderSuccess, setReorderSuccess] = useState<{ orderNumber: string; id: string } | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -95,6 +97,41 @@ export default function OrderDetailPage() {
     }
   }
 
+  async function handleReorder() {
+    setActionLoading(true);
+    setError('');
+    setReorderWarnings([]);
+    setReorderSuccess(null);
+
+    const dateStr = prompt('Event date for new order (YYYY-MM-DD):');
+    if (!dateStr) { setActionLoading(false); return; }
+
+    const eventDate = new Date(dateStr + 'T12:00:00.000Z');
+    if (isNaN(eventDate.getTime())) {
+      setError('Invalid date format');
+      setActionLoading(false);
+      return;
+    }
+
+    try {
+      const res = await apiFetch(`/api/orders/${id}/reorder`, {
+        method: 'POST',
+        body: JSON.stringify({ eventDate: eventDate.toISOString() }),
+      });
+
+      const data = res.data;
+      setReorderSuccess({ orderNumber: data.orderNumber, id: data.id });
+
+      if (data.warnings && data.warnings.length > 0) {
+        setReorderWarnings(data.warnings);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Reorder failed');
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
   if (loading) return <p style={{ color: '#6b7280' }}>Loading order...</p>;
   if (error && !order) return <p style={{ color: '#dc2626' }}>{error}</p>;
   if (!order) return null;
@@ -125,6 +162,25 @@ export default function OrderDetailPage() {
 
       {error && <p style={{ color: '#dc2626', marginBottom: '1rem', fontSize: '0.875rem' }}>{error}</p>}
 
+      {/* Reorder success */}
+      {reorderSuccess && (
+        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '0.5rem', padding: '1rem', marginBottom: '1rem' }}>
+          <p style={{ color: '#166534', fontWeight: 600 }}>
+            Reorder created: <a href={`/orders/${reorderSuccess.id}`} style={{ color: '#2563eb' }}>{reorderSuccess.orderNumber}</a>
+          </p>
+        </div>
+      )}
+
+      {/* Reorder warnings */}
+      {reorderWarnings.length > 0 && (
+        <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '0.5rem', padding: '1rem', marginBottom: '1rem' }}>
+          <p style={{ color: '#92400e', fontWeight: 600, marginBottom: '0.5rem' }}>Some items were unavailable and were not included:</p>
+          <ul style={{ margin: 0, paddingLeft: '1.25rem', color: '#92400e', fontSize: '0.875rem' }}>
+            {reorderWarnings.map((w, i) => <li key={i}>{w}</li>)}
+          </ul>
+        </div>
+      )}
+
       {/* Actions */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         {order.status === 'submitted' && order.depositRequired && (
@@ -151,6 +207,10 @@ export default function OrderDetailPage() {
             Cancel Order
           </button>
         )}
+        <button onClick={handleReorder} disabled={actionLoading}
+          style={{ padding: '0.5rem 1rem', background: 'white', color: '#374151', border: '1px solid #d1d5db', borderRadius: '0.375rem', cursor: 'pointer', fontWeight: 500 }}>
+          Reorder
+        </button>
       </div>
 
       {/* Details grid */}
