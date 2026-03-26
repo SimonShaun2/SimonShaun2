@@ -7,13 +7,14 @@ import {
   customerAddresses,
   locations,
   locationSettings,
+  deposits,
 } from '@trayloop/database';
 import { eq, and, gte, lte, desc, sql } from 'drizzle-orm';
 import postgres from 'postgres';
 import { ValidationError, NotFoundError } from '../../lib/errors.js';
 import { calculatePricing } from '../../lib/pricing.js';
 import type { EventBus } from '../../lib/event-bus/index.js';
-import type { CreateOrderInput, UpdateOrderStatusInput, OrderListQuery, SendPaymentLinkInput } from './orders.schema.js';
+import type { CreateOrderInput, UpdateOrderStatusInput, OrderListQuery, SendDepositLinkInput } from './orders.schema.js';
 
 // --- Status transition rules ---
 // Deposit required:  submitted → awaiting_deposit → confirmed → completed
@@ -356,9 +357,9 @@ export async function updateStatus(id: string, orgId: string, input: UpdateOrder
   };
 }
 
-// --- Send payment link (stub) ---
+// --- Send deposit link ---
 
-export async function sendPaymentLink(orgId: string, input: SendPaymentLinkInput) {
+export async function sendDepositLink(orderId: string, orgId: string, input: SendDepositLinkInput, eventBus: EventBus) {
   const [order] = await db
     .select({
       id: orders.id,
@@ -368,18 +369,24 @@ export async function sendPaymentLink(orgId: string, input: SendPaymentLinkInput
       locationId: orders.locationId,
     })
     .from(orders)
-    .where(and(eq(orders.id, input.orderId), eq(orders.organizationId, orgId)))
+    .where(and(eq(orders.id, orderId), eq(orders.organizationId, orgId)))
     .limit(1);
 
   if (!order) throw new NotFoundError('Order');
 
+  // Must require deposits
   const depositRequired = await getDepositRequired(order.locationId);
   if (!depositRequired) {
     throw new ValidationError('This location does not require deposits. Confirm the order directly.');
   }
 
-  if (order.status !== 'submitted' && order.status !== 'awaiting_deposit') {
-    throw new ValidationError('Payment link can only be sent for submitted or awaiting_deposit orders');
+  // Must be in a status that allows transitioning to awaiting_deposit
+  const allowed = getAllowedTransitions(order.status, depositRequired);
+  if (!allowed.includes('awaiting_deposit') && order.status !== 'awaiting_deposit') {
+    throw new ValidationError(
+      `Cannot send deposit link for order in "${order.status}" status. ` +
+      `Allowed transitions: ${allowed.join(', ')}`,
+    );
   }
 
   const [customer] = await db
@@ -388,20 +395,169 @@ export async function sendPaymentLink(orgId: string, input: SendPaymentLinkInput
     .where(eq(customers.id, order.customerId))
     .limit(1);
 
-  // Update status to awaiting_deposit
-  await db
-    .update(orders)
-    .set({ status: 'awaiting_deposit', updatedAt: new Date() })
-    .where(eq(orders.id, order.id));
+  const depositAmount = input.depositAmount ?? order.totalAmount;
 
-  // TODO: Create Stripe payment link and send email
-  return {
-    orderId: order.id,
-    status: 'awaiting_deposit',
-    depositAmount: input.depositAmount ?? order.totalAmount,
-    sentTo: customer.email,
-    message: `Payment link will be sent to ${customer.firstName} at ${customer.email}`,
-  };
+  // Generate a placeholder payment link (UUID-based, will be Stripe later)
+  const fakeLinkId = crypto.randomUUID();
+  const paymentLink = `https://pay.trayloop.com/deposit/${fakeLinkId}`;
+
+  // Transaction: create/replace deposit record + update order status
+  const connectionString = process.env.DATABASE_URL!;
+  const txSql = postgres(connectionString);
+
+  try {
+    const result = await txSql.begin(async (tx) => {
+      const { drizzle } = await import('drizzle-orm/postgres-js');
+      const txDb = drizzle(tx);
+
+      // Cancel any existing pending deposit for this order
+      await txDb
+        .update(deposits)
+        .set({ status: 'refunded', updatedAt: new Date() })
+        .where(and(eq(deposits.orderId, order.id), eq(deposits.status, 'pending')));
+
+      // Create new deposit record
+      const [deposit] = await txDb
+        .insert(deposits)
+        .values({
+          orderId: order.id,
+          amount: depositAmount,
+          currency: 'USD',
+          status: 'pending',
+          stripePaymentIntentId: fakeLinkId,
+        })
+        .returning();
+
+      // Update order status to awaiting_deposit
+      const [updated] = await txDb
+        .update(orders)
+        .set({ status: 'awaiting_deposit', updatedAt: new Date() })
+        .where(eq(orders.id, order.id))
+        .returning();
+
+      return { deposit, order: updated };
+    });
+
+    await eventBus.emit('order.status_updated', {
+      orderId: order.id,
+      oldStatus: order.status,
+      newStatus: 'awaiting_deposit',
+    });
+
+    return {
+      orderId: result.order.id,
+      status: result.order.status,
+      depositId: result.deposit.id,
+      depositAmount: result.deposit.amount,
+      currency: result.deposit.currency,
+      paymentLink,
+      sentTo: customer.email,
+      depositRequired: true,
+      allowedTransitions: getAllowedTransitions('awaiting_deposit', true),
+    };
+  } finally {
+    await txSql.end();
+  }
+}
+
+// --- Mark order as paid ---
+
+export async function markPaid(orderId: string, orgId: string, eventBus: EventBus) {
+  const [order] = await db
+    .select({
+      id: orders.id,
+      status: orders.status,
+      locationId: orders.locationId,
+    })
+    .from(orders)
+    .where(and(eq(orders.id, orderId), eq(orders.organizationId, orgId)))
+    .limit(1);
+
+  if (!order) throw new NotFoundError('Order');
+
+  if (order.status !== 'awaiting_deposit') {
+    throw new ValidationError(
+      `Order must be in "awaiting_deposit" status to mark as paid (currently "${order.status}")`,
+    );
+  }
+
+  // Find the pending deposit
+  const [pendingDeposit] = await db
+    .select()
+    .from(deposits)
+    .where(and(eq(deposits.orderId, order.id), eq(deposits.status, 'pending')))
+    .limit(1);
+
+  if (!pendingDeposit) {
+    throw new ValidationError('No pending deposit found for this order. Send a deposit link first.');
+  }
+
+  const depositRequired = await getDepositRequired(order.locationId);
+
+  // Transaction: update deposit + update order status
+  const connectionString = process.env.DATABASE_URL!;
+  const txSql = postgres(connectionString);
+
+  try {
+    const result = await txSql.begin(async (tx) => {
+      const { drizzle } = await import('drizzle-orm/postgres-js');
+      const txDb = drizzle(tx);
+
+      // Mark deposit as collected
+      const now = new Date();
+      const [updatedDeposit] = await txDb
+        .update(deposits)
+        .set({
+          status: 'collected',
+          collectedAt: now,
+          updatedAt: now,
+        })
+        .where(eq(deposits.id, pendingDeposit.id))
+        .returning();
+
+      // Transition order to confirmed
+      const [updatedOrder] = await txDb
+        .update(orders)
+        .set({
+          status: 'confirmed',
+          updatedAt: now,
+        })
+        .where(eq(orders.id, order.id))
+        .returning();
+
+      return { deposit: updatedDeposit, order: updatedOrder };
+    });
+
+    await eventBus.emit('payment.completed', {
+      paymentId: result.deposit.id,
+      orderId: order.id,
+      amount: result.deposit.amount,
+    });
+
+    await eventBus.emit('order.status_updated', {
+      orderId: order.id,
+      oldStatus: 'awaiting_deposit',
+      newStatus: 'confirmed',
+    });
+
+    return {
+      orderId: result.order.id,
+      status: result.order.status,
+      previousStatus: 'awaiting_deposit',
+      deposit: {
+        id: result.deposit.id,
+        amount: result.deposit.amount,
+        currency: result.deposit.currency,
+        status: result.deposit.status,
+        collectedAt: result.deposit.collectedAt,
+      },
+      depositRequired,
+      allowedTransitions: getAllowedTransitions('confirmed', depositRequired),
+      updatedAt: result.order.updatedAt,
+    };
+  } finally {
+    await txSql.end();
+  }
 }
 
 // --- Location validation (reusable) ---

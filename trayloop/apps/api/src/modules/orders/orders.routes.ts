@@ -6,7 +6,7 @@ import {
   createOrderSchema,
   updateOrderStatusSchema,
   orderListQuerySchema,
-  sendPaymentLinkSchema,
+  sendDepositLinkSchema,
 } from './orders.schema.js';
 import * as service from './orders.service.js';
 
@@ -57,11 +57,27 @@ export function registerRoutes(app: FastifyInstance) {
     return reply.send({ data: result });
   });
 
-  // Send payment link (stub)
-  app.post('/:id/payment-link', async (request, reply) => {
+  // Send deposit link
+  app.post('/:id/send-deposit-link', async (request, reply) => {
     const { id } = request.params as { id: string };
-    const body = sendPaymentLinkSchema.parse({ orderId: id, ...(request.body as object) });
-    const result = await service.sendPaymentLink(request.ctx.tenant!.organizationId, body);
+    const body = sendDepositLinkSchema.parse(request.body ?? {});
+    const result = await service.sendDepositLink(
+      id,
+      request.ctx.tenant!.organizationId,
+      body,
+      (app as any).eventBus,
+    );
+    return reply.status(201).send({ data: result });
+  });
+
+  // Mark order as paid (deposit collected)
+  app.patch('/:id/mark-paid', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const result = await service.markPaid(
+      id,
+      request.ctx.tenant!.organizationId,
+      (app as any).eventBus,
+    );
     return reply.send({ data: result });
   });
 }

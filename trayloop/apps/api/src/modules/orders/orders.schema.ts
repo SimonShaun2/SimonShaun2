@@ -101,9 +101,8 @@ export const orderListQuerySchema = z.object({
 
 export type OrderListQuery = z.infer<typeof orderListQuerySchema>;
 
-export const sendPaymentLinkSchema = z.object({
-  orderId: z.string().uuid(),
+export const sendDepositLinkSchema = z.object({
   depositAmount: z.number().int().positive().optional(),
 });
 
-export type SendPaymentLinkInput = z.infer<typeof sendPaymentLinkSchema>;
+export type SendDepositLinkInput = z.infer<typeof sendDepositLinkSchema>;
