@@ -27,8 +27,11 @@ export default function LoginPage() {
       localStorage.setItem('token', json.data.token);
       if (json.data.organizations?.length > 0) {
         localStorage.setItem('orgId', json.data.organizations[0].id);
+        window.location.href = '/';
+      } else {
+        // No orgs — redirect to create one
+        window.location.href = '/register?step=org';
       }
-      window.location.href = '/';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
@@ -56,8 +59,11 @@ export default function LoginPage() {
           {loading ? 'Signing in...' : 'Sign In'}
         </button>
       </form>
-      <p style={{ marginTop: '1rem', fontSize: '0.8rem', color: '#6b7280' }}>
-        Test: owner@trayloop.dev (seed account)
+      <p style={{ marginTop: '1rem', fontSize: '0.8rem', color: '#6b7280', textAlign: 'center' }}>
+        New merchant? <a href="/register" style={{ color: '#2563eb' }}>Create an account</a>
+      </p>
+      <p style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#9ca3af', textAlign: 'center' }}>
+        Test: owner@trayloop.dev / password123
       </p>
     </div>
   );

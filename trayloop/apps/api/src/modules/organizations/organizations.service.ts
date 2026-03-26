@@ -1,6 +1,6 @@
 import { db } from '@trayloop/database';
-import { organizations, organizationMemberships } from '@trayloop/database';
-import { eq } from 'drizzle-orm';
+import { organizations, organizationMemberships, locations, catalogs, packages } from '@trayloop/database';
+import { eq, and, sql } from 'drizzle-orm';
 import { NotFoundError, ValidationError } from '../../lib/errors.js';
 import type { CreateOrganizationInput, UpdateOrganizationInput } from './organizations.schema.js';
 
@@ -124,4 +124,46 @@ export async function update(id: string, input: UpdateOrganizationInput) {
   }
 
   return toDto(updated);
+}
+
+export async function getSetupStatus(orgId: string) {
+  const [org] = await db
+    .select({
+      name: organizations.name,
+      slug: organizations.slug,
+      phone: organizations.phone,
+    })
+    .from(organizations)
+    .where(eq(organizations.id, orgId))
+    .limit(1);
+
+  if (!org) throw new NotFoundError('Organization');
+
+  const [[locationCount], [catalogCount], [packageCount]] = await Promise.all([
+    db.select({ count: sql<number>`count(*)::int` }).from(locations)
+      .where(and(eq(locations.organizationId, orgId), eq(locations.isActive, true))),
+    db.select({ count: sql<number>`count(*)::int` }).from(catalogs)
+      .where(and(eq(catalogs.organizationId, orgId), eq(catalogs.isActive, true))),
+    db.select({ count: sql<number>`count(*)::int` }).from(packages)
+      .innerJoin(catalogs, eq(catalogs.id, packages.catalogId))
+      .where(and(eq(catalogs.organizationId, orgId), eq(packages.isActive, true))),
+  ]);
+
+  const hasProfile = !!(org.name && org.slug);
+  const hasLocation = locationCount.count > 0;
+  const hasCatalog = catalogCount.count > 0;
+  const hasPackages = packageCount.count > 0;
+  const isComplete = hasProfile && hasLocation && hasCatalog && hasPackages;
+
+  return {
+    isComplete,
+    completedSteps: [hasProfile, hasLocation, hasCatalog, hasPackages].filter(Boolean).length,
+    totalSteps: 4,
+    steps: {
+      profile: { done: hasProfile, label: 'Set up organization profile' },
+      location: { done: hasLocation, label: 'Add your first location', count: locationCount.count },
+      catalog: { done: hasCatalog, label: 'Create a catalog', count: catalogCount.count },
+      packages: { done: hasPackages, label: 'Add at least one package', count: packageCount.count },
+    },
+  };
 }

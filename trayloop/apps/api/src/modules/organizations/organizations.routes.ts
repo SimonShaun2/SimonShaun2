@@ -24,6 +24,12 @@ export function registerRoutes(app: FastifyInstance) {
     return { data: org };
   });
 
+  // Get setup status for onboarding checklist
+  app.get('/current/setup-status', { preHandler: [requireAuth, requireTenant] }, async (request) => {
+    const status = await service.getSetupStatus(request.ctx.tenant!.organizationId);
+    return { data: status };
+  });
+
   // Update current organization (requires owner/admin)
   app.patch('/current', { preHandler: [requireAuth, requireTenant, requireOrgAdmin, validateBody(updateOrganizationSchema)] }, async (request, reply) => {
     const result = await service.update(request.ctx.tenant!.organizationId, (request as any).validatedBody);

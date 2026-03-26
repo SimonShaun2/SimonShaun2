@@ -16,7 +16,7 @@ export function registerRoutes(app: FastifyInstance) {
 
   app.post('/invite', { preHandler: [validateBody(inviteMemberSchema)] }, async (request, reply) => {
     const body = (request as any).validatedBody;
-    const result = await service.invite({ ...body, orgId: request.ctx.tenant!.organizationId });
+    const result = await service.invite(request.ctx.tenant!.organizationId, body);
     return reply.status(201).send({ data: result });
   });
 

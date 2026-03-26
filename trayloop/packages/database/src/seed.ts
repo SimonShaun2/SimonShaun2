@@ -1,4 +1,5 @@
 import { db } from './client.js';
+import { hashPassword } from '@trayloop/auth';
 import {
   users,
   organizations,
@@ -17,15 +18,21 @@ import {
   payments,
 } from './schema/index.js';
 
+const SEED_PASSWORD = 'password123';
+
 async function seed() {
   console.log('🌱 Seeding database...\n');
+
+  // Hash a real password for all seed users
+  const hashedPassword = await hashPassword(SEED_PASSWORD);
+  console.log(`  Using password "${SEED_PASSWORD}" for all seed users\n`);
 
   // --- Users ---
   console.log('Creating users...');
   const [ownerUser] = await db.insert(users).values({
     email: 'owner@trayloop.dev',
     name: 'Alex Rivera',
-    passwordHash: '$2a$12$placeholder.hash.for.seeding.only',
+    passwordHash: hashedPassword,
     role: 'merchant',
     emailVerified: true,
     isActive: true,
@@ -34,7 +41,7 @@ async function seed() {
   const [staffUser] = await db.insert(users).values({
     email: 'staff@trayloop.dev',
     name: 'Jordan Lee',
-    passwordHash: '$2a$12$placeholder.hash.for.seeding.only',
+    passwordHash: hashedPassword,
     role: 'merchant',
     emailVerified: true,
     isActive: true,
@@ -43,7 +50,7 @@ async function seed() {
   const [customerUser] = await db.insert(users).values({
     email: 'customer@trayloop.dev',
     name: 'Sam Chen',
-    passwordHash: '$2a$12$placeholder.hash.for.seeding.only',
+    passwordHash: hashedPassword,
     role: 'customer',
     emailVerified: true,
     isActive: true,

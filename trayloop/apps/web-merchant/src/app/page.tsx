@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../lib/api';
+import SetupChecklist from '../components/setup-checklist';
 
 interface Order {
   id: string;
@@ -66,6 +67,7 @@ export default function OrdersPage() {
 
   return (
     <div>
+      <SetupChecklist />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Orders</h1>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
