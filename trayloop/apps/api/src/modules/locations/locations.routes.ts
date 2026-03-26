@@ -21,8 +21,7 @@ export function registerRoutes(app: FastifyInstance) {
   });
 
   app.post('/', { preHandler: [validateBody(createLocationSchema)] }, async (request, reply) => {
-    const body = (request as any).validatedBody;
-    const result = await service.create({ ...body, orgId: request.ctx.tenant!.organizationId });
+    const result = await service.create(request.ctx.tenant!.organizationId, (request as any).validatedBody);
     return reply.status(201).send({ data: result });
   });
 
