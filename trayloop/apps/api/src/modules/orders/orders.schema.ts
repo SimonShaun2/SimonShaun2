@@ -74,20 +74,20 @@ export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 // --- Merchant dashboard ---
 
 export const orderStatus = z.enum([
-  'draft',
   'submitted',
   'awaiting_deposit',
   'confirmed',
-  'in_progress',
   'completed',
   'cancelled',
-  'refunded',
 ]);
 
 export const updateOrderStatusSchema = z.object({
   status: orderStatus,
-  reason: z.string().max(500).trim().optional(),
-});
+  reason: z.string().min(1, 'Reason is required when cancelling').max(500).trim().optional(),
+}).refine(
+  (data) => !(data.status === 'cancelled' && !data.reason),
+  { message: 'Reason is required when cancelling an order', path: ['reason'] },
+);
 
 export type UpdateOrderStatusInput = z.infer<typeof updateOrderStatusSchema>;
 

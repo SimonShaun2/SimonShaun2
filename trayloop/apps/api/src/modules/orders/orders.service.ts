@@ -16,16 +16,24 @@ import type { EventBus } from '../../lib/event-bus/index.js';
 import type { CreateOrderInput, UpdateOrderStatusInput, OrderListQuery, SendPaymentLinkInput } from './orders.schema.js';
 
 // --- Status transition rules ---
+// Linear flow: submitted → awaiting_deposit → confirmed → completed
+// Cancellation allowed from any non-terminal state
 
-const VALID_TRANSITIONS: Record<string, string[]> = {
-  submitted: ['awaiting_deposit', 'confirmed', 'cancelled'],
-  awaiting_deposit: ['confirmed', 'cancelled'],
-  confirmed: ['in_progress', 'cancelled'],
-  in_progress: ['completed', 'cancelled'],
-  completed: ['refunded'],
-  cancelled: [],
-  refunded: [],
+const FORWARD_TRANSITIONS: Record<string, string> = {
+  submitted: 'awaiting_deposit',
+  awaiting_deposit: 'confirmed',
+  confirmed: 'completed',
 };
+
+const TERMINAL_STATUSES = new Set(['completed', 'cancelled']);
+
+function getAllowedTransitions(currentStatus: string): string[] {
+  const allowed: string[] = [];
+  const forward = FORWARD_TRANSITIONS[currentStatus];
+  if (forward) allowed.push(forward);
+  if (!TERMINAL_STATUSES.has(currentStatus)) allowed.push('cancelled');
+  return allowed;
+}
 
 // --- List orders (merchant dashboard) ---
 
@@ -208,7 +216,7 @@ export async function getById(id: string, orgId: string) {
   const addOnSubtotal = addOnItems.reduce((sum, i) => sum + i.totalPrice, 0);
 
   // Determine allowed status transitions for UI
-  const allowedTransitions = VALID_TRANSITIONS[order.status] ?? [];
+  const allowedTransitions = getAllowedTransitions(order.status);
 
   return {
     id: order.id,
@@ -275,21 +283,35 @@ export async function updateStatus(id: string, orgId: string, input: UpdateOrder
 
   if (!existing) throw new NotFoundError('Order');
 
-  const allowed = VALID_TRANSITIONS[existing.status];
-  if (!allowed || !allowed.includes(input.status)) {
+  // Terminal states cannot be changed
+  if (TERMINAL_STATUSES.has(existing.status)) {
     throw new ValidationError(
-      `Cannot transition from "${existing.status}" to "${input.status}"`,
+      `Order is "${existing.status}" and cannot be updated`,
     );
   }
 
-  const completedAt = input.status === 'completed' ? new Date() : undefined;
+  // Validate transition
+  const allowed = getAllowedTransitions(existing.status);
+  if (!allowed.includes(input.status)) {
+    throw new ValidationError(
+      `Cannot transition from "${existing.status}" to "${input.status}". ` +
+      `Allowed: ${allowed.join(', ')}`,
+    );
+  }
+
+  // Set timestamps based on target status
+  const now = new Date();
+  const completedAt = input.status === 'completed' ? now : undefined;
 
   const [updated] = await db
     .update(orders)
     .set({
       status: input.status,
       completedAt,
-      updatedAt: new Date(),
+      notes: input.status === 'cancelled' && input.reason
+        ? sql`coalesce(${orders.notes}, '') || E'\n[Cancelled] ' || ${input.reason}`
+        : undefined,
+      updatedAt: now,
     })
     .where(eq(orders.id, id))
     .returning();
@@ -304,6 +326,7 @@ export async function updateStatus(id: string, orgId: string, input: UpdateOrder
     id: updated.id,
     status: updated.status,
     previousStatus: existing.status,
+    allowedTransitions: getAllowedTransitions(updated.status),
     updatedAt: updated.updatedAt,
   };
 }
