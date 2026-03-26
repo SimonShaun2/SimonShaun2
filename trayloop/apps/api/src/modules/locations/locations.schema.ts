@@ -1,7 +1,6 @@
 import { z } from 'zod';
 
 export const createLocationSchema = z.object({
-  orgId: z.string(),
   name: z.string().min(1).max(255),
   address: z.string(),
   city: z.string(),
@@ -12,7 +11,7 @@ export const createLocationSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
-export const updateLocationSchema = createLocationSchema.omit({ orgId: true }).partial();
+export const updateLocationSchema = createLocationSchema.partial();
 
 export type CreateLocationInput = z.infer<typeof createLocationSchema>;
 export type UpdateLocationInput = z.infer<typeof updateLocationSchema>;

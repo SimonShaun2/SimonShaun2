@@ -1,11 +1,13 @@
 import type { FastifyInstance } from 'fastify';
 import { validateBody } from '../../lib/middleware/validate.js';
-import { registerSchema, loginSchema } from './auth.schema.js';
+import { requireAuth } from '../../lib/middleware/auth.js';
+import { registerSchema, loginSchema, refreshSchema } from './auth.schema.js';
 import * as service from './auth.service.js';
 
 export function registerRoutes(app: FastifyInstance) {
+  // Public routes
   app.post('/register', { preHandler: [validateBody(registerSchema)] }, async (request, reply) => {
-    const result = await service.register((request as any).validatedBody, (app as any).eventBus);
+    const result = await service.register(request.ctx?.validatedBody ?? (request as any).validatedBody, (app as any).eventBus);
     return reply.status(201).send({ data: result });
   });
 
@@ -14,13 +16,20 @@ export function registerRoutes(app: FastifyInstance) {
     return reply.send({ data: result });
   });
 
-  app.post('/refresh', async (request, reply) => {
-    // TODO: Token refresh
-    return reply.send({ data: { message: 'Not implemented' } });
+  app.post('/refresh', { preHandler: [validateBody(refreshSchema)] }, async (request, reply) => {
+    const { token } = (request as any).validatedBody;
+    const result = await service.refreshToken(token);
+    return reply.send({ data: result });
   });
 
-  app.post('/logout', async (request, reply) => {
-    // TODO: Session invalidation
+  // Protected routes
+  app.get('/me', { preHandler: [requireAuth] }, async (request) => {
+    const result = await service.getMe(request.ctx.user.id);
+    return { data: result };
+  });
+
+  app.post('/logout', async (_request, reply) => {
+    // Stateless JWT — client discards the token
     return reply.send({ data: { message: 'Logged out' } });
   });
 }

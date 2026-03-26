@@ -3,7 +3,6 @@ import { z } from 'zod';
 export const memberRole = z.enum(['owner', 'admin', 'manager', 'staff']);
 
 export const inviteMemberSchema = z.object({
-  orgId: z.string(),
   email: z.string().email(),
   role: memberRole.default('staff'),
 });

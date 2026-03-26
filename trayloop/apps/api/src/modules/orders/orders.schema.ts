@@ -11,7 +11,6 @@ export const orderStatus = z.enum([
 ]);
 
 export const createOrderSchema = z.object({
-  orgId: z.string(),
   customerId: z.string(),
   locationId: z.string().optional(),
   items: z.array(z.object({

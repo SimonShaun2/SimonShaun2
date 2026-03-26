@@ -16,6 +16,7 @@
     "stripe": "^17.0.0",
     "ioredis": "^5.4.0",
     "zod": "^3.23.0",
+    "drizzle-orm": "^0.35.0",
     "@trayloop/database": "*",
     "@trayloop/types": "*",
     "@trayloop/auth": "*",

@@ -1,7 +1,6 @@
 import { z } from 'zod';
 
 export const createPackageSchema = z.object({
-  orgId: z.string(),
   name: z.string().min(1).max(255),
   description: z.string().default(''),
   catalogItemIds: z.array(z.string()).min(1),
@@ -11,7 +10,7 @@ export const createPackageSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
-export const updatePackageSchema = createPackageSchema.omit({ orgId: true }).partial();
+export const updatePackageSchema = createPackageSchema.partial();
 
 export type CreatePackageInput = z.infer<typeof createPackageSchema>;
 export type UpdatePackageInput = z.infer<typeof updatePackageSchema>;

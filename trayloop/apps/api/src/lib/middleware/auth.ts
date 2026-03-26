@@ -1,8 +1,9 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { verifyToken } from '@trayloop/auth';
 import { UnauthorizedError } from '../errors.js';
+import type { AuthUser } from '../context.js';
 
-export async function requireAuth(request: FastifyRequest, reply: FastifyReply) {
+export async function requireAuth(request: FastifyRequest, _reply: FastifyReply) {
   const authHeader = request.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {
     throw new UnauthorizedError('Missing or invalid authorization header');
@@ -11,7 +12,12 @@ export async function requireAuth(request: FastifyRequest, reply: FastifyReply) 
   const token = authHeader.slice(7);
   try {
     const payload = await verifyToken(token);
-    (request as any).user = payload;
+    const user: AuthUser = {
+      id: payload.sub,
+      email: payload.email,
+      role: payload.role,
+    };
+    request.ctx = { user };
   } catch {
     throw new UnauthorizedError('Invalid or expired token');
   }
