@@ -14,7 +14,7 @@ import postgres from 'postgres';
 import { ValidationError, NotFoundError } from '../../lib/errors.js';
 import { calculatePricing } from '../../lib/pricing.js';
 import type { EventBus } from '../../lib/event-bus/index.js';
-import type { CreateOrderInput, UpdateOrderStatusInput, OrderListQuery, SendDepositLinkInput } from './orders.schema.js';
+import type { CreateOrderInput, UpdateOrderStatusInput, OrderListQuery, SendDepositLinkInput, ReorderInput } from './orders.schema.js';
 
 // --- Status transition rules ---
 // Deposit required:  submitted → awaiting_deposit → confirmed → completed
@@ -800,6 +800,167 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
       })),
       recurringOrderId: result.recurringOrderId,
       createdAt: result.order.createdAt,
+    };
+  } finally {
+    await txSql.end();
+  }
+}
+
+// --- Reorder ---
+
+export async function reorder(sourceOrderId: string, orgId: string, input: ReorderInput, eventBus: EventBus) {
+  // 1. Fetch source order + verify org ownership
+  const [sourceOrder] = await db
+    .select()
+    .from(orders)
+    .where(and(eq(orders.id, sourceOrderId), eq(orders.organizationId, orgId)))
+    .limit(1);
+
+  if (!sourceOrder) throw new NotFoundError('Order');
+
+  // 2. Fetch source order items
+  const sourceItems = await db
+    .select()
+    .from(orderItems)
+    .where(eq(orderItems.orderId, sourceOrderId));
+
+  if (sourceItems.length === 0) {
+    throw new ValidationError('Source order has no items to reorder');
+  }
+
+  // 3. Reconstruct package and add-on selections from line items
+  const packageSelections = sourceItems
+    .filter((item) => item.packageId !== null)
+    .map((item) => ({ packageId: item.packageId!, quantity: 1 }));
+
+  const addOnSelections = sourceItems
+    .filter((item) => item.packageId === null)
+    .map((item) => ({
+      // We need the add-on ID — stored items don't have it directly,
+      // so we pass quantity through; pricing service validates by name match
+      addOnId: item.name, // placeholder — see step 4
+      quantity: item.quantity,
+    }));
+
+  // 4. Look up actual add-on IDs by matching names within the org's catalogs
+  //    (order_items store the name at time of order, add-ons may still exist)
+  const resolvedAddOns: Array<{ addOnId: string; quantity: number }> = [];
+  if (addOnSelections.length > 0) {
+    const { addOns: addOnsTable, catalogs } = await import('@trayloop/database');
+    const orgAddOns = await db
+      .select({ id: addOnsTable.id, name: addOnsTable.name })
+      .from(addOnsTable)
+      .innerJoin(catalogs, eq(catalogs.id, addOnsTable.catalogId))
+      .where(and(eq(catalogs.organizationId, orgId), eq(addOnsTable.isActive, true)));
+
+    for (const item of sourceItems.filter((i) => i.packageId === null)) {
+      const match = orgAddOns.find((a) => a.name === item.name);
+      if (match) {
+        resolvedAddOns.push({ addOnId: match.id, quantity: item.quantity });
+      }
+      // Skip add-ons that no longer exist — don't block reorder
+    }
+  }
+
+  const eventDate = new Date(input.eventDate);
+  const headcount = input.headcount ?? sourceOrder.headCount ?? 1;
+
+  // 5. Validate location is still active
+  if (sourceOrder.locationId) {
+    const { settings } = await validateLocation(orgId, sourceOrder.locationId);
+    validateLeadTime(eventDate, settings);
+  }
+
+  // 6. Recalculate pricing — never copy old totals
+  const pricing = await calculatePricing({
+    headcount,
+    packages: packageSelections,
+    addOns: resolvedAddOns.length > 0 ? resolvedAddOns : undefined,
+    locationId: sourceOrder.locationId ?? undefined,
+  });
+
+  const { lineItems, total: totalAmount } = pricing;
+
+  // 7. Create new order in transaction
+  const connectionString = process.env.DATABASE_URL!;
+  const txSql = postgres(connectionString);
+
+  try {
+    const result = await txSql.begin(async (tx) => {
+      const { drizzle } = await import('drizzle-orm/postgres-js');
+      const txDb = drizzle(tx);
+
+      const [newOrder] = await txDb
+        .insert(orders)
+        .values({
+          organizationId: orgId,
+          locationId: sourceOrder.locationId,
+          customerId: sourceOrder.customerId,
+          status: 'submitted',
+          totalAmount,
+          currency: 'USD',
+          headCount: headcount,
+          scheduledAt: eventDate,
+          notes: input.notes ?? sourceOrder.notes,
+        })
+        .returning();
+
+      await txDb.insert(orderItems).values(
+        lineItems.map((item) => ({
+          orderId: newOrder.id,
+          packageId: item.type === 'package' ? item.referenceId : null,
+          name: item.name,
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          totalPrice: item.totalPrice,
+        })),
+      );
+
+      return newOrder;
+    });
+
+    await eventBus.emit('order.created', {
+      orderId: result.id,
+      customerId: sourceOrder.customerId,
+      orgId,
+    });
+
+    const depositRequired = await getDepositRequired(sourceOrder.locationId);
+
+    // Fetch customer name for response
+    const [customer] = await db
+      .select({ firstName: customers.firstName, lastName: customers.lastName, email: customers.email })
+      .from(customers)
+      .where(eq(customers.id, sourceOrder.customerId))
+      .limit(1);
+
+    return {
+      id: result.id,
+      reorderedFrom: sourceOrderId,
+      status: result.status,
+      eventDate: result.scheduledAt,
+      headCount: result.headCount,
+      customer: {
+        name: `${customer.firstName} ${customer.lastName}`,
+        email: customer.email,
+      },
+      pricing: {
+        packageSubtotal: pricing.packageSubtotal,
+        addOnSubtotal: pricing.addOnSubtotal,
+        total: pricing.total,
+        currency: pricing.currency,
+      },
+      items: lineItems.map((item) => ({
+        type: item.type,
+        name: item.name,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.totalPrice,
+      })),
+      depositRequired,
+      allowedTransitions: getAllowedTransitions('submitted', depositRequired),
+      createdAt: result.createdAt,
     };
   } finally {
     await txSql.end();

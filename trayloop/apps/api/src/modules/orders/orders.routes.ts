@@ -7,6 +7,7 @@ import {
   updateOrderStatusSchema,
   orderListQuerySchema,
   sendDepositLinkSchema,
+  reorderSchema,
 } from './orders.schema.js';
 import * as service from './orders.service.js';
 
@@ -79,5 +80,18 @@ export function registerRoutes(app: FastifyInstance) {
       (app as any).eventBus,
     );
     return reply.send({ data: result });
+  });
+
+  // Reorder from existing order
+  app.post('/:id/reorder', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = reorderSchema.parse(request.body);
+    const result = await service.reorder(
+      id,
+      request.ctx.tenant!.organizationId,
+      body,
+      (app as any).eventBus,
+    );
+    return reply.status(201).send({ data: result });
   });
 }

@@ -106,3 +106,14 @@ export const sendDepositLinkSchema = z.object({
 });
 
 export type SendDepositLinkInput = z.infer<typeof sendDepositLinkSchema>;
+
+export const reorderSchema = z.object({
+  eventDate: z.string().datetime('Invalid date format — use ISO 8601'),
+  headcount: z.number().int().positive().optional(),
+  notes: z.string().max(2000).trim().optional(),
+}).refine(
+  (data) => new Date(data.eventDate) > new Date(),
+  { message: 'Event date must be in the future', path: ['eventDate'] },
+);
+
+export type ReorderInput = z.infer<typeof reorderSchema>;
