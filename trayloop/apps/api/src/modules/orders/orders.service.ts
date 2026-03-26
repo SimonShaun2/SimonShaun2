@@ -54,18 +54,27 @@ export async function listByOrg(orgId: string, query: OrderListQuery) {
         currency: orders.currency,
         headCount: orders.headCount,
         scheduledAt: orders.scheduledAt,
+        completedAt: orders.completedAt,
+        notes: orders.notes,
         createdAt: orders.createdAt,
+        updatedAt: orders.updatedAt,
         locationName: locations.name,
+        locationCity: locations.city,
         customerFirstName: customers.firstName,
         customerLastName: customers.lastName,
         customerEmail: customers.email,
+        customerPhone: customers.phone,
         customerCompany: customers.companyName,
+        itemCount: sql<number>`(
+          select count(*)::int from order_items
+          where order_items.order_id = orders.id
+        )`,
       })
       .from(orders)
       .innerJoin(customers, eq(customers.id, orders.customerId))
       .leftJoin(locations, eq(locations.id, orders.locationId))
       .where(where)
-      .orderBy(desc(orders.createdAt))
+      .orderBy(desc(orders.scheduledAt))
       .limit(query.pageSize)
       .offset(offset),
     db
@@ -80,16 +89,26 @@ export async function listByOrg(orgId: string, query: OrderListQuery) {
     orders: rows.map((r) => ({
       id: r.id,
       status: r.status,
-      totalAmount: r.totalAmount,
-      currency: r.currency,
+      eventDate: r.scheduledAt,
       headCount: r.headCount,
-      scheduledAt: r.scheduledAt,
-      createdAt: r.createdAt,
-      location: r.locationName,
+      itemCount: r.itemCount,
+      pricing: {
+        total: r.totalAmount,
+        currency: r.currency,
+      },
+      location: r.locationName
+        ? { name: r.locationName, city: r.locationCity }
+        : null,
       customer: {
         name: `${r.customerFirstName} ${r.customerLastName}`,
         email: r.customerEmail,
+        phone: r.customerPhone,
         company: r.customerCompany,
+      },
+      timestamps: {
+        created: r.createdAt,
+        updated: r.updatedAt,
+        completed: r.completedAt,
       },
     })),
     pagination: {
@@ -102,7 +121,7 @@ export async function listByOrg(orgId: string, query: OrderListQuery) {
 }
 
 export async function listByCustomer(customerId: string) {
-  return db
+  const rows = await db
     .select({
       id: orders.id,
       status: orders.status,
@@ -111,10 +130,22 @@ export async function listByCustomer(customerId: string) {
       headCount: orders.headCount,
       scheduledAt: orders.scheduledAt,
       createdAt: orders.createdAt,
+      locationName: locations.name,
     })
     .from(orders)
+    .leftJoin(locations, eq(locations.id, orders.locationId))
     .where(eq(orders.customerId, customerId))
-    .orderBy(desc(orders.createdAt));
+    .orderBy(desc(orders.scheduledAt));
+
+  return rows.map((r) => ({
+    id: r.id,
+    status: r.status,
+    eventDate: r.scheduledAt,
+    headCount: r.headCount,
+    pricing: { total: r.totalAmount, currency: r.currency },
+    location: r.locationName,
+    createdAt: r.createdAt,
+  }));
 }
 
 // --- Get order detail ---
@@ -128,10 +159,12 @@ export async function getById(id: string, orgId: string) {
 
   if (!order) throw new NotFoundError('Order');
 
-  const [items, [customer], [location]] = await Promise.all([
+  // Fetch all related data in parallel
+  const [items, [customer], locationRow, [address]] = await Promise.all([
     db.select().from(orderItems).where(eq(orderItems.orderId, id)),
     db
       .select({
+        id: customers.id,
         firstName: customers.firstName,
         lastName: customers.lastName,
         email: customers.email,
@@ -143,53 +176,91 @@ export async function getById(id: string, orgId: string) {
       .limit(1),
     order.locationId
       ? db
-          .select({ name: locations.name, address: locations.address, city: locations.city, state: locations.state })
+          .select({
+            name: locations.name,
+            address: locations.address,
+            city: locations.city,
+            state: locations.state,
+            zipCode: locations.zipCode,
+          })
           .from(locations)
           .where(eq(locations.id, order.locationId))
           .limit(1)
-      : Promise.resolve([null]),
+          .then((rows) => rows[0] ?? null)
+      : Promise.resolve(null),
+    db
+      .select({
+        address: customerAddresses.address,
+        city: customerAddresses.city,
+        state: customerAddresses.state,
+        zipCode: customerAddresses.zipCode,
+        country: customerAddresses.country,
+      })
+      .from(customerAddresses)
+      .where(eq(customerAddresses.customerId, order.customerId))
+      .limit(1),
   ]);
 
-  // Fetch delivery address if exists
-  const [address] = await db
-    .select({
-      address: customerAddresses.address,
-      city: customerAddresses.city,
-      state: customerAddresses.state,
-      zipCode: customerAddresses.zipCode,
-    })
-    .from(customerAddresses)
-    .where(eq(customerAddresses.customerId, order.customerId))
-    .limit(1);
+  // Compute pricing breakdown from line items
+  const packageItems = items.filter((i) => i.packageId !== null);
+  const addOnItems = items.filter((i) => i.packageId === null);
+  const packageSubtotal = packageItems.reduce((sum, i) => sum + i.totalPrice, 0);
+  const addOnSubtotal = addOnItems.reduce((sum, i) => sum + i.totalPrice, 0);
+
+  // Determine allowed status transitions for UI
+  const allowedTransitions = VALID_TRANSITIONS[order.status] ?? [];
 
   return {
     id: order.id,
     status: order.status,
-    totalAmount: order.totalAmount,
-    currency: order.currency,
+    allowedTransitions,
+    eventDate: order.scheduledAt,
     headCount: order.headCount,
-    scheduledAt: order.scheduledAt,
-    completedAt: order.completedAt,
     notes: order.notes,
-    createdAt: order.createdAt,
-    updatedAt: order.updatedAt,
-    location: location
-      ? { name: location.name, address: location.address, city: location.city, state: location.state }
+    pricing: {
+      packageSubtotal,
+      addOnSubtotal,
+      total: order.totalAmount,
+      currency: order.currency,
+    },
+    location: locationRow
+      ? {
+          name: locationRow.name,
+          address: locationRow.address,
+          city: locationRow.city,
+          state: locationRow.state,
+          zipCode: locationRow.zipCode,
+        }
       : null,
     customer: {
+      id: customer.id,
       name: `${customer.firstName} ${customer.lastName}`,
       email: customer.email,
       phone: customer.phone,
       company: customer.companyName,
     },
     deliveryAddress: address ?? null,
-    items: items.map((i) => ({
-      name: i.name,
-      description: i.description,
-      quantity: i.quantity,
-      unitPrice: i.unitPrice,
-      totalPrice: i.totalPrice,
-    })),
+    items: {
+      packages: packageItems.map((i) => ({
+        name: i.name,
+        description: i.description,
+        quantity: i.quantity,
+        unitPrice: i.unitPrice,
+        totalPrice: i.totalPrice,
+      })),
+      addOns: addOnItems.map((i) => ({
+        name: i.name,
+        description: i.description,
+        quantity: i.quantity,
+        unitPrice: i.unitPrice,
+        totalPrice: i.totalPrice,
+      })),
+    },
+    timestamps: {
+      created: order.createdAt,
+      updated: order.updatedAt,
+      completed: order.completedAt,
+    },
   };
 }
 
