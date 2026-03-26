@@ -503,13 +503,13 @@ export async function markPaid(orderId: string, orgId: string, eventBus: EventBu
       const { drizzle } = await import('drizzle-orm/postgres-js');
       const txDb = drizzle(tx);
 
-      // Mark deposit as collected
+      // Mark deposit as paid
       const now = new Date();
       const [updatedDeposit] = await txDb
         .update(deposits)
         .set({
-          status: 'collected',
-          collectedAt: now,
+          status: 'paid',
+          paidAt: now,
           updatedAt: now,
         })
         .where(eq(deposits.id, pendingDeposit.id))
@@ -549,7 +549,7 @@ export async function markPaid(orderId: string, orgId: string, eventBus: EventBu
         amount: result.deposit.amount,
         currency: result.deposit.currency,
         status: result.deposit.status,
-        collectedAt: result.deposit.collectedAt,
+        paidAt: result.deposit.paidAt,
       },
       depositRequired,
       allowedTransitions: getAllowedTransitions('confirmed', depositRequired),

@@ -24,8 +24,7 @@ export const deposits = pgTable('deposits', {
   currency: varchar('currency', { length: 3 }).notNull().default('USD'),
   status: depositStatusEnum('status').notNull().default('pending'),
   stripePaymentIntentId: text('stripe_payment_intent_id').unique(),
-  collectedAt: timestamp('collected_at', { withTimezone: true }),
-  appliedAt: timestamp('applied_at', { withTimezone: true }),
+  paidAt: timestamp('paid_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
