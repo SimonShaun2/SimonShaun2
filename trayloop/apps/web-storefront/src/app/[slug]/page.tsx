@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { fetchStorefront } from '../../lib/api';
 import type { StorefrontData, StorefrontLocation, StorefrontMenu, StorefrontPackage, StorefrontAddOn } from '../../lib/api';
 import type { Metadata } from 'next';
+import CheckoutForm from '../../components/checkout-form';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -62,6 +63,8 @@ export default async function StorefrontPage({ params }: PageProps) {
       {menu.map((catalog, i) => (
         <MenuSection key={i} menu={catalog} />
       ))}
+
+      <CheckoutForm data={data} />
     </main>
   );
 }

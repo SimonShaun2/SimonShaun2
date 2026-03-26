@@ -91,3 +91,67 @@ export async function fetchStorefront(slug: string): Promise<StorefrontData> {
   const json = await res.json();
   return json.data;
 }
+
+export interface OrderSubmission {
+  locationId: string;
+  serviceType: 'delivery' | 'pickup';
+  eventDate: string;
+  headcount: number;
+  packages: Array<{ packageId: string; quantity: number }>;
+  addOns?: Array<{ addOnId: string; quantity: number }>;
+  customer: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    companyName?: string;
+  };
+  deliveryAddress?: {
+    address: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country?: string;
+  };
+  notes?: string;
+}
+
+export interface OrderConfirmation {
+  id: string;
+  status: string;
+  headCount: number;
+  scheduledAt: string;
+  customer: { firstName: string; lastName: string; email: string };
+  pricing: { packageSubtotal: number; addOnSubtotal: number; total: number; currency: string };
+  items: Array<{ type: string; name: string; quantity: number; unitPrice: number; totalPrice: number }>;
+  depositRequired?: boolean;
+  createdAt: string;
+}
+
+export async function submitOrder(order: OrderSubmission, idempotencyKey: string): Promise<OrderConfirmation> {
+  const res = await fetch(`${API_URL}/api/orders`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Idempotency-Key': idempotencyKey,
+    },
+    body: JSON.stringify(order),
+  });
+
+  const json = await res.json();
+
+  if (!res.ok) {
+    const msg = json.error?.message ?? 'Order submission failed';
+    const details = json.error?.details;
+    throw new OrderError(msg, details);
+  }
+
+  return json.data;
+}
+
+export class OrderError extends Error {
+  constructor(message: string, public details?: Array<{ field: string; message: string }>) {
+    super(message);
+    this.name = 'OrderError';
+  }
+}
