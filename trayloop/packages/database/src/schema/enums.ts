@@ -12,4 +12,5 @@ export const notificationStatusEnum = pgEnum('notification_status', ['pending', 
 export const catalogItemTypeEnum = pgEnum('catalog_item_type', ['service', 'physical_good', 'digital_good', 'bundle']);
 export const packagePricingEnum = pgEnum('package_pricing', ['per_head', 'flat']);
 export const recurrenceIntervalEnum = pgEnum('recurrence_interval', ['weekly', 'biweekly', 'monthly', 'quarterly']);
+export const followUpStatusEnum = pgEnum('follow_up_status', ['pending', 'completed']);
 export const auditActionEnum = pgEnum('audit_action', ['create', 'update', 'delete', 'login', 'logout', 'status_change']);
