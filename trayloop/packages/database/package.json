@@ -9,6 +9,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
+    "db:seed": "tsx src/seed.ts",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
@@ -16,6 +17,7 @@
     "postgres": "^3.4.0"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.28.0"
+    "drizzle-kit": "^0.28.0",
+    "tsx": "^4.0.0"
   }
 }
