@@ -5,28 +5,28 @@ import { z } from 'zod';
 export const serviceType = z.enum(['delivery', 'pickup']);
 
 export const customerInfoSchema = z.object({
-  firstName: z.string().min(1).max(255),
-  lastName: z.string().min(1).max(255),
-  email: z.string().email(),
-  phone: z.string().optional(),
-  companyName: z.string().optional(),
+  firstName: z.string().min(1, 'First name is required').max(255).trim(),
+  lastName: z.string().min(1, 'Last name is required').max(255).trim(),
+  email: z.string().email('Valid email is required').trim().toLowerCase(),
+  phone: z.string().min(7, 'Phone number too short').max(20).optional(),
+  companyName: z.string().max(255).trim().optional(),
 });
 
 export const deliveryAddressSchema = z.object({
-  address: z.string().min(1),
-  city: z.string().min(1),
-  state: z.string().min(1),
-  zipCode: z.string().min(1),
+  address: z.string().min(1, 'Street address is required').trim(),
+  city: z.string().min(1, 'City is required').trim(),
+  state: z.string().min(1, 'State is required').trim(),
+  zipCode: z.string().min(3, 'Zip code is required').max(20).trim(),
   country: z.string().length(2).default('US'),
 });
 
 export const selectedPackageSchema = z.object({
-  packageId: z.string().uuid(),
+  packageId: z.string().uuid('Invalid package ID'),
   quantity: z.number().int().positive().default(1),
 });
 
 export const selectedAddOnSchema = z.object({
-  addOnId: z.string().uuid(),
+  addOnId: z.string().uuid('Invalid add-on ID'),
   quantity: z.number().int().positive().default(1),
 });
 
@@ -34,23 +34,39 @@ export const recurringSettingsSchema = z.object({
   interval: z.enum(['weekly', 'biweekly', 'monthly', 'quarterly']),
   endDate: z.string().datetime().optional(),
   preferredDay: z.string().optional(),
-  preferredTime: z.string().optional(),
+  preferredTime: z.string().regex(/^\d{2}:\d{2}$/, 'Use HH:MM format').optional(),
 });
 
 export const createOrderSchema = z.object({
-  locationId: z.string().uuid(),
+  locationId: z.string().uuid('Invalid location ID'),
   serviceType: serviceType,
-  eventDate: z.string().datetime(),
-  headcount: z.number().int().positive(),
-  packages: z.array(selectedPackageSchema).min(1),
-  addOns: z.array(selectedAddOnSchema).optional(),
+  eventDate: z.string().datetime('Invalid date format — use ISO 8601'),
+  headcount: z.number().int().positive('Headcount must be at least 1').max(10000, 'Headcount exceeds maximum'),
+  packages: z.array(selectedPackageSchema).min(1, 'At least one package is required'),
+  addOns: z.array(selectedAddOnSchema).optional().default([]),
   customer: customerInfoSchema,
   deliveryAddress: deliveryAddressSchema.optional(),
   recurring: recurringSettingsSchema.optional(),
-  notes: z.string().optional(),
+  notes: z.string().max(2000).trim().optional(),
 }).refine(
   (data) => !(data.serviceType === 'delivery' && !data.deliveryAddress),
-  { message: 'Delivery address required for delivery orders', path: ['deliveryAddress'] },
+  { message: 'Delivery address is required for delivery orders', path: ['deliveryAddress'] },
+).refine(
+  (data) => new Date(data.eventDate) > new Date(),
+  { message: 'Event date must be in the future', path: ['eventDate'] },
+).refine(
+  (data) => {
+    const ids = data.packages.map((p) => p.packageId);
+    return new Set(ids).size === ids.length;
+  },
+  { message: 'Duplicate package selections are not allowed', path: ['packages'] },
+).refine(
+  (data) => {
+    if (!data.addOns || data.addOns.length === 0) return true;
+    const ids = data.addOns.map((a) => a.addOnId);
+    return new Set(ids).size === ids.length;
+  },
+  { message: 'Duplicate add-on selections are not allowed', path: ['addOns'] },
 );
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
@@ -70,7 +86,7 @@ export const orderStatus = z.enum([
 
 export const updateOrderStatusSchema = z.object({
   status: orderStatus,
-  reason: z.string().optional(),
+  reason: z.string().max(500).trim().optional(),
 });
 
 export type UpdateOrderStatusInput = z.infer<typeof updateOrderStatusSchema>;

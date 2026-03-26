@@ -279,52 +279,83 @@ export async function sendPaymentLink(orgId: string, input: SendPaymentLinkInput
   };
 }
 
-// --- Create Order (storefront submission) ---
+// --- Location validation (reusable) ---
 
-export async function create(orgId: string, input: CreateOrderInput, eventBus: EventBus) {
-  // 1. Validate location belongs to org and is active
+async function validateLocation(orgId: string, locationId: string) {
   const [location] = await db
-    .select()
+    .select({ id: locations.id, name: locations.name, isActive: locations.isActive })
     .from(locations)
-    .where(and(eq(locations.id, input.locationId), eq(locations.organizationId, orgId), eq(locations.isActive, true)))
+    .where(and(eq(locations.id, locationId), eq(locations.organizationId, orgId)))
     .limit(1);
 
   if (!location) {
-    throw new ValidationError('Location not found or inactive');
+    throw new ValidationError('Location not found for this organization');
+  }
+  if (!location.isActive) {
+    throw new ValidationError(`Location "${location.name}" is currently inactive and not accepting orders`);
   }
 
-  // 2. Fetch location settings for validation
   const [settings] = await db
     .select()
     .from(locationSettings)
     .where(eq(locationSettings.locationId, location.id))
     .limit(1);
 
-  // 3. Validate service type
-  if (settings) {
-    if (input.serviceType === 'delivery' && !settings.deliveryEnabled) {
-      throw new ValidationError('Delivery is not available at this location');
-    }
-    if (input.serviceType === 'pickup' && !settings.pickupEnabled) {
-      throw new ValidationError('Pickup is not available at this location');
-    }
-  }
+  return { location, settings };
+}
 
-  // 4. Validate lead time
-  const eventDate = new Date(input.eventDate);
-  const now = new Date();
-  const leadTimeMs = eventDate.getTime() - now.getTime();
-  const leadTimeHours = leadTimeMs / (1000 * 60 * 60);
-  const requiredLeadTimeHours = (settings?.leadTimeDays ?? 3) * 24;
+function validateServiceType(
+  serviceType: string,
+  settings: typeof locationSettings.$inferSelect | undefined,
+) {
+  if (!settings) return;
 
-  if (leadTimeHours < requiredLeadTimeHours) {
+  if (serviceType === 'delivery' && !settings.deliveryEnabled) {
     throw new ValidationError(
-      `Event date must be at least ${requiredLeadTimeHours} hours from now (${Math.ceil(requiredLeadTimeHours / 24)} days lead time)`,
+      'Delivery is not available at this location. Available: pickup',
     );
   }
+  if (serviceType === 'pickup' && !settings.pickupEnabled) {
+    throw new ValidationError(
+      'Pickup is not available at this location. Available: delivery',
+    );
+  }
+}
 
-  // 5. Calculate pricing via centralized pricing service
-  // Validates packages, headcount constraints, add-ons, and minimum order amount
+function validateLeadTime(
+  eventDate: Date,
+  settings: typeof locationSettings.$inferSelect | undefined,
+) {
+  const now = new Date();
+  const hoursUntilEvent = (eventDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+  const requiredHours = (settings?.leadTimeDays ?? 3) * 24;
+
+  if (hoursUntilEvent < requiredHours) {
+    const requiredDays = Math.ceil(requiredHours / 24);
+    const earliestDate = new Date(now.getTime() + requiredHours * 60 * 60 * 1000);
+    throw new ValidationError(
+      `Event date requires ${requiredDays}-day lead time (${requiredHours} hours). ` +
+      `Earliest available: ${earliestDate.toISOString().split('T')[0]}`,
+    );
+  }
+}
+
+// --- Create Order ---
+
+export async function create(orgId: string, input: CreateOrderInput, eventBus: EventBus) {
+  const eventDate = new Date(input.eventDate);
+
+  // 1. Validate location ownership, active status, and fetch settings
+  const { settings } = await validateLocation(orgId, input.locationId);
+
+  // 2. Validate service type against location capabilities
+  validateServiceType(input.serviceType, settings);
+
+  // 3. Validate lead time against location settings
+  validateLeadTime(eventDate, settings);
+
+  // 4. Calculate pricing via centralized pricing service
+  //    Handles: package validation, headcount bounds, add-on validation, min order amount
   const pricing = await calculatePricing({
     headcount: input.headcount,
     packages: input.packages,
@@ -334,7 +365,7 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
 
   const { lineItems, total: totalAmount } = pricing;
 
-  // 9. Execute in transaction
+  // 5. Execute all writes in a single transaction
   const connectionString = process.env.DATABASE_URL!;
   const txSql = postgres(connectionString);
 
@@ -343,11 +374,14 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
       const { drizzle } = await import('drizzle-orm/postgres-js');
       const txDb = drizzle(tx);
 
-      // 9a. Find or create customer
+      // 5a. Find or create customer (scoped to org)
       const [existingCustomer] = await txDb
         .select()
         .from(customers)
-        .where(and(eq(customers.email, input.customer.email), eq(customers.organizationId, orgId)))
+        .where(and(
+          eq(customers.email, input.customer.email),
+          eq(customers.organizationId, orgId),
+        ))
         .limit(1);
 
       let customerId: string;
@@ -378,7 +412,7 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
         customerId = newCustomer.id;
       }
 
-      // 9b. Save delivery address
+      // 5b. Save delivery address for new customers
       if (input.deliveryAddress) {
         const [existingAddr] = await txDb
           .select({ id: customerAddresses.id })
@@ -396,7 +430,7 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
         }
       }
 
-      // 9c. Create order with status=submitted
+      // 5c. Create order — status always starts as "submitted"
       const [order] = await txDb
         .insert(orders)
         .values({
@@ -412,7 +446,7 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
         })
         .returning();
 
-      // 9d. Create order items from pricing result
+      // 5d. Create order line items from pricing result
       await txDb.insert(orderItems).values(
         lineItems.map((item) => ({
           orderId: order.id,
@@ -425,17 +459,16 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
         })),
       );
 
-      // 9e. Create recurring order if applicable
+      // 5e. Create recurring order if requested
       let recurringOrderId: string | null = null;
       if (input.recurring) {
-        const primaryPkg = input.packages[0];
         const [recurring] = await txDb
           .insert(recurringOrders)
           .values({
             organizationId: orgId,
             locationId: input.locationId,
             customerId,
-            packageId: primaryPkg.packageId,
+            packageId: input.packages[0].packageId,
             interval: input.recurring.interval,
             startDate: eventDate,
             endDate: input.recurring.endDate ? new Date(input.recurring.endDate) : null,
@@ -453,12 +486,14 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
       return { order, customerId, recurringOrderId };
     });
 
+    // 6. Emit events after successful commit
     await eventBus.emit('order.created', {
       orderId: result.order.id,
       customerId: result.customerId,
       orgId,
     });
 
+    // 7. Return order summary with full pricing breakdown
     return {
       id: result.order.id,
       status: result.order.status,
