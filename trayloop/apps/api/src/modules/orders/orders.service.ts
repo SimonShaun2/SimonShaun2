@@ -828,24 +828,42 @@ export async function reorder(sourceOrderId: string, orgId: string, input: Reord
     throw new ValidationError('Source order has no items to reorder');
   }
 
-  // 3. Reconstruct package and add-on selections from line items
-  const packageSelections = sourceItems
-    .filter((item) => item.packageId !== null)
-    .map((item) => ({ packageId: item.packageId!, quantity: 1 }));
+  // 3. Reconstruct selections and track unavailable items
+  const warnings: string[] = [];
 
-  const addOnSelections = sourceItems
-    .filter((item) => item.packageId === null)
-    .map((item) => ({
-      // We need the add-on ID — stored items don't have it directly,
-      // so we pass quantity through; pricing service validates by name match
-      addOnId: item.name, // placeholder — see step 4
-      quantity: item.quantity,
-    }));
+  // 3a. Resolve packages — verify each is still active
+  const { packages: packagesTable } = await import('@trayloop/database');
+  const packageItems = sourceItems.filter((item) => item.packageId !== null);
+  const packageSelections: Array<{ packageId: string; quantity: number }> = [];
 
-  // 4. Look up actual add-on IDs by matching names within the org's catalogs
-  //    (order_items store the name at time of order, add-ons may still exist)
+  if (packageItems.length > 0) {
+    const activePackages = await db
+      .select({ id: packagesTable.id })
+      .from(packagesTable)
+      .where(eq(packagesTable.isActive, true));
+
+    const activeIds = new Set(activePackages.map((p) => p.id));
+
+    for (const item of packageItems) {
+      if (activeIds.has(item.packageId!)) {
+        packageSelections.push({ packageId: item.packageId!, quantity: 1 });
+      } else {
+        warnings.push(`Package "${item.name}" is no longer available and was not included`);
+      }
+    }
+  }
+
+  if (packageSelections.length === 0) {
+    throw new ValidationError(
+      'Cannot reorder: all packages from the source order are no longer available',
+    );
+  }
+
+  // 3b. Resolve add-ons by name match
+  const addOnItems = sourceItems.filter((item) => item.packageId === null);
   const resolvedAddOns: Array<{ addOnId: string; quantity: number }> = [];
-  if (addOnSelections.length > 0) {
+
+  if (addOnItems.length > 0) {
     const { addOns: addOnsTable, catalogs } = await import('@trayloop/database');
     const orgAddOns = await db
       .select({ id: addOnsTable.id, name: addOnsTable.name })
@@ -853,12 +871,13 @@ export async function reorder(sourceOrderId: string, orgId: string, input: Reord
       .innerJoin(catalogs, eq(catalogs.id, addOnsTable.catalogId))
       .where(and(eq(catalogs.organizationId, orgId), eq(addOnsTable.isActive, true)));
 
-    for (const item of sourceItems.filter((i) => i.packageId === null)) {
+    for (const item of addOnItems) {
       const match = orgAddOns.find((a) => a.name === item.name);
       if (match) {
         resolvedAddOns.push({ addOnId: match.id, quantity: item.quantity });
+      } else {
+        warnings.push(`Add-on "${item.name}" is no longer available and was not included`);
       }
-      // Skip add-ons that no longer exist — don't block reorder
     }
   }
 
@@ -960,6 +979,7 @@ export async function reorder(sourceOrderId: string, orgId: string, input: Reord
       })),
       depositRequired,
       allowedTransitions: getAllowedTransitions('submitted', depositRequired),
+      warnings: warnings.length > 0 ? warnings : undefined,
       createdAt: result.createdAt,
     };
   } finally {
