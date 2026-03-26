@@ -18,6 +18,7 @@ import { billingModule } from './modules/billing/index.js';
 import { followUpsModule } from './modules/follow-ups/index.js';
 import { notificationsModule } from './modules/notifications/index.js';
 import { adminModule } from './modules/admin/index.js';
+import { storefrontModule } from './modules/storefront/index.js';
 
 export async function buildApp() {
   const app = Fastify({ logger: true });
@@ -58,6 +59,9 @@ export async function buildApp() {
   // Follow-ups & notifications
   await app.register(followUpsModule, { prefix: '/api/follow-ups' });
   await app.register(notificationsModule, { prefix: '/api/notifications' });
+
+  // Public storefront
+  await app.register(storefrontModule, { prefix: '/api/storefront' });
 
   // Platform admin
   await app.register(adminModule, { prefix: '/api/admin' });
