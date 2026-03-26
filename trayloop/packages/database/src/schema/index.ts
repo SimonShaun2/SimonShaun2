@@ -4,3 +4,7 @@ export * from './organizations.js';
 export * from './locations.js';
 export * from './catalogs.js';
 export * from './customers.js';
+export * from './orders.js';
+export * from './payments.js';
+export * from './notifications.js';
+export * from './audit-logs.js';
