@@ -1,18 +1,25 @@
 import { z } from 'zod';
 
-export const catalogItemType = z.enum(['service', 'physical_good', 'digital_good', 'bundle']);
-
-export const createCatalogItemSchema = z.object({
+// --- Catalogs ---
+export const createCatalogSchema = z.object({
   name: z.string().min(1).max(255),
-  description: z.string().default(''),
-  type: catalogItemType.default('service'),
-  price: z.number().int().nonnegative(),
-  currency: z.string().length(3).default('USD'),
-  imageUrl: z.string().url().optional(),
-  isActive: z.boolean().default(true),
+  description: z.string().optional(),
 });
 
-export const updateCatalogItemSchema = createCatalogItemSchema.partial();
+export const updateCatalogSchema = createCatalogSchema.partial();
 
-export type CreateCatalogItemInput = z.infer<typeof createCatalogItemSchema>;
-export type UpdateCatalogItemInput = z.infer<typeof updateCatalogItemSchema>;
+export type CreateCatalogInput = z.infer<typeof createCatalogSchema>;
+export type UpdateCatalogInput = z.infer<typeof updateCatalogSchema>;
+
+// --- Categories ---
+export const createCategorySchema = z.object({
+  catalogId: z.string().uuid(),
+  name: z.string().min(1).max(255),
+  description: z.string().optional(),
+  sortOrder: z.number().int().nonnegative().default(0),
+});
+
+export const updateCategorySchema = createCategorySchema.omit({ catalogId: true }).partial();
+
+export type CreateCategoryInput = z.infer<typeof createCategorySchema>;
+export type UpdateCategoryInput = z.infer<typeof updateCategorySchema>;

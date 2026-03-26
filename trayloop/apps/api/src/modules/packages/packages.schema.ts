@@ -1,16 +1,19 @@
 import { z } from 'zod';
 
 export const createPackageSchema = z.object({
+  catalogId: z.string().uuid(),
+  categoryId: z.string().uuid().optional(),
   name: z.string().min(1).max(255),
-  description: z.string().default(''),
-  catalogItemIds: z.array(z.string()).min(1),
-  price: z.number().int().nonnegative(),
+  description: z.string().optional(),
+  pricePerHead: z.number().int().nonnegative(),
   currency: z.string().length(3).default('USD'),
-  recurrenceInterval: z.enum(['one_time', 'weekly', 'biweekly', 'monthly', 'quarterly']).default('one_time'),
+  minimumHeadcount: z.number().int().positive().default(1),
+  maximumHeadcount: z.number().int().positive().optional(),
+  imageUrl: z.string().url().optional(),
   isActive: z.boolean().default(true),
 });
 
-export const updatePackageSchema = createPackageSchema.partial();
+export const updatePackageSchema = createPackageSchema.omit({ catalogId: true }).partial();
 
 export type CreatePackageInput = z.infer<typeof createPackageSchema>;
 export type UpdatePackageInput = z.infer<typeof updatePackageSchema>;

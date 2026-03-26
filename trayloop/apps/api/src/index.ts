@@ -9,6 +9,7 @@ import { membershipsModule } from './modules/memberships/index.js';
 import { locationsModule } from './modules/locations/index.js';
 import { catalogsModule } from './modules/catalogs/index.js';
 import { packagesModule } from './modules/packages/index.js';
+import { addOnsModule } from './modules/add-ons/index.js';
 import { customersModule } from './modules/customers/index.js';
 import { ordersModule } from './modules/orders/index.js';
 import { recurringOrdersModule } from './modules/recurring-orders/index.js';
@@ -41,6 +42,7 @@ export async function buildApp() {
   // Catalog & packages
   await app.register(catalogsModule, { prefix: '/api/catalogs' });
   await app.register(packagesModule, { prefix: '/api/packages' });
+  await app.register(addOnsModule, { prefix: '/api/add-ons' });
 
   // Customers
   await app.register(customersModule, { prefix: '/api/customers' });

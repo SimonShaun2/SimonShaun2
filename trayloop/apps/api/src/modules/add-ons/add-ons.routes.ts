@@ -2,8 +2,8 @@ import type { FastifyInstance } from 'fastify';
 import { requireAuth } from '../../lib/middleware/auth.js';
 import { requireTenant } from '../../lib/middleware/tenant.js';
 import { validateBody } from '../../lib/middleware/validate.js';
-import { createPackageSchema, updatePackageSchema } from './packages.schema.js';
-import * as service from './packages.service.js';
+import { createAddOnSchema, updateAddOnSchema } from './add-ons.schema.js';
+import * as service from './add-ons.service.js';
 
 export function registerRoutes(app: FastifyInstance) {
   app.addHook('preHandler', requireAuth);
@@ -14,18 +14,12 @@ export function registerRoutes(app: FastifyInstance) {
     return { data: result };
   });
 
-  app.get('/:id', async (request) => {
-    const { id } = request.params as { id: string };
-    const result = await service.getById(id);
-    return { data: result };
-  });
-
-  app.post('/', { preHandler: [validateBody(createPackageSchema)] }, async (request, reply) => {
+  app.post('/', { preHandler: [validateBody(createAddOnSchema)] }, async (request, reply) => {
     const result = await service.create(request.ctx.tenant!.organizationId, (request as any).validatedBody);
     return reply.status(201).send({ data: result });
   });
 
-  app.patch('/:id', { preHandler: [validateBody(updatePackageSchema)] }, async (request, reply) => {
+  app.patch('/:id', { preHandler: [validateBody(updateAddOnSchema)] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const result = await service.update(id, (request as any).validatedBody);
     return reply.send({ data: result });
