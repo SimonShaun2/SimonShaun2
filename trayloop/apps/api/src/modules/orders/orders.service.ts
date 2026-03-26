@@ -13,6 +13,7 @@ import { eq, and, gte, lte, desc, sql } from 'drizzle-orm';
 import postgres from 'postgres';
 import { ValidationError, NotFoundError } from '../../lib/errors.js';
 import { calculatePricing } from '../../lib/pricing.js';
+import { recordOrderEvent, getOrderTimeline } from '../../lib/order-events.js';
 import type { EventBus } from '../../lib/event-bus/index.js';
 import type { CreateOrderInput, UpdateOrderStatusInput, OrderListQuery, SendDepositLinkInput, ReorderInput } from './orders.schema.js';
 
@@ -251,7 +252,10 @@ export async function getById(id: string, orgId: string) {
   const addOnSubtotal = addOnItems.reduce((sum, i) => sum + i.totalPrice, 0);
 
   // Determine allowed status transitions based on location deposit setting
-  const depositRequired = await getDepositRequired(order.locationId);
+  const [depositRequired, timeline] = await Promise.all([
+    getDepositRequired(order.locationId),
+    getOrderTimeline(id),
+  ]);
   const allowedTransitions = getAllowedTransitions(order.status, depositRequired);
 
   return {
@@ -302,6 +306,7 @@ export async function getById(id: string, orgId: string) {
         totalPrice: i.totalPrice,
       })),
     },
+    timeline,
     timestamps: {
       created: order.createdAt,
       updated: order.updatedAt,
@@ -356,6 +361,17 @@ export async function updateStatus(id: string, orgId: string, input: UpdateOrder
     })
     .where(eq(orders.id, id))
     .returning();
+
+  const statusLabel = input.status.replace('_', ' ');
+  const description = input.status === 'cancelled'
+    ? `Order cancelled: ${input.reason}`
+    : `Status changed to ${statusLabel}`;
+
+  await recordOrderEvent(id, 'status_changed', description, {
+    from: existing.status,
+    to: input.status,
+    reason: input.reason,
+  });
 
   await eventBus.emit('order.status_updated', {
     orderId: id,
@@ -455,6 +471,12 @@ export async function sendDepositLink(orderId: string, orgId: string, input: Sen
       return { deposit, order: updated };
     });
 
+    await recordOrderEvent(order.id, 'deposit_link_sent', `Deposit link sent to ${customer.email} for $${(depositAmount / 100).toFixed(2)}`, {
+      depositId: result.deposit.id,
+      amount: depositAmount,
+      sentTo: customer.email,
+    });
+
     await eventBus.emit('order.status_updated', {
       orderId: order.id,
       oldStatus: order.status,
@@ -543,6 +565,16 @@ export async function markPaid(orderId: string, orgId: string, eventBus: EventBu
         .returning();
 
       return { deposit: updatedDeposit, order: updatedOrder };
+    });
+
+    await recordOrderEvent(order.id, 'deposit_paid', `Deposit of $${(result.deposit.amount / 100).toFixed(2)} marked as paid`, {
+      depositId: result.deposit.id,
+      amount: result.deposit.amount,
+    });
+
+    await recordOrderEvent(order.id, 'status_changed', 'Status changed to confirmed', {
+      from: 'awaiting_deposit',
+      to: 'confirmed',
     });
 
     await eventBus.emit('payment.completed', {
@@ -786,7 +818,13 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
       return { order, customerId, recurringOrderId };
     });
 
-    // 6. Emit events after successful commit
+    // 6. Record timeline event + emit
+    await recordOrderEvent(result.order.id, 'order_created', `Order ${result.order.orderNumber} submitted`, {
+      orderNumber: result.order.orderNumber,
+      headcount: input.headcount,
+      total: totalAmount,
+    });
+
     await eventBus.emit('order.created', {
       orderId: result.order.id,
       customerId: result.customerId,
@@ -959,6 +997,17 @@ export async function reorder(sourceOrderId: string, orgId: string, input: Reord
       );
 
       return newOrder;
+    });
+
+    // Record events on both source and new order
+    await recordOrderEvent(result.id, 'order_created', `Order ${result.orderNumber} created (reorder from ${sourceOrderId.slice(0, 8)})`, {
+      orderNumber: result.orderNumber,
+      reorderedFrom: sourceOrderId,
+    });
+
+    await recordOrderEvent(sourceOrderId, 'reorder_created', `Reorder created: ${result.orderNumber}`, {
+      newOrderId: result.id,
+      newOrderNumber: result.orderNumber,
     });
 
     await eventBus.emit('order.created', {

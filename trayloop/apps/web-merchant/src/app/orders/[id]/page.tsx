@@ -21,6 +21,7 @@ interface OrderDetail {
     packages: Array<{ name: string; description: string | null; quantity: number; unitPrice: number; totalPrice: number }>;
     addOns: Array<{ name: string; description: string | null; quantity: number; unitPrice: number; totalPrice: number }>;
   };
+  timeline: Array<{ id: string; type: string; description: string; metadata: Record<string, unknown> | null; createdAt: string }>;
   timestamps: { created: string; updated: string; completed: string | null };
 }
 
@@ -287,6 +288,45 @@ export default function OrderDetailPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Activity Timeline */}
+      {order.timeline && order.timeline.length > 0 && (
+        <div style={{ marginTop: '2rem' }}>
+          <h3 style={{ fontWeight: 600, marginBottom: '0.75rem' }}>Activity</h3>
+          <div style={{ borderLeft: '2px solid #e5e7eb', paddingLeft: '1.25rem', display: 'grid', gap: '0.75rem' }}>
+            {order.timeline.map((event) => {
+              const typeIcons: Record<string, string> = {
+                order_created: '●',
+                status_changed: '◆',
+                deposit_link_sent: '◇',
+                deposit_paid: '✦',
+                reorder_created: '↻',
+              };
+              const typeColors: Record<string, string> = {
+                order_created: '#10b981',
+                status_changed: '#3b82f6',
+                deposit_link_sent: '#f59e0b',
+                deposit_paid: '#10b981',
+                reorder_created: '#8b5cf6',
+              };
+              return (
+                <div key={event.id} style={{ position: 'relative' }}>
+                  <span style={{
+                    position: 'absolute', left: '-1.65rem', top: '0.15rem',
+                    fontSize: '0.7rem', color: typeColors[event.type] ?? '#6b7280',
+                  }}>
+                    {typeIcons[event.type] ?? '○'}
+                  </span>
+                  <p style={{ fontSize: '0.875rem', margin: 0 }}>{event.description}</p>
+                  <p style={{ fontSize: '0.75rem', color: '#9ca3af', margin: '0.1rem 0 0' }}>
+                    {new Date(event.createdAt).toLocaleString()}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
