@@ -4,7 +4,7 @@ import { EventBus } from './lib/event-bus/index.js';
 import { errorHandler } from './lib/middleware/error-handler.js';
 import { registerRequestLogger } from './lib/middleware/request-logger.js';
 import { registerIdempotencyHook } from './lib/middleware/idempotency.js';
-import type './lib/context.js';
+import './lib/context.js';
 import { authModule } from './modules/auth/index.js';
 import { organizationsModule } from './modules/organizations/index.js';
 import { membershipsModule } from './modules/memberships/index.js';

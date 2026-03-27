@@ -11,7 +11,7 @@ export const orders = pgTable('orders', {
   organizationId: uuid('organization_id').notNull().references(() => organizations.id),
   locationId: uuid('location_id').references(() => locations.id),
   customerId: uuid('customer_id').notNull().references(() => customers.id),
-  status: orderStatusEnum('status').notNull().default('draft'),
+  status: orderStatusEnum('status').notNull().default('submitted'),
   totalAmount: integer('total_amount').notNull().default(0),
   currency: varchar('currency', { length: 3 }).notNull().default('USD'),
   headCount: integer('head_count'),
