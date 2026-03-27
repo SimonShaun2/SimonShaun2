@@ -1,7 +1,7 @@
 import { db } from '@trayloop/database';
 import { packages, addOns, locationSettings } from '@trayloop/database';
 import { eq } from 'drizzle-orm';
-import { ValidationError, NotFoundError } from '../errors.js';
+import { ValidationError, NotFoundError } from './errors.js';
 
 // --- Types ---
 
