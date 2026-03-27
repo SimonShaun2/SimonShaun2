@@ -11,6 +11,9 @@ import {
 } from '@trayloop/database';
 import { eq, and } from 'drizzle-orm';
 import { NotFoundError } from '../../lib/errors.js';
+import { create as createOrder } from '../orders/orders.service.js';
+import type { CreateOrderInput } from '../orders/orders.schema.js';
+import type { EventBus } from '../../lib/event-bus/index.js';
 
 export async function getStorefront(slug: string) {
   // 1. Resolve organization by slug
@@ -250,4 +253,19 @@ export async function getStorefront(slug: string) {
     locations: locationDtos,
     menu,
   };
+}
+
+export async function submitPublicOrder(slug: string, input: CreateOrderInput, eventBus: EventBus) {
+  // Resolve org from slug
+  const [org] = await db
+    .select({ id: organizations.id })
+    .from(organizations)
+    .where(and(eq(organizations.slug, slug), eq(organizations.isActive, true)))
+    .limit(1);
+
+  if (!org) {
+    throw new NotFoundError('Storefront');
+  }
+
+  return createOrder(org.id, input, eventBus);
 }

@@ -103,7 +103,7 @@ export default function CheckoutForm({ data }: Props) {
     const idempotencyKey = `order-${email}-${eventDate}-${Date.now()}`;
 
     try {
-      const result = await submitOrder(payload, idempotencyKey);
+      const result = await submitOrder(data.merchant.slug, payload, idempotencyKey);
       setConfirmation(result);
     } catch (err) {
       if (err instanceof OrderError) {

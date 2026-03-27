@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { calculatePricing } from '../../lib/pricing.js';
+import { createOrderSchema } from '../orders/orders.schema.js';
 import * as service from './storefront.service.js';
 
 const pricingPreviewSchema = z.object({
@@ -24,7 +25,7 @@ export function registerRoutes(app: FastifyInstance) {
     return { data: storefront };
   });
 
-  // Public pricing preview — lets storefront show price before checkout
+  // Public pricing preview
   app.post('/pricing', async (request) => {
     const input = pricingPreviewSchema.parse(request.body);
     const result = await calculatePricing(input);
@@ -44,5 +45,13 @@ export function registerRoutes(app: FastifyInstance) {
         headcount: result.headcount,
       },
     };
+  });
+
+  // Public order submission — resolves org from slug, no auth needed
+  app.post('/:slug/order', async (request, reply) => {
+    const { slug } = request.params as { slug: string };
+    const body = createOrderSchema.parse(request.body);
+    const result = await service.submitPublicOrder(slug, body, (app as any).eventBus);
+    return reply.status(201).send({ data: result });
   });
 }

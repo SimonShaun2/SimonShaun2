@@ -129,8 +129,8 @@ export interface OrderConfirmation {
   createdAt: string;
 }
 
-export async function submitOrder(order: OrderSubmission, idempotencyKey: string): Promise<OrderConfirmation> {
-  const res = await fetch(`${API_URL}/api/orders`, {
+export async function submitOrder(slug: string, order: OrderSubmission, idempotencyKey: string): Promise<OrderConfirmation> {
+  const res = await fetch(`${API_URL}/api/storefront/${slug}/order`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
