@@ -16,13 +16,13 @@ export async function getStorefront(slug: string) {
   // 1. Resolve organization by slug
   const [org] = await db
     .select({
+      id: organizations.id,
       name: organizations.name,
       slug: organizations.slug,
       description: organizations.description,
       website: organizations.website,
       phone: organizations.phone,
       logoUrl: organizations.logoUrl,
-      id: organizations.id,
     })
     .from(organizations)
     .where(and(eq(organizations.slug, slug), eq(organizations.isActive, true)))
@@ -34,35 +34,54 @@ export async function getStorefront(slug: string) {
 
   const orgId = org.id;
 
-  // 2. Fetch active locations with settings
+  // 2. Fetch locations with explicit columns (avoids schema drift issues)
   const locationRows = await db
-    .select()
+    .select({
+      id: locations.id,
+      name: locations.name,
+      address: locations.address,
+      city: locations.city,
+      state: locations.state,
+      zipCode: locations.zipCode,
+      country: locations.country,
+      phone: locations.phone,
+      leadTimeDays: locationSettings.leadTimeDays,
+      minOrderAmount: locationSettings.minOrderAmount,
+      serviceTypes: locationSettings.serviceTypes,
+      deliveryEnabled: locationSettings.deliveryEnabled,
+      pickupEnabled: locationSettings.pickupEnabled,
+      deliveryRadius: locationSettings.deliveryRadius,
+      operatingHours: locationSettings.operatingHours,
+    })
     .from(locations)
     .leftJoin(locationSettings, eq(locationSettings.locationId, locations.id))
     .where(and(eq(locations.organizationId, orgId), eq(locations.isActive, true)));
 
   const locationDtos = locationRows.map((row) => ({
-    slug: row.locations.id,
-    name: row.locations.name,
-    address: row.locations.address,
-    city: row.locations.city,
-    state: row.locations.state,
-    zipCode: row.locations.zipCode,
-    country: row.locations.country,
-    phone: row.locations.phone,
-    serviceTypes: row.location_settings?.serviceTypes ?? ['delivery'],
-    leadTimeHours: (row.location_settings?.leadTimeDays ?? 3) * 24,
-    minimumOrderAmount: row.location_settings?.minOrderAmount ?? 0,
-    deliveryEnabled: row.location_settings?.deliveryEnabled ?? true,
-    pickupEnabled: row.location_settings?.pickupEnabled ?? false,
-    deliveryRadiusMiles: row.location_settings?.deliveryRadius ?? null,
-    depositRequired: row.location_settings?.depositRequired ?? true,
-    operatingHours: row.location_settings?.operatingHours ?? null,
+    slug: row.id,
+    name: row.name,
+    address: row.address,
+    city: row.city,
+    state: row.state,
+    zipCode: row.zipCode,
+    country: row.country,
+    phone: row.phone,
+    serviceTypes: row.serviceTypes ?? ['delivery'],
+    leadTimeHours: (row.leadTimeDays ?? 3) * 24,
+    minimumOrderAmount: row.minOrderAmount ?? 0,
+    deliveryEnabled: row.deliveryEnabled ?? true,
+    pickupEnabled: row.pickupEnabled ?? false,
+    deliveryRadiusMiles: row.deliveryRadius ?? null,
+    operatingHours: row.operatingHours ?? null,
   }));
 
   // 3. Fetch active catalogs
   const catalogRows = await db
-    .select()
+    .select({
+      id: catalogs.id,
+      name: catalogs.name,
+      description: catalogs.description,
+    })
     .from(catalogs)
     .where(and(eq(catalogs.organizationId, orgId), eq(catalogs.isActive, true)));
 
@@ -86,21 +105,54 @@ export async function getStorefront(slug: string) {
   // 4. Fetch categories, packages, package items, and add-ons in parallel
   const [categoryRows, packageRows, packageItemRows, addOnRows] = await Promise.all([
     db
-      .select()
+      .select({
+        id: catalogCategories.id,
+        catalogId: catalogCategories.catalogId,
+        name: catalogCategories.name,
+        description: catalogCategories.description,
+        sortOrder: catalogCategories.sortOrder,
+      })
       .from(catalogCategories)
       .where(eq(catalogCategories.isActive, true))
       .then((rows) => rows.filter((r) => catalogIds.includes(r.catalogId))),
     db
-      .select()
+      .select({
+        id: packages.id,
+        catalogId: packages.catalogId,
+        categoryId: packages.categoryId,
+        name: packages.name,
+        description: packages.description,
+        pricing: packages.pricing,
+        price: packages.price,
+        currency: packages.currency,
+        minHeadCount: packages.minHeadCount,
+        maxHeadCount: packages.maxHeadCount,
+        imageUrl: packages.imageUrl,
+        sortOrder: packages.sortOrder,
+      })
       .from(packages)
       .where(eq(packages.isActive, true))
       .then((rows) => rows.filter((r) => catalogIds.includes(r.catalogId))),
     db
-      .select()
-      .from(packageItems)
-      .then((rows) => rows),
+      .select({
+        id: packageItems.id,
+        packageId: packageItems.packageId,
+        name: packageItems.name,
+        description: packageItems.description,
+        isOptional: packageItems.isOptional,
+        sortOrder: packageItems.sortOrder,
+      })
+      .from(packageItems),
     db
-      .select()
+      .select({
+        id: addOns.id,
+        catalogId: addOns.catalogId,
+        name: addOns.name,
+        description: addOns.description,
+        price: addOns.price,
+        currency: addOns.currency,
+        sortOrder: addOns.sortOrder,
+      })
       .from(addOns)
       .where(eq(addOns.isActive, true))
       .then((rows) => rows.filter((r) => catalogIds.includes(r.catalogId))),
@@ -114,7 +166,7 @@ export async function getStorefront(slug: string) {
     itemsByPackageId.set(item.packageId, existing);
   }
 
-  // 6. Build packages grouped by category
+  // 6. Build packages
   const packageDtos = packageRows
     .sort((a, b) => a.sortOrder - b.sortOrder)
     .map((pkg) => {
@@ -150,7 +202,6 @@ export async function getStorefront(slug: string) {
       packages: packageDtos.filter((p) => p.categoryId === cat.id),
     }));
 
-  // Packages without a category
   const uncategorized = packageDtos.filter((p) => !p.categoryId);
 
   // 8. Build add-ons
