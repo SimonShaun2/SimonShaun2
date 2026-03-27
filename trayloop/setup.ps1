@@ -6,13 +6,13 @@ $ErrorActionPreference = "Stop"
 Write-Host "`n=== TrayLoop Local Setup ===" -ForegroundColor Cyan
 
 # 1. Start Docker containers
-Write-Host "`n[1/6] Starting Docker containers..." -ForegroundColor Yellow
+Write-Host "`n[1/5] Starting Docker containers..." -ForegroundColor Yellow
 Push-Location infrastructure/docker
 docker compose up -d
 Pop-Location
 
 # 2. Wait for Postgres to be ready
-Write-Host "`n[2/6] Waiting for PostgreSQL..." -ForegroundColor Yellow
+Write-Host "`n[2/5] Waiting for PostgreSQL..." -ForegroundColor Yellow
 $attempts = 0
 $maxAttempts = 15
 while ($attempts -lt $maxAttempts) {
@@ -30,36 +30,39 @@ if ($attempts -eq $maxAttempts) {
     exit 1
 }
 
-# 3. Install root dependencies
-Write-Host "`n[3/6] Installing root dependencies..." -ForegroundColor Yellow
+# 3. Install dependencies
+Write-Host "`n[3/5] Installing dependencies..." -ForegroundColor Yellow
 npm install
-
-# 4. Force correct drizzle versions in database package
-Write-Host "`n[4/6] Installing database dependencies..." -ForegroundColor Yellow
 Push-Location packages/database
+npm install drizzle-orm@0.44.2 postgres@3.4.5 --save-exact 2>$null
+npm install drizzle-kit@0.31.1 tsx@4.19.4 --save-dev --save-exact 2>$null
+Pop-Location
 
-# Remove stale config
-if (Test-Path "drizzle.config.ts") {
-    Write-Host "  Removing stale drizzle.config.ts" -ForegroundColor Yellow
-    Remove-Item "drizzle.config.ts"
-}
-
-# Force exact versions regardless of lockfile
-npm install drizzle-orm@0.44.2 postgres@3.4.5 --save-exact
-npm install drizzle-kit@0.31.1 tsx@4.19.4 --save-dev --save-exact
-
-# 5. Push database schema
-Write-Host "`n[5/6] Pushing database schema..." -ForegroundColor Yellow
-npx drizzle-kit push --config=drizzle.config.js
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "  ERROR: Schema push failed" -ForegroundColor Red
-    Pop-Location
+# 4. Create database tables via SQL (bypasses drizzle-kit interactive prompts)
+Write-Host "`n[4/5] Creating database tables..." -ForegroundColor Yellow
+$sqlPath = "packages/database/init.sql"
+if (-not (Test-Path $sqlPath)) {
+    Write-Host "  ERROR: init.sql not found at $sqlPath" -ForegroundColor Red
     exit 1
 }
-Write-Host "  Schema pushed successfully" -ForegroundColor Green
+# Copy SQL file into container and execute
+docker cp $sqlPath docker-postgres-1:/tmp/init.sql
+docker exec docker-postgres-1 psql -U postgres -d trayloop -f /tmp/init.sql
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "  ERROR: Schema creation failed" -ForegroundColor Red
+    exit 1
+}
+Write-Host "  Tables created successfully" -ForegroundColor Green
 
-# 6. Seed data
-Write-Host "`n[6/6] Seeding database..." -ForegroundColor Yellow
+# Verify tables exist
+$tableCount = docker exec docker-postgres-1 psql -U postgres -d trayloop -t -c "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public';"
+Write-Host "  Verified: $($tableCount.Trim()) tables in database" -ForegroundColor Green
+
+# 5. Seed data
+Write-Host "`n[5/5] Seeding database..." -ForegroundColor Yellow
+Push-Location packages/database
+# Remove stale config if exists
+if (Test-Path "drizzle.config.ts") { Remove-Item "drizzle.config.ts" }
 npx tsx src/seed.ts
 if ($LASTEXITCODE -ne 0) {
     Write-Host "  ERROR: Seed failed" -ForegroundColor Red
