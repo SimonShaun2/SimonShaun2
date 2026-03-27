@@ -1,6 +1,5 @@
-import { defineConfig } from 'drizzle-kit';
-
-export default defineConfig({
+/** @type {import('drizzle-kit').Config} */
+module.exports = {
   schema: './src/schema/index.ts',
   out: './src/migrations',
   dialect: 'postgresql',
@@ -11,4 +10,4 @@ export default defineConfig({
     password: 'postgres',
     database: 'trayloop',
   },
-});
+};

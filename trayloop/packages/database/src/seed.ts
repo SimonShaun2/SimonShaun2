@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import { db } from './client.js';
 import { hashPassword } from '@trayloop/auth';
 import {
