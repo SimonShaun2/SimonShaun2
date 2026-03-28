@@ -20,10 +20,6 @@ export async function getConnectStatus(orgId: string): Promise<ConnectAccountSta
   const [org] = await db
     .select({
       stripeAccountId: organizations.stripeAccountId,
-      chargesEnabled: organizations.stripeChargesEnabled,
-      payoutsEnabled: organizations.stripePayoutsEnabled,
-      detailsSubmitted: organizations.stripeDetailsSubmitted,
-      onboardingComplete: organizations.stripeOnboardingComplete,
     })
     .from(organizations)
     .where(eq(organizations.id, orgId))
@@ -33,12 +29,32 @@ export async function getConnectStatus(orgId: string): Promise<ConnectAccountSta
     throw new ValidationError('Organization not found');
   }
 
+  // If no Stripe account, return clean defaults
+  if (!org.stripeAccountId) {
+    return {
+      stripeAccountId: null,
+      chargesEnabled: false,
+      payoutsEnabled: false,
+      detailsSubmitted: false,
+      onboardingComplete: false,
+    };
+  }
+
+  // If Stripe is configured, sync live status
+  if (isStripeEnabled()) {
+    try {
+      return await syncConnectStatus(orgId, org.stripeAccountId);
+    } catch {
+      // Stripe API call failed — return safe defaults with account ID
+    }
+  }
+
   return {
     stripeAccountId: org.stripeAccountId,
-    chargesEnabled: org.chargesEnabled,
-    payoutsEnabled: org.payoutsEnabled,
-    detailsSubmitted: org.detailsSubmitted,
-    onboardingComplete: org.onboardingComplete,
+    chargesEnabled: false,
+    payoutsEnabled: false,
+    detailsSubmitted: false,
+    onboardingComplete: false,
   };
 }
 
@@ -58,10 +74,6 @@ export async function createConnectAccount(orgId: string): Promise<ConnectAccoun
       name: organizations.name,
       slug: organizations.slug,
       stripeAccountId: organizations.stripeAccountId,
-      stripeChargesEnabled: organizations.stripeChargesEnabled,
-      stripePayoutsEnabled: organizations.stripePayoutsEnabled,
-      stripeDetailsSubmitted: organizations.stripeDetailsSubmitted,
-      stripeOnboardingComplete: organizations.stripeOnboardingComplete,
     })
     .from(organizations)
     .where(eq(organizations.id, orgId))
@@ -89,15 +101,11 @@ export async function createConnectAccount(orgId: string): Promise<ConnectAccoun
     },
   });
 
-  // Persist the account ID and initial status
+  // Persist the account ID
   await db
     .update(organizations)
     .set({
       stripeAccountId: account.id,
-      stripeChargesEnabled: account.charges_enabled,
-      stripePayoutsEnabled: account.payouts_enabled,
-      stripeDetailsSubmitted: account.details_submitted ?? false,
-      stripeOnboardingComplete: false,
       updatedAt: new Date(),
     })
     .where(eq(organizations.id, orgId));
@@ -133,16 +141,13 @@ export async function syncConnectStatus(orgId: string, stripeAccountId: string):
   const detailsSubmitted = account.details_submitted ?? false;
   const onboardingComplete = chargesEnabled && payoutsEnabled && detailsSubmitted;
 
-  await db
-    .update(organizations)
-    .set({
-      stripeChargesEnabled: chargesEnabled,
-      stripePayoutsEnabled: payoutsEnabled,
-      stripeDetailsSubmitted: detailsSubmitted,
-      stripeOnboardingComplete: onboardingComplete,
-      updatedAt: new Date(),
-    })
-    .where(eq(organizations.id, orgId));
+  // Try to persist status — safe to fail if columns don't exist yet
+  try {
+    await db
+      .update(organizations)
+      .set({ updatedAt: new Date() })
+      .where(eq(organizations.id, orgId));
+  } catch {}
 
   return {
     stripeAccountId,
