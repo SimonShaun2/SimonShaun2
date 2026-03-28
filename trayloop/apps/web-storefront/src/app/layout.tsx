@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'TrayLoop — Order Catering',
-  description: 'Browse menus and order catering from local merchants',
+  title: 'Order Online',
+  description: 'Browse the menu and place your order',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

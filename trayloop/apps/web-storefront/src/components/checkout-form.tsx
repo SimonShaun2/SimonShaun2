@@ -963,7 +963,7 @@ export default function CheckoutForm({ data }: Props) {
               textTransform: 'uppercase', letterSpacing: '1.5px',
               color: T.gold, marginBottom: 4,
             }}>
-              Catering Order
+              Your Order
             </div>
             <div style={{ fontSize: 18, fontWeight: 700, color: T.textPrimary }}>
               {data.merchant.name}

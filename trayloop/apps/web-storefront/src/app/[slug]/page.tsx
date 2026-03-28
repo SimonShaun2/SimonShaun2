@@ -13,8 +13,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   try {
     const data = await fetchStorefront(slug);
     return {
-      title: `${data.merchant.name} — Order Catering`,
-      description: data.merchant.description || `Order catering from ${data.merchant.name}`,
+      title: `${data.merchant.name} — Place an Order`,
+      description: data.merchant.description || `Order from ${data.merchant.name}`,
     };
   } catch {
     return { title: 'Storefront Not Found' };
@@ -41,7 +41,7 @@ export default async function StorefrontPage({ params }: PageProps) {
   if (menu.length === 0) {
     return (
       <main style={{ fontFamily: fontStack, background: '#FAF9F7', minHeight: '100vh' }}>
-        <Header merchantName={merchant.name} />
+        <Header merchantName={merchant.name} merchantDescription={merchant.description} />
         <div style={{ maxWidth: 1040, margin: '0 auto', padding: '48px 24px' }}>
           <EmptyState message="This merchant hasn't published their menu yet." />
         </div>
@@ -53,7 +53,7 @@ export default async function StorefrontPage({ params }: PageProps) {
 
   return (
     <main style={{ fontFamily: fontStack, background: '#FAF9F7', minHeight: '100vh' }}>
-      <Header merchantName={merchant.name} />
+      <Header merchantName={merchant.name} merchantDescription={merchant.description} />
 
       {primaryLocation && <PolicyBadges location={primaryLocation} />}
 
@@ -64,7 +64,7 @@ export default async function StorefrontPage({ params }: PageProps) {
   );
 }
 
-function Header({ merchantName }: { merchantName: string }) {
+function Header({ merchantName, merchantDescription }: { merchantName: string; merchantDescription?: string | null }) {
   return (
     <header style={{
       background: '#1C1917',
@@ -95,7 +95,7 @@ function Header({ merchantName }: { merchantName: string }) {
           fontWeight: 500,
           letterSpacing: '0.5px',
         }}>
-          Catering &amp; Events
+          {merchantDescription || 'Catering & Events'}
         </span>
       </div>
     </header>
