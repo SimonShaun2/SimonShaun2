@@ -100,10 +100,8 @@ export default function CheckoutForm({ data }: Props) {
       payload.deliveryAddress = { address, city, state, zipCode };
     }
 
-    const idempotencyKey = `order-${email}-${eventDate}-${Date.now()}`;
-
     try {
-      const result = await submitOrder(data.merchant.slug, payload, idempotencyKey);
+      const result = await submitOrder(data.merchant.slug, payload);
       setConfirmation(result);
     } catch (err) {
       if (err instanceof OrderError) {

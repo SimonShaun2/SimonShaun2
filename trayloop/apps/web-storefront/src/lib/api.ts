@@ -129,20 +129,23 @@ export interface OrderConfirmation {
   createdAt: string;
 }
 
-export async function submitOrder(slug: string, order: OrderSubmission, idempotencyKey: string): Promise<OrderConfirmation> {
+export async function submitOrder(slug: string, order: OrderSubmission): Promise<OrderConfirmation> {
   const res = await fetch(`${API_URL}/api/storefront/${slug}/order`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Idempotency-Key': idempotencyKey,
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(order),
   });
 
-  const json = await res.json();
+  const text = await res.text();
+  let json: any;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new OrderError(`Server returned invalid response: ${text.slice(0, 100)}`);
+  }
 
   if (!res.ok) {
-    const msg = json.error?.message ?? 'Order submission failed';
+    const msg = json.error?.message ?? json.message ?? 'Order submission failed';
     const details = json.error?.details;
     throw new OrderError(msg, details);
   }
