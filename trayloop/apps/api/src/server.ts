@@ -1,10 +1,12 @@
 import { buildApp } from './index.js';
 import { logger } from '@trayloop/utils';
 import { initStripe } from './lib/stripe.js';
+import { initEmail } from './lib/email.js';
 
 const start = async () => {
   // Initialize external services
   initStripe();
+  initEmail();
 
   const app = await buildApp();
   const port = parseInt(process.env.API_PORT || '3001', 10);

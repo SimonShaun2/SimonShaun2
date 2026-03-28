@@ -38,11 +38,13 @@ export async function buildApp() {
   // Health check
   app.get('/health', async () => {
     const { isStripeEnabled } = await import('./lib/stripe.js');
+    const { isEmailEnabled } = await import('./lib/email.js');
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),
       services: {
         stripe: isStripeEnabled() ? 'connected' : 'not configured',
+        email: isEmailEnabled() ? 'connected' : 'not configured',
       },
     };
   });

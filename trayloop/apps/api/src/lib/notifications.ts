@@ -1,6 +1,8 @@
 import { db } from '@trayloop/database';
-import { notifications } from '@trayloop/database';
+import { notifications, users } from '@trayloop/database';
+import { eq } from 'drizzle-orm';
 import { logger } from '@trayloop/utils';
+import { sendEmail, isEmailEnabled } from './email.js';
 
 export interface NotificationPayload {
   userId: string;
@@ -31,17 +33,40 @@ export async function sendNotification(payload: NotificationPayload): Promise<vo
     logger.error('Failed to persist notification', { error: (err as Error).message, subject: payload.subject });
   }
 
-  // Log the notification (acts as email stub until real email is wired)
-  logger.info('Notification sent', {
+  // Send email for email-type notifications
+  if (payload.type === 'email' && isEmailEnabled()) {
+    try {
+      const [user] = await db
+        .select({ email: users.email, name: users.name })
+        .from(users)
+        .where(eq(users.id, payload.userId))
+        .limit(1);
+
+      if (user?.email) {
+        const textBody = payload.body;
+        const htmlBody = payload.body
+          .split('\n')
+          .map((line) => line.trim() === '' ? '<br>' : `<p style="margin:0 0 4px">${line}</p>`)
+          .join('\n');
+
+        await sendEmail({
+          to: user.email,
+          subject: payload.subject,
+          text: textBody,
+          html: `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#1C1917">${htmlBody}</div>`,
+        });
+      }
+    } catch (err) {
+      logger.error('Email send failed (notification still saved)', { error: (err as Error).message, subject: payload.subject });
+    }
+  }
+
+  logger.info('Notification processed', {
     userId: payload.userId,
     type: payload.type,
     subject: payload.subject,
+    emailSent: payload.type === 'email' && isEmailEnabled(),
   });
-
-  // TODO: When email provider is configured, send email here:
-  // if (payload.type === 'email') {
-  //   await emailProvider.send({ to: userEmail, subject, html: body });
-  // }
 }
 
 // --- Convenience helpers for common notifications ---
