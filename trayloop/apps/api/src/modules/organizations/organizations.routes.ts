@@ -4,7 +4,7 @@ import { requireTenant, requireOrgAdmin } from '../../lib/middleware/tenant.js';
 import { validateBody } from '../../lib/middleware/validate.js';
 import { createOrganizationSchema, updateOrganizationSchema } from './organizations.schema.js';
 import * as service from './organizations.service.js';
-import { getConnectStatus, createConnectAccount, syncConnectStatus } from '../../lib/stripe-connect.js';
+import { getConnectStatus, createConnectAccount, syncConnectStatus, createOnboardingLink } from '../../lib/stripe-connect.js';
 
 export function registerRoutes(app: FastifyInstance) {
   // List organizations the authenticated user belongs to
@@ -59,5 +59,17 @@ export function registerRoutes(app: FastifyInstance) {
     }
     const synced = await syncConnectStatus(request.ctx.tenant!.organizationId, status.stripeAccountId);
     return { data: synced };
+  });
+
+  // Create Stripe-hosted onboarding link (owner/admin only)
+  app.post('/current/payment-onboarding-link', { preHandler: [requireAuth, requireTenant, requireOrgAdmin] }, async (request, reply) => {
+    const body = request.body as { returnUrl?: string; refreshUrl?: string } | undefined;
+    const baseUrl = body?.returnUrl || 'http://localhost:3003/settings';
+    const result = await createOnboardingLink(
+      request.ctx.tenant!.organizationId,
+      `${baseUrl}?stripe=complete`,
+      `${baseUrl}?stripe=refresh`,
+    );
+    return reply.status(201).send({ data: result });
   });
 }

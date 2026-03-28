@@ -152,3 +152,44 @@ export async function syncConnectStatus(orgId: string, stripeAccountId: string):
     onboardingComplete,
   };
 }
+
+/**
+ * Create a Stripe-hosted Account Link for onboarding.
+ * If no connected account exists yet, creates one first.
+ */
+export async function createOnboardingLink(
+  orgId: string,
+  returnUrl: string,
+  refreshUrl: string,
+): Promise<{ url: string; status: ConnectAccountStatus }> {
+  if (!isStripeEnabled()) {
+    throw new ValidationError('Stripe is not configured. Contact support.');
+  }
+
+  // Ensure account exists (idempotent)
+  const status = await createConnectAccount(orgId);
+
+  if (!status.stripeAccountId) {
+    throw new ValidationError('Failed to create Stripe account.');
+  }
+
+  // If already fully onboarded, no link needed
+  if (status.onboardingComplete) {
+    return { url: returnUrl, status };
+  }
+
+  const stripe = getStripe();
+  const accountLink = await stripe.accountLinks.create({
+    account: status.stripeAccountId,
+    return_url: returnUrl,
+    refresh_url: refreshUrl,
+    type: 'account_onboarding',
+  });
+
+  logger.info('Stripe onboarding link created', {
+    orgId,
+    stripeAccountId: status.stripeAccountId,
+  });
+
+  return { url: accountLink.url, status };
+}
