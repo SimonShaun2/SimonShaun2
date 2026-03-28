@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { apiFetch } from '../../lib/api';
@@ -15,6 +16,14 @@ interface PaymentStatus {
 type SetupState = 'loading' | 'not_started' | 'incomplete' | 'active' | 'error';
 
 export default function SettingsPage() {
+  return (
+    <Suspense fallback={<p style={{ color: '#6b7280' }}>Loading settings...</p>}>
+      <SettingsContent />
+    </Suspense>
+  );
+}
+
+function SettingsContent() {
   const searchParams = useSearchParams();
   const stripeParam = searchParams.get('stripe');
 
@@ -29,7 +38,6 @@ export default function SettingsPage() {
     fetchPaymentStatus();
   }, []);
 
-  // If returning from Stripe onboarding, sync status
   useEffect(() => {
     if (stripeParam === 'complete' || stripeParam === 'refresh') {
       syncStatus();
@@ -42,9 +50,10 @@ export default function SettingsPage() {
       const status: PaymentStatus = res.data;
       setPaymentStatus(status);
       deriveState(status);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load payment status');
-      setSetupState('error');
+    } catch {
+      // API call failed — show "not started" instead of error
+      setPaymentStatus(null);
+      setSetupState('not_started');
     }
   }
 
@@ -55,7 +64,6 @@ export default function SettingsPage() {
       setPaymentStatus(status);
       deriveState(status);
     } catch {
-      // Fall back to cached status
       fetchPaymentStatus();
     }
   }
@@ -82,7 +90,6 @@ export default function SettingsPage() {
         method: 'POST',
         body: JSON.stringify({ returnUrl: window.location.origin + '/settings' }),
       });
-      // Redirect to Stripe-hosted onboarding
       window.location.href = res.data.url;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create onboarding link');
@@ -124,7 +131,6 @@ export default function SettingsPage() {
     <div>
       <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1.5rem' }}>Settings</h1>
 
-      {/* Stripe return banner */}
       {stripeParam === 'complete' && (
         <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 8, padding: '12px 16px', marginBottom: 16 }}>
           <p style={{ color: '#166534', fontWeight: 600, margin: 0, fontSize: 14 }}>
@@ -146,7 +152,6 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Payment setup card */}
       <div style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: 24, maxWidth: 600 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>{config.title}</h2>
@@ -165,7 +170,6 @@ export default function SettingsPage() {
           {config.desc}
         </p>
 
-        {/* Status details when account exists */}
         {paymentStatus?.stripeAccountId && setupState !== 'loading' && (
           <div style={{ background: '#F9FAFB', borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 13 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -197,7 +201,6 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {/* CTA button */}
         {config.cta && (
           <button
             onClick={handleSetupPayments}
@@ -217,7 +220,6 @@ export default function SettingsPage() {
           </button>
         )}
 
-        {/* Refresh status link */}
         {paymentStatus?.stripeAccountId && !paymentStatus.onboardingComplete && (
           <button
             onClick={syncStatus}
