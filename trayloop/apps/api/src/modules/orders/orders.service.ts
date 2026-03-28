@@ -17,6 +17,8 @@ import { recordOrderEvent, getOrderTimeline } from '../../lib/order-events.js';
 import type { EventBus } from '../../lib/event-bus/index.js';
 import type { CreateOrderInput, UpdateOrderStatusInput, OrderListQuery, SendDepositLinkInput, ReorderInput } from './orders.schema.js';
 
+const DB_URL = 'postgresql://postgres:postgres@localhost:5432/trayloop';
+
 // --- Status transition rules ---
 // Deposit required:  submitted → awaiting_deposit → confirmed → completed
 // No deposit:        submitted → confirmed → completed
@@ -435,7 +437,7 @@ export async function sendDepositLink(orderId: string, orgId: string, input: Sen
   const paymentLink = `https://pay.trayloop.com/deposit/${fakeLinkId}`;
 
   // Transaction: create/replace deposit record + update order status
-  const connectionString = process.env.DATABASE_URL!;
+  const connectionString = DB_URL;
   const txSql = postgres(connectionString);
 
   try {
@@ -534,7 +536,7 @@ export async function markPaid(orderId: string, orgId: string, eventBus: EventBu
   const depositRequired = await getDepositRequired(order.locationId);
 
   // Transaction: update deposit + update order status
-  const connectionString = process.env.DATABASE_URL!;
+  const connectionString = DB_URL;
   const txSql = postgres(connectionString);
 
   try {
@@ -696,7 +698,7 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
   const { lineItems, total: totalAmount } = pricing;
 
   // 5. Execute all writes in a single transaction
-  const connectionString = process.env.DATABASE_URL!;
+  const connectionString = DB_URL;
   const txSql = postgres(connectionString);
 
   try {
@@ -967,7 +969,7 @@ export async function reorder(sourceOrderId: string, orgId: string, input: Reord
   const { lineItems, total: totalAmount } = pricing;
 
   // 7. Create new order in transaction
-  const connectionString = process.env.DATABASE_URL!;
+  const connectionString = DB_URL;
   const txSql = postgres(connectionString);
 
   try {
