@@ -10,14 +10,11 @@ import {
   deposits,
 } from '@trayloop/database';
 import { eq, and, gte, lte, desc, sql } from 'drizzle-orm';
-import postgres from 'postgres';
 import { ValidationError, NotFoundError } from '../../lib/errors.js';
 import { calculatePricing } from '../../lib/pricing.js';
 import { recordOrderEvent, getOrderTimeline } from '../../lib/order-events.js';
 import type { EventBus } from '../../lib/event-bus/index.js';
 import type { CreateOrderInput, UpdateOrderStatusInput, OrderListQuery, SendDepositLinkInput, ReorderInput } from './orders.schema.js';
-
-const DB_URL = 'postgresql://postgres:postgres@localhost:5432/trayloop';
 
 // --- Status transition rules ---
 // Deposit required:  submitted → awaiting_deposit → confirmed → completed
@@ -437,68 +434,28 @@ export async function sendDepositLink(orderId: string, orgId: string, input: Sen
   const paymentLink = `https://pay.trayloop.com/deposit/${fakeLinkId}`;
 
   // Transaction: create/replace deposit record + update order status
-  const connectionString = DB_URL;
-  const txSql = postgres(connectionString);
+  const result = await db.transaction(async (tx) => {
+    await tx.update(deposits).set({ status: 'refunded', updatedAt: new Date() })
+      .where(and(eq(deposits.orderId, order.id), eq(deposits.status, 'pending')));
 
-  try {
-    const result = await txSql.begin(async (tx) => {
-      const { drizzle } = await import('drizzle-orm/postgres-js');
-      const txDb = drizzle(tx);
+    const [deposit] = await tx.insert(deposits).values({
+      orderId: order.id, amount: depositAmount, currency: 'USD', status: 'pending', stripePaymentIntentId: fakeLinkId,
+    }).returning();
 
-      // Cancel any existing pending deposit for this order
-      await txDb
-        .update(deposits)
-        .set({ status: 'refunded', updatedAt: new Date() })
-        .where(and(eq(deposits.orderId, order.id), eq(deposits.status, 'pending')));
+    const [updated] = await tx.update(orders).set({ status: 'awaiting_deposit', updatedAt: new Date() })
+      .where(eq(orders.id, order.id)).returning();
 
-      // Create new deposit record
-      const [deposit] = await txDb
-        .insert(deposits)
-        .values({
-          orderId: order.id,
-          amount: depositAmount,
-          currency: 'USD',
-          status: 'pending',
-          stripePaymentIntentId: fakeLinkId,
-        })
-        .returning();
+    return { deposit, order: updated };
+  });
 
-      // Update order status to awaiting_deposit
-      const [updated] = await txDb
-        .update(orders)
-        .set({ status: 'awaiting_deposit', updatedAt: new Date() })
-        .where(eq(orders.id, order.id))
-        .returning();
+  try { await recordOrderEvent(order.id, 'deposit_link_sent', `Deposit link sent to ${customer.email} for $${(depositAmount / 100).toFixed(2)}`); } catch {}
+  try { await eventBus.emit('order.status_updated', { orderId: order.id, oldStatus: order.status, newStatus: 'awaiting_deposit' }); } catch {}
 
-      return { deposit, order: updated };
-    });
-
-    await recordOrderEvent(order.id, 'deposit_link_sent', `Deposit link sent to ${customer.email} for $${(depositAmount / 100).toFixed(2)}`, {
-      depositId: result.deposit.id,
-      amount: depositAmount,
-      sentTo: customer.email,
-    });
-
-    await eventBus.emit('order.status_updated', {
-      orderId: order.id,
-      oldStatus: order.status,
-      newStatus: 'awaiting_deposit',
-    });
-
-    return {
-      orderId: result.order.id,
-      status: result.order.status,
-      depositId: result.deposit.id,
-      depositAmount: result.deposit.amount,
-      currency: result.deposit.currency,
-      paymentLink,
-      sentTo: customer.email,
-      depositRequired: true,
-      allowedTransitions: getAllowedTransitions('awaiting_deposit', true),
-    };
-  } finally {
-    await txSql.end();
-  }
+  return {
+    orderId: result.order.id, status: result.order.status, depositId: result.deposit.id,
+    depositAmount: result.deposit.amount, currency: result.deposit.currency, paymentLink,
+    sentTo: customer.email, depositRequired: true, allowedTransitions: getAllowedTransitions('awaiting_deposit', true),
+  };
 }
 
 // --- Mark order as paid ---
@@ -536,79 +493,29 @@ export async function markPaid(orderId: string, orgId: string, eventBus: EventBu
   const depositRequired = await getDepositRequired(order.locationId);
 
   // Transaction: update deposit + update order status
-  const connectionString = DB_URL;
-  const txSql = postgres(connectionString);
+  const now = new Date();
+  const result = await db.transaction(async (tx) => {
+    const [updatedDeposit] = await tx.update(deposits)
+      .set({ status: 'paid', paidAt: now, updatedAt: now })
+      .where(eq(deposits.id, pendingDeposit.id)).returning();
 
-  try {
-    const result = await txSql.begin(async (tx) => {
-      const { drizzle } = await import('drizzle-orm/postgres-js');
-      const txDb = drizzle(tx);
+    const [updatedOrder] = await tx.update(orders)
+      .set({ status: 'confirmed', updatedAt: now })
+      .where(eq(orders.id, order.id)).returning();
 
-      // Mark deposit as paid
-      const now = new Date();
-      const [updatedDeposit] = await txDb
-        .update(deposits)
-        .set({
-          status: 'paid',
-          paidAt: now,
-          updatedAt: now,
-        })
-        .where(eq(deposits.id, pendingDeposit.id))
-        .returning();
+    return { deposit: updatedDeposit, order: updatedOrder };
+  });
 
-      // Transition order to confirmed
-      const [updatedOrder] = await txDb
-        .update(orders)
-        .set({
-          status: 'confirmed',
-          updatedAt: now,
-        })
-        .where(eq(orders.id, order.id))
-        .returning();
+  try { await recordOrderEvent(order.id, 'deposit_paid', `Deposit of $${(result.deposit.amount / 100).toFixed(2)} marked as paid`); } catch {}
+  try { await recordOrderEvent(order.id, 'status_changed', 'Status changed to confirmed'); } catch {}
+  try { await eventBus.emit('payment.completed', { paymentId: result.deposit.id, orderId: order.id, amount: result.deposit.amount }); } catch {}
+  try { await eventBus.emit('order.status_updated', { orderId: order.id, oldStatus: 'awaiting_deposit', newStatus: 'confirmed' }); } catch {}
 
-      return { deposit: updatedDeposit, order: updatedOrder };
-    });
-
-    await recordOrderEvent(order.id, 'deposit_paid', `Deposit of $${(result.deposit.amount / 100).toFixed(2)} marked as paid`, {
-      depositId: result.deposit.id,
-      amount: result.deposit.amount,
-    });
-
-    await recordOrderEvent(order.id, 'status_changed', 'Status changed to confirmed', {
-      from: 'awaiting_deposit',
-      to: 'confirmed',
-    });
-
-    await eventBus.emit('payment.completed', {
-      paymentId: result.deposit.id,
-      orderId: order.id,
-      amount: result.deposit.amount,
-    });
-
-    await eventBus.emit('order.status_updated', {
-      orderId: order.id,
-      oldStatus: 'awaiting_deposit',
-      newStatus: 'confirmed',
-    });
-
-    return {
-      orderId: result.order.id,
-      status: result.order.status,
-      previousStatus: 'awaiting_deposit',
-      deposit: {
-        id: result.deposit.id,
-        amount: result.deposit.amount,
-        currency: result.deposit.currency,
-        status: result.deposit.status,
-        paidAt: result.deposit.paidAt,
-      },
-      depositRequired,
-      allowedTransitions: getAllowedTransitions('confirmed', depositRequired),
-      updatedAt: result.order.updatedAt,
-    };
-  } finally {
-    await txSql.end();
-  }
+  return {
+    orderId: result.order.id, status: result.order.status, previousStatus: 'awaiting_deposit',
+    deposit: { id: result.deposit.id, amount: result.deposit.amount, currency: result.deposit.currency, status: result.deposit.status, paidAt: result.deposit.paidAt },
+    depositRequired, allowedTransitions: getAllowedTransitions('confirmed', depositRequired), updatedAt: result.order.updatedAt,
+  };
 }
 
 // --- Location validation (reusable) ---
@@ -697,181 +604,154 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
 
   const { lineItems, total: totalAmount } = pricing;
 
-  // 5. Execute all writes in a single transaction
-  const connectionString = DB_URL;
-  const txSql = postgres(connectionString);
+  // 5. Execute all writes in a single transaction (uses existing db connection)
+  const result = await db.transaction(async (tx) => {
+    // 5a. Find or create customer (scoped to org)
+    const [existingCustomer] = await tx
+      .select({ id: customers.id, phone: customers.phone, companyName: customers.companyName })
+      .from(customers)
+      .where(and(
+        eq(customers.email, input.customer.email),
+        eq(customers.organizationId, orgId),
+      ))
+      .limit(1);
 
-  try {
-    const result = await txSql.begin(async (tx) => {
-      const { drizzle } = await import('drizzle-orm/postgres-js');
-      const txDb = drizzle(tx);
-
-      // 5a. Find or create customer (scoped to org)
-      const [existingCustomer] = await txDb
-        .select()
-        .from(customers)
-        .where(and(
-          eq(customers.email, input.customer.email),
-          eq(customers.organizationId, orgId),
-        ))
-        .limit(1);
-
-      let customerId: string;
-      if (existingCustomer) {
-        customerId = existingCustomer.id;
-        await txDb
-          .update(customers)
-          .set({
-            firstName: input.customer.firstName,
-            lastName: input.customer.lastName,
-            phone: input.customer.phone ?? existingCustomer.phone,
-            companyName: input.customer.companyName ?? existingCustomer.companyName,
-            updatedAt: new Date(),
-          })
-          .where(eq(customers.id, customerId));
-      } else {
-        const [newCustomer] = await txDb
-          .insert(customers)
-          .values({
-            organizationId: orgId,
-            email: input.customer.email,
-            firstName: input.customer.firstName,
-            lastName: input.customer.lastName,
-            phone: input.customer.phone,
-            companyName: input.customer.companyName,
-          })
-          .returning();
-        customerId = newCustomer.id;
-      }
-
-      // 5b. Save delivery address for new customers
-      if (input.deliveryAddress) {
-        const [existingAddr] = await txDb
-          .select({ id: customerAddresses.id })
-          .from(customerAddresses)
-          .where(eq(customerAddresses.customerId, customerId))
-          .limit(1);
-
-        if (!existingAddr) {
-          await txDb.insert(customerAddresses).values({
-            customerId,
-            label: 'default',
-            ...input.deliveryAddress,
-            isDefault: true,
-          });
-        }
-      }
-
-      // 5c. Create order — status always starts as "submitted"
-      const orderNumber = await generateOrderNumber(orgId, txDb);
-      const [order] = await txDb
-        .insert(orders)
+    let customerId: string;
+    if (existingCustomer) {
+      customerId = existingCustomer.id;
+      await tx
+        .update(customers)
+        .set({
+          firstName: input.customer.firstName,
+          lastName: input.customer.lastName,
+          phone: input.customer.phone ?? existingCustomer.phone,
+          companyName: input.customer.companyName ?? existingCustomer.companyName,
+          updatedAt: new Date(),
+        })
+        .where(eq(customers.id, customerId));
+    } else {
+      const [newCustomer] = await tx
+        .insert(customers)
         .values({
-          orderNumber,
           organizationId: orgId,
-          locationId: input.locationId,
-          customerId,
-          status: 'submitted',
-          totalAmount,
-          currency: 'USD',
-          headCount: input.headcount,
-          scheduledAt: eventDate,
-          notes: input.notes,
+          email: input.customer.email,
+          firstName: input.customer.firstName,
+          lastName: input.customer.lastName,
+          phone: input.customer.phone,
+          companyName: input.customer.companyName,
         })
         .returning();
+      customerId = newCustomer.id;
+    }
 
-      // 5d. Create order line items from pricing result
-      await txDb.insert(orderItems).values(
-        lineItems.map((item) => ({
-          orderId: order.id,
-          packageId: item.type === 'package' ? item.referenceId : null,
-          name: item.name,
-          description: item.description,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          totalPrice: item.totalPrice,
-        })),
-      );
+    // 5b. Save delivery address for new customers
+    if (input.deliveryAddress) {
+      const [existingAddr] = await tx
+        .select({ id: customerAddresses.id })
+        .from(customerAddresses)
+        .where(eq(customerAddresses.customerId, customerId))
+        .limit(1);
 
-      // 5e. Create recurring order if requested
-      let recurringOrderId: string | null = null;
-      if (input.recurring) {
-        const [recurring] = await txDb
-          .insert(recurringOrders)
-          .values({
-            organizationId: orgId,
-            locationId: input.locationId,
-            customerId,
-            packageId: input.packages[0].packageId,
-            interval: input.recurring.interval,
-            startDate: eventDate,
-            endDate: input.recurring.endDate ? new Date(input.recurring.endDate) : null,
-            nextOccurrence: eventDate,
-            preferredDay: input.recurring.preferredDay,
-            preferredTime: input.recurring.preferredTime,
-            headCount: input.headcount,
-            notes: input.notes,
-            isActive: true,
-          })
-          .returning();
-        recurringOrderId = recurring.id;
+      if (!existingAddr) {
+        await tx.insert(customerAddresses).values({
+          customerId,
+          label: 'default',
+          ...input.deliveryAddress,
+          isDefault: true,
+        });
       }
-
-      return { order, customerId, recurringOrderId };
-    });
-
-    // 6. Record timeline event + emit (non-critical — don't fail the order)
-    try {
-      await recordOrderEvent(result.order.id, 'order_created', `Order ${result.order.orderNumber} submitted`, {
-        orderNumber: result.order.orderNumber,
-        headcount: input.headcount,
-        total: totalAmount,
-      });
-    } catch {
-      // Timeline recording failed — order still valid
     }
 
-    try {
-      await eventBus.emit('order.created', {
-        orderId: result.order.id,
-        customerId: result.customerId,
-        orgId,
-      });
-    } catch {
-      // Event emission failed — order still valid
-    }
+    // 5c. Create order
+    const orderNumber = await generateOrderNumber(orgId, tx);
+    const [order] = await tx
+      .insert(orders)
+      .values({
+        orderNumber,
+        organizationId: orgId,
+        locationId: input.locationId,
+        customerId,
+        status: 'submitted',
+        totalAmount,
+        currency: 'USD',
+        headCount: input.headcount,
+        scheduledAt: eventDate,
+        notes: input.notes,
+      })
+      .returning();
 
-    // 7. Return order summary with full pricing breakdown
-    return {
-      id: result.order.id,
-      orderNumber: result.order.orderNumber,
-      status: result.order.status,
-      headCount: result.order.headCount,
-      scheduledAt: result.order.scheduledAt,
-      customer: {
-        firstName: input.customer.firstName,
-        lastName: input.customer.lastName,
-        email: input.customer.email,
-      },
-      pricing: {
-        packageSubtotal: pricing.packageSubtotal,
-        addOnSubtotal: pricing.addOnSubtotal,
-        total: pricing.total,
-        currency: pricing.currency,
-      },
-      items: lineItems.map((item) => ({
-        type: item.type,
+    // 5d. Create order line items
+    await tx.insert(orderItems).values(
+      lineItems.map((item) => ({
+        orderId: order.id,
+        packageId: item.type === 'package' ? item.referenceId : null,
         name: item.name,
+        description: item.description,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         totalPrice: item.totalPrice,
       })),
-      recurringOrderId: result.recurringOrderId,
-      createdAt: result.order.createdAt,
-    };
-  } finally {
-    await txSql.end();
-  }
+    );
+
+    // 5e. Create recurring order if requested
+    let recurringOrderId: string | null = null;
+    if (input.recurring) {
+      const [recurring] = await tx
+        .insert(recurringOrders)
+        .values({
+          organizationId: orgId,
+          locationId: input.locationId,
+          customerId,
+          packageId: input.packages[0].packageId,
+          interval: input.recurring.interval,
+          startDate: eventDate,
+          endDate: input.recurring.endDate ? new Date(input.recurring.endDate) : null,
+          nextOccurrence: eventDate,
+          preferredDay: input.recurring.preferredDay,
+          preferredTime: input.recurring.preferredTime,
+          headCount: input.headcount,
+          notes: input.notes,
+          isActive: true,
+        })
+        .returning();
+      recurringOrderId = recurring.id;
+    }
+
+    return { order, customerId, recurringOrderId };
+  });
+
+  // 6. Non-critical post-commit side effects
+  try { await recordOrderEvent(result.order.id, 'order_created', `Order ${result.order.orderNumber} submitted`); } catch {}
+  try { await eventBus.emit('order.created', { orderId: result.order.id, customerId: result.customerId, orgId }); } catch {}
+
+  // 7. Return order summary
+  return {
+    id: result.order.id,
+    orderNumber: result.order.orderNumber,
+    status: result.order.status,
+    headCount: result.order.headCount,
+    scheduledAt: result.order.scheduledAt,
+    customer: {
+      firstName: input.customer.firstName,
+      lastName: input.customer.lastName,
+      email: input.customer.email,
+    },
+    pricing: {
+      packageSubtotal: pricing.packageSubtotal,
+      addOnSubtotal: pricing.addOnSubtotal,
+      total: pricing.total,
+      currency: pricing.currency,
+    },
+    items: lineItems.map((item) => ({
+      type: item.type,
+      name: item.name,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      totalPrice: item.totalPrice,
+    })),
+    recurringOrderId: result.recurringOrderId,
+    createdAt: result.order.createdAt,
+  };
 }
 
 // --- Reorder ---
@@ -968,103 +848,44 @@ export async function reorder(sourceOrderId: string, orgId: string, input: Reord
 
   const { lineItems, total: totalAmount } = pricing;
 
-  // 7. Create new order in transaction
-  const connectionString = DB_URL;
-  const txSql = postgres(connectionString);
+  // 7. Create new order in transaction (uses existing db connection)
+  const result = await db.transaction(async (tx) => {
+    const orderNumber = await generateOrderNumber(orgId, tx);
+    const [newOrder] = await tx.insert(orders).values({
+      orderNumber, organizationId: orgId, locationId: sourceOrder.locationId,
+      customerId: sourceOrder.customerId, status: 'submitted', totalAmount,
+      currency: 'USD', headCount: headcount, scheduledAt: eventDate,
+      notes: input.notes ?? sourceOrder.notes,
+    }).returning();
 
-  try {
-    const result = await txSql.begin(async (tx) => {
-      const { drizzle } = await import('drizzle-orm/postgres-js');
-      const txDb = drizzle(tx);
-
-      const orderNumber = await generateOrderNumber(orgId, txDb);
-      const [newOrder] = await txDb
-        .insert(orders)
-        .values({
-          orderNumber,
-          organizationId: orgId,
-          locationId: sourceOrder.locationId,
-          customerId: sourceOrder.customerId,
-          status: 'submitted',
-          totalAmount,
-          currency: 'USD',
-          headCount: headcount,
-          scheduledAt: eventDate,
-          notes: input.notes ?? sourceOrder.notes,
-        })
-        .returning();
-
-      await txDb.insert(orderItems).values(
-        lineItems.map((item) => ({
-          orderId: newOrder.id,
-          packageId: item.type === 'package' ? item.referenceId : null,
-          name: item.name,
-          description: item.description,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          totalPrice: item.totalPrice,
-        })),
-      );
-
-      return newOrder;
-    });
-
-    // Record events on both source and new order
-    await recordOrderEvent(result.id, 'order_created', `Order ${result.orderNumber} created (reorder from ${sourceOrderId.slice(0, 8)})`, {
-      orderNumber: result.orderNumber,
-      reorderedFrom: sourceOrderId,
-    });
-
-    await recordOrderEvent(sourceOrderId, 'reorder_created', `Reorder created: ${result.orderNumber}`, {
-      newOrderId: result.id,
-      newOrderNumber: result.orderNumber,
-    });
-
-    await eventBus.emit('order.created', {
-      orderId: result.id,
-      customerId: sourceOrder.customerId,
-      orgId,
-    });
-
-    const depositRequired = await getDepositRequired(sourceOrder.locationId);
-
-    // Fetch customer name for response
-    const [customer] = await db
-      .select({ firstName: customers.firstName, lastName: customers.lastName, email: customers.email })
-      .from(customers)
-      .where(eq(customers.id, sourceOrder.customerId))
-      .limit(1);
-
-    return {
-      id: result.id,
-      orderNumber: result.orderNumber,
-      reorderedFrom: sourceOrderId,
-      status: result.status,
-      eventDate: result.scheduledAt,
-      headCount: result.headCount,
-      customer: {
-        name: `${customer.firstName} ${customer.lastName}`,
-        email: customer.email,
-      },
-      pricing: {
-        packageSubtotal: pricing.packageSubtotal,
-        addOnSubtotal: pricing.addOnSubtotal,
-        total: pricing.total,
-        currency: pricing.currency,
-      },
-      items: lineItems.map((item) => ({
-        type: item.type,
-        name: item.name,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        totalPrice: item.totalPrice,
+    await tx.insert(orderItems).values(
+      lineItems.map((item) => ({
+        orderId: newOrder.id,
+        packageId: item.type === 'package' ? item.referenceId : null,
+        name: item.name, description: item.description,
+        quantity: item.quantity, unitPrice: item.unitPrice, totalPrice: item.totalPrice,
       })),
-      depositRequired,
-      allowedTransitions: getAllowedTransitions('submitted', depositRequired),
-      warnings: warnings.length > 0 ? warnings : undefined,
-      createdAt: result.createdAt,
-    };
-  } finally {
-    await txSql.end();
-  }
+    );
+
+    return newOrder;
+  });
+
+  try { await recordOrderEvent(result.id, 'order_created', `Order ${result.orderNumber} created (reorder)`); } catch {}
+  try { await recordOrderEvent(sourceOrderId, 'reorder_created', `Reorder created: ${result.orderNumber}`); } catch {}
+  try { await eventBus.emit('order.created', { orderId: result.id, customerId: sourceOrder.customerId, orgId }); } catch {}
+
+  const depositRequired = await getDepositRequired(sourceOrder.locationId);
+  const [customer] = await db
+    .select({ firstName: customers.firstName, lastName: customers.lastName, email: customers.email })
+    .from(customers).where(eq(customers.id, sourceOrder.customerId)).limit(1);
+
+  return {
+    id: result.id, orderNumber: result.orderNumber, reorderedFrom: sourceOrderId,
+    status: result.status, eventDate: result.scheduledAt, headCount: result.headCount,
+    customer: { name: `${customer.firstName} ${customer.lastName}`, email: customer.email },
+    pricing: { packageSubtotal: pricing.packageSubtotal, addOnSubtotal: pricing.addOnSubtotal, total: pricing.total, currency: pricing.currency },
+    items: lineItems.map((item) => ({ type: item.type, name: item.name, quantity: item.quantity, unitPrice: item.unitPrice, totalPrice: item.totalPrice })),
+    depositRequired, allowedTransitions: getAllowedTransitions('submitted', depositRequired),
+    warnings: warnings.length > 0 ? warnings : undefined, createdAt: result.createdAt,
+  };
 }
