@@ -4,6 +4,7 @@ import { requireTenant, requireOrgAdmin } from '../../lib/middleware/tenant.js';
 import { validateBody } from '../../lib/middleware/validate.js';
 import { createOrganizationSchema, updateOrganizationSchema } from './organizations.schema.js';
 import * as service from './organizations.service.js';
+import { getConnectStatus, createConnectAccount, syncConnectStatus } from '../../lib/stripe-connect.js';
 
 export function registerRoutes(app: FastifyInstance) {
   // List organizations the authenticated user belongs to
@@ -34,5 +35,29 @@ export function registerRoutes(app: FastifyInstance) {
   app.patch('/current', { preHandler: [requireAuth, requireTenant, requireOrgAdmin, validateBody(updateOrganizationSchema)] }, async (request, reply) => {
     const result = await service.update(request.ctx.tenant!.organizationId, (request as any).validatedBody);
     return reply.send({ data: result });
+  });
+
+  // --- Stripe Connect ---
+
+  // Get payment setup status
+  app.get('/current/payment-status', { preHandler: [requireAuth, requireTenant] }, async (request) => {
+    const status = await getConnectStatus(request.ctx.tenant!.organizationId);
+    return { data: status };
+  });
+
+  // Create or retrieve Stripe Connect account (owner/admin only)
+  app.post('/current/payment-setup', { preHandler: [requireAuth, requireTenant, requireOrgAdmin] }, async (request, reply) => {
+    const result = await createConnectAccount(request.ctx.tenant!.organizationId);
+    return reply.status(201).send({ data: result });
+  });
+
+  // Sync Stripe Connect status from Stripe (owner/admin only)
+  app.post('/current/payment-status/sync', { preHandler: [requireAuth, requireTenant, requireOrgAdmin] }, async (request) => {
+    const status = await getConnectStatus(request.ctx.tenant!.organizationId);
+    if (!status.stripeAccountId) {
+      return { data: status };
+    }
+    const synced = await syncConnectStatus(request.ctx.tenant!.organizationId, status.stripeAccountId);
+    return { data: synced };
   });
 }

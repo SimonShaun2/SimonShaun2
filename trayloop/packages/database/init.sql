@@ -101,6 +101,10 @@ CREATE TABLE IF NOT EXISTS organizations (
   logo_url TEXT,
   owner_id UUID NOT NULL REFERENCES users(id),
   stripe_account_id TEXT,
+  stripe_charges_enabled BOOLEAN NOT NULL DEFAULT false,
+  stripe_payouts_enabled BOOLEAN NOT NULL DEFAULT false,
+  stripe_details_submitted BOOLEAN NOT NULL DEFAULT false,
+  stripe_onboarding_complete BOOLEAN NOT NULL DEFAULT false,
   is_active BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
