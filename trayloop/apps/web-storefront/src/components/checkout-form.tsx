@@ -432,50 +432,112 @@ export default function CheckoutForm({ data }: Props) {
           </div>
 
           {/* Package cards */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {allPackages.map((pkg) => {
               const isSelected = !!selectedPkgs[pkg.id];
               return (
                 <div
                   key={pkg.id}
                   onClick={() => togglePkg(pkg.id)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togglePkg(pkg.id); } }}
+                  className="pkg-card"
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 14,
-                    padding: '16px 18px',
+                    padding: '20px 20px',
                     border: isSelected ? `2px solid ${T.selectedBorder}` : `1px solid ${T.cardBorder}`,
-                    borderRadius: 10,
-                    background: isSelected ? T.selectedBg : T.cardBg,
+                    borderRadius: 12,
+                    background: isSelected ? '#F7F6F5' : T.cardBg,
                     cursor: 'pointer',
-                    transition: 'border-color 0.15s, background 0.15s',
+                    transition: 'all 0.15s ease',
+                    boxShadow: isSelected ? '0 2px 8px rgba(28,25,23,0.08)' : 'none',
+                    outline: 'none',
+                    position: 'relative' as const,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.borderColor = '#A8A29E';
+                      e.currentTarget.style.background = '#FAFAF9';
+                      e.currentTarget.style.boxShadow = '0 1px 4px rgba(28,25,23,0.05)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.borderColor = T.cardBorder;
+                      e.currentTarget.style.background = T.cardBg;
+                      e.currentTarget.style.boxShadow = 'none';
+                    }
                   }}
                 >
-                  {/* Checkbox */}
-                  <div style={{
-                    width: 20, height: 20, borderRadius: 4, flexShrink: 0,
-                    border: isSelected ? `2px solid ${T.selectedBorder}` : `2px solid ${T.borderInput}`,
-                    background: isSelected ? T.selectedBorder : 'transparent',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    {isSelected && (
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                        <path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    )}
+                  {/* Top row: checkbox + name + price */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+                    {/* Checkbox */}
+                    <div style={{
+                      width: 22, height: 22, borderRadius: 6, flexShrink: 0, marginTop: 1,
+                      border: isSelected ? 'none' : `2px solid ${T.borderInput}`,
+                      background: isSelected ? T.selectedBorder : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all 0.15s',
+                    }}>
+                      {isSelected && (
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                          <path d="M3 7L6 10L11 4" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                    </div>
+
+                    {/* Name + description */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: T.textPrimary, lineHeight: 1.3 }}>{pkg.name}</div>
+                      {pkg.description && (
+                        <div style={{ fontSize: 13, color: T.textMuted, marginTop: 3, lineHeight: 1.4 }}>{pkg.description}</div>
+                      )}
+                    </div>
+
+                    {/* Price block */}
+                    <div style={{
+                      textAlign: 'right', flexShrink: 0,
+                      background: isSelected ? 'rgba(212,168,83,0.08)' : 'transparent',
+                      padding: '4px 10px', borderRadius: 8,
+                      transition: 'background 0.15s',
+                    }}>
+                      <div>
+                        <span style={{ fontSize: 22, fontWeight: 700, color: T.gold, lineHeight: 1 }}>
+                          ${(pkg.pricePerHead / 100).toFixed(2)}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 12, color: T.textMuted, marginTop: 1 }}>/person</div>
+                    </div>
                   </div>
-                  {/* Info */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 15, fontWeight: 600, color: T.textPrimary }}>{pkg.name}</div>
-                    {pkg.description && (
-                      <div style={{ fontSize: 13, color: T.textMuted, marginTop: 2 }}>{pkg.description}</div>
-                    )}
-                  </div>
-                  {/* Price */}
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <span style={{ fontSize: 20, fontWeight: 700, color: T.gold }}>${(pkg.pricePerHead / 100).toFixed(2)}</span>
-                    <span style={{ fontSize: 13, color: T.textMuted }}>/person</span>
-                  </div>
+
+                  {/* Headcount range */}
+                  {(pkg.minimumHeadcount || pkg.maximumHeadcount) && (
+                    <div style={{ marginTop: 8, marginLeft: 36, fontSize: 12, color: T.textPlaceholder }}>
+                      {pkg.minimumHeadcount && `Min ${pkg.minimumHeadcount}`}
+                      {pkg.minimumHeadcount && pkg.maximumHeadcount && ' · '}
+                      {pkg.maximumHeadcount && `Max ${pkg.maximumHeadcount}`}
+                      {' guests'}
+                    </div>
+                  )}
+
+                  {/* Includes (shown when selected) */}
+                  {isSelected && pkg.includes && pkg.includes.length > 0 && (
+                    <div style={{
+                      marginTop: 12, marginLeft: 36, paddingTop: 12,
+                      borderTop: `1px solid ${T.cardBorder}`,
+                    }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '1px', color: T.textMuted, marginBottom: 6 }}>
+                        Includes
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px' }}>
+                        {pkg.includes.map((item, i) => (
+                          <span key={i} style={{ fontSize: 13, color: T.textPrimary, lineHeight: 1.6 }}>
+                            {item.isOptional ? '○' : '•'} {item.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -494,6 +556,9 @@ export default function CheckoutForm({ data }: Props) {
                   <div
                     key={addOn.id}
                     onClick={() => toggleAddOn(addOn.id)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleAddOn(addOn.id); } }}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -501,20 +566,35 @@ export default function CheckoutForm({ data }: Props) {
                       padding: '14px 18px',
                       border: isSelected ? `2px solid ${T.selectedBorder}` : `1px solid ${T.cardBorder}`,
                       borderRadius: 10,
-                      background: isSelected ? T.selectedBg : T.cardBg,
+                      background: isSelected ? '#F7F6F5' : T.cardBg,
                       cursor: 'pointer',
-                      transition: 'border-color 0.15s, background 0.15s',
+                      transition: 'all 0.15s ease',
+                      boxShadow: isSelected ? '0 1px 4px rgba(28,25,23,0.06)' : 'none',
+                      outline: 'none',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isSelected) {
+                        e.currentTarget.style.borderColor = '#A8A29E';
+                        e.currentTarget.style.background = '#FAFAF9';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected) {
+                        e.currentTarget.style.borderColor = T.cardBorder;
+                        e.currentTarget.style.background = T.cardBg;
+                      }
                     }}
                   >
                     <div style={{
-                      width: 20, height: 20, borderRadius: 4, flexShrink: 0,
-                      border: isSelected ? `2px solid ${T.selectedBorder}` : `2px solid ${T.borderInput}`,
+                      width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+                      border: isSelected ? 'none' : `2px solid ${T.borderInput}`,
                       background: isSelected ? T.selectedBorder : 'transparent',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all 0.15s',
                     }}>
                       {isSelected && (
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                          <path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                          <path d="M3 7L6 10L11 4" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       )}
                     </div>
@@ -524,8 +604,13 @@ export default function CheckoutForm({ data }: Props) {
                         <div style={{ fontSize: 13, color: T.textMuted, marginTop: 2 }}>{addOn.description}</div>
                       )}
                     </div>
-                    <div style={{ flexShrink: 0 }}>
-                      <span style={{ fontSize: 16, fontWeight: 700, color: T.gold }}>${(addOn.price / 100).toFixed(2)}</span>
+                    <div style={{
+                      flexShrink: 0,
+                      background: isSelected ? 'rgba(212,168,83,0.08)' : 'transparent',
+                      padding: '4px 10px', borderRadius: 8,
+                      transition: 'background 0.15s',
+                    }}>
+                      <span style={{ fontSize: 17, fontWeight: 700, color: T.gold }}>${(addOn.price / 100).toFixed(2)}</span>
                     </div>
                   </div>
                 );
