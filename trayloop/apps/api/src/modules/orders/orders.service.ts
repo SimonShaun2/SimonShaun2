@@ -8,11 +8,13 @@ import {
   locations,
   locationSettings,
   deposits,
+  organizations,
 } from '@trayloop/database';
 import { eq, and, gte, lte, desc, sql } from 'drizzle-orm';
 import { ValidationError, NotFoundError } from '../../lib/errors.js';
 import { calculatePricing } from '../../lib/pricing.js';
 import { recordOrderEvent, getOrderTimeline } from '../../lib/order-events.js';
+import { getStripe, isStripeEnabled } from '../../lib/stripe.js';
 import type { EventBus } from '../../lib/event-bus/index.js';
 import type { CreateOrderInput, UpdateOrderStatusInput, OrderListQuery, SendDepositLinkInput, ReorderInput } from './orders.schema.js';
 
@@ -395,6 +397,7 @@ export async function sendDepositLink(orderId: string, orgId: string, input: Sen
   const [order] = await db
     .select({
       id: orders.id,
+      orderNumber: orders.orderNumber,
       status: orders.status,
       totalAmount: orders.totalAmount,
       customerId: orders.customerId,
@@ -406,13 +409,11 @@ export async function sendDepositLink(orderId: string, orgId: string, input: Sen
 
   if (!order) throw new NotFoundError('Order');
 
-  // Must require deposits
   const depositRequired = await getDepositRequired(order.locationId);
   if (!depositRequired) {
     throw new ValidationError('This location does not require deposits. Confirm the order directly.');
   }
 
-  // Must be in a status that allows transitioning to awaiting_deposit
   const allowed = getAllowedTransitions(order.status, depositRequired);
   if (!allowed.includes('awaiting_deposit') && order.status !== 'awaiting_deposit') {
     throw new ValidationError(
@@ -421,17 +422,57 @@ export async function sendDepositLink(orderId: string, orgId: string, input: Sen
     );
   }
 
-  const [customer] = await db
-    .select({ email: customers.email, firstName: customers.firstName })
-    .from(customers)
-    .where(eq(customers.id, order.customerId))
-    .limit(1);
+  const [[customer], [org]] = await Promise.all([
+    db.select({ email: customers.email, firstName: customers.firstName })
+      .from(customers).where(eq(customers.id, order.customerId)).limit(1),
+    db.select({ stripeAccountId: organizations.stripeAccountId, name: organizations.name })
+      .from(organizations).where(eq(organizations.id, orgId)).limit(1),
+  ]);
 
   const depositAmount = input.depositAmount ?? order.totalAmount;
 
-  // Generate a placeholder payment link (UUID-based, will be Stripe later)
-  const fakeLinkId = crypto.randomUUID();
-  const paymentLink = `https://pay.trayloop.com/deposit/${fakeLinkId}`;
+  // --- Stripe Checkout or fallback ---
+  let paymentLink: string;
+  let checkoutSessionId: string | null = null;
+
+  if (isStripeEnabled() && org?.stripeAccountId) {
+    const stripe = getStripe();
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      line_items: [{
+        price_data: {
+          currency: 'usd',
+          unit_amount: depositAmount,
+          product_data: {
+            name: `Deposit for ${order.orderNumber}`,
+            description: `Order deposit — ${org.name}`,
+          },
+        },
+        quantity: 1,
+      }],
+      payment_intent_data: {
+        application_fee_amount: Math.round(depositAmount * 0.05), // 5% platform fee
+        transfer_data: {
+          destination: org.stripeAccountId,
+        },
+      },
+      customer_email: customer.email,
+      metadata: {
+        trayloop_order_id: order.id,
+        trayloop_order_number: order.orderNumber,
+        trayloop_org_id: orgId,
+        trayloop_deposit: 'true',
+      },
+      success_url: `http://localhost:3003/orders/${order.id}?deposit=success`,
+      cancel_url: `http://localhost:3003/orders/${order.id}?deposit=cancelled`,
+    });
+
+    paymentLink = session.url!;
+    checkoutSessionId = session.id;
+  } else {
+    // Fallback: fake link when Stripe isn't configured
+    paymentLink = `https://pay.trayloop.com/deposit/${crypto.randomUUID()}`;
+  }
 
   // Transaction: create/replace deposit record + update order status
   const result = await db.transaction(async (tx) => {
@@ -439,7 +480,11 @@ export async function sendDepositLink(orderId: string, orgId: string, input: Sen
       .where(and(eq(deposits.orderId, order.id), eq(deposits.status, 'pending')));
 
     const [deposit] = await tx.insert(deposits).values({
-      orderId: order.id, amount: depositAmount, currency: 'USD', status: 'pending', stripePaymentIntentId: fakeLinkId,
+      orderId: order.id,
+      amount: depositAmount,
+      currency: 'USD',
+      status: 'pending',
+      stripeCheckoutSessionId: checkoutSessionId,
     }).returning();
 
     const [updated] = await tx.update(orders).set({ status: 'awaiting_deposit', updatedAt: new Date() })
@@ -454,6 +499,7 @@ export async function sendDepositLink(orderId: string, orgId: string, input: Sen
   return {
     orderId: result.order.id, status: result.order.status, depositId: result.deposit.id,
     depositAmount: result.deposit.amount, currency: result.deposit.currency, paymentLink,
+    stripeCheckoutSessionId: checkoutSessionId,
     sentTo: customer.email, depositRequired: true, allowedTransitions: getAllowedTransitions('awaiting_deposit', true),
   };
 }

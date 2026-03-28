@@ -23,6 +23,7 @@ export const deposits = pgTable('deposits', {
   amount: integer('amount').notNull(),
   currency: varchar('currency', { length: 3 }).notNull().default('USD'),
   status: depositStatusEnum('status').notNull().default('pending'),
+  stripeCheckoutSessionId: text('stripe_checkout_session_id').unique(),
   stripePaymentIntentId: text('stripe_payment_intent_id').unique(),
   paidAt: timestamp('paid_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

@@ -362,6 +362,7 @@ CREATE TABLE IF NOT EXISTS deposits (
   amount INTEGER NOT NULL,
   currency VARCHAR(3) NOT NULL DEFAULT 'USD',
   status deposit_status NOT NULL DEFAULT 'pending',
+  stripe_checkout_session_id TEXT UNIQUE,
   stripe_payment_intent_id TEXT UNIQUE,
   paid_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
