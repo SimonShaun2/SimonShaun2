@@ -13,6 +13,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>TrayLoop Merchant</span>
           <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.875rem' }}>
             <a href="/" style={{ color: '#d1d5db', textDecoration: 'none' }}>Orders</a>
+            <a href="/follow-ups" style={{ color: '#d1d5db', textDecoration: 'none' }}>Follow-Ups</a>
             <a href="/customers" style={{ color: '#d1d5db', textDecoration: 'none' }}>Customers</a>
             <a href="/catalog" style={{ color: '#d1d5db', textDecoration: 'none' }}>Menu</a>
             <a href="/settings" style={{ color: '#d1d5db', textDecoration: 'none' }}>Settings</a>
