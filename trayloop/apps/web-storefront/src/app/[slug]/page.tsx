@@ -57,7 +57,7 @@ export default async function StorefrontPage({ params }: PageProps) {
 
       {primaryLocation && <PolicyBadges location={primaryLocation} />}
 
-      <div style={{ maxWidth: 1040, margin: '0 auto', padding: '32px 24px 64px' }}>
+      <div style={{ maxWidth: 1040, margin: '0 auto', padding: '28px 24px 56px' }}>
         <CheckoutForm data={data} />
       </div>
     </main>
@@ -69,7 +69,7 @@ function Header({ merchantName }: { merchantName: string }) {
     <header style={{
       background: '#1C1917',
       padding: '0 24px',
-      height: 64,
+      height: 56,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',

@@ -32,16 +32,16 @@ const labelStyle: React.CSSProperties = {
   fontSize: 11,
   fontWeight: 600,
   textTransform: 'uppercase',
-  letterSpacing: '1.5px',
+  letterSpacing: '1.2px',
   color: T.textMuted,
-  marginBottom: 6,
+  marginBottom: 5,
   display: 'block',
 };
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
-  height: 44,
-  padding: '0 14px',
+  height: 42,
+  padding: '0 12px',
   border: `1px solid ${T.borderInput}`,
   borderRadius: 8,
   fontSize: 14,
@@ -49,26 +49,29 @@ const inputStyle: React.CSSProperties = {
   background: T.cardBg,
   boxSizing: 'border-box',
   outline: 'none',
+  transition: 'border-color 0.15s',
 };
 
 const cardStyle: React.CSSProperties = {
   background: T.cardBg,
   border: `1px solid ${T.cardBorder}`,
   borderRadius: 12,
-  padding: 32,
+  padding: '28px 28px',
 };
 
 const sectionTitleStyle: React.CSSProperties = {
-  fontSize: 20,
+  fontSize: 18,
   fontWeight: 700,
   color: T.textPrimary,
   margin: 0,
+  lineHeight: 1.3,
 };
 
 const sectionSubtitleStyle: React.CSSProperties = {
-  fontSize: 14,
+  fontSize: 13,
   color: T.textMuted,
-  margin: '4px 0 0',
+  margin: '3px 0 0',
+  lineHeight: 1.5,
 };
 
 export default function CheckoutForm({ data }: Props) {
@@ -262,7 +265,7 @@ export default function CheckoutForm({ data }: Props) {
             <p style={sectionSubtitleStyle}>Please order at least {leadTime} hours in advance</p>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: 20 }}>
             <div>
               <label style={labelStyle}>Event Date</label>
               <input
@@ -285,7 +288,7 @@ export default function CheckoutForm({ data }: Props) {
           </div>
 
           {/* Service Type Toggle */}
-          <div style={{ marginTop: 24 }}>
+          <div style={{ marginTop: 20 }}>
             <label style={labelStyle}>Service Type</label>
             <div style={{ display: 'flex', gap: 12 }}>
               {selectedLocation?.deliveryEnabled !== false && (
@@ -294,7 +297,7 @@ export default function CheckoutForm({ data }: Props) {
                   onClick={() => setServiceType('delivery')}
                   style={{
                     flex: 1,
-                    height: 44,
+                    height: 42,
                     border: serviceType === 'delivery' ? `2px solid ${T.toggleSelectedBorder}` : `1px solid ${T.borderInput}`,
                     borderRadius: 8,
                     background: serviceType === 'delivery' ? T.toggleSelectedBg : T.cardBg,
@@ -313,7 +316,7 @@ export default function CheckoutForm({ data }: Props) {
                   onClick={() => setServiceType('pickup')}
                   style={{
                     flex: 1,
-                    height: 44,
+                    height: 42,
                     border: serviceType === 'pickup' ? `2px solid ${T.toggleSelectedBorder}` : `1px solid ${T.borderInput}`,
                     borderRadius: 8,
                     background: serviceType === 'pickup' ? T.toggleSelectedBg : T.cardBg,
@@ -376,7 +379,7 @@ export default function CheckoutForm({ data }: Props) {
 
           {/* Headcount */}
           <div style={{
-            marginTop: 24, marginBottom: 28,
+            marginTop: 20, marginBottom: 24,
             background: '#F5F5F4',
             borderRadius: 12,
             padding: '24px 24px 20px',
@@ -644,7 +647,7 @@ export default function CheckoutForm({ data }: Props) {
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
               gap: 10,
-              marginTop: 20,
+              marginTop: 16,
             }}>
               {allAddOns.map((addOn) => {
                 const isSelected = !!selectedAddOnIds[addOn.id];
@@ -868,9 +871,9 @@ export default function CheckoutForm({ data }: Props) {
           <h2 style={sectionTitleStyle}>Your Details</h2>
           <p style={sectionSubtitleStyle}>We'll send confirmation + payment link here</p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: 20 }}>
             <div>
-              <label style={labelStyle}>Full Name</label>
+              <label style={labelStyle}>Full Name *</label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 <input
                   value={firstName}
@@ -899,9 +902,9 @@ export default function CheckoutForm({ data }: Props) {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: 14 }}>
             <div>
-              <label style={labelStyle}>Email</label>
+              <label style={labelStyle}>Email *</label>
               <input
                 type="email"
                 value={email}
@@ -923,7 +926,7 @@ export default function CheckoutForm({ data }: Props) {
             </div>
           </div>
 
-          <div style={{ marginTop: 16 }}>
+          <div style={{ marginTop: 14 }}>
             <label style={labelStyle}>Special Instructions</label>
             <textarea
               value={notes}
