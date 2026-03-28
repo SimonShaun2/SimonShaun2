@@ -192,11 +192,17 @@ export default function DashboardPage() {
                       )}
                     </div>
                     <div style={{ fontSize: 13, color: '#78716C', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      {order.customer.company && <span>{order.customer.company}</span>}
-                      {order.customer.company && <span style={{ color: '#D6D3D1' }}>·</span>}
+                      <span style={{ fontWeight: 500, color: '#57534E' }}>{new Date(order.eventDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                      <span style={{ color: '#D6D3D1' }}>·</span>
                       <span>{order.headCount} guests</span>
                       <span style={{ color: '#D6D3D1' }}>·</span>
                       <span>{order.itemCount} items</span>
+                      {order.customer.company && (
+                        <>
+                          <span style={{ color: '#D6D3D1' }}>·</span>
+                          <span>{order.customer.company}</span>
+                        </>
+                      )}
                       {order.location && (
                         <>
                           <span style={{ color: '#D6D3D1' }}>·</span>
@@ -206,10 +212,12 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  {/* Right: price + date */}
-                  <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 16 }}>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: '#1C1917' }}>${(order.pricing.total / 100).toFixed(2)}</div>
-                    <div style={{ fontSize: 12, color: '#9CA3AF' }}>{new Date(order.eventDate).toLocaleDateString()}</div>
+                  {/* Right: price + arrow */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, marginLeft: 16 }}>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#1C1917' }}>${(order.pricing.total / 100).toFixed(2)}</div>
+                    </div>
+                    <span style={{ color: '#D6D3D1', fontSize: 16 }}>›</span>
                   </div>
                 </div>
               </a>
