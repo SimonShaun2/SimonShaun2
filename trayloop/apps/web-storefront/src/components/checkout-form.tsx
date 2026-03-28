@@ -1,12 +1,75 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import type { StorefrontData, StorefrontLocation, StorefrontPackage, StorefrontAddOn, OrderSubmission, OrderConfirmation } from '../lib/api';
+import type { StorefrontData, OrderSubmission, OrderConfirmation } from '../lib/api';
 import { submitOrder, OrderError } from '../lib/api';
 
 interface Props {
   data: StorefrontData;
 }
+
+/* ── Design tokens ── */
+const T = {
+  pageBg: '#FAF9F7',
+  cardBg: '#FFFFFF',
+  cardBorder: '#E7E5E4',
+  selectedBorder: '#1C1917',
+  selectedBg: '#FAFAF9',
+  gold: '#D4A853',
+  textPrimary: '#1C1917',
+  textMuted: '#78716C',
+  textPlaceholder: '#A8A29E',
+  borderInput: '#D6D3D1',
+  toggleSelectedBg: '#FEF3C7',
+  toggleSelectedBorder: '#D4A853',
+  errorBg: '#FEF2F2',
+  errorBorder: '#FECACA',
+  errorText: '#DC2626',
+  successBorder: '#10B981',
+} as const;
+
+const labelStyle: React.CSSProperties = {
+  fontSize: 11,
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  letterSpacing: '1.5px',
+  color: T.textMuted,
+  marginBottom: 6,
+  display: 'block',
+};
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  height: 44,
+  padding: '0 14px',
+  border: `1px solid ${T.borderInput}`,
+  borderRadius: 8,
+  fontSize: 14,
+  color: T.textPrimary,
+  background: T.cardBg,
+  boxSizing: 'border-box',
+  outline: 'none',
+};
+
+const cardStyle: React.CSSProperties = {
+  background: T.cardBg,
+  border: `1px solid ${T.cardBorder}`,
+  borderRadius: 12,
+  padding: 32,
+};
+
+const sectionTitleStyle: React.CSSProperties = {
+  fontSize: 20,
+  fontWeight: 700,
+  color: T.textPrimary,
+  margin: 0,
+};
+
+const sectionSubtitleStyle: React.CSSProperties = {
+  fontSize: 14,
+  color: T.textMuted,
+  margin: '4px 0 0',
+};
 
 export default function CheckoutForm({ data }: Props) {
   const { locations, menu } = data;
@@ -19,9 +82,10 @@ export default function CheckoutForm({ data }: Props) {
   const allAddOns = menu.flatMap((m) => m.addOns);
 
   // Form state
-  const [selectedLocationSlug, setSelectedLocationSlug] = useState('');
+  const [selectedLocationSlug, setSelectedLocationSlug] = useState(locations.length === 1 ? locations[0].slug : '');
   const [serviceType, setServiceType] = useState<'delivery' | 'pickup'>('delivery');
   const [eventDate, setEventDate] = useState('');
+  const [eventTime, setEventTime] = useState('');
   const [headcount, setHeadcount] = useState(10);
   const [selectedPkgs, setSelectedPkgs] = useState<Record<string, number>>({});
   const [selectedAddOnIds, setSelectedAddOnIds] = useState<Record<string, number>>({});
@@ -41,7 +105,7 @@ export default function CheckoutForm({ data }: Props) {
   const [fieldErrors, setFieldErrors] = useState<Array<{ field: string; message: string }>>([]);
   const [confirmation, setConfirmation] = useState<OrderConfirmation | null>(null);
 
-  const selectedLocation = locations.find((l) => l.slug === selectedLocationSlug) ?? null;
+  const selectedLocation = locations.find((l) => l.slug === selectedLocationSlug) ?? locations[0] ?? null;
 
   const togglePkg = (id: string) => {
     setSelectedPkgs((prev) => {
@@ -79,10 +143,13 @@ export default function CheckoutForm({ data }: Props) {
     const pkgSelections = Object.entries(selectedPkgs).map(([packageId, quantity]) => ({ packageId, quantity }));
     const addOnSelections = Object.entries(selectedAddOnIds).map(([addOnId, quantity]) => ({ addOnId, quantity }));
 
+    // Combine date + time into a single datetime string for the API
+    const combinedDateTime = eventTime ? `${eventDate}T${eventTime}` : eventDate;
+
     const payload: OrderSubmission = {
-      locationId: selectedLocationSlug,
+      locationId: selectedLocationSlug || (locations[0]?.slug ?? ''),
       serviceType,
-      eventDate: new Date(eventDate).toISOString(),
+      eventDate: new Date(combinedDateTime).toISOString(),
       headcount,
       packages: pkgSelections,
       addOns: addOnSelections.length > 0 ? addOnSelections : undefined,
@@ -113,31 +180,40 @@ export default function CheckoutForm({ data }: Props) {
     } finally {
       setSubmitting(false);
     }
-  }, [submitting, selectedLocationSlug, serviceType, eventDate, headcount, selectedPkgs, selectedAddOnIds, firstName, lastName, email, phone, companyName, address, city, state, zipCode, notes]);
+  }, [submitting, selectedLocationSlug, serviceType, eventDate, eventTime, headcount, selectedPkgs, selectedAddOnIds, firstName, lastName, email, phone, companyName, address, city, state, zipCode, notes, locations, data.merchant.slug]);
 
-  // --- Confirmation state ---
+  /* ── Confirmation state ── */
   if (confirmation) {
     return (
-      <div style={{ border: '2px solid #10b981', borderRadius: '0.75rem', padding: '2rem', marginTop: '2rem' }}>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#10b981', marginBottom: '0.25rem' }}>Order Submitted!</h2>
-        <p style={{ fontSize: '1.1rem', fontWeight: 600, fontFamily: 'monospace', color: '#374151', marginBottom: '1rem' }}>{confirmation.orderNumber}</p>
-        <div style={{ display: 'grid', gap: '0.5rem', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-          <p><strong>Status:</strong> {confirmation.status}</p>
-          <p><strong>Event Date:</strong> {new Date(confirmation.scheduledAt).toLocaleDateString()}</p>
-          <p><strong>Guests:</strong> {confirmation.headCount}</p>
-          <p><strong>Customer:</strong> {confirmation.customer.firstName} {confirmation.customer.lastName} ({confirmation.customer.email})</p>
+      <div style={{
+        maxWidth: 620,
+        margin: '0 auto',
+        background: T.cardBg,
+        border: `2px solid ${T.successBorder}`,
+        borderRadius: 12,
+        padding: 40,
+      }}>
+        <div style={{ marginBottom: 24 }}>
+          <h2 style={{ fontSize: 24, fontWeight: 700, color: T.successBorder, margin: '0 0 4px' }}>Order Submitted!</h2>
+          <p style={{ fontSize: 16, fontWeight: 600, fontFamily: 'monospace', color: T.textPrimary, margin: 0 }}>{confirmation.orderNumber}</p>
+        </div>
+        <div style={{ display: 'grid', gap: 8, fontSize: 14, color: T.textPrimary, marginBottom: 24 }}>
+          <p style={{ margin: 0 }}><strong>Status:</strong> {confirmation.status}</p>
+          <p style={{ margin: 0 }}><strong>Event Date:</strong> {new Date(confirmation.scheduledAt).toLocaleDateString()}</p>
+          <p style={{ margin: 0 }}><strong>Guests:</strong> {confirmation.headCount}</p>
+          <p style={{ margin: 0 }}><strong>Customer:</strong> {confirmation.customer.firstName} {confirmation.customer.lastName} ({confirmation.customer.email})</p>
           {confirmation.depositRequired !== undefined && (
-            <p><strong>Deposit Required:</strong> {confirmation.depositRequired ? 'Yes — you will receive a payment link' : 'No'}</p>
+            <p style={{ margin: 0 }}><strong>Deposit Required:</strong> {confirmation.depositRequired ? 'Yes — you will receive a payment link' : 'No'}</p>
           )}
         </div>
-        <h3 style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Items</h3>
+        <h3 style={{ fontSize: 16, fontWeight: 700, color: T.textPrimary, margin: '0 0 12px' }}>Items</h3>
         {confirmation.items.map((item, i) => (
-          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.25rem 0', fontSize: '0.875rem' }}>
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: 14, borderBottom: `1px solid ${T.cardBorder}` }}>
             <span>{item.name} x{item.quantity}</span>
-            <span>${(item.totalPrice / 100).toFixed(2)}</span>
+            <span style={{ fontWeight: 600 }}>${(item.totalPrice / 100).toFixed(2)}</span>
           </div>
         ))}
-        <div style={{ borderTop: '2px solid #e5e7eb', marginTop: '0.75rem', paddingTop: '0.75rem', display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '1.1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16, paddingTop: 16, borderTop: `2px solid ${T.cardBorder}`, fontWeight: 700, fontSize: 18 }}>
           <span>Total</span>
           <span>${(confirmation.pricing.total / 100).toFixed(2)}</span>
         </div>
@@ -145,216 +221,505 @@ export default function CheckoutForm({ data }: Props) {
     );
   }
 
-  // --- Order form ---
+  /* ── Helpers ── */
   const hasPackages = Object.keys(selectedPkgs).length > 0;
+  const canSubmit = !submitting && hasPackages && eventDate;
+  const minOrder = selectedLocation?.minimumOrderAmount ? (selectedLocation.minimumOrderAmount / 100).toFixed(0) : null;
+  const leadTime = selectedLocation?.leadTimeHours ?? null;
 
+  const selectedPkgList = allPackages.filter((p) => selectedPkgs[p.id]);
+  const selectedAddOnList = allAddOns.filter((a) => selectedAddOnIds[a.id]);
+
+  /* ── Render ── */
   return (
-    <form onSubmit={handleSubmit} style={{ marginTop: '2rem', borderTop: '2px solid #111827', paddingTop: '2rem' }}>
-      <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1.5rem' }}>Place an Order</h2>
+    <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 32, alignItems: 'flex-start' }}>
+      {/* ── LEFT COLUMN: Form sections ── */}
+      <div style={{ flex: '0 0 620px', display: 'flex', flexDirection: 'column', gap: 24 }}>
 
-      {error && (
-        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.5rem', padding: '1rem', marginBottom: '1rem' }}>
-          <p style={{ color: '#dc2626', fontWeight: 500 }}>{error}</p>
-          {fieldErrors.length > 0 && (
-            <ul style={{ margin: '0.5rem 0 0', paddingLeft: '1.25rem', color: '#dc2626', fontSize: '0.85rem' }}>
-              {fieldErrors.map((fe, i) => <li key={i}>{fe.field}: {fe.message}</li>)}
-            </ul>
+        {/* Error banner */}
+        {error && (
+          <div style={{ background: T.errorBg, border: `1px solid ${T.errorBorder}`, borderRadius: 12, padding: '16px 20px' }}>
+            <p style={{ color: T.errorText, fontWeight: 600, fontSize: 14, margin: 0 }}>{error}</p>
+            {fieldErrors.length > 0 && (
+              <ul style={{ margin: '8px 0 0', paddingLeft: 20, color: T.errorText, fontSize: 13 }}>
+                {fieldErrors.map((fe, i) => <li key={i}>{fe.field}: {fe.message}</li>)}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {/* ── Section: When & How ── */}
+        <div style={cardStyle}>
+          <h2 style={sectionTitleStyle}>When &amp; How</h2>
+          {leadTime && (
+            <p style={sectionSubtitleStyle}>Please order at least {leadTime} hours in advance</p>
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 24 }}>
+            <div>
+              <label style={labelStyle}>Event Date</label>
+              <input
+                type="date"
+                value={eventDate}
+                onChange={(e) => setEventDate(e.target.value)}
+                required
+                style={inputStyle}
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Arrival Time</label>
+              <input
+                type="time"
+                value={eventTime}
+                onChange={(e) => setEventTime(e.target.value)}
+                style={inputStyle}
+              />
+            </div>
+          </div>
+
+          {/* Service Type Toggle */}
+          <div style={{ marginTop: 24 }}>
+            <label style={labelStyle}>Service Type</label>
+            <div style={{ display: 'flex', gap: 12 }}>
+              {selectedLocation?.deliveryEnabled !== false && (
+                <button
+                  type="button"
+                  onClick={() => setServiceType('delivery')}
+                  style={{
+                    flex: 1,
+                    height: 44,
+                    border: serviceType === 'delivery' ? `2px solid ${T.toggleSelectedBorder}` : `1px solid ${T.borderInput}`,
+                    borderRadius: 8,
+                    background: serviceType === 'delivery' ? T.toggleSelectedBg : T.cardBg,
+                    color: serviceType === 'delivery' ? T.gold : T.textPrimary,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Delivery
+                </button>
+              )}
+              {selectedLocation?.pickupEnabled !== false && (
+                <button
+                  type="button"
+                  onClick={() => setServiceType('pickup')}
+                  style={{
+                    flex: 1,
+                    height: 44,
+                    border: serviceType === 'pickup' ? `2px solid ${T.toggleSelectedBorder}` : `1px solid ${T.borderInput}`,
+                    borderRadius: 8,
+                    background: serviceType === 'pickup' ? T.toggleSelectedBg : T.cardBg,
+                    color: serviceType === 'pickup' ? T.gold : T.textPrimary,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Pickup
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Delivery Address */}
+          {serviceType === 'delivery' && (
+            <div style={{ marginTop: 16 }}>
+              <label style={labelStyle}>Delivery Address</label>
+              <input
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Street address"
+                required
+                style={{ ...inputStyle, marginBottom: 12 }}
+              />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                <input
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="City"
+                  required
+                  style={inputStyle}
+                />
+                <input
+                  value={state}
+                  onChange={(e) => setState(e.target.value)}
+                  placeholder="State"
+                  required
+                  style={inputStyle}
+                />
+                <input
+                  value={zipCode}
+                  onChange={(e) => setZipCode(e.target.value)}
+                  placeholder="Zip"
+                  required
+                  style={inputStyle}
+                />
+              </div>
+            </div>
           )}
         </div>
-      )}
 
-      {/* Location */}
-      <fieldset style={{ border: 'none', padding: 0, marginBottom: '1.5rem' }}>
-        <legend style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Select Location *</legend>
-        <div style={{ display: 'grid', gap: '0.5rem' }}>
-          {locations.map((loc) => (
-            <label key={loc.slug} style={{
-              display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem',
-              border: selectedLocationSlug === loc.slug ? '2px solid #111827' : '1px solid #d1d5db',
-              borderRadius: '0.5rem', cursor: 'pointer',
-            }}>
-              <input type="radio" name="location" value={loc.slug} checked={selectedLocationSlug === loc.slug}
-                onChange={(e) => setSelectedLocationSlug(e.target.value)} />
-              <div>
-                <span style={{ fontWeight: 500 }}>{loc.name}</span>
-                <span style={{ color: '#6b7280', fontSize: '0.8rem', marginLeft: '0.5rem' }}>{loc.city}, {loc.state}</span>
+        {/* ── Section: Choose a Package ── */}
+        <div style={cardStyle}>
+          <h2 style={sectionTitleStyle}>Choose a Package</h2>
+          <p style={sectionSubtitleStyle}>
+            {minOrder ? `Min. $${minOrder} order · ` : ''}Select one or more · Price adjusts with headcount
+          </p>
+
+          {/* Headcount */}
+          <div style={{ marginTop: 24, marginBottom: 24 }}>
+            <label style={labelStyle}>Headcount</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginTop: 8 }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 48, fontWeight: 700, color: T.textPrimary, lineHeight: 1 }}>{headcount}</div>
+                <div style={{ fontSize: 13, color: T.textMuted, marginTop: 4 }}>guests</div>
               </div>
-            </label>
-          ))}
-        </div>
-      </fieldset>
-
-      {/* Service type */}
-      {selectedLocation && (
-        <fieldset style={{ border: 'none', padding: 0, marginBottom: '1.5rem' }}>
-          <legend style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Service Type *</legend>
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            {selectedLocation.deliveryEnabled && (
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer' }}>
-                <input type="radio" name="serviceType" value="delivery" checked={serviceType === 'delivery'} onChange={() => setServiceType('delivery')} />
-                Delivery
-              </label>
-            )}
-            {selectedLocation.pickupEnabled && (
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer' }}>
-                <input type="radio" name="serviceType" value="pickup" checked={serviceType === 'pickup'} onChange={() => setServiceType('pickup')} />
-                Pickup
-              </label>
-            )}
-          </div>
-        </fieldset>
-      )}
-
-      {/* Event details */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-        <div>
-          <label style={{ display: 'block', fontWeight: 500, fontSize: '0.875rem', marginBottom: '0.25rem' }}>Event Date *</label>
-          <input type="datetime-local" value={eventDate} onChange={(e) => setEventDate(e.target.value)} required
-            style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', boxSizing: 'border-box' }} />
-        </div>
-        <div>
-          <label style={{ display: 'block', fontWeight: 500, fontSize: '0.875rem', marginBottom: '0.25rem' }}>Headcount *</label>
-          <input type="number" min="1" value={headcount} onChange={(e) => setHeadcount(parseInt(e.target.value) || 1)} required
-            style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', boxSizing: 'border-box' }} />
-        </div>
-      </div>
-
-      {/* Package selection */}
-      <fieldset style={{ border: 'none', padding: 0, marginBottom: '1.5rem' }}>
-        <legend style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Select Packages *</legend>
-        <div style={{ display: 'grid', gap: '0.5rem' }}>
-          {allPackages.map((pkg) => (
-            <label key={pkg.id} style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem',
-              border: selectedPkgs[pkg.id] ? '2px solid #111827' : '1px solid #d1d5db',
-              borderRadius: '0.5rem', cursor: 'pointer',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <input type="checkbox" checked={!!selectedPkgs[pkg.id]} onChange={() => togglePkg(pkg.id)} />
-                <div>
-                  <span style={{ fontWeight: 500 }}>{pkg.name}</span>
-                  {pkg.description && <p style={{ fontSize: '0.8rem', color: '#6b7280', margin: '0.15rem 0 0' }}>{pkg.description}</p>}
-                </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => setHeadcount(Math.max(1, headcount - 1))}
+                  style={{
+                    width: 40, height: 40,
+                    border: `1px solid ${T.borderInput}`,
+                    borderRadius: 8,
+                    background: T.cardBg,
+                    fontSize: 20,
+                    cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: T.textPrimary,
+                  }}
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  min="1"
+                  value={headcount}
+                  onChange={(e) => setHeadcount(Math.max(1, parseInt(e.target.value) || 1))}
+                  style={{
+                    ...inputStyle,
+                    width: 72,
+                    textAlign: 'center',
+                    fontWeight: 600,
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setHeadcount(headcount + 1)}
+                  style={{
+                    width: 40, height: 40,
+                    border: `1px solid ${T.borderInput}`,
+                    borderRadius: 8,
+                    background: T.cardBg,
+                    fontSize: 20,
+                    cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: T.textPrimary,
+                  }}
+                >
+                  +
+                </button>
               </div>
-              <span style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>${(pkg.pricePerHead / 100).toFixed(2)}/person</span>
-            </label>
-          ))}
-        </div>
-      </fieldset>
+            </div>
+          </div>
 
-      {/* Add-ons */}
-      {allAddOns.length > 0 && (
-        <fieldset style={{ border: 'none', padding: 0, marginBottom: '1.5rem' }}>
-          <legend style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Add-Ons</legend>
-          <div style={{ display: 'grid', gap: '0.5rem' }}>
-            {allAddOns.map((addOn) => (
-              <label key={addOn.id} style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.6rem 0.75rem',
-                border: selectedAddOnIds[addOn.id] ? '2px solid #111827' : '1px solid #d1d5db',
-                borderRadius: '0.5rem', cursor: 'pointer',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <input type="checkbox" checked={!!selectedAddOnIds[addOn.id]} onChange={() => toggleAddOn(addOn.id)} />
-                  <span style={{ fontWeight: 500 }}>{addOn.name}</span>
+          {/* Package cards */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {allPackages.map((pkg) => {
+              const isSelected = !!selectedPkgs[pkg.id];
+              return (
+                <div
+                  key={pkg.id}
+                  onClick={() => togglePkg(pkg.id)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 14,
+                    padding: '16px 18px',
+                    border: isSelected ? `2px solid ${T.selectedBorder}` : `1px solid ${T.cardBorder}`,
+                    borderRadius: 10,
+                    background: isSelected ? T.selectedBg : T.cardBg,
+                    cursor: 'pointer',
+                    transition: 'border-color 0.15s, background 0.15s',
+                  }}
+                >
+                  {/* Checkbox */}
+                  <div style={{
+                    width: 20, height: 20, borderRadius: 4, flexShrink: 0,
+                    border: isSelected ? `2px solid ${T.selectedBorder}` : `2px solid ${T.borderInput}`,
+                    background: isSelected ? T.selectedBorder : 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {isSelected && (
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </div>
+                  {/* Info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: T.textPrimary }}>{pkg.name}</div>
+                    {pkg.description && (
+                      <div style={{ fontSize: 13, color: T.textMuted, marginTop: 2 }}>{pkg.description}</div>
+                    )}
+                  </div>
+                  {/* Price */}
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <span style={{ fontSize: 20, fontWeight: 700, color: T.gold }}>${(pkg.pricePerHead / 100).toFixed(2)}</span>
+                    <span style={{ fontSize: 13, color: T.textMuted }}>/person</span>
+                  </div>
                 </div>
-                <span style={{ fontWeight: 700 }}>${(addOn.price / 100).toFixed(2)}</span>
-              </label>
-            ))}
+              );
+            })}
           </div>
-        </fieldset>
-      )}
+        </div>
 
-      {/* Customer info */}
-      <h3 style={{ fontWeight: 600, marginBottom: '0.75rem' }}>Your Information</h3>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-        <div>
-          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.25rem' }}>First Name *</label>
-          <input value={firstName} onChange={(e) => setFirstName(e.target.value)} required
-            style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', boxSizing: 'border-box' }} />
-        </div>
-        <div>
-          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.25rem' }}>Last Name *</label>
-          <input value={lastName} onChange={(e) => setLastName(e.target.value)} required
-            style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', boxSizing: 'border-box' }} />
-        </div>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-        <div>
-          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.25rem' }}>Email *</label>
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
-            style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', boxSizing: 'border-box' }} />
-        </div>
-        <div>
-          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.25rem' }}>Phone</label>
-          <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
-            style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', boxSizing: 'border-box' }} />
-        </div>
-      </div>
-      <div style={{ marginBottom: '1.5rem' }}>
-        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.25rem' }}>Company Name</label>
-        <input value={companyName} onChange={(e) => setCompanyName(e.target.value)}
-          style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', boxSizing: 'border-box' }} />
-      </div>
-
-      {/* Delivery address */}
-      {serviceType === 'delivery' && (
-        <>
-          <h3 style={{ fontWeight: 600, marginBottom: '0.75rem' }}>Delivery Address</h3>
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.25rem' }}>Street Address *</label>
-            <input value={address} onChange={(e) => setAddress(e.target.value)} required
-              style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', boxSizing: 'border-box' }} />
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.25rem' }}>City *</label>
-              <input value={city} onChange={(e) => setCity(e.target.value)} required
-                style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', boxSizing: 'border-box' }} />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.25rem' }}>State *</label>
-              <input value={state} onChange={(e) => setState(e.target.value)} required
-                style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', boxSizing: 'border-box' }} />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.25rem' }}>Zip *</label>
-              <input value={zipCode} onChange={(e) => setZipCode(e.target.value)} required
-                style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', boxSizing: 'border-box' }} />
+        {/* ── Section: Add-Ons ── */}
+        {allAddOns.length > 0 && (
+          <div style={cardStyle}>
+            <h2 style={sectionTitleStyle}>Add-Ons</h2>
+            <p style={sectionSubtitleStyle}>Enhance your order with extras</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 20 }}>
+              {allAddOns.map((addOn) => {
+                const isSelected = !!selectedAddOnIds[addOn.id];
+                return (
+                  <div
+                    key={addOn.id}
+                    onClick={() => toggleAddOn(addOn.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 14,
+                      padding: '14px 18px',
+                      border: isSelected ? `2px solid ${T.selectedBorder}` : `1px solid ${T.cardBorder}`,
+                      borderRadius: 10,
+                      background: isSelected ? T.selectedBg : T.cardBg,
+                      cursor: 'pointer',
+                      transition: 'border-color 0.15s, background 0.15s',
+                    }}
+                  >
+                    <div style={{
+                      width: 20, height: 20, borderRadius: 4, flexShrink: 0,
+                      border: isSelected ? `2px solid ${T.selectedBorder}` : `2px solid ${T.borderInput}`,
+                      background: isSelected ? T.selectedBorder : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      {isSelected && (
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                          <path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: T.textPrimary }}>{addOn.name}</div>
+                      {addOn.description && (
+                        <div style={{ fontSize: 13, color: T.textMuted, marginTop: 2 }}>{addOn.description}</div>
+                      )}
+                    </div>
+                    <div style={{ flexShrink: 0 }}>
+                      <span style={{ fontSize: 16, fontWeight: 700, color: T.gold }}>${(addOn.price / 100).toFixed(2)}</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
-        </>
-      )}
+        )}
 
-      {/* Notes */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.25rem' }}>Order Notes</label>
-        <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3}
-          style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', boxSizing: 'border-box', resize: 'vertical' }} />
+        {/* ── Section: Your Details ── */}
+        <div style={cardStyle}>
+          <h2 style={sectionTitleStyle}>Your Details</h2>
+          <p style={sectionSubtitleStyle}>We'll send confirmation + payment link here</p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 24 }}>
+            <div>
+              <label style={labelStyle}>Full Name</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <input
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="First"
+                  required
+                  style={inputStyle}
+                />
+                <input
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Last"
+                  required
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+            <div>
+              <label style={labelStyle}>Company</label>
+              <input
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                placeholder="Company name"
+                style={inputStyle}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 16 }}>
+            <div>
+              <label style={labelStyle}>Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@company.com"
+                required
+                style={inputStyle}
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Phone</label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="(555) 000-0000"
+                style={inputStyle}
+              />
+            </div>
+          </div>
+
+          <div style={{ marginTop: 16 }}>
+            <label style={labelStyle}>Special Instructions</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              placeholder="Allergies, setup requests, dietary needs..."
+              style={{
+                ...inputStyle,
+                height: 'auto',
+                padding: '12px 14px',
+                resize: 'vertical',
+              }}
+            />
+          </div>
+        </div>
       </div>
 
-      {/* Estimate + Submit */}
-      {hasPackages && estimatedTotal > 0 && (
-        <div style={{ background: '#f9fafb', borderRadius: '0.5rem', padding: '1rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>Estimated Total</span>
-          <span style={{ fontSize: '1.5rem', fontWeight: 700 }}>${(estimatedTotal / 100).toFixed(2)}</span>
+      {/* ── RIGHT COLUMN: Summary Panel ── */}
+      <div style={{ flex: '0 0 320px', position: 'sticky', top: 24 }}>
+        <div style={cardStyle}>
+          {/* Header */}
+          <div style={{
+            fontSize: 11,
+            fontWeight: 600,
+            textTransform: 'uppercase',
+            letterSpacing: '1.5px',
+            color: T.gold,
+            marginBottom: 4,
+          }}>
+            Catering Order
+          </div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: T.textPrimary, marginBottom: 24 }}>
+            {data.merchant.name}
+          </div>
+
+          {/* Empty state */}
+          {!hasPackages ? (
+            <div style={{
+              textAlign: 'center',
+              padding: '32px 16px',
+              color: T.textMuted,
+              fontSize: 14,
+              lineHeight: 1.5,
+            }}>
+              Select a package and date to see your summary
+            </div>
+          ) : (
+            <>
+              {/* Line items */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {selectedPkgList.map((pkg) => (
+                  <div key={pkg.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                    <div>
+                      <div style={{ color: T.textPrimary, fontWeight: 500 }}>{pkg.name}</div>
+                      <div style={{ color: T.textMuted, fontSize: 12 }}>{headcount} guests x ${(pkg.pricePerHead / 100).toFixed(2)}</div>
+                    </div>
+                    <div style={{ fontWeight: 600, color: T.textPrimary, whiteSpace: 'nowrap' }}>
+                      ${((pkg.pricePerHead * headcount) / 100).toFixed(2)}
+                    </div>
+                  </div>
+                ))}
+                {selectedAddOnList.map((addOn) => (
+                  <div key={addOn.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                    <div style={{ color: T.textPrimary, fontWeight: 500 }}>{addOn.name}</div>
+                    <div style={{ fontWeight: 600, color: T.textPrimary }}>${(addOn.price / 100).toFixed(2)}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Separator */}
+              <div style={{ borderTop: `1px solid ${T.cardBorder}`, margin: '20px 0' }} />
+
+              {/* Subtotals */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 6 }}>
+                <span style={{ color: T.textMuted }}>Package subtotal</span>
+                <span style={{ color: T.textPrimary, fontWeight: 500 }}>
+                  ${(Object.entries(selectedPkgs).reduce((sum, [id, qty]) => {
+                    const pkg = allPackages.find((p) => p.id === id);
+                    return sum + (pkg ? pkg.pricePerHead * headcount * qty : 0);
+                  }, 0) / 100).toFixed(2)}
+                </span>
+              </div>
+              {selectedAddOnList.length > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 6 }}>
+                  <span style={{ color: T.textMuted }}>Add-ons</span>
+                  <span style={{ color: T.textPrimary, fontWeight: 500 }}>
+                    ${(Object.entries(selectedAddOnIds).reduce((sum, [id, qty]) => {
+                      const addOn = allAddOns.find((a) => a.id === id);
+                      return sum + (addOn ? addOn.price * qty : 0);
+                    }, 0) / 100).toFixed(2)}
+                  </span>
+                </div>
+              )}
+
+              {/* Total */}
+              <div style={{ borderTop: `1px solid ${T.cardBorder}`, margin: '12px 0' }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 18, fontWeight: 700, color: T.textPrimary }}>Total</span>
+                <span style={{ fontSize: 18, fontWeight: 700, color: T.textPrimary }}>${(estimatedTotal / 100).toFixed(2)}</span>
+              </div>
+
+              {/* Submit */}
+              <button
+                type="submit"
+                disabled={!canSubmit}
+                style={{
+                  width: '100%',
+                  height: 52,
+                  marginTop: 24,
+                  border: 'none',
+                  borderRadius: 10,
+                  background: canSubmit ? T.selectedBorder : T.textPlaceholder,
+                  color: '#FFFFFF',
+                  fontSize: 16,
+                  fontWeight: 600,
+                  cursor: canSubmit ? 'pointer' : 'not-allowed',
+                  transition: 'background 0.15s',
+                }}
+              >
+                {submitting ? 'Placing order...' : 'Place Order'}
+              </button>
+
+              {/* Deposit notice */}
+              {selectedLocation?.depositRequired && (
+                <p style={{ fontSize: 12, color: T.textMuted, textAlign: 'center', marginTop: 12, marginBottom: 0 }}>
+                  A deposit is required. You will receive a payment link after your order is reviewed.
+                </p>
+              )}
+            </>
+          )}
         </div>
-      )}
-
-      {selectedLocation?.depositRequired && (
-        <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '1rem' }}>
-          This location requires a deposit. You will receive a payment link after your order is reviewed.
-        </p>
-      )}
-
-      <button type="submit" disabled={submitting || !selectedLocationSlug || !hasPackages}
-        style={{
-          width: '100%', padding: '0.85rem', fontSize: '1.1rem', fontWeight: 700,
-          background: submitting || !selectedLocationSlug || !hasPackages ? '#9ca3af' : '#111827',
-          color: 'white', border: 'none', borderRadius: '0.5rem',
-          cursor: submitting || !selectedLocationSlug || !hasPackages ? 'not-allowed' : 'pointer',
-        }}>
-        {submitting ? 'Submitting Order...' : 'Submit Order'}
-      </button>
+      </div>
     </form>
   );
 }
