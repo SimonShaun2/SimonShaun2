@@ -1,9 +1,10 @@
 import type { FastifyInstance } from 'fastify';
 import { db } from '@trayloop/database';
-import { deposits, orders } from '@trayloop/database';
+import { deposits, orders, customers, organizations } from '@trayloop/database';
 import { eq, and } from 'drizzle-orm';
 import { getStripe, isStripeEnabled, getWebhookSecret } from '../../lib/stripe.js';
 import { recordOrderEvent } from '../../lib/order-events.js';
+import { notifyDepositPaid } from '../../lib/notifications.js';
 import { logger } from '@trayloop/utils';
 
 export async function webhookModule(app: FastifyInstance) {
@@ -111,18 +112,61 @@ async function handleCheckoutSessionCompleted(session: any) {
     }).where(eq(orders.id, orderId));
   });
 
-  // Record timeline events (non-critical)
+  const amount = session.amount_total ?? 0;
+
+  // Record timeline events (non-critical, idempotent by being after status check)
   try {
-    const amount = session.amount_total;
     await recordOrderEvent(orderId, 'deposit_paid', `Deposit of $${(amount / 100).toFixed(2)} paid via Stripe`);
     await recordOrderEvent(orderId, 'status_changed', 'Status changed to confirmed (deposit received)');
   } catch {}
+
+  // Send payment confirmation notifications
+  try {
+    const [order] = await db.select({
+      orderNumber: orders.orderNumber,
+      customerId: orders.customerId,
+      organizationId: orders.organizationId,
+      scheduledAt: orders.scheduledAt,
+    }).from(orders).where(eq(orders.id, orderId)).limit(1);
+
+    if (order) {
+      const [[customer], [org]] = await Promise.all([
+        db.select({
+          userId: customers.userId,
+          email: customers.email,
+          firstName: customers.firstName,
+          lastName: customers.lastName,
+        }).from(customers).where(eq(customers.id, order.customerId)).limit(1),
+        db.select({
+          name: organizations.name,
+          ownerId: organizations.ownerId,
+        }).from(organizations).where(eq(organizations.id, order.organizationId)).limit(1),
+      ]);
+
+      if (customer && org) {
+        await notifyDepositPaid({
+          orderId,
+          orderNumber: order.orderNumber,
+          merchantName: org.name,
+          depositAmount: amount,
+          currency: 'usd',
+          eventDate: order.scheduledAt,
+          customerUserId: customer.userId,
+          customerEmail: customer.email,
+          customerName: `${customer.firstName} ${customer.lastName}`,
+          merchantOwnerUserId: org.ownerId,
+        });
+      }
+    }
+  } catch (err) {
+    logger.error('Failed to send deposit notifications', { error: (err as Error).message, orderId });
+  }
 
   logger.info('Deposit payment completed via webhook', {
     depositId: deposit.id,
     orderId,
     paymentIntentId,
-    amount: session.amount_total,
+    amount,
   });
 }
 
