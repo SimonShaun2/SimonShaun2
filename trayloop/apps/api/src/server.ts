@@ -1,7 +1,11 @@
 import { buildApp } from './index.js';
 import { logger } from '@trayloop/utils';
+import { initStripe } from './lib/stripe.js';
 
 const start = async () => {
+  // Initialize external services
+  initStripe();
+
   const app = await buildApp();
   const port = parseInt(process.env.API_PORT || '3001', 10);
 
@@ -9,7 +13,7 @@ const start = async () => {
     await app.listen({ port, host: '0.0.0.0' });
     logger.info(`API server running on port ${port}`);
   } catch (err) {
-    app.log.error(err);
+    logger.error('Failed to start server', { error: (err as Error).message });
     process.exit(1);
   }
 };

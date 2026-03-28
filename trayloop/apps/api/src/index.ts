@@ -35,7 +35,16 @@ export async function buildApp() {
   app.setErrorHandler(errorHandler);
 
   // Health check
-  app.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }));
+  app.get('/health', async () => {
+    const { isStripeEnabled } = await import('./lib/stripe.js');
+    return {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      services: {
+        stripe: isStripeEnabled() ? 'connected' : 'not configured',
+      },
+    };
+  });
 
   // Auth
   await app.register(authModule, { prefix: '/api/auth' });
