@@ -62,6 +62,8 @@ export default function OrderDetailPage() {
   async function handleMarkPaid() { setActionLoading(true); setError(''); try { await apiFetch(`/api/orders/${id}/mark-paid`, { method: 'PATCH' }); await fetchOrder(); } catch (err) { setError(err instanceof Error ? err.message : 'Failed'); } finally { setActionLoading(false); } }
   async function handleReorder() { setActionLoading(true); setError(''); setReorderWarnings([]); setReorderSuccess(null); const d = prompt('Event date (YYYY-MM-DD):'); if (!d) { setActionLoading(false); return; } const dt = new Date(d+'T12:00:00.000Z'); if (isNaN(dt.getTime())) { setError('Invalid date'); setActionLoading(false); return; } try { const res = await apiFetch(`/api/orders/${id}/reorder`, { method: 'POST', body: JSON.stringify({ eventDate: dt.toISOString() }) }); setReorderSuccess({ orderNumber: res.data.orderNumber, id: res.data.id }); if (res.data.warnings?.length) setReorderWarnings(res.data.warnings); } catch (err) { setError(err instanceof Error ? err.message : 'Reorder failed'); } finally { setActionLoading(false); } }
 
+  async function handleRefundDeposit() { if (!confirm('Refund this deposit? This will cancel the order.')) return; setActionLoading(true); setError(''); try { await apiFetch(`/api/orders/${id}/refund-deposit`, { method: 'POST' }); await fetchOrder(); } catch (err) { setError(err instanceof Error ? err.message : 'Refund failed'); } finally { setActionLoading(false); } }
+
   if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#9CA3AF' }}>Loading order...</div>;
   if (error && !order) return <div style={{ padding: 40, textAlign: 'center', color: '#DC2626' }}>{error}</div>;
   if (!order) return null;
@@ -107,6 +109,9 @@ export default function OrderDetailPage() {
           </ActionBtn>
         ))}
         <ActionBtn onClick={handleReorder} disabled={actionLoading} variant="outline">Reorder</ActionBtn>
+        {order.deposit?.status === 'paid' && order.status !== 'cancelled' && (
+          <ActionBtn onClick={handleRefundDeposit} disabled={actionLoading} variant="danger">Refund Deposit</ActionBtn>
+        )}
         {order.allowedTransitions.includes('cancelled') && (
           <ActionBtn onClick={() => handleStatusChange('cancelled')} disabled={actionLoading} variant="danger">Cancel</ActionBtn>
         )}

@@ -15,6 +15,7 @@ import { ValidationError, NotFoundError } from '../../lib/errors.js';
 import { calculatePricing } from '../../lib/pricing.js';
 import { recordOrderEvent, getOrderTimeline } from '../../lib/order-events.js';
 import { getStripe, isStripeEnabled } from '../../lib/stripe.js';
+import { logger } from '@trayloop/utils';
 import type { EventBus } from '../../lib/event-bus/index.js';
 import type { CreateOrderInput, UpdateOrderStatusInput, OrderListQuery, SendDepositLinkInput, ReorderInput } from './orders.schema.js';
 
@@ -972,5 +973,110 @@ export async function reorder(sourceOrderId: string, orgId: string, input: Reord
     items: lineItems.map((item) => ({ type: item.type, name: item.name, quantity: item.quantity, unitPrice: item.unitPrice, totalPrice: item.totalPrice })),
     depositRequired, allowedTransitions: getAllowedTransitions('submitted', depositRequired),
     warnings: warnings.length > 0 ? warnings : undefined, createdAt: result.createdAt,
+  };
+}
+
+// --- Refund deposit ---
+
+export async function refundDeposit(orderId: string, orgId: string, eventBus: EventBus) {
+  const [order] = await db
+    .select({
+      id: orders.id,
+      orderNumber: orders.orderNumber,
+      status: orders.status,
+      customerId: orders.customerId,
+      organizationId: orders.organizationId,
+    })
+    .from(orders)
+    .where(and(eq(orders.id, orderId), eq(orders.organizationId, orgId)))
+    .limit(1);
+
+  if (!order) throw new NotFoundError('Order');
+
+  // Find the paid deposit
+  const [deposit] = await db
+    .select()
+    .from(deposits)
+    .where(and(eq(deposits.orderId, orderId), eq(deposits.status, 'paid')))
+    .limit(1);
+
+  if (!deposit) {
+    throw new ValidationError('No paid deposit found to refund');
+  }
+
+  // Idempotency: if already refunded, return early
+  if (deposit.status === 'refunded') {
+    return { orderId, depositId: deposit.id, status: 'already_refunded' };
+  }
+
+  // Attempt Stripe refund if payment intent exists
+  let stripeRefundId: string | null = null;
+
+  if (deposit.stripePaymentIntentId && isStripeEnabled()) {
+    try {
+      const stripe = getStripe();
+      const refund = await stripe.refunds.create({
+        payment_intent: deposit.stripePaymentIntentId,
+      });
+      stripeRefundId = refund.id;
+    } catch (err) {
+      throw new ValidationError(`Stripe refund failed: ${(err as Error).message}`);
+    }
+  }
+
+  const now = new Date();
+
+  // Transaction: update deposit + order
+  await db.transaction(async (tx) => {
+    await tx.update(deposits).set({
+      status: 'refunded',
+      stripeRefundId,
+      refundedAt: now,
+      updatedAt: now,
+    }).where(eq(deposits.id, deposit.id));
+
+    await tx.update(orders).set({
+      status: 'cancelled',
+      updatedAt: now,
+    }).where(eq(orders.id, orderId));
+  });
+
+  // Timeline
+  try {
+    await recordOrderEvent(orderId, 'deposit_refunded', `Deposit of $${(deposit.amount / 100).toFixed(2)} refunded${stripeRefundId ? ' via Stripe' : ''}`);
+    await recordOrderEvent(orderId, 'status_changed', 'Order cancelled (deposit refunded)');
+  } catch {}
+
+  // Events
+  try { await eventBus.emit('order.status_updated', { orderId, oldStatus: order.status, newStatus: 'cancelled' }); } catch {}
+
+  // Notifications
+  try {
+    const { notifyDepositRefunded } = await import('../../lib/notifications.js');
+    const [[customer], [org]] = await Promise.all([
+      db.select({ userId: customers.userId, email: customers.email, firstName: customers.firstName, lastName: customers.lastName })
+        .from(customers).where(eq(customers.id, order.customerId)).limit(1),
+      db.select({ name: organizations.name, ownerId: organizations.ownerId })
+        .from(organizations).where(eq(organizations.id, orgId)).limit(1),
+    ]);
+    if (customer && org) {
+      await notifyDepositRefunded({
+        orderId, orderNumber: order.orderNumber, merchantName: org.name,
+        depositAmount: deposit.amount, currency: 'usd',
+        customerUserId: customer.userId, customerEmail: customer.email,
+        customerName: `${customer.firstName} ${customer.lastName}`,
+        merchantOwnerUserId: org.ownerId,
+      });
+    }
+  } catch (err) {
+    logger.error('Failed to send refund notifications', { error: (err as Error).message });
+  }
+
+  return {
+    orderId,
+    depositId: deposit.id,
+    refundedAmount: deposit.amount,
+    stripeRefundId,
+    orderStatus: 'cancelled',
   };
 }

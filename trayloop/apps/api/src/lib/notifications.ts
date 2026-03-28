@@ -125,3 +125,49 @@ export async function notifyDepositPaid(ctx: DepositPaidContext): Promise<void> 
     actionUrl: `/orders/${ctx.orderId}`,
   });
 }
+
+// --- Refund notification ---
+
+export interface DepositRefundedContext {
+  orderId: string;
+  orderNumber: string;
+  merchantName: string;
+  depositAmount: number;
+  currency: string;
+  customerUserId: string | null;
+  customerEmail: string;
+  customerName: string;
+  merchantOwnerUserId: string;
+}
+
+export async function notifyDepositRefunded(ctx: DepositRefundedContext): Promise<void> {
+  const amountStr = `$${(ctx.depositAmount / 100).toFixed(2)}`;
+
+  // Customer notification
+  if (ctx.customerUserId) {
+    await sendNotification({
+      userId: ctx.customerUserId,
+      type: 'email',
+      subject: `Refund processed — ${ctx.orderNumber}`,
+      body: [
+        `Hi ${ctx.customerName},`,
+        '',
+        `Your deposit of ${amountStr} for order ${ctx.orderNumber} with ${ctx.merchantName} has been refunded.`,
+        '',
+        `The refund will appear in your account within 5–10 business days.`,
+        '',
+        `If you have questions, please contact ${ctx.merchantName} directly.`,
+      ].join('\n'),
+      actionUrl: `/orders/${ctx.orderId}`,
+    });
+  }
+
+  // Merchant notification
+  await sendNotification({
+    userId: ctx.merchantOwnerUserId,
+    type: 'in_app',
+    subject: `Deposit refunded — ${ctx.orderNumber}`,
+    body: `Deposit of ${amountStr} for ${ctx.customerName} (${ctx.customerEmail}) on order ${ctx.orderNumber} has been refunded.`,
+    actionUrl: `/orders/${ctx.orderId}`,
+  });
+}

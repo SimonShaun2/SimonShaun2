@@ -95,4 +95,15 @@ export function registerRoutes(app: FastifyInstance) {
     );
     return reply.status(201).send({ data: result });
   });
+
+  // Refund deposit
+  app.post('/:id/refund-deposit', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const result = await service.refundDeposit(
+      id,
+      request.ctx.tenant!.organizationId,
+      (app as any).eventBus,
+    );
+    return reply.send({ data: result });
+  });
 }
