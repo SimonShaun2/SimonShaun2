@@ -754,118 +754,213 @@ export default function CheckoutForm({ data }: Props) {
 
       {/* ── RIGHT COLUMN: Summary Panel ── */}
       <div style={{ flex: '0 0 320px', position: 'sticky', top: 24 }}>
-        <div style={cardStyle}>
-          {/* Header */}
+        <div style={{
+          background: T.cardBg,
+          border: `1px solid ${T.cardBorder}`,
+          borderRadius: 12,
+          overflow: 'hidden',
+          boxShadow: '0 4px 24px rgba(28,25,23,0.06)',
+        }}>
+          {/* Header band */}
           <div style={{
-            fontSize: 11,
-            fontWeight: 600,
-            textTransform: 'uppercase',
-            letterSpacing: '1.5px',
-            color: T.gold,
-            marginBottom: 4,
+            padding: '20px 24px 16px',
+            borderBottom: `1px solid ${T.cardBorder}`,
           }}>
-            Catering Order
-          </div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: T.textPrimary, marginBottom: 24 }}>
-            {data.merchant.name}
-          </div>
-
-          {/* Empty state */}
-          {!hasPackages ? (
             <div style={{
-              textAlign: 'center',
-              padding: '32px 16px',
-              color: T.textMuted,
-              fontSize: 14,
-              lineHeight: 1.5,
+              fontSize: 11, fontWeight: 700,
+              textTransform: 'uppercase', letterSpacing: '1.5px',
+              color: T.gold, marginBottom: 4,
             }}>
-              Select a package and date to see your summary
+              Catering Order
             </div>
-          ) : (
-            <>
-              {/* Line items */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {selectedPkgList.map((pkg) => (
-                  <div key={pkg.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-                    <div>
-                      <div style={{ color: T.textPrimary, fontWeight: 500 }}>{pkg.name}</div>
-                      <div style={{ color: T.textMuted, fontSize: 12 }}>{headcount} guests x ${(pkg.pricePerHead / 100).toFixed(2)}</div>
-                    </div>
-                    <div style={{ fontWeight: 600, color: T.textPrimary, whiteSpace: 'nowrap' }}>
-                      ${((pkg.pricePerHead * headcount) / 100).toFixed(2)}
-                    </div>
-                  </div>
-                ))}
-                {selectedAddOnList.map((addOn) => (
-                  <div key={addOn.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-                    <div style={{ color: T.textPrimary, fontWeight: 500 }}>{addOn.name}</div>
-                    <div style={{ fontWeight: 600, color: T.textPrimary }}>${(addOn.price / 100).toFixed(2)}</div>
-                  </div>
-                ))}
-              </div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: T.textPrimary }}>
+              {data.merchant.name}
+            </div>
+          </div>
 
-              {/* Separator */}
-              <div style={{ borderTop: `1px solid ${T.cardBorder}`, margin: '20px 0' }} />
-
-              {/* Subtotals */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 6 }}>
-                <span style={{ color: T.textMuted }}>Package subtotal</span>
-                <span style={{ color: T.textPrimary, fontWeight: 500 }}>
-                  ${(Object.entries(selectedPkgs).reduce((sum, [id, qty]) => {
-                    const pkg = allPackages.find((p) => p.id === id);
-                    return sum + (pkg ? pkg.pricePerHead * headcount * qty : 0);
-                  }, 0) / 100).toFixed(2)}
-                </span>
+          <div style={{ padding: '20px 24px 24px' }}>
+            {/* Empty state */}
+            {!hasPackages ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '40px 16px',
+              }}>
+                <div style={{
+                  width: 56, height: 56, borderRadius: 28,
+                  background: '#F5F5F4',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  margin: '0 auto 16px',
+                  fontSize: 24,
+                }}>
+                  🍽️
+                </div>
+                <p style={{ color: T.textMuted, fontSize: 14, lineHeight: 1.6, margin: '0 0 24px' }}>
+                  Select a package and date<br />to see your summary
+                </p>
+                <button
+                  type="button"
+                  disabled
+                  style={{
+                    width: '100%', height: 52,
+                    border: 'none', borderRadius: 10,
+                    background: T.textPlaceholder,
+                    color: '#FFFFFF', fontSize: 15, fontWeight: 600,
+                    cursor: 'not-allowed',
+                  }}
+                >
+                  Select a package first
+                </button>
+                {selectedLocation && (
+                  <p style={{ fontSize: 11, color: T.textPlaceholder, textAlign: 'center', marginTop: 10, marginBottom: 0 }}>
+                    No charge now · $0 deposit sent by email after confirmation
+                  </p>
+                )}
               </div>
-              {selectedAddOnList.length > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, marginBottom: 6 }}>
-                  <span style={{ color: T.textMuted }}>Add-ons</span>
-                  <span style={{ color: T.textPrimary, fontWeight: 500 }}>
-                    ${(Object.entries(selectedAddOnIds).reduce((sum, [id, qty]) => {
-                      const addOn = allAddOns.find((a) => a.id === id);
-                      return sum + (addOn ? addOn.price * qty : 0);
-                    }, 0) / 100).toFixed(2)}
+            ) : (
+              <>
+                {/* Line items — packages */}
+                <div style={{ marginBottom: 16 }}>
+                  {selectedPkgList.map((pkg, i) => (
+                    <div key={pkg.id} style={{
+                      padding: '12px 0',
+                      borderBottom: i < selectedPkgList.length - 1 || selectedAddOnList.length > 0
+                        ? `1px solid #F5F5F4` : 'none',
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: T.textPrimary }}>{pkg.name}</span>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: T.textPrimary }}>
+                          ${((pkg.pricePerHead * headcount) / 100).toFixed(2)}
+                        </span>
+                      </div>
+                      <span style={{ fontSize: 12, color: T.textMuted }}>
+                        {headcount} guests × ${(pkg.pricePerHead / 100).toFixed(2)}/person
+                      </span>
+                    </div>
+                  ))}
+
+                  {/* Line items — add-ons */}
+                  {selectedAddOnList.map((addOn, i) => (
+                    <div key={addOn.id} style={{
+                      padding: '12px 0',
+                      borderBottom: i < selectedAddOnList.length - 1 ? `1px solid #F5F5F4` : 'none',
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: 14, fontWeight: 500, color: T.textPrimary }}>{addOn.name}</span>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: T.textPrimary }}>
+                          ${(addOn.price / 100).toFixed(2)}
+                        </span>
+                      </div>
+                      {addOn.description && (
+                        <span style={{ fontSize: 12, color: T.textMuted }}>{addOn.description}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Subtotals */}
+                <div style={{
+                  borderTop: `1px solid ${T.cardBorder}`,
+                  paddingTop: 14,
+                  display: 'flex', flexDirection: 'column', gap: 8,
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                    <span style={{ color: T.textMuted }}>Packages ({selectedPkgList.length})</span>
+                    <span style={{ color: T.textPrimary, fontWeight: 500 }}>
+                      ${(Object.entries(selectedPkgs).reduce((sum, [id, qty]) => {
+                        const pkg = allPackages.find((p) => p.id === id);
+                        return sum + (pkg ? pkg.pricePerHead * headcount * qty : 0);
+                      }, 0) / 100).toFixed(2)}
+                    </span>
+                  </div>
+                  {selectedAddOnList.length > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                      <span style={{ color: T.textMuted }}>Add-ons ({selectedAddOnList.length})</span>
+                      <span style={{ color: T.textPrimary, fontWeight: 500 }}>
+                        ${(Object.entries(selectedAddOnIds).reduce((sum, [id, qty]) => {
+                          const addOn = allAddOns.find((a) => a.id === id);
+                          return sum + (addOn ? addOn.price * qty : 0);
+                        }, 0) / 100).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  {headcount > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                      <span style={{ color: T.textPlaceholder }}>{headcount} guests</span>
+                      <span style={{ color: T.textPlaceholder }}>
+                        ${(estimatedTotal / headcount / 100).toFixed(2)}/person avg
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Total */}
+                <div style={{
+                  borderTop: `2px solid ${T.selectedBorder}`,
+                  marginTop: 14, paddingTop: 14,
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+                }}>
+                  <span style={{ fontSize: 16, fontWeight: 700, color: T.textPrimary }}>Total</span>
+                  <span style={{ fontSize: 24, fontWeight: 700, color: T.textPrimary }}>
+                    ${(estimatedTotal / 100).toFixed(2)}
                   </span>
                 </div>
-              )}
 
-              {/* Total */}
-              <div style={{ borderTop: `1px solid ${T.cardBorder}`, margin: '12px 0' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 18, fontWeight: 700, color: T.textPrimary }}>Total</span>
-                <span style={{ fontSize: 18, fontWeight: 700, color: T.textPrimary }}>${(estimatedTotal / 100).toFixed(2)}</span>
-              </div>
+                {/* Submit button */}
+                <button
+                  type="submit"
+                  disabled={!canSubmit}
+                  style={{
+                    width: '100%', height: 52,
+                    marginTop: 20,
+                    border: 'none', borderRadius: 10,
+                    background: canSubmit ? T.selectedBorder : T.textPlaceholder,
+                    color: '#FFFFFF', fontSize: 16, fontWeight: 600,
+                    cursor: canSubmit ? 'pointer' : 'not-allowed',
+                    transition: 'background 0.15s',
+                    position: 'relative',
+                  }}
+                >
+                  {submitting ? (
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                      <span style={{
+                        width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)',
+                        borderTopColor: '#fff', borderRadius: '50%',
+                        animation: 'spin 0.6s linear infinite',
+                        display: 'inline-block',
+                      }} />
+                      Placing order...
+                    </span>
+                  ) : canSubmit ? 'Place Order' : !eventDate ? 'Select a date' : 'Select a package'}
+                </button>
 
-              {/* Submit */}
-              <button
-                type="submit"
-                disabled={!canSubmit}
-                style={{
-                  width: '100%',
-                  height: 52,
-                  marginTop: 24,
-                  border: 'none',
-                  borderRadius: 10,
-                  background: canSubmit ? T.selectedBorder : T.textPlaceholder,
-                  color: '#FFFFFF',
-                  fontSize: 16,
-                  fontWeight: 600,
-                  cursor: canSubmit ? 'pointer' : 'not-allowed',
-                  transition: 'background 0.15s',
-                }}
-              >
-                {submitting ? 'Placing order...' : 'Place Order'}
-              </button>
-
-              {/* Deposit notice */}
-              {selectedLocation?.depositRequired && (
-                <p style={{ fontSize: 12, color: T.textMuted, textAlign: 'center', marginTop: 12, marginBottom: 0 }}>
-                  A deposit is required. You will receive a payment link after your order is reviewed.
+                {/* Deposit notice */}
+                <p style={{
+                  fontSize: 11, color: T.textMuted, textAlign: 'center',
+                  marginTop: 10, marginBottom: 0, lineHeight: 1.4,
+                }}>
+                  {selectedLocation?.depositRequired
+                    ? 'No charge now · Deposit sent by email after confirmation'
+                    : 'No charge now · $0 deposit sent by email after confirmation'}
                 </p>
-              )}
-            </>
-          )}
+
+                {/* Recurring badge */}
+                {recurringEnabled && (
+                  <div style={{
+                    marginTop: 12, padding: '8px 12px',
+                    background: '#FFFBEB', borderRadius: 8,
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    fontSize: 12, color: '#92400E',
+                  }}>
+                    <span>↻</span>
+                    <span>Repeats {recurringInterval}</span>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
+        {/* Spinner keyframe (injected once) */}
+        <style dangerouslySetInnerHTML={{ __html: `@keyframes spin { to { transform: rotate(360deg); } }` }} />
       </div>
     </form>
   );
