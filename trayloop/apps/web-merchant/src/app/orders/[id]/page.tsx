@@ -18,13 +18,8 @@ interface OrderDetail {
   customer: { id: string; name: string; email: string; phone: string | null; company: string | null };
   deliveryAddress: { address: string; city: string; state: string; zipCode: string } | null;
   deposit: {
-    id: string;
-    amount: number;
-    currency: string;
-    status: string;
-    paidAt: string | null;
-    hasStripeSession: boolean;
-    stripePaymentIntentId: string | null;
+    id: string; amount: number; currency: string; status: string;
+    paidAt: string | null; hasStripeSession: boolean; stripePaymentIntentId: string | null;
   } | null;
   items: {
     packages: Array<{ name: string; description: string | null; quantity: number; unitPrice: number; totalPrice: number }>;
@@ -33,6 +28,17 @@ interface OrderDetail {
   timeline: Array<{ id: string; type: string; description: string; metadata: Record<string, unknown> | null; createdAt: string }>;
   timestamps: { created: string; updated: string; completed: string | null };
 }
+
+const SC: Record<string, { bg: string; color: string; label: string }> = {
+  submitted: { bg: '#FEF3C7', color: '#92400E', label: 'New' },
+  awaiting_deposit: { bg: '#DBEAFE', color: '#1E40AF', label: 'Awaiting Deposit' },
+  confirmed: { bg: '#DCFCE7', color: '#166534', label: 'Confirmed' },
+  completed: { bg: '#F3F4F6', color: '#374151', label: 'Completed' },
+  cancelled: { bg: '#FEE2E2', color: '#991B1B', label: 'Cancelled' },
+};
+
+const card: React.CSSProperties = { background: '#FFF', border: '1px solid #E7E5E4', borderRadius: 10, padding: '16px 18px' };
+const sectionLabel: React.CSSProperties = { fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: '#78716C', marginBottom: 8, display: 'block' };
 
 export default function OrderDetailPage() {
   const params = useParams();
@@ -50,334 +56,177 @@ export default function OrderDetailPage() {
     fetchOrder();
   }, [id]);
 
-  async function fetchOrder() {
-    setLoading(true);
-    try {
-      const res = await apiFetch(`/api/orders/${id}`);
-      setOrder(res.data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load order');
-    } finally {
-      setLoading(false);
-    }
-  }
+  async function fetchOrder() { setLoading(true); try { const res = await apiFetch(`/api/orders/${id}`); setOrder(res.data); } catch (err) { setError(err instanceof Error ? err.message : 'Failed to load'); } finally { setLoading(false); } }
+  async function handleStatusChange(s: string) { setActionLoading(true); setError(''); try { const b: Record<string,string> = { status: s }; if (s === 'cancelled') { const r = prompt('Cancellation reason:'); if (!r) { setActionLoading(false); return; } b.reason = r; } await apiFetch(`/api/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify(b) }); await fetchOrder(); } catch (err) { setError(err instanceof Error ? err.message : 'Action failed'); } finally { setActionLoading(false); } }
+  async function handleSendDeposit() { setActionLoading(true); setError(''); try { await apiFetch(`/api/orders/${id}/send-deposit-link`, { method: 'POST', body: JSON.stringify({}) }); await fetchOrder(); } catch (err) { setError(err instanceof Error ? err.message : 'Failed'); } finally { setActionLoading(false); } }
+  async function handleMarkPaid() { setActionLoading(true); setError(''); try { await apiFetch(`/api/orders/${id}/mark-paid`, { method: 'PATCH' }); await fetchOrder(); } catch (err) { setError(err instanceof Error ? err.message : 'Failed'); } finally { setActionLoading(false); } }
+  async function handleReorder() { setActionLoading(true); setError(''); setReorderWarnings([]); setReorderSuccess(null); const d = prompt('Event date (YYYY-MM-DD):'); if (!d) { setActionLoading(false); return; } const dt = new Date(d+'T12:00:00.000Z'); if (isNaN(dt.getTime())) { setError('Invalid date'); setActionLoading(false); return; } try { const res = await apiFetch(`/api/orders/${id}/reorder`, { method: 'POST', body: JSON.stringify({ eventDate: dt.toISOString() }) }); setReorderSuccess({ orderNumber: res.data.orderNumber, id: res.data.id }); if (res.data.warnings?.length) setReorderWarnings(res.data.warnings); } catch (err) { setError(err instanceof Error ? err.message : 'Reorder failed'); } finally { setActionLoading(false); } }
 
-  async function handleStatusChange(newStatus: string) {
-    setActionLoading(true);
-    setError('');
-    try {
-      const body: Record<string, string> = { status: newStatus };
-      if (newStatus === 'cancelled') {
-        const reason = prompt('Cancellation reason:');
-        if (!reason) { setActionLoading(false); return; }
-        body.reason = reason;
-      }
-      await apiFetch(`/api/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify(body) });
-      await fetchOrder();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Action failed');
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  async function handleSendDeposit() {
-    setActionLoading(true);
-    setError('');
-    try {
-      await apiFetch(`/api/orders/${id}/send-deposit-link`, { method: 'POST', body: JSON.stringify({}) });
-      await fetchOrder();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send deposit link');
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  async function handleMarkPaid() {
-    setActionLoading(true);
-    setError('');
-    try {
-      await apiFetch(`/api/orders/${id}/mark-paid`, { method: 'PATCH' });
-      await fetchOrder();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to mark as paid');
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  async function handleReorder() {
-    setActionLoading(true);
-    setError('');
-    setReorderWarnings([]);
-    setReorderSuccess(null);
-
-    const dateStr = prompt('Event date for new order (YYYY-MM-DD):');
-    if (!dateStr) { setActionLoading(false); return; }
-
-    const eventDate = new Date(dateStr + 'T12:00:00.000Z');
-    if (isNaN(eventDate.getTime())) {
-      setError('Invalid date format');
-      setActionLoading(false);
-      return;
-    }
-
-    try {
-      const res = await apiFetch(`/api/orders/${id}/reorder`, {
-        method: 'POST',
-        body: JSON.stringify({ eventDate: eventDate.toISOString() }),
-      });
-
-      const data = res.data;
-      setReorderSuccess({ orderNumber: data.orderNumber, id: data.id });
-
-      if (data.warnings && data.warnings.length > 0) {
-        setReorderWarnings(data.warnings);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Reorder failed');
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  if (loading) return <p style={{ color: '#6b7280' }}>Loading order...</p>;
-  if (error && !order) return <p style={{ color: '#dc2626' }}>{error}</p>;
+  if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#9CA3AF' }}>Loading order...</div>;
+  if (error && !order) return <div style={{ padding: 40, textAlign: 'center', color: '#DC2626' }}>{error}</div>;
   if (!order) return null;
 
-  const statusColors: Record<string, string> = {
-    submitted: '#f59e0b', awaiting_deposit: '#3b82f6', confirmed: '#10b981',
-    completed: '#6b7280', cancelled: '#ef4444',
-  };
+  const sc = SC[order.status] ?? SC.submitted;
 
   return (
     <div>
-      <a href="/" style={{ color: '#6b7280', fontSize: '0.875rem', textDecoration: 'none' }}>← Back to orders</a>
+      {/* Back link */}
+      <a href="/" style={{ fontSize: 13, color: '#78716C', textDecoration: 'none' }}>← Back to orders</a>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: '1rem', marginBottom: '1.5rem' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 12, marginBottom: 20 }}>
         <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.25rem' }}>
-            {order.orderNumber} — {order.customer.name}
-          </h1>
-          <span style={{
-            fontSize: '0.8rem', padding: '0.15rem 0.6rem', borderRadius: '9999px',
-            background: statusColors[order.status] ?? '#6b7280', color: 'white', fontWeight: 500,
-          }}>{order.status.replace('_', ' ')}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: '#1C1917' }}>{order.orderNumber}</h1>
+            <span style={{ fontSize: 12, fontWeight: 600, padding: '2px 10px', borderRadius: 10, background: sc.bg, color: sc.color }}>{sc.label}</span>
+          </div>
+          <p style={{ fontSize: 15, color: '#57534E', margin: 0 }}>{order.customer.name}{order.customer.company ? ` · ${order.customer.company}` : ''}</p>
         </div>
-        <div style={{ fontSize: '2rem', fontWeight: 700 }}>
-          ${(order.pricing.total / 100).toFixed(2)}
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: 28, fontWeight: 700, color: '#1C1917', lineHeight: 1 }}>${(order.pricing.total / 100).toFixed(2)}</div>
+          <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>{new Date(order.eventDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
         </div>
       </div>
 
-      {error && <p style={{ color: '#dc2626', marginBottom: '1rem', fontSize: '0.875rem' }}>{error}</p>}
+      {/* Banners */}
+      {error && <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '10px 14px', marginBottom: 12 }}><p style={{ color: '#DC2626', fontSize: 13, fontWeight: 500, margin: 0 }}>{error}</p></div>}
+      {reorderSuccess && <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 8, padding: '10px 14px', marginBottom: 12 }}><p style={{ color: '#166534', fontSize: 13, fontWeight: 600, margin: 0 }}>Reorder created: <a href={`/orders/${reorderSuccess.id}`} style={{ color: '#2563EB' }}>{reorderSuccess.orderNumber}</a></p></div>}
+      {reorderWarnings.length > 0 && <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 8, padding: '10px 14px', marginBottom: 12 }}><p style={{ color: '#92400E', fontSize: 13, fontWeight: 600, margin: '0 0 4px' }}>Some items were unavailable:</p><ul style={{ margin: 0, paddingLeft: 18, color: '#92400E', fontSize: 13 }}>{reorderWarnings.map((w, i) => <li key={i}>{w}</li>)}</ul></div>}
 
-      {/* Reorder success */}
-      {reorderSuccess && (
-        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '0.5rem', padding: '1rem', marginBottom: '1rem' }}>
-          <p style={{ color: '#166534', fontWeight: 600 }}>
-            Reorder created: <a href={`/orders/${reorderSuccess.id}`} style={{ color: '#2563eb' }}>{reorderSuccess.orderNumber}</a>
-          </p>
-        </div>
-      )}
-
-      {/* Reorder warnings */}
-      {reorderWarnings.length > 0 && (
-        <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '0.5rem', padding: '1rem', marginBottom: '1rem' }}>
-          <p style={{ color: '#92400e', fontWeight: 600, marginBottom: '0.5rem' }}>Some items were unavailable and were not included:</p>
-          <ul style={{ margin: 0, paddingLeft: '1.25rem', color: '#92400e', fontSize: '0.875rem' }}>
-            {reorderWarnings.map((w, i) => <li key={i}>{w}</li>)}
-          </ul>
-        </div>
-      )}
-
-      {/* Actions */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+      {/* Action buttons */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
         {order.status === 'submitted' && order.depositRequired && (
-          <button onClick={handleSendDeposit} disabled={actionLoading}
-            style={{ padding: '0.5rem 1rem', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontWeight: 500 }}>
-            Send Deposit Link
-          </button>
+          <ActionBtn onClick={handleSendDeposit} disabled={actionLoading} variant="blue">Send Deposit Link</ActionBtn>
         )}
         {order.status === 'awaiting_deposit' && (
-          <button onClick={handleMarkPaid} disabled={actionLoading}
-            style={{ padding: '0.5rem 1rem', background: '#10b981', color: 'white', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontWeight: 500 }}>
-            Mark Deposit Paid
-          </button>
+          <ActionBtn onClick={handleMarkPaid} disabled={actionLoading} variant="green">Mark Deposit Paid</ActionBtn>
         )}
         {order.allowedTransitions.filter(t => t !== 'cancelled').map((t) => (
-          <button key={t} onClick={() => handleStatusChange(t)} disabled={actionLoading}
-            style={{ padding: '0.5rem 1rem', background: '#111827', color: 'white', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontWeight: 500 }}>
+          <ActionBtn key={t} onClick={() => handleStatusChange(t)} disabled={actionLoading} variant="dark">
             {t === 'confirmed' ? 'Confirm Order' : t === 'completed' ? 'Mark Complete' : t.replace('_', ' ')}
-          </button>
+          </ActionBtn>
         ))}
+        <ActionBtn onClick={handleReorder} disabled={actionLoading} variant="outline">Reorder</ActionBtn>
         {order.allowedTransitions.includes('cancelled') && (
-          <button onClick={() => handleStatusChange('cancelled')} disabled={actionLoading}
-            style={{ padding: '0.5rem 1rem', background: 'white', color: '#dc2626', border: '1px solid #dc2626', borderRadius: '0.375rem', cursor: 'pointer', fontWeight: 500 }}>
-            Cancel Order
-          </button>
+          <ActionBtn onClick={() => handleStatusChange('cancelled')} disabled={actionLoading} variant="danger">Cancel</ActionBtn>
         )}
-        <button onClick={handleReorder} disabled={actionLoading}
-          style={{ padding: '0.5rem 1rem', background: 'white', color: '#374151', border: '1px solid #d1d5db', borderRadius: '0.375rem', cursor: 'pointer', fontWeight: 500 }}>
-          Reorder
-        </button>
       </div>
 
-      {/* Details grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-        {/* Customer */}
-        <div style={{ border: '1px solid #e5e7eb', borderRadius: '0.5rem', padding: '1rem' }}>
-          <h3 style={{ fontWeight: 600, marginBottom: '0.5rem', fontSize: '0.9rem', color: '#6b7280' }}>Customer</h3>
-          <p style={{ fontWeight: 600 }}>{order.customer.name}</p>
-          <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>{order.customer.email}</p>
-          {order.customer.phone && <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>{order.customer.phone}</p>}
-          {order.customer.company && <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>{order.customer.company}</p>}
+      {/* Detail grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <div style={card}>
+          <span style={sectionLabel}>Customer</span>
+          <p style={{ fontWeight: 600, fontSize: 15, margin: '0 0 4px' }}>{order.customer.name}</p>
+          <p style={{ fontSize: 13, color: '#78716C', margin: 0 }}>{order.customer.email}</p>
+          {order.customer.phone && <p style={{ fontSize: 13, color: '#78716C', margin: '2px 0 0' }}>{order.customer.phone}</p>}
+          {order.customer.company && <p style={{ fontSize: 13, color: '#78716C', margin: '2px 0 0' }}>{order.customer.company}</p>}
         </div>
 
-        {/* Event Details */}
-        <div style={{ border: '1px solid #e5e7eb', borderRadius: '0.5rem', padding: '1rem' }}>
-          <h3 style={{ fontWeight: 600, marginBottom: '0.5rem', fontSize: '0.9rem', color: '#6b7280' }}>Event Details</h3>
-          <p><strong>Date:</strong> {new Date(order.eventDate).toLocaleDateString()}</p>
-          <p><strong>Guests:</strong> {order.headCount}</p>
-          {order.location && <p><strong>Location:</strong> {order.location.name}</p>}
-          {order.notes && <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#6b7280' }}>{order.notes}</p>}
+        <div style={card}>
+          <span style={sectionLabel}>Event</span>
+          <p style={{ fontSize: 14, margin: '0 0 4px' }}><strong>{new Date(order.eventDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</strong></p>
+          <p style={{ fontSize: 13, color: '#78716C', margin: 0 }}>{order.headCount} guests{order.location ? ` · ${order.location.name}` : ''}</p>
+          {order.notes && <p style={{ fontSize: 13, color: '#57534E', margin: '8px 0 0', padding: '6px 8px', background: '#FAFAF9', borderRadius: 6 }}>{order.notes}</p>}
         </div>
 
-        {/* Delivery Address */}
         {order.deliveryAddress && (
-          <div style={{ border: '1px solid #e5e7eb', borderRadius: '0.5rem', padding: '1rem' }}>
-            <h3 style={{ fontWeight: 600, marginBottom: '0.5rem', fontSize: '0.9rem', color: '#6b7280' }}>Delivery Address</h3>
-            <p>{order.deliveryAddress.address}</p>
-            <p>{order.deliveryAddress.city}, {order.deliveryAddress.state} {order.deliveryAddress.zipCode}</p>
+          <div style={card}>
+            <span style={sectionLabel}>Delivery Address</span>
+            <p style={{ fontSize: 14, margin: 0 }}>{order.deliveryAddress.address}</p>
+            <p style={{ fontSize: 13, color: '#78716C', margin: '2px 0 0' }}>{order.deliveryAddress.city}, {order.deliveryAddress.state} {order.deliveryAddress.zipCode}</p>
           </div>
         )}
 
-        {/* Pricing */}
-        <div style={{ border: '1px solid #e5e7eb', borderRadius: '0.5rem', padding: '1rem' }}>
-          <h3 style={{ fontWeight: 600, marginBottom: '0.5rem', fontSize: '0.9rem', color: '#6b7280' }}>Pricing</h3>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Packages</span><span>${(order.pricing.packageSubtotal / 100).toFixed(2)}</span></div>
+        <div style={card}>
+          <span style={sectionLabel}>Pricing</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
+            <span style={{ color: '#78716C' }}>Packages</span><span style={{ fontWeight: 500 }}>${(order.pricing.packageSubtotal / 100).toFixed(2)}</span>
+          </div>
           {order.pricing.addOnSubtotal > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Add-ons</span><span>${(order.pricing.addOnSubtotal / 100).toFixed(2)}</span></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
+              <span style={{ color: '#78716C' }}>Add-ons</span><span style={{ fontWeight: 500 }}>${(order.pricing.addOnSubtotal / 100).toFixed(2)}</span>
+            </div>
           )}
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, borderTop: '1px solid #e5e7eb', paddingTop: '0.5rem', marginTop: '0.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, fontWeight: 700, borderTop: '1px solid #E7E5E4', paddingTop: 8, marginTop: 6 }}>
             <span>Total</span><span>${(order.pricing.total / 100).toFixed(2)}</span>
           </div>
         </div>
       </div>
 
-      {/* Deposit / Payment Status */}
-      <div style={{ border: '1px solid #e5e7eb', borderRadius: '0.5rem', padding: '1rem', marginTop: '1.5rem' }}>
-        <h3 style={{ fontWeight: 600, marginBottom: '0.75rem', fontSize: '0.9rem', color: '#6b7280' }}>Payment Status</h3>
+      {/* Payment status */}
+      <div style={{ ...card, marginTop: 14 }}>
+        <span style={sectionLabel}>Payment</span>
         {!order.depositRequired && !order.deposit ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ width: 8, height: 8, borderRadius: 4, background: '#9CA3AF', display: 'inline-block' }} />
-            <span style={{ fontSize: '0.875rem', color: '#6B7280' }}>No deposit required for this location</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Dot color="#9CA3AF" /><span style={{ fontSize: 13, color: '#78716C' }}>No deposit required</span>
           </div>
         ) : !order.deposit ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ width: 8, height: 8, borderRadius: 4, background: '#F59E0B', display: 'inline-block' }} />
-            <span style={{ fontSize: '0.875rem', color: '#92400E' }}>Deposit required — not yet sent</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Dot color="#F59E0B" /><span style={{ fontSize: 13, color: '#92400E' }}>Deposit required — not yet sent</span>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{
-                width: 8, height: 8, borderRadius: 4, display: 'inline-block',
-                background: order.deposit.status === 'paid' ? '#10B981' : order.deposit.status === 'pending' ? '#F59E0B' : '#9CA3AF',
-              }} />
-              <span style={{
-                fontSize: '0.875rem', fontWeight: 600,
-                color: order.deposit.status === 'paid' ? '#166534' : order.deposit.status === 'pending' ? '#92400E' : '#6B7280',
-              }}>
-                {order.deposit.status === 'paid' ? 'Deposit paid' : order.deposit.status === 'pending' ? 'Awaiting deposit payment' : 'Deposit expired'}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+              <Dot color={order.deposit.status === 'paid' ? '#10B981' : order.deposit.status === 'pending' ? '#F59E0B' : '#9CA3AF'} />
+              <span style={{ fontSize: 13, fontWeight: 600, color: order.deposit.status === 'paid' ? '#166534' : order.deposit.status === 'pending' ? '#92400E' : '#78716C' }}>
+                {order.deposit.status === 'paid' ? 'Deposit paid' : order.deposit.status === 'pending' ? 'Awaiting payment' : 'Expired'}
               </span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#1C1917', marginLeft: 4 }}>${(order.deposit.amount / 100).toFixed(2)}</span>
             </div>
-            <div style={{ fontSize: '0.8rem', color: '#6B7280', display: 'flex', flexDirection: 'column', gap: '0.2rem', paddingLeft: '1rem' }}>
-              <span>Amount: <strong>${(order.deposit.amount / 100).toFixed(2)}</strong></span>
-              {order.deposit.hasStripeSession && (
-                <span>Source: <strong>Stripe Checkout</strong></span>
-              )}
-              {!order.deposit.hasStripeSession && order.deposit.status === 'paid' && (
-                <span>Source: <strong>Manual</strong></span>
-              )}
-              {order.deposit.paidAt && (
-                <span>Paid: <strong>{new Date(order.deposit.paidAt).toLocaleString()}</strong></span>
-              )}
-              {order.deposit.stripePaymentIntentId && (
-                <span style={{ fontFamily: 'monospace', fontSize: '0.7rem', color: '#9CA3AF' }}>
-                  {order.deposit.stripePaymentIntentId}
-                </span>
-              )}
+            <div style={{ fontSize: 12, color: '#9CA3AF', paddingLeft: 14, display: 'flex', gap: 12 }}>
+              {order.deposit.hasStripeSession && <span>via Stripe</span>}
+              {!order.deposit.hasStripeSession && order.deposit.status === 'paid' && <span>Manual</span>}
+              {order.deposit.paidAt && <span>{new Date(order.deposit.paidAt).toLocaleString()}</span>}
             </div>
           </div>
         )}
       </div>
 
-      {/* Line Items */}
-      <div style={{ marginTop: '1.5rem' }}>
-        <h3 style={{ fontWeight: 600, marginBottom: '0.75rem' }}>Items</h3>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+      {/* Items table */}
+      <div style={{ marginTop: 20 }}>
+        <span style={{ ...sectionLabel, marginBottom: 10 }}>Line Items</span>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
-            <tr style={{ borderBottom: '2px solid #e5e7eb', textAlign: 'left' }}>
-              <th style={{ padding: '0.5rem' }}>Item</th>
-              <th style={{ padding: '0.5rem' }}>Qty</th>
-              <th style={{ padding: '0.5rem', textAlign: 'right' }}>Unit</th>
-              <th style={{ padding: '0.5rem', textAlign: 'right' }}>Total</th>
+            <tr style={{ borderBottom: '2px solid #E7E5E4' }}>
+              <th style={{ padding: '6px 8px 6px 0', textAlign: 'left', fontWeight: 600, color: '#78716C', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Item</th>
+              <th style={{ padding: '6px 8px', textAlign: 'center', fontWeight: 600, color: '#78716C', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Qty</th>
+              <th style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 600, color: '#78716C', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Unit</th>
+              <th style={{ padding: '6px 0 6px 8px', textAlign: 'right', fontWeight: 600, color: '#78716C', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total</th>
             </tr>
           </thead>
           <tbody>
             {order.items.packages.map((item, i) => (
-              <tr key={`pkg-${i}`} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                <td style={{ padding: '0.5rem' }}>{item.name}</td>
-                <td style={{ padding: '0.5rem' }}>{item.quantity}</td>
-                <td style={{ padding: '0.5rem', textAlign: 'right' }}>${(item.unitPrice / 100).toFixed(2)}</td>
-                <td style={{ padding: '0.5rem', textAlign: 'right' }}>${(item.totalPrice / 100).toFixed(2)}</td>
+              <tr key={`p-${i}`} style={{ borderBottom: '1px solid #F5F5F4' }}>
+                <td style={{ padding: '8px 8px 8px 0', fontWeight: 500 }}>{item.name}</td>
+                <td style={{ padding: '8px', textAlign: 'center', color: '#78716C' }}>{item.quantity}</td>
+                <td style={{ padding: '8px', textAlign: 'right', color: '#78716C' }}>${(item.unitPrice / 100).toFixed(2)}</td>
+                <td style={{ padding: '8px 0 8px 8px', textAlign: 'right', fontWeight: 600 }}>${(item.totalPrice / 100).toFixed(2)}</td>
               </tr>
             ))}
             {order.items.addOns.map((item, i) => (
-              <tr key={`addon-${i}`} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                <td style={{ padding: '0.5rem' }}>{item.name} <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}>(add-on)</span></td>
-                <td style={{ padding: '0.5rem' }}>{item.quantity}</td>
-                <td style={{ padding: '0.5rem', textAlign: 'right' }}>${(item.unitPrice / 100).toFixed(2)}</td>
-                <td style={{ padding: '0.5rem', textAlign: 'right' }}>${(item.totalPrice / 100).toFixed(2)}</td>
+              <tr key={`a-${i}`} style={{ borderBottom: '1px solid #F5F5F4' }}>
+                <td style={{ padding: '8px 8px 8px 0' }}>{item.name} <span style={{ color: '#A8A29E', fontSize: 11 }}>add-on</span></td>
+                <td style={{ padding: '8px', textAlign: 'center', color: '#78716C' }}>{item.quantity}</td>
+                <td style={{ padding: '8px', textAlign: 'right', color: '#78716C' }}>${(item.unitPrice / 100).toFixed(2)}</td>
+                <td style={{ padding: '8px 0 8px 8px', textAlign: 'right', fontWeight: 600 }}>${(item.totalPrice / 100).toFixed(2)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      {/* Activity Timeline */}
+      {/* Timeline */}
       {order.timeline && order.timeline.length > 0 && (
-        <div style={{ marginTop: '2rem' }}>
-          <h3 style={{ fontWeight: 600, marginBottom: '0.75rem' }}>Activity</h3>
-          <div style={{ borderLeft: '2px solid #e5e7eb', paddingLeft: '1.25rem', display: 'grid', gap: '0.75rem' }}>
-            {order.timeline.map((event) => {
-              const typeIcons: Record<string, string> = {
-                order_created: '●',
-                status_changed: '◆',
-                deposit_link_sent: '◇',
-                deposit_paid: '✦',
-                reorder_created: '↻',
-              };
-              const typeColors: Record<string, string> = {
-                order_created: '#10b981',
-                status_changed: '#3b82f6',
-                deposit_link_sent: '#f59e0b',
-                deposit_paid: '#10b981',
-                reorder_created: '#8b5cf6',
-              };
+        <div style={{ marginTop: 24 }}>
+          <span style={{ ...sectionLabel, marginBottom: 12 }}>Activity</span>
+          <div style={{ borderLeft: '2px solid #E7E5E4', paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {order.timeline.map((e) => {
+              const colors: Record<string, string> = { order_created: '#10B981', status_changed: '#3B82F6', deposit_link_sent: '#F59E0B', deposit_paid: '#10B981', deposit_expired: '#9CA3AF', reorder_created: '#8B5CF6' };
               return (
-                <div key={event.id} style={{ position: 'relative' }}>
-                  <span style={{
-                    position: 'absolute', left: '-1.65rem', top: '0.15rem',
-                    fontSize: '0.7rem', color: typeColors[event.type] ?? '#6b7280',
-                  }}>
-                    {typeIcons[event.type] ?? '○'}
-                  </span>
-                  <p style={{ fontSize: '0.875rem', margin: 0 }}>{event.description}</p>
-                  <p style={{ fontSize: '0.75rem', color: '#9ca3af', margin: '0.1rem 0 0' }}>
-                    {new Date(event.createdAt).toLocaleString()}
-                  </p>
+                <div key={e.id} style={{ position: 'relative' }}>
+                  <div style={{ position: 'absolute', left: -21, top: 4, width: 8, height: 8, borderRadius: 4, background: colors[e.type] ?? '#9CA3AF' }} />
+                  <p style={{ fontSize: 13, margin: 0, color: '#1C1917' }}>{e.description}</p>
+                  <p style={{ fontSize: 11, color: '#A8A29E', margin: '1px 0 0' }}>{new Date(e.createdAt).toLocaleString()}</p>
                 </div>
               );
             })}
@@ -386,4 +235,25 @@ export default function OrderDetailPage() {
       )}
     </div>
   );
+}
+
+function ActionBtn({ children, onClick, disabled, variant }: { children: React.ReactNode; onClick: () => void; disabled: boolean; variant: 'dark' | 'blue' | 'green' | 'outline' | 'danger' }) {
+  const styles: Record<string, React.CSSProperties> = {
+    dark: { background: '#1C1917', color: '#FFF', border: 'none' },
+    blue: { background: '#3B82F6', color: '#FFF', border: 'none' },
+    green: { background: '#10B981', color: '#FFF', border: 'none' },
+    outline: { background: '#FFF', color: '#57534E', border: '1px solid #D6D3D1' },
+    danger: { background: '#FFF', color: '#DC2626', border: '1px solid #DC2626' },
+  };
+  return (
+    <button onClick={onClick} disabled={disabled} style={{
+      padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+      cursor: disabled ? 'wait' : 'pointer', opacity: disabled ? 0.6 : 1,
+      transition: 'opacity 0.15s', ...styles[variant],
+    }}>{children}</button>
+  );
+}
+
+function Dot({ color }: { color: string }) {
+  return <span style={{ width: 8, height: 8, borderRadius: 4, background: color, display: 'inline-block', flexShrink: 0 }} />;
 }
