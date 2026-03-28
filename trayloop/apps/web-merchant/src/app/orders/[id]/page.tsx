@@ -17,6 +17,15 @@ interface OrderDetail {
   location: { name: string; address: string; city: string; state: string; zipCode: string } | null;
   customer: { id: string; name: string; email: string; phone: string | null; company: string | null };
   deliveryAddress: { address: string; city: string; state: string; zipCode: string } | null;
+  deposit: {
+    id: string;
+    amount: number;
+    currency: string;
+    status: string;
+    paidAt: string | null;
+    hasStripeSession: boolean;
+    stripePaymentIntentId: string | null;
+  } | null;
   items: {
     packages: Array<{ name: string; description: string | null; quantity: number; unitPrice: number; totalPrice: number }>;
     addOns: Array<{ name: string; description: string | null; quantity: number; unitPrice: number; totalPrice: number }>;
@@ -254,6 +263,54 @@ export default function OrderDetailPage() {
             <span>Total</span><span>${(order.pricing.total / 100).toFixed(2)}</span>
           </div>
         </div>
+      </div>
+
+      {/* Deposit / Payment Status */}
+      <div style={{ border: '1px solid #e5e7eb', borderRadius: '0.5rem', padding: '1rem', marginTop: '1.5rem' }}>
+        <h3 style={{ fontWeight: 600, marginBottom: '0.75rem', fontSize: '0.9rem', color: '#6b7280' }}>Payment Status</h3>
+        {!order.depositRequired && !order.deposit ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ width: 8, height: 8, borderRadius: 4, background: '#9CA3AF', display: 'inline-block' }} />
+            <span style={{ fontSize: '0.875rem', color: '#6B7280' }}>No deposit required for this location</span>
+          </div>
+        ) : !order.deposit ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ width: 8, height: 8, borderRadius: 4, background: '#F59E0B', display: 'inline-block' }} />
+            <span style={{ fontSize: '0.875rem', color: '#92400E' }}>Deposit required — not yet sent</span>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{
+                width: 8, height: 8, borderRadius: 4, display: 'inline-block',
+                background: order.deposit.status === 'paid' ? '#10B981' : order.deposit.status === 'pending' ? '#F59E0B' : '#9CA3AF',
+              }} />
+              <span style={{
+                fontSize: '0.875rem', fontWeight: 600,
+                color: order.deposit.status === 'paid' ? '#166534' : order.deposit.status === 'pending' ? '#92400E' : '#6B7280',
+              }}>
+                {order.deposit.status === 'paid' ? 'Deposit paid' : order.deposit.status === 'pending' ? 'Awaiting deposit payment' : 'Deposit expired'}
+              </span>
+            </div>
+            <div style={{ fontSize: '0.8rem', color: '#6B7280', display: 'flex', flexDirection: 'column', gap: '0.2rem', paddingLeft: '1rem' }}>
+              <span>Amount: <strong>${(order.deposit.amount / 100).toFixed(2)}</strong></span>
+              {order.deposit.hasStripeSession && (
+                <span>Source: <strong>Stripe Checkout</strong></span>
+              )}
+              {!order.deposit.hasStripeSession && order.deposit.status === 'paid' && (
+                <span>Source: <strong>Manual</strong></span>
+              )}
+              {order.deposit.paidAt && (
+                <span>Paid: <strong>{new Date(order.deposit.paidAt).toLocaleString()}</strong></span>
+              )}
+              {order.deposit.stripePaymentIntentId && (
+                <span style={{ fontFamily: 'monospace', fontSize: '0.7rem', color: '#9CA3AF' }}>
+                  {order.deposit.stripePaymentIntentId}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Line Items */}

@@ -113,6 +113,16 @@ export async function listByOrg(orgId: string, query: OrderListQuery) {
           select count(*)::int from order_items
           where order_items.order_id = orders.id
         )`,
+        depositStatus: sql<string | null>`(
+          select status from deposits
+          where deposits.order_id = orders.id
+          order by deposits.created_at desc limit 1
+        )`,
+        depositAmount: sql<number | null>`(
+          select amount from deposits
+          where deposits.order_id = orders.id
+          order by deposits.created_at desc limit 1
+        )`,
       })
       .from(orders)
       .innerJoin(customers, eq(customers.id, orders.customerId))
@@ -150,6 +160,10 @@ export async function listByOrg(orgId: string, query: OrderListQuery) {
         phone: r.customerPhone,
         company: r.customerCompany,
       },
+      deposit: r.depositStatus ? {
+        status: r.depositStatus,
+        amount: r.depositAmount,
+      } : null,
       timestamps: {
         created: r.createdAt,
         updated: r.updatedAt,
@@ -205,7 +219,7 @@ export async function getById(id: string, orgId: string) {
   if (!order) throw new NotFoundError('Order');
 
   // Fetch all related data in parallel
-  const [items, [customer], locationRow, [address]] = await Promise.all([
+  const [items, [customer], locationRow, [address], latestDeposit] = await Promise.all([
     db.select().from(orderItems).where(eq(orderItems.orderId, id)),
     db
       .select({
@@ -244,6 +258,22 @@ export async function getById(id: string, orgId: string) {
       .from(customerAddresses)
       .where(eq(customerAddresses.customerId, order.customerId))
       .limit(1),
+    db
+      .select({
+        id: deposits.id,
+        amount: deposits.amount,
+        currency: deposits.currency,
+        status: deposits.status,
+        stripeCheckoutSessionId: deposits.stripeCheckoutSessionId,
+        stripePaymentIntentId: deposits.stripePaymentIntentId,
+        paidAt: deposits.paidAt,
+        createdAt: deposits.createdAt,
+      })
+      .from(deposits)
+      .where(eq(deposits.orderId, id))
+      .orderBy(desc(deposits.createdAt))
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
   ]);
 
   // Compute pricing breakdown from line items
@@ -291,6 +321,15 @@ export async function getById(id: string, orgId: string) {
       company: customer.companyName,
     },
     deliveryAddress: address ?? null,
+    deposit: latestDeposit ? {
+      id: latestDeposit.id,
+      amount: latestDeposit.amount,
+      currency: latestDeposit.currency,
+      status: latestDeposit.status,
+      paidAt: latestDeposit.paidAt,
+      hasStripeSession: !!latestDeposit.stripeCheckoutSessionId,
+      stripePaymentIntentId: latestDeposit.stripePaymentIntentId,
+    } : null,
     items: {
       packages: packageItems.map((i) => ({
         name: i.name,

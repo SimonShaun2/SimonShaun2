@@ -14,6 +14,7 @@ interface Order {
   pricing: { total: number; currency: string };
   location: { name: string; city: string } | null;
   customer: { name: string; email: string; phone: string | null; company: string | null };
+  deposit: { status: string; amount: number } | null;
   timestamps: { created: string; updated: string; completed: string | null };
 }
 
@@ -108,6 +109,20 @@ export default function OrdersPage() {
                       fontSize: '0.7rem', padding: '0.1rem 0.5rem', borderRadius: '9999px',
                       background: statusColors[order.status] ?? '#6b7280', color: 'white', fontWeight: 500,
                     }}>{order.status.replace('_', ' ')}</span>
+                    {order.deposit && (() => {
+                      const dc: Record<string, { bg: string; color: string; label: string }> = {
+                        pending: { bg: '#FEF3C7', color: '#92400E', label: 'Deposit pending' },
+                        paid: { bg: '#DCFCE7', color: '#166534', label: 'Deposit paid' },
+                        refunded: { bg: '#F3F4F6', color: '#6B7280', label: 'Deposit expired' },
+                      };
+                      const d = dc[order.deposit.status] ?? dc.pending;
+                      return (
+                        <span style={{
+                          fontSize: '0.65rem', padding: '0.1rem 0.45rem', borderRadius: '9999px',
+                          background: d.bg, color: d.color, fontWeight: 600,
+                        }}>{d.label}</span>
+                      );
+                    })()}
                   </div>
                   <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
                     {order.customer.company && <span>{order.customer.company} · </span>}
