@@ -375,29 +375,64 @@ export default function CheckoutForm({ data }: Props) {
           </p>
 
           {/* Headcount */}
-          <div style={{ marginTop: 24, marginBottom: 24 }}>
-            <label style={labelStyle}>Headcount</label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginTop: 8 }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 48, fontWeight: 700, color: T.textPrimary, lineHeight: 1 }}>{headcount}</div>
-                <div style={{ fontSize: 13, color: T.textMuted, marginTop: 4 }}>guests</div>
+          <div style={{
+            marginTop: 24, marginBottom: 28,
+            background: '#F5F5F4',
+            borderRadius: 12,
+            padding: '24px 24px 20px',
+          }}>
+            <label style={{ ...labelStyle, marginBottom: 16 }}>Headcount</label>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              {/* Big display number */}
+              <div>
+                <div style={{
+                  fontSize: 56, fontWeight: 700, color: T.textPrimary,
+                  lineHeight: 1, letterSpacing: '-2px',
+                }}>
+                  {headcount}
+                </div>
+                <div style={{ fontSize: 14, color: T.textMuted, marginTop: 4, fontWeight: 500 }}>guests</div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+
+              {/* Stepper controls */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <button
                   type="button"
-                  onClick={() => setHeadcount(Math.max(1, headcount - 1))}
+                  onClick={() => setHeadcount(Math.max(1, headcount - 5))}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#E7E5E4'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = T.cardBg; }}
                   style={{
-                    width: 40, height: 40,
+                    width: 36, height: 36,
                     border: `1px solid ${T.borderInput}`,
                     borderRadius: 8,
                     background: T.cardBg,
-                    fontSize: 20,
+                    fontSize: 11, fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: T.textMuted,
+                    transition: 'background 0.1s',
+                  }}
+                >
+                  −5
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHeadcount(Math.max(1, headcount - 1))}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#E7E5E4'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = T.cardBg; }}
+                  style={{
+                    width: 44, height: 44,
+                    border: `1px solid ${T.borderInput}`,
+                    borderRadius: 10,
+                    background: T.cardBg,
+                    fontSize: 22, fontWeight: 400,
                     cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     color: T.textPrimary,
+                    transition: 'background 0.1s',
                   }}
                 >
-                  -
+                  −
                 </button>
                 <input
                   type="number"
@@ -405,30 +440,73 @@ export default function CheckoutForm({ data }: Props) {
                   value={headcount}
                   onChange={(e) => setHeadcount(Math.max(1, parseInt(e.target.value) || 1))}
                   style={{
-                    ...inputStyle,
-                    width: 72,
-                    textAlign: 'center',
-                    fontWeight: 600,
+                    width: 64, height: 44,
+                    padding: '0 8px',
+                    border: `1px solid ${T.borderInput}`,
+                    borderRadius: 10,
+                    fontSize: 16, fontWeight: 700,
+                    color: T.textPrimary,
+                    background: T.cardBg,
+                    textAlign: 'center' as const,
+                    boxSizing: 'border-box' as const,
+                    outline: 'none',
                   }}
                 />
                 <button
                   type="button"
                   onClick={() => setHeadcount(headcount + 1)}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#E7E5E4'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = T.cardBg; }}
                   style={{
-                    width: 40, height: 40,
+                    width: 44, height: 44,
                     border: `1px solid ${T.borderInput}`,
-                    borderRadius: 8,
+                    borderRadius: 10,
                     background: T.cardBg,
-                    fontSize: 20,
+                    fontSize: 22, fontWeight: 400,
                     cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     color: T.textPrimary,
+                    transition: 'background 0.1s',
                   }}
                 >
                   +
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setHeadcount(headcount + 5)}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#E7E5E4'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = T.cardBg; }}
+                  style={{
+                    width: 36, height: 36,
+                    border: `1px solid ${T.borderInput}`,
+                    borderRadius: 8,
+                    background: T.cardBg,
+                    fontSize: 11, fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: T.textMuted,
+                    transition: 'background 0.1s',
+                  }}
+                >
+                  +5
+                </button>
               </div>
             </div>
+
+            {/* Per-person estimate */}
+            {hasPackages && estimatedTotal > 0 && (
+              <div style={{
+                marginTop: 12, paddingTop: 12,
+                borderTop: '1px solid #E7E5E4',
+                display: 'flex', justifyContent: 'space-between',
+                fontSize: 13, color: T.textMuted,
+              }}>
+                <span>Estimated per person</span>
+                <span style={{ fontWeight: 600, color: T.gold }}>
+                  ${(estimatedTotal / headcount / 100).toFixed(2)}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Package cards */}
