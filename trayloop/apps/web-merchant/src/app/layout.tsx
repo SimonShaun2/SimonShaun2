@@ -1,27 +1,47 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'TrayLoop Merchant Dashboard',
+  title: 'TrayLoop Merchant',
   description: 'Manage your catering business',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body style={{ margin: 0, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', color: '#111827', lineHeight: 1.5 }}>
-        <nav style={{ background: '#111827', color: 'white', padding: '0.75rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>TrayLoop Merchant</span>
-          <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.875rem' }}>
-            <a href="/" style={{ color: '#d1d5db', textDecoration: 'none' }}>Orders</a>
-            <a href="/follow-ups" style={{ color: '#d1d5db', textDecoration: 'none' }}>Follow-Ups</a>
-            <a href="/customers" style={{ color: '#d1d5db', textDecoration: 'none' }}>Customers</a>
-            <a href="/catalog" style={{ color: '#d1d5db', textDecoration: 'none' }}>Menu</a>
-            <a href="/settings" style={{ color: '#d1d5db', textDecoration: 'none' }}>Settings</a>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+      </head>
+      <body style={{
+        margin: 0,
+        fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        color: '#1C1917',
+        lineHeight: 1.5,
+        backgroundColor: '#FAFAF9',
+      }}>
+        <nav style={{
+          background: '#1C1917',
+          padding: '0 24px',
+          height: 52,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}>
+          <a href="/" style={{ fontWeight: 700, fontSize: 16, color: '#FFFFFF', textDecoration: 'none' }}>
+            TrayLoop
+          </a>
+          <div style={{ display: 'flex', gap: 24, fontSize: 13, fontWeight: 500 }}>
+            <a href="/" style={{ color: '#D6D3D1', textDecoration: 'none' }}>Orders</a>
+            <a href="/follow-ups" style={{ color: '#D6D3D1', textDecoration: 'none' }}>Follow-Ups</a>
+            <a href="/customers" style={{ color: '#D6D3D1', textDecoration: 'none' }}>Customers</a>
+            <a href="/catalog" style={{ color: '#D6D3D1', textDecoration: 'none' }}>Menu</a>
+            <a href="/settings" style={{ color: '#D6D3D1', textDecoration: 'none' }}>Settings</a>
           </div>
         </nav>
-        <div style={{ padding: '1.5rem', maxWidth: 1200, margin: '0 auto' }}>
+        <main style={{ padding: '24px 28px', maxWidth: 1100, margin: '0 auto' }}>
           {children}
-        </div>
+        </main>
       </body>
     </html>
   );

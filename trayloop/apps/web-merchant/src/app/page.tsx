@@ -25,7 +25,30 @@ interface Pagination {
   totalPages: number;
 }
 
-export default function OrdersPage() {
+const STATUS_CONFIG: Record<string, { bg: string; color: string; label: string }> = {
+  submitted: { bg: '#FEF3C7', color: '#92400E', label: 'New' },
+  awaiting_deposit: { bg: '#DBEAFE', color: '#1E40AF', label: 'Awaiting Deposit' },
+  confirmed: { bg: '#DCFCE7', color: '#166534', label: 'Confirmed' },
+  completed: { bg: '#F3F4F6', color: '#374151', label: 'Completed' },
+  cancelled: { bg: '#FEE2E2', color: '#991B1B', label: 'Cancelled' },
+};
+
+const DEPOSIT_CONFIG: Record<string, { bg: string; color: string; label: string }> = {
+  pending: { bg: '#FEF3C7', color: '#92400E', label: 'Deposit pending' },
+  paid: { bg: '#DCFCE7', color: '#166534', label: 'Paid' },
+  refunded: { bg: '#F3F4F6', color: '#6B7280', label: 'Expired' },
+};
+
+const FILTERS = [
+  { value: '', label: 'All' },
+  { value: 'submitted', label: 'New' },
+  { value: 'awaiting_deposit', label: 'Awaiting Deposit' },
+  { value: 'confirmed', label: 'Confirmed' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'cancelled', label: 'Cancelled' },
+];
+
+export default function DashboardPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [statusFilter, setStatusFilter] = useState('');
@@ -57,108 +80,191 @@ export default function OrdersPage() {
     }
   }
 
-  const statusColors: Record<string, string> = {
-    submitted: '#f59e0b',
-    awaiting_deposit: '#3b82f6',
-    confirmed: '#10b981',
-    completed: '#6b7280',
-    cancelled: '#ef4444',
-  };
-
-  const statuses = ['', 'submitted', 'awaiting_deposit', 'confirmed', 'completed', 'cancelled'];
+  // Compute quick stats from loaded orders
+  const needsAction = orders.filter((o) => o.status === 'submitted' || o.status === 'awaiting_deposit').length;
+  const totalRevenue = orders.reduce((sum, o) => sum + o.pricing.total, 0);
+  const upcomingCount = orders.filter((o) => {
+    if (o.status === 'completed' || o.status === 'cancelled') return false;
+    return o.eventDate && new Date(o.eventDate) > new Date();
+  }).length;
 
   return (
     <div>
       <SetupChecklist />
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Orders</h1>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          {statuses.map((s) => (
-            <button key={s} onClick={() => { setStatusFilter(s); setPage(1); }}
-              style={{
-                padding: '0.3rem 0.75rem', border: '1px solid #d1d5db', borderRadius: '9999px',
-                background: statusFilter === s ? '#111827' : 'white',
-                color: statusFilter === s ? 'white' : '#374151',
-                cursor: 'pointer', fontSize: '0.8rem',
-              }}>
-              {s || 'All'}
-            </button>
-          ))}
-        </div>
+
+      {/* Page header */}
+      <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 20px', color: '#1C1917' }}>Dashboard</h1>
+
+      {/* KPI cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 28 }}>
+        <KpiCard
+          label="Needs Action"
+          value={needsAction}
+          sub={needsAction > 0 ? 'New or awaiting deposit' : 'All caught up'}
+          accent={needsAction > 0 ? '#F59E0B' : '#10B981'}
+        />
+        <KpiCard
+          label="Upcoming Events"
+          value={upcomingCount}
+          sub="Active orders with future dates"
+          accent="#3B82F6"
+        />
+        <KpiCard
+          label="Revenue (Shown)"
+          value={`$${(totalRevenue / 100).toFixed(0)}`}
+          sub={`From ${pagination?.total ?? orders.length} orders`}
+          accent="#1C1917"
+        />
       </div>
 
-      {error && <p style={{ color: '#dc2626' }}>{error}</p>}
-      {loading && <p style={{ color: '#6b7280' }}>Loading orders...</p>}
+      {/* Orders section */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: '#1C1917' }}>Orders</h2>
+        {pagination && (
+          <span style={{ fontSize: 12, color: '#9CA3AF' }}>{pagination.total} total</span>
+        )}
+      </div>
+
+      {/* Filter pills */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+        {FILTERS.map((f) => {
+          const isActive = statusFilter === f.value;
+          return (
+            <button
+              key={f.value}
+              onClick={() => { setStatusFilter(f.value); setPage(1); }}
+              style={{
+                padding: '5px 14px',
+                border: isActive ? 'none' : '1px solid #E7E5E4',
+                borderRadius: 20,
+                background: isActive ? '#1C1917' : '#FFFFFF',
+                color: isActive ? '#FFFFFF' : '#57534E',
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: isActive ? 600 : 400,
+                transition: 'all 0.15s',
+              }}
+            >
+              {f.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {error && <p style={{ color: '#DC2626', fontSize: 14, marginBottom: 12 }}>{error}</p>}
+
+      {loading && (
+        <div style={{ padding: 40, textAlign: 'center', color: '#9CA3AF', fontSize: 14 }}>Loading orders...</div>
+      )}
 
       {!loading && orders.length === 0 && (
-        <div style={{ padding: '3rem', textAlign: 'center', color: '#6b7280', border: '1px dashed #d1d5db', borderRadius: '0.5rem' }}>
-          No orders found
+        <div style={{ border: '1px dashed #D6D3D1', borderRadius: 10, padding: 40, textAlign: 'center', color: '#78716C' }}>
+          {statusFilter ? `No ${FILTERS.find((f) => f.value === statusFilter)?.label.toLowerCase()} orders` : 'No orders yet'}
         </div>
       )}
 
+      {/* Order rows */}
       {!loading && orders.length > 0 && (
-        <div style={{ display: 'grid', gap: '0.75rem' }}>
-          {orders.map((order) => (
-            <a key={order.id} href={`/orders/${order.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div style={{ border: '1px solid #e5e7eb', borderRadius: '0.5rem', padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
-                    <span style={{ fontSize: '0.8rem', color: '#6b7280', fontFamily: 'monospace' }}>{order.orderNumber}</span>
-                    <span style={{ fontWeight: 600 }}>{order.customer.name}</span>
-                    <span style={{
-                      fontSize: '0.7rem', padding: '0.1rem 0.5rem', borderRadius: '9999px',
-                      background: statusColors[order.status] ?? '#6b7280', color: 'white', fontWeight: 500,
-                    }}>{order.status.replace('_', ' ')}</span>
-                    {order.deposit && (() => {
-                      const dc: Record<string, { bg: string; color: string; label: string }> = {
-                        pending: { bg: '#FEF3C7', color: '#92400E', label: 'Deposit pending' },
-                        paid: { bg: '#DCFCE7', color: '#166534', label: 'Deposit paid' },
-                        refunded: { bg: '#F3F4F6', color: '#6B7280', label: 'Deposit expired' },
-                      };
-                      const d = dc[order.deposit.status] ?? dc.pending;
-                      return (
-                        <span style={{
-                          fontSize: '0.65rem', padding: '0.1rem 0.45rem', borderRadius: '9999px',
-                          background: d.bg, color: d.color, fontWeight: 600,
-                        }}>{d.label}</span>
-                      );
-                    })()}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {orders.map((order) => {
+            const sc = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.submitted;
+            const dc = order.deposit ? (DEPOSIT_CONFIG[order.deposit.status] ?? DEPOSIT_CONFIG.pending) : null;
+
+            return (
+              <a key={order.id} href={`/orders/${order.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                <div style={{
+                  border: '1px solid #E7E5E4', borderRadius: 10, padding: '14px 18px',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  cursor: 'pointer', transition: 'border-color 0.15s, box-shadow 0.15s',
+                  background: '#FFFFFF',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#A8A29E'; e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.04)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#E7E5E4'; e.currentTarget.style.boxShadow = 'none'; }}
+                >
+                  {/* Left: info */}
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <span style={{ fontSize: 12, color: '#9CA3AF', fontFamily: 'monospace', fontWeight: 500 }}>{order.orderNumber}</span>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: '#1C1917' }}>{order.customer.name}</span>
+                      <span style={{ fontSize: 11, padding: '1px 8px', borderRadius: 10, background: sc.bg, color: sc.color, fontWeight: 600 }}>{sc.label}</span>
+                      {dc && (
+                        <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: dc.bg, color: dc.color, fontWeight: 600 }}>{dc.label}</span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 13, color: '#78716C', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {order.customer.company && <span>{order.customer.company}</span>}
+                      {order.customer.company && <span style={{ color: '#D6D3D1' }}>·</span>}
+                      <span>{order.headCount} guests</span>
+                      <span style={{ color: '#D6D3D1' }}>·</span>
+                      <span>{order.itemCount} items</span>
+                      {order.location && (
+                        <>
+                          <span style={{ color: '#D6D3D1' }}>·</span>
+                          <span>{order.location.name}</span>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
-                    {order.customer.company && <span>{order.customer.company} · </span>}
-                    {order.headCount} guests · {order.itemCount} items
-                    {order.location && <span> · {order.location.name}</span>}
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
-                    Event: {new Date(order.eventDate).toLocaleDateString()}
+
+                  {/* Right: price + date */}
+                  <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 16 }}>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: '#1C1917' }}>${(order.pricing.total / 100).toFixed(2)}</div>
+                    <div style={{ fontSize: 12, color: '#9CA3AF' }}>{new Date(order.eventDate).toLocaleDateString()}</div>
                   </div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>
-                    ${(order.pricing.total / 100).toFixed(2)}
-                  </div>
-                </div>
-              </div>
-            </a>
-          ))}
+              </a>
+            );
+          })}
         </div>
       )}
 
+      {/* Pagination */}
       {pagination && pagination.totalPages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1.5rem' }}>
-          <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}
-            style={{ padding: '0.4rem 0.8rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', cursor: 'pointer', background: 'white' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 20 }}>
+          <button
+            onClick={() => setPage(Math.max(1, page - 1))}
+            disabled={page === 1}
+            style={{
+              padding: '6px 14px', border: '1px solid #E7E5E4', borderRadius: 8,
+              background: '#FFFFFF', cursor: page === 1 ? 'not-allowed' : 'pointer',
+              fontSize: 13, color: page === 1 ? '#D6D3D1' : '#57534E',
+            }}
+          >
             Previous
           </button>
-          <span style={{ padding: '0.4rem 0.8rem', color: '#6b7280', fontSize: '0.875rem' }}>
-            Page {pagination.page} of {pagination.totalPages}
+          <span style={{ fontSize: 13, color: '#78716C' }}>
+            {pagination.page} of {pagination.totalPages}
           </span>
-          <button onClick={() => setPage(Math.min(pagination.totalPages, page + 1))} disabled={page === pagination.totalPages}
-            style={{ padding: '0.4rem 0.8rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', cursor: 'pointer', background: 'white' }}>
+          <button
+            onClick={() => setPage(Math.min(pagination.totalPages, page + 1))}
+            disabled={page === pagination.totalPages}
+            style={{
+              padding: '6px 14px', border: '1px solid #E7E5E4', borderRadius: 8,
+              background: '#FFFFFF', cursor: page === pagination.totalPages ? 'not-allowed' : 'pointer',
+              fontSize: 13, color: page === pagination.totalPages ? '#D6D3D1' : '#57534E',
+            }}
+          >
             Next
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+function KpiCard({ label, value, sub, accent }: { label: string; value: string | number; sub: string; accent: string }) {
+  return (
+    <div style={{
+      border: '1px solid #E7E5E4', borderRadius: 10, padding: '16px 18px',
+      background: '#FFFFFF', borderLeft: `3px solid ${accent}`,
+    }}>
+      <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.5px', color: '#78716C', marginBottom: 4 }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 26, fontWeight: 700, color: '#1C1917', lineHeight: 1.2 }}>
+        {value}
+      </div>
+      <div style={{ fontSize: 12, color: '#A8A29E', marginTop: 2 }}>{sub}</div>
     </div>
   );
 }
