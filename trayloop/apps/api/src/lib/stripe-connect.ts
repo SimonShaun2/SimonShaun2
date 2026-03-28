@@ -17,20 +17,38 @@ export interface ConnectAccountStatus {
  * Get the Stripe Connect status for an organization.
  */
 export async function getConnectStatus(orgId: string): Promise<ConnectAccountStatus> {
-  const [org] = await db
-    .select({
-      stripeAccountId: organizations.stripeAccountId,
-    })
-    .from(organizations)
-    .where(eq(organizations.id, orgId))
-    .limit(1);
+  let stripeAccountId: string | null = null;
 
-  if (!org) {
-    throw new ValidationError('Organization not found');
+  try {
+    const [org] = await db
+      .select({
+        stripeAccountId: organizations.stripeAccountId,
+      })
+      .from(organizations)
+      .where(eq(organizations.id, orgId))
+      .limit(1);
+
+    if (!org) {
+      throw new ValidationError('Organization not found');
+    }
+
+    stripeAccountId = org.stripeAccountId;
+  } catch (err) {
+    // If the query fails (e.g. column doesn't exist), try a raw approach
+    if (err instanceof ValidationError) throw err;
+
+    logger.warn('getConnectStatus query failed, returning defaults', { orgId, error: (err as Error).message });
+    return {
+      stripeAccountId: null,
+      chargesEnabled: false,
+      payoutsEnabled: false,
+      detailsSubmitted: false,
+      onboardingComplete: false,
+    };
   }
 
   // If no Stripe account, return clean defaults
-  if (!org.stripeAccountId) {
+  if (!stripeAccountId) {
     return {
       stripeAccountId: null,
       chargesEnabled: false,
@@ -43,14 +61,14 @@ export async function getConnectStatus(orgId: string): Promise<ConnectAccountSta
   // If Stripe is configured, sync live status
   if (isStripeEnabled()) {
     try {
-      return await syncConnectStatus(orgId, org.stripeAccountId);
+      return await syncConnectStatus(orgId, stripeAccountId);
     } catch {
       // Stripe API call failed — return safe defaults with account ID
     }
   }
 
   return {
-    stripeAccountId: org.stripeAccountId,
+    stripeAccountId,
     chargesEnabled: false,
     payoutsEnabled: false,
     detailsSubmitted: false,

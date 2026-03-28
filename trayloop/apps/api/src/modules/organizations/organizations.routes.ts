@@ -40,9 +40,23 @@ export function registerRoutes(app: FastifyInstance) {
   // --- Stripe Connect ---
 
   // Get payment setup status
+  // Get payment setup status (safe — never crashes)
   app.get('/current/payment-status', { preHandler: [requireAuth, requireTenant] }, async (request) => {
-    const status = await getConnectStatus(request.ctx.tenant!.organizationId);
-    return { data: status };
+    try {
+      const status = await getConnectStatus(request.ctx.tenant!.organizationId);
+      return { data: status };
+    } catch {
+      // Return safe defaults if anything goes wrong
+      return {
+        data: {
+          stripeAccountId: null,
+          chargesEnabled: false,
+          payoutsEnabled: false,
+          detailsSubmitted: false,
+          onboardingComplete: false,
+        },
+      };
+    }
   });
 
   // Create or retrieve Stripe Connect account (owner/admin only)
