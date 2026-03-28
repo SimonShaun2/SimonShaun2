@@ -625,9 +625,27 @@ export default function CheckoutForm({ data }: Props) {
         {/* ── Section: Add-Ons ── */}
         {allAddOns.length > 0 && (
           <div style={cardStyle}>
-            <h2 style={sectionTitleStyle}>Add-Ons</h2>
-            <p style={sectionSubtitleStyle}>Enhance your order with extras</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <div>
+                <h2 style={sectionTitleStyle}>Add-Ons</h2>
+                <p style={sectionSubtitleStyle}>Enhance your order with extras</p>
+              </div>
+              {selectedAddOnList.length > 0 && (
+                <span style={{
+                  fontSize: 12, fontWeight: 600, color: T.gold,
+                  background: 'rgba(212,168,83,0.1)',
+                  padding: '3px 10px', borderRadius: 10,
+                }}>
+                  {selectedAddOnList.length} selected
+                </span>
+              )}
+            </div>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+              gap: 10,
+              marginTop: 20,
+            }}>
               {allAddOns.map((addOn) => {
                 const isSelected = !!selectedAddOnIds[addOn.id];
                 return (
@@ -638,57 +656,65 @@ export default function CheckoutForm({ data }: Props) {
                     tabIndex={0}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleAddOn(addOn.id); } }}
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 14,
-                      padding: '14px 18px',
-                      border: isSelected ? `2px solid ${T.selectedBorder}` : `1px solid ${T.cardBorder}`,
+                      padding: '14px 16px',
+                      border: isSelected ? `2px solid ${T.gold}` : `1px solid ${T.cardBorder}`,
                       borderRadius: 10,
-                      background: isSelected ? '#F7F6F5' : T.cardBg,
+                      background: isSelected ? 'rgba(212,168,83,0.04)' : T.cardBg,
                       cursor: 'pointer',
                       transition: 'all 0.15s ease',
-                      boxShadow: isSelected ? '0 1px 4px rgba(28,25,23,0.06)' : 'none',
+                      boxShadow: isSelected ? '0 1px 6px rgba(212,168,83,0.12)' : 'none',
                       outline: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
                     }}
                     onMouseEnter={(e) => {
                       if (!isSelected) {
-                        e.currentTarget.style.borderColor = '#A8A29E';
-                        e.currentTarget.style.background = '#FAFAF9';
+                        e.currentTarget.style.borderColor = T.gold;
+                        e.currentTarget.style.background = 'rgba(212,168,83,0.02)';
+                        e.currentTarget.style.boxShadow = '0 1px 4px rgba(212,168,83,0.08)';
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (!isSelected) {
                         e.currentTarget.style.borderColor = T.cardBorder;
                         e.currentTarget.style.background = T.cardBg;
+                        e.currentTarget.style.boxShadow = 'none';
                       }
                     }}
                   >
+                    {/* Checkbox — gold when selected to differentiate from packages */}
                     <div style={{
-                      width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+                      width: 20, height: 20, borderRadius: 10, flexShrink: 0,
                       border: isSelected ? 'none' : `2px solid ${T.borderInput}`,
-                      background: isSelected ? T.selectedBorder : 'transparent',
+                      background: isSelected ? T.gold : 'transparent',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       transition: 'all 0.15s',
                     }}>
                       {isSelected && (
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                          <path d="M3 7L6 10L11 4" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                          <path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       )}
                     </div>
+
+                    {/* Name + description */}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 15, fontWeight: 600, color: T.textPrimary }}>{addOn.name}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: T.textPrimary }}>{addOn.name}</div>
                       {addOn.description && (
-                        <div style={{ fontSize: 13, color: T.textMuted, marginTop: 2 }}>{addOn.description}</div>
+                        <div style={{ fontSize: 12, color: T.textMuted, marginTop: 1 }}>{addOn.description}</div>
                       )}
                     </div>
-                    <div style={{
-                      flexShrink: 0,
-                      background: isSelected ? 'rgba(212,168,83,0.08)' : 'transparent',
-                      padding: '4px 10px', borderRadius: 8,
-                      transition: 'background 0.15s',
-                    }}>
-                      <span style={{ fontSize: 17, fontWeight: 700, color: T.gold }}>${(addOn.price / 100).toFixed(2)}</span>
+
+                    {/* Price — right-aligned, always visible */}
+                    <div style={{ flexShrink: 0 }}>
+                      <span style={{
+                        fontSize: 16, fontWeight: 700,
+                        color: isSelected ? T.gold : T.textPrimary,
+                        transition: 'color 0.15s',
+                      }}>
+                        ${(addOn.price / 100).toFixed(2)}
+                      </span>
                     </div>
                   </div>
                 );
