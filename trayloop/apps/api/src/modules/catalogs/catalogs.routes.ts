@@ -32,4 +32,11 @@ export function registerRoutes(app: FastifyInstance) {
     const result = await service.createCategory(request.ctx.tenant!.organizationId, (request as any).validatedBody);
     return reply.status(201).send({ data: result });
   });
+
+  // --- Full menu tree ---
+
+  app.get('/menu', async (request) => {
+    const result = await service.getFullMenu(request.ctx.tenant!.organizationId);
+    return { data: result };
+  });
 }
