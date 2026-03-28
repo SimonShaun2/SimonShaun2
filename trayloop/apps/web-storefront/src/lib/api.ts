@@ -114,6 +114,12 @@ export interface OrderSubmission {
     country?: string;
   };
   notes?: string;
+  recurring?: {
+    interval: 'weekly' | 'biweekly' | 'monthly' | 'quarterly';
+    endDate?: string;
+    preferredDay?: string;
+    preferredTime?: string;
+  };
 }
 
 export interface OrderConfirmation {

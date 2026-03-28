@@ -94,6 +94,9 @@ export default function CheckoutForm({ data }: Props) {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [companyName, setCompanyName] = useState('');
+  const [recurringEnabled, setRecurringEnabled] = useState(false);
+  const [recurringInterval, setRecurringInterval] = useState<'weekly' | 'biweekly' | 'monthly'>('weekly');
+  const [recurringDays, setRecurringDays] = useState<Set<string>>(new Set());
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
@@ -161,6 +164,10 @@ export default function CheckoutForm({ data }: Props) {
         companyName: companyName || undefined,
       },
       notes: notes || undefined,
+      recurring: recurringEnabled ? {
+        interval: recurringInterval,
+        preferredDay: recurringDays.size > 0 ? [...recurringDays][0] : undefined,
+      } : undefined,
     };
 
     if (serviceType === 'delivery') {
@@ -180,7 +187,7 @@ export default function CheckoutForm({ data }: Props) {
     } finally {
       setSubmitting(false);
     }
-  }, [submitting, selectedLocationSlug, serviceType, eventDate, eventTime, headcount, selectedPkgs, selectedAddOnIds, firstName, lastName, email, phone, companyName, address, city, state, zipCode, notes, locations, data.merchant.slug]);
+  }, [submitting, selectedLocationSlug, serviceType, eventDate, eventTime, headcount, selectedPkgs, selectedAddOnIds, firstName, lastName, email, phone, companyName, address, city, state, zipCode, notes, recurringEnabled, recurringInterval, recurringDays, locations, data.merchant.slug]);
 
   /* ── Confirmation state ── */
   if (confirmation) {
@@ -526,6 +533,146 @@ export default function CheckoutForm({ data }: Props) {
             </div>
           </div>
         )}
+
+        {/* ── Section: Recurring ── */}
+        <div style={{
+          ...cardStyle,
+          padding: 0,
+          overflow: 'hidden',
+        }}>
+          {/* Toggle row */}
+          <div
+            style={{
+              padding: '16px 24px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              cursor: 'pointer',
+              background: recurringEnabled ? '#FFFBEB' : T.cardBg,
+              borderBottom: recurringEnabled ? `1px solid ${T.cardBorder}` : 'none',
+            }}
+            onClick={() => setRecurringEnabled(!recurringEnabled)}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{
+                width: 20, height: 20, borderRadius: 4,
+                border: `2px solid ${recurringEnabled ? T.selectedBorder : T.borderInput}`,
+                background: recurringEnabled ? T.selectedBorder : T.cardBg,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+              }}>
+                {recurringEnabled && <span style={{ color: '#fff', fontSize: 12, lineHeight: 1 }}>✓</span>}
+              </div>
+              <div>
+                <span style={{ fontSize: 15, fontWeight: 600, color: T.textPrimary }}>Make this recurring</span>
+                <p style={{ fontSize: 13, color: T.textMuted, margin: '2px 0 0' }}>Weekly/monthly repeat orders</p>
+              </div>
+            </div>
+            {/* Toggle switch */}
+            <div style={{
+              width: 44, height: 24, borderRadius: 12,
+              background: recurringEnabled ? T.gold : T.borderInput,
+              position: 'relative',
+              transition: 'background 0.2s',
+              flexShrink: 0,
+            }}>
+              <div style={{
+                width: 20, height: 20, borderRadius: 10,
+                background: '#FFFFFF',
+                position: 'absolute',
+                top: 2,
+                left: recurringEnabled ? 22 : 2,
+                transition: 'left 0.2s',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+              }} />
+            </div>
+          </div>
+
+          {/* Expanded recurring options */}
+          {recurringEnabled && (
+            <div style={{ padding: '20px 24px' }}>
+              {/* Day tiles */}
+              {eventDate && (
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+                    {(() => {
+                      const startDate = new Date(eventDate);
+                      if (isNaN(startDate.getTime())) return null;
+                      const days = [];
+                      for (let i = 0; i < 14; i++) {
+                        const d = new Date(startDate);
+                        d.setDate(d.getDate() + i);
+                        const dayKey = d.toISOString().split('T')[0];
+                        const dayName = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+                        const dayNum = d.getDate();
+                        const monthName = d.toLocaleDateString('en-US', { month: 'short' });
+                        const isSelected = recurringDays.has(dayKey);
+                        days.push(
+                          <div
+                            key={dayKey}
+                            onClick={() => {
+                              setRecurringDays(prev => {
+                                const next = new Set(prev);
+                                if (next.has(dayKey)) next.delete(dayKey); else next.add(dayKey);
+                                return next;
+                              });
+                            }}
+                            style={{
+                              width: 56, minWidth: 56, height: 68,
+                              borderRadius: 10,
+                              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                              cursor: 'pointer',
+                              background: isSelected ? T.gold : '#F5F5F4',
+                              color: isSelected ? '#FFFFFF' : '#57534E',
+                              transition: 'background 0.15s',
+                            }}
+                          >
+                            <span style={{ fontSize: 11, fontWeight: 600 }}>{dayName}</span>
+                            <span style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.2 }}>{dayNum}</span>
+                            <span style={{ fontSize: 11 }}>{monthName}</span>
+                          </div>
+                        );
+                      }
+                      return days;
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {/* Frequency pills */}
+              <div style={{ display: 'flex', gap: 8 }}>
+                {(['weekly', 'biweekly', 'monthly'] as const).map((freq) => {
+                  const isActive = recurringInterval === freq;
+                  const labels: Record<string, string> = { weekly: 'Weekly', biweekly: 'Bi-weekly', monthly: 'Monthly' };
+                  return (
+                    <button
+                      key={freq}
+                      type="button"
+                      onClick={() => setRecurringInterval(freq)}
+                      style={{
+                        height: 36, padding: '0 16px',
+                        borderRadius: 18,
+                        border: isActive ? 'none' : `1px solid ${T.borderInput}`,
+                        background: isActive ? T.selectedBorder : T.cardBg,
+                        color: isActive ? '#FFFFFF' : '#57534E',
+                        fontSize: 13, fontWeight: isActive ? 600 : 400,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {labels[freq]}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {!eventDate && (
+                <p style={{ fontSize: 13, color: T.textMuted, margin: 0 }}>
+                  Select an event date above to see recurring day options
+                </p>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* ── Section: Your Details ── */}
         <div style={cardStyle}>
