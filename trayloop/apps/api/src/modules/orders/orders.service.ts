@@ -818,18 +818,26 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
       return { order, customerId, recurringOrderId };
     });
 
-    // 6. Record timeline event + emit
-    await recordOrderEvent(result.order.id, 'order_created', `Order ${result.order.orderNumber} submitted`, {
-      orderNumber: result.order.orderNumber,
-      headcount: input.headcount,
-      total: totalAmount,
-    });
+    // 6. Record timeline event + emit (non-critical — don't fail the order)
+    try {
+      await recordOrderEvent(result.order.id, 'order_created', `Order ${result.order.orderNumber} submitted`, {
+        orderNumber: result.order.orderNumber,
+        headcount: input.headcount,
+        total: totalAmount,
+      });
+    } catch {
+      // Timeline recording failed — order still valid
+    }
 
-    await eventBus.emit('order.created', {
-      orderId: result.order.id,
-      customerId: result.customerId,
-      orgId,
-    });
+    try {
+      await eventBus.emit('order.created', {
+        orderId: result.order.id,
+        customerId: result.customerId,
+        orgId,
+      });
+    } catch {
+      // Event emission failed — order still valid
+    }
 
     // 7. Return order summary with full pricing breakdown
     return {
