@@ -41,19 +41,30 @@ export default function LoginPage() {
 
   return (
     <div style={{ maxWidth: 400, margin: '4rem auto' }}>
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1.5rem' }}>Sign In</h1>
-      {error && <p style={{ color: '#dc2626', marginBottom: '1rem', fontSize: '0.875rem' }}>{error}</p>}
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.25rem' }}>Sign in to your dashboard</h1>
+      <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: 0, marginBottom: '1.5rem' }}>
+        Manage orders, menus, and customers
+      </p>
+      {error && (
+        <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '0.5rem', padding: '0.75rem 1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={{ color: '#DC2626', fontSize: '1rem', flexShrink: 0 }}>!</span>
+          <p style={{ color: '#DC2626', fontSize: '0.875rem', margin: 0, fontWeight: 500 }}>{error}</p>
+        </div>
+      )}
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: '1rem' }}>
           <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.25rem' }}>Email</label>
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
             style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', boxSizing: 'border-box' }} />
         </div>
-        <div style={{ marginBottom: '1.5rem' }}>
+        <div style={{ marginBottom: '0.5rem' }}>
           <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.25rem' }}>Password</label>
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
             style={{ width: '100%', padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.375rem', boxSizing: 'border-box' }} />
         </div>
+        <p style={{ textAlign: 'right', margin: '0 0 1rem', fontSize: '0.8rem' }}>
+          <span style={{ color: '#6b7280', cursor: 'default' }}>Forgot password?</span>
+        </p>
         <button type="submit" disabled={loading}
           style={{ width: '100%', padding: '0.6rem', background: '#111827', color: 'white', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontWeight: 600 }}>
           {loading ? 'Signing in...' : 'Sign In'}

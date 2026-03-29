@@ -129,7 +129,14 @@ export default function NotificationBell() {
             padding: '12px 16px', borderBottom: '1px solid #E7E5E4',
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: '#1C1917' }}>Notifications</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#1C1917' }}>
+              Notifications
+              {notifications.length > 0 && (
+                <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 600, color: '#6B7280', background: '#F3F4F6', borderRadius: 10, padding: '1px 7px' }}>
+                  {notifications.length}
+                </span>
+              )}
+            </span>
             {unread > 0 && (
               <button
                 onClick={handleMarkAllRead}
@@ -144,8 +151,9 @@ export default function NotificationBell() {
           <div style={{ overflowY: 'auto', flex: 1 }}>
             {notifications.length === 0 ? (
               <div style={{ padding: 40, textAlign: 'center', color: '#9CA3AF', fontSize: 13, lineHeight: 1.6 }}>
-                <span style={{ display: 'block', fontSize: 24, marginBottom: 8 }}>🔔</span>
-                All caught up — no new notifications
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 20, background: '#F0FDF4', color: '#22C55E', fontSize: 20, marginBottom: 8 }}>&#10003;</span>
+                <br />
+                No new notifications
               </div>
             ) : (
               notifications.map((n) => (
@@ -159,7 +167,7 @@ export default function NotificationBell() {
                     background: n.readAt ? '#FFFFFF' : '#FAFAF9',
                     transition: 'background 0.1s',
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#EEEEEC'; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#E7E5E4'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = n.readAt ? '#FFFFFF' : '#FAFAF9'; }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
@@ -176,7 +184,7 @@ export default function NotificationBell() {
                         {truncateBody(n.body)}
                       </p>
                     </div>
-                    <span style={{ fontSize: 11, color: '#A8A29E', whiteSpace: 'nowrap', flexShrink: 0, marginTop: 1 }}>
+                    <span style={{ fontSize: 11, color: '#A8A29E', whiteSpace: 'nowrap', flexShrink: 0, marginTop: 2, lineHeight: 1.5 }}>
                       {timeAgo(n.createdAt)}
                     </span>
                   </div>

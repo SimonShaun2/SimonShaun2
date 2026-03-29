@@ -204,7 +204,7 @@ export default function CheckoutForm({ data }: Props) {
         padding: 40,
       }}>
         <div style={{ marginBottom: 24 }}>
-          <h2 style={{ fontSize: 24, fontWeight: 700, color: T.successBorder, margin: '0 0 4px' }}>Thank you for your order!</h2>
+          <h2 style={{ fontSize: 24, fontWeight: 700, color: T.successBorder, margin: '0 0 4px' }}>&#10003; Thank you for your order!</h2>
           <p style={{ fontSize: 14, color: T.textMuted, margin: '0 0 2px' }}>{data.merchant.name}</p>
           <p style={{ fontSize: 16, fontWeight: 600, fontFamily: 'monospace', color: T.textPrimary, margin: 0 }}>{confirmation.orderNumber}</p>
         </div>
@@ -219,7 +219,7 @@ export default function CheckoutForm({ data }: Props) {
         </div>
         <h3 style={{ fontSize: 16, fontWeight: 700, color: T.textPrimary, margin: '0 0 12px' }}>Items</h3>
         {confirmation.items.map((item, i) => (
-          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: 14, borderBottom: `1px solid ${T.cardBorder}` }}>
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', fontSize: 14, borderBottom: `1px solid ${T.cardBorder}` }}>
             <span>{item.name} x{item.quantity}</span>
             <span style={{ fontWeight: 600 }}>${(item.totalPrice / 100).toFixed(2)}</span>
           </div>
@@ -228,9 +228,14 @@ export default function CheckoutForm({ data }: Props) {
           <span>Total</span>
           <span>${(confirmation.pricing.total / 100).toFixed(2)}</span>
         </div>
-        <p style={{ fontSize: 14, color: T.textMuted, lineHeight: 1.6, marginTop: 20, marginBottom: 0 }}>
-          You'll receive a confirmation email shortly. If a deposit is required, you'll receive a payment link.
-        </p>
+        <div style={{ marginTop: 28, background: '#FAFAF9', borderRadius: 10, padding: '20px 24px' }}>
+          <h4 style={{ fontSize: 14, fontWeight: 700, color: T.textPrimary, margin: '0 0 12px' }}>What happens next?</h4>
+          <ol style={{ margin: 0, paddingLeft: 20, listStyleType: 'decimal', fontSize: 13, color: T.textMuted, lineHeight: 2 }}>
+            <li>We'll review your order</li>
+            <li>You'll receive a confirmation email</li>
+            <li>If a deposit is required, you'll receive a payment link</li>
+          </ol>
+        </div>
       </div>
     );
   }
@@ -339,7 +344,7 @@ export default function CheckoutForm({ data }: Props) {
           {/* Delivery Address */}
           {serviceType === 'delivery' && (
             <div style={{ marginTop: 16 }}>
-              <label style={labelStyle}>Delivery Address</label>
+              <label style={labelStyle}>&#x1F69A; Delivery Address</label>
               <input
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
@@ -882,14 +887,14 @@ export default function CheckoutForm({ data }: Props) {
                 <input
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  placeholder="First"
+                  placeholder="First name"
                   required
                   style={inputStyle}
                 />
                 <input
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  placeholder="Last"
+                  placeholder="Last name"
                   required
                   style={inputStyle}
                 />
@@ -917,6 +922,7 @@ export default function CheckoutForm({ data }: Props) {
                 required
                 style={inputStyle}
               />
+              <p style={{ fontSize: 11, color: T.textPlaceholder, margin: '4px 0 0', lineHeight: 1.4 }}>We'll send your order confirmation here</p>
             </div>
             <div>
               <label style={labelStyle}>Phone</label>

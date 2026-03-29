@@ -163,6 +163,17 @@ function SettingsContent() {
 
         <p style={{ color: '#6b7280', fontSize: 14, lineHeight: 1.6, margin: '0 0 16px' }}>{card.desc}</p>
 
+        {setupState === 'not_started' && (
+          <div style={{ marginBottom: 16 }}>
+            {['Accept credit card payments', 'Collect deposits automatically', 'Receive payouts to your bank account'].map((item, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#6b7280', lineHeight: 2 }}>
+                <span style={{ color: '#22C55E', fontSize: 14, flexShrink: 0 }}>&#10003;</span>
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         {setupState === 'active' && (
           <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
