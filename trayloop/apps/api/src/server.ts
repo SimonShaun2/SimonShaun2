@@ -3,7 +3,21 @@ import { logger } from '@trayloop/utils';
 import { initStripe } from './lib/stripe.js';
 import { initEmail } from './lib/email.js';
 
+function validateEnv() {
+  const required = ['DATABASE_URL', 'JWT_SECRET'];
+  const missing = required.filter((key) => !process.env[key]);
+  if (missing.length > 0 && process.env.NODE_ENV === 'production') {
+    console.error(`Missing required environment variables: ${missing.join(', ')}`);
+    process.exit(1);
+  }
+  if (!process.env.JWT_SECRET) {
+    console.warn('JWT_SECRET not set — using insecure default for development');
+  }
+}
+
 const start = async () => {
+  validateEnv();
+
   // Initialize external services
   initStripe();
   initEmail();

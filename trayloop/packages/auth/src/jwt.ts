@@ -1,6 +1,9 @@
 import { SignJWT, jwtVerify } from 'jose';
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'dev-secret');
+if (!process.env.JWT_SECRET && typeof globalThis !== 'undefined') {
+  console.warn('[auth] JWT_SECRET not set — using insecure default. Set JWT_SECRET in production.');
+}
 
 export interface TokenPayload {
   sub: string;
