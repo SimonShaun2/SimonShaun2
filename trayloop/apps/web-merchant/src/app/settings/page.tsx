@@ -97,20 +97,23 @@ function SettingsContent() {
     }
   }
 
-  const cards: Record<SetupState, { desc: string; badge: string; badgeColor: string; badgeBg: string; cta: string | null }> = {
-    loading: { desc: 'Checking payment setup...', badge: '', badgeColor: '', badgeBg: '', cta: null },
+  const cards: Record<SetupState, { icon: string; desc: string; badge: string; badgeColor: string; badgeBg: string; cta: string | null }> = {
+    loading: { icon: '', desc: 'Checking payment setup...', badge: '', badgeColor: '', badgeBg: '', cta: null },
     not_started: {
-      desc: 'Connect your Stripe account to accept payments from customers.',
+      icon: '💳',
+      desc: 'Connect a Stripe account to start accepting deposits and payments from your customers. Setup takes about 5 minutes.',
       badge: 'Not Started', badgeColor: '#92400E', badgeBg: '#FEF3C7',
       cta: 'Set Up Payments',
     },
     incomplete: {
-      desc: 'Your Stripe account setup is incomplete. Complete onboarding to start accepting payments.',
+      icon: '⚠️',
+      desc: 'Your Stripe onboarding is not yet complete. Finish the setup to enable payments.',
       badge: 'Incomplete', badgeColor: '#C2410C', badgeBg: '#FFF7ED',
       cta: 'Continue Stripe Onboarding',
     },
     active: {
-      desc: 'Your Stripe account is active. You can accept payments and receive payouts.',
+      icon: '✅',
+      desc: 'Stripe is connected and ready to accept payments.',
       badge: 'Active', badgeColor: '#166534', badgeBg: '#DCFCE7',
       cta: null,
     },
@@ -133,9 +136,17 @@ function SettingsContent() {
         </div>
       )}
 
-      <div style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: 24, maxWidth: 600 }}>
+      <div style={{
+        border: '1px solid #e5e7eb',
+        borderRadius: 10,
+        padding: 24,
+        maxWidth: 600,
+        ...(setupState === 'active' ? { borderLeft: '4px solid #22C55E' } : {}),
+      }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Payment Setup</h2>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
+            {card.icon ? `${card.icon} ` : ''}Payment Setup
+          </h2>
           {card.badge && (
             <span style={{ fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 12, color: card.badgeColor, background: card.badgeBg }}>
               {card.badge}
@@ -143,9 +154,29 @@ function SettingsContent() {
           )}
         </div>
 
+        {setupState === 'active' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <span style={{ color: '#22C55E', fontSize: 18 }}>✓</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: '#166534' }}>Connected</span>
+          </div>
+        )}
+
         <p style={{ color: '#6b7280', fontSize: 14, lineHeight: 1.6, margin: '0 0 16px' }}>{card.desc}</p>
 
-        {paymentStatus.stripeAccountId && setupState !== 'loading' && (
+        {setupState === 'active' && (
+          <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+              <span style={{ width: 8, height: 8, borderRadius: 4, background: paymentStatus.chargesEnabled ? '#22C55E' : '#DC2626', display: 'inline-block' }} />
+              <span style={{ color: '#374151', fontWeight: 500 }}>Charges</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+              <span style={{ width: 8, height: 8, borderRadius: 4, background: paymentStatus.payoutsEnabled ? '#22C55E' : '#DC2626', display: 'inline-block' }} />
+              <span style={{ color: '#374151', fontWeight: 500 }}>Payouts</span>
+            </div>
+          </div>
+        )}
+
+        {paymentStatus.stripeAccountId && setupState !== 'loading' && setupState !== 'active' && (
           <div style={{ background: '#F9FAFB', borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 13 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               <div><span style={{ color: '#6b7280' }}>Charges: </span><span style={{ fontWeight: 600, color: paymentStatus.chargesEnabled ? '#166534' : '#DC2626' }}>{paymentStatus.chargesEnabled ? 'Enabled' : 'Disabled'}</span></div>
@@ -160,7 +191,7 @@ function SettingsContent() {
 
         {card.cta && (
           <button onClick={handleSetupPayments} disabled={actionLoading}
-            style={{ padding: '10px 24px', background: actionLoading ? '#9CA3AF' : '#111827', color: 'white', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: actionLoading ? 'wait' : 'pointer' }}>
+            style={{ padding: '10px 24px', background: actionLoading ? '#9CA3AF' : '#111827', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: actionLoading ? 'wait' : 'pointer' }}>
             {actionLoading ? 'Redirecting to Stripe...' : card.cta}
           </button>
         )}

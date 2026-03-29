@@ -78,8 +78,15 @@ export default function NotificationBell() {
     if (mins < 60) return `${mins}m ago`;
     const hrs = Math.floor(mins / 60);
     if (hrs < 24) return `${hrs}h ago`;
+    if (hrs < 48) return 'Yesterday';
     const days = Math.floor(hrs / 24);
     return `${days}d ago`;
+  }
+
+  function truncateBody(body: string): string {
+    const firstLine = body.split('\n')[0];
+    if (firstLine.length <= 80) return firstLine;
+    return firstLine.slice(0, 80) + '...';
   }
 
   return (
@@ -136,8 +143,9 @@ export default function NotificationBell() {
           {/* List */}
           <div style={{ overflowY: 'auto', flex: 1 }}>
             {notifications.length === 0 ? (
-              <div style={{ padding: 32, textAlign: 'center', color: '#9CA3AF', fontSize: 13 }}>
-                No notifications yet
+              <div style={{ padding: 40, textAlign: 'center', color: '#9CA3AF', fontSize: 13, lineHeight: 1.6 }}>
+                <span style={{ display: 'block', fontSize: 24, marginBottom: 8 }}>🔔</span>
+                All caught up — no new notifications
               </div>
             ) : (
               notifications.map((n) => (
@@ -151,21 +159,21 @@ export default function NotificationBell() {
                     background: n.readAt ? '#FFFFFF' : '#FAFAF9',
                     transition: 'background 0.1s',
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#F5F5F4'; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#EEEEEC'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = n.readAt ? '#FFFFFF' : '#FAFAF9'; }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                     <div style={{ minWidth: 0, flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         {!n.readAt && (
-                          <span style={{ width: 6, height: 6, borderRadius: 3, background: '#3B82F6', flexShrink: 0 }} />
+                          <span style={{ width: 8, height: 8, borderRadius: 4, background: '#3B82F6', flexShrink: 0 }} />
                         )}
                         <span style={{ fontSize: 13, fontWeight: n.readAt ? 400 : 600, color: '#1C1917', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {n.subject}
                         </span>
                       </div>
-                      <p style={{ fontSize: 12, color: '#78716C', margin: '3px 0 0', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}>
-                        {n.body.split('\n')[0]}
+                      <p style={{ fontSize: 12, color: '#78716C', margin: '2px 0 0', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}>
+                        {truncateBody(n.body)}
                       </p>
                     </div>
                     <span style={{ fontSize: 11, color: '#A8A29E', whiteSpace: 'nowrap', flexShrink: 0, marginTop: 1 }}>

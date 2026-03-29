@@ -204,16 +204,17 @@ export default function CheckoutForm({ data }: Props) {
         padding: 40,
       }}>
         <div style={{ marginBottom: 24 }}>
-          <h2 style={{ fontSize: 24, fontWeight: 700, color: T.successBorder, margin: '0 0 4px' }}>Order Submitted!</h2>
+          <h2 style={{ fontSize: 24, fontWeight: 700, color: T.successBorder, margin: '0 0 4px' }}>Thank you for your order!</h2>
+          <p style={{ fontSize: 14, color: T.textMuted, margin: '0 0 2px' }}>{data.merchant.name}</p>
           <p style={{ fontSize: 16, fontWeight: 600, fontFamily: 'monospace', color: T.textPrimary, margin: 0 }}>{confirmation.orderNumber}</p>
         </div>
         <div style={{ display: 'grid', gap: 8, fontSize: 14, color: T.textPrimary, marginBottom: 24 }}>
-          <p style={{ margin: 0 }}><strong>Status:</strong> {confirmation.status}</p>
-          <p style={{ margin: 0 }}><strong>Event Date:</strong> {new Date(confirmation.scheduledAt).toLocaleDateString()}</p>
-          <p style={{ margin: 0 }}><strong>Guests:</strong> {confirmation.headCount}</p>
-          <p style={{ margin: 0 }}><strong>Customer:</strong> {confirmation.customer.firstName} {confirmation.customer.lastName} ({confirmation.customer.email})</p>
+          <p style={{ margin: 0 }}><span style={{ fontSize: 12, color: T.textMuted }}>Status</span><br /><strong>New</strong></p>
+          <p style={{ margin: 0 }}><span style={{ fontSize: 12, color: T.textMuted }}>Event Date</span><br /><strong>{new Date(confirmation.scheduledAt).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong></p>
+          <p style={{ margin: 0 }}><span style={{ fontSize: 12, color: T.textMuted }}>Guests</span><br /><strong>{confirmation.headCount}</strong></p>
+          <p style={{ margin: 0 }}><span style={{ fontSize: 12, color: T.textMuted }}>Customer</span><br /><strong>{confirmation.customer.firstName} {confirmation.customer.lastName}</strong> ({confirmation.customer.email})</p>
           {confirmation.depositRequired !== undefined && (
-            <p style={{ margin: 0 }}><strong>Deposit Required:</strong> {confirmation.depositRequired ? 'Yes — you will receive a payment link' : 'No'}</p>
+            <p style={{ margin: 0 }}><span style={{ fontSize: 12, color: T.textMuted }}>Deposit Required</span><br /><strong>{confirmation.depositRequired ? 'Yes' : 'No'}</strong></p>
           )}
         </div>
         <h3 style={{ fontSize: 16, fontWeight: 700, color: T.textPrimary, margin: '0 0 12px' }}>Items</h3>
@@ -227,6 +228,9 @@ export default function CheckoutForm({ data }: Props) {
           <span>Total</span>
           <span>${(confirmation.pricing.total / 100).toFixed(2)}</span>
         </div>
+        <p style={{ fontSize: 14, color: T.textMuted, lineHeight: 1.6, marginTop: 20, marginBottom: 0 }}>
+          You'll receive a confirmation email shortly. If a deposit is required, you'll receive a payment link.
+        </p>
       </div>
     );
   }

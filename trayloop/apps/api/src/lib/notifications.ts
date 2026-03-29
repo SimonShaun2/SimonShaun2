@@ -49,11 +49,22 @@ export async function sendNotification(payload: NotificationPayload): Promise<vo
           .map((line) => line.trim() === '' ? '<br>' : `<p style="margin:0 0 4px">${line}</p>`)
           .join('\n');
 
+        const actionUrl = payload.actionUrl;
+
         await sendEmail({
           to: user.email,
           subject: payload.subject,
           text: textBody,
-          html: `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#1C1917">${htmlBody}</div>`,
+          html: `<div style="font-family:Inter,-apple-system,sans-serif;max-width:560px;margin:0 auto;color:#1C1917">
+  <div style="background:#1C1917;padding:20px 24px;border-radius:8px 8px 0 0">
+    <span style="color:#FFFFFF;font-size:16px;font-weight:700">TrayLoop</span>
+  </div>
+  <div style="padding:32px 24px;background:#FFFFFF;border:1px solid #E7E5E4;border-top:none;border-radius:0 0 8px 8px">
+    ${htmlBody}
+    ${actionUrl ? `<a href="${actionUrl}" style="display:inline-block;margin-top:20px;padding:10px 24px;background:#1C1917;color:#FFFFFF;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px">View your order</a>` : ''}
+  </div>
+  <p style="text-align:center;font-size:12px;color:#9CA3AF;margin-top:16px">Powered by TrayLoop</p>
+</div>`,
         });
       }
     } catch (err) {
@@ -93,17 +104,16 @@ export async function notifyDepositPaid(ctx: DepositPaidContext): Promise<void> 
     await sendNotification({
       userId: ctx.customerUserId,
       type: 'email',
-      subject: `Payment confirmed — ${ctx.orderNumber}`,
+      subject: `Your payment is confirmed — ${ctx.orderNumber}`,
       body: [
         `Hi ${ctx.customerName},`,
         '',
         `Your deposit of ${amountStr} for order ${ctx.orderNumber} with ${ctx.merchantName} has been received.`,
         '',
-        `Order details:`,
-        `  Order: ${ctx.orderNumber}`,
-        `  Amount: ${amountStr}`,
-        `  Event date: ${dateStr}`,
-        `  Status: Confirmed`,
+        `Order: ${ctx.orderNumber}`,
+        `Amount: ${amountStr}`,
+        `Event date: ${dateStr}`,
+        `Status: Confirmed`,
         '',
         `You will receive updates as your order progresses.`,
       ].join('\n'),
@@ -148,13 +158,16 @@ export async function notifyDepositRefunded(ctx: DepositRefundedContext): Promis
     await sendNotification({
       userId: ctx.customerUserId,
       type: 'email',
-      subject: `Refund processed — ${ctx.orderNumber}`,
+      subject: `Your refund has been processed — ${ctx.orderNumber}`,
       body: [
         `Hi ${ctx.customerName},`,
         '',
         `Your deposit of ${amountStr} for order ${ctx.orderNumber} with ${ctx.merchantName} has been refunded.`,
         '',
-        `The refund will appear in your account within 5–10 business days.`,
+        `Refund amount: ${amountStr}`,
+        `Order: ${ctx.orderNumber}`,
+        '',
+        `The refund will appear in your account within 5-10 business days.`,
         '',
         `If you have questions, please contact ${ctx.merchantName} directly.`,
       ].join('\n'),
