@@ -102,7 +102,7 @@ export function registerRoutes(app: FastifyInstance) {
   // Create Stripe-hosted onboarding link (owner/admin only)
   app.post('/current/payment-onboarding-link', { preHandler: [requireAuth, requireTenant, requireOrgAdmin] }, async (request, reply) => {
     const body = request.body as { returnUrl?: string; refreshUrl?: string } | undefined;
-    const baseUrl = body?.returnUrl || 'http://localhost:3003/settings';
+    const baseUrl = body?.returnUrl || process.env.MERCHANT_URL || 'http://localhost:3003/settings';
     const result = await createOnboardingLink(
       request.ctx.tenant!.organizationId,
       `${baseUrl}?stripe=complete`,

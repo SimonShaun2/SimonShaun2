@@ -503,8 +503,8 @@ export async function sendDepositLink(orderId: string, orgId: string, input: Sen
         trayloop_org_id: orgId,
         trayloop_deposit: 'true',
       },
-      success_url: `http://localhost:3003/orders/${order.id}?deposit=success`,
-      cancel_url: `http://localhost:3003/orders/${order.id}?deposit=cancelled`,
+      success_url: `${process.env.MERCHANT_URL || 'http://localhost:3003'}/orders/${order.id}?deposit=success`,
+      cancel_url: `${process.env.MERCHANT_URL || 'http://localhost:3003'}/orders/${order.id}?deposit=cancelled`,
     });
 
     paymentLink = session.url!;
