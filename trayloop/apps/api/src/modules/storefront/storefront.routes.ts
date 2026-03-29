@@ -19,10 +19,20 @@ const pricingPreviewSchema = z.object({
 
 export function registerRoutes(app: FastifyInstance) {
   // Public endpoint — no auth required
-  app.get('/:slug', async (request) => {
+  app.get('/:slug', async (request, reply) => {
     const { slug } = request.params as { slug: string };
-    const storefront = await service.getStorefront(slug);
-    return { data: storefront };
+    try {
+      const storefront = await service.getStorefront(slug);
+      return { data: storefront };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      console.error('Storefront endpoint error:', message, err);
+      // If it's a NotFoundError, return 404
+      if (message.includes('not found') || message.includes('Not Found')) {
+        return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Storefront not found' } });
+      }
+      return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message, debug: process.env.NODE_ENV !== 'production' ? String(err) : undefined } });
+    }
   });
 
   // Public pricing preview
