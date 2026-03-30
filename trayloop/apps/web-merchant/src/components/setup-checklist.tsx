@@ -18,6 +18,7 @@ interface SetupStatus {
     location: SetupStep;
     catalog: SetupStep;
     packages: SetupStep;
+    payments: SetupStep;
   };
 }
 
@@ -26,6 +27,7 @@ const STEP_LINKS: Record<string, { href: string; action: string }> = {
   location: { href: '/settings/locations/new', action: 'Add Location' },
   catalog: { href: '/catalog/new', action: 'Create Catalog' },
   packages: { href: '/catalog/packages/new', action: 'Add Package' },
+  payments: { href: '/settings', action: 'Connect Payments' },
 };
 
 export default function SetupChecklist() {

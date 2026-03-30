@@ -30,6 +30,13 @@ export function registerRoutes(app: FastifyInstance) {
     return { data: result };
   });
 
+  // Get order stats (must be before /:id)
+  app.get('/stats', async (request) => {
+    const orgId = request.ctx.tenant!.organizationId;
+    const stats = await service.getOrderStats(orgId);
+    return { data: stats };
+  });
+
   // Get order detail
   app.get('/:id', async (request) => {
     const { id } = request.params as { id: string };

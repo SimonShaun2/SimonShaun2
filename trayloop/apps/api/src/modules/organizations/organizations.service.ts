@@ -153,17 +153,27 @@ export async function getSetupStatus(orgId: string) {
   const hasLocation = locationCount.count > 0;
   const hasCatalog = catalogCount.count > 0;
   const hasPackages = packageCount.count > 0;
+
+  // Check payment setup via stripeAccountId
+  let hasPayments = false;
+  try {
+    const [orgFull] = await db.select({ stripeAccountId: organizations.stripeAccountId })
+      .from(organizations).where(eq(organizations.id, orgId)).limit(1);
+    hasPayments = !!orgFull?.stripeAccountId;
+  } catch { hasPayments = false; }
+
   const isComplete = hasProfile && hasLocation && hasCatalog && hasPackages;
 
   return {
     isComplete,
-    completedSteps: [hasProfile, hasLocation, hasCatalog, hasPackages].filter(Boolean).length,
-    totalSteps: 4,
+    completedSteps: [hasProfile, hasLocation, hasCatalog, hasPackages, hasPayments].filter(Boolean).length,
+    totalSteps: 5,
     steps: {
       profile: { done: hasProfile, label: 'Set up organization profile' },
       location: { done: hasLocation, label: 'Add your first location', count: locationCount.count },
       catalog: { done: hasCatalog, label: 'Create a catalog', count: catalogCount.count },
       packages: { done: hasPackages, label: 'Add at least one package', count: packageCount.count },
+      payments: { done: hasPayments, label: 'Connect payment processing' },
     },
   };
 }

@@ -48,6 +48,18 @@ const FILTERS = [
   { value: 'cancelled', label: 'Cancelled' },
 ];
 
+interface Stats {
+  totalOrders: number;
+  totalRevenue: number;
+  last7DaysRevenue: number;
+  last30DaysRevenue: number;
+  completedOrders: number;
+  activeOrders: number;
+  avgOrderValue: number;
+  totalCustomers: number;
+  repeatCustomers: number;
+}
+
 export default function DashboardPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
@@ -55,12 +67,21 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
+  const [stats, setStats] = useState<Stats | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) { window.location.href = '/login'; return; }
     fetchOrders();
+    fetchStats();
   }, [statusFilter, page]);
+
+  async function fetchStats() {
+    try {
+      const res = await apiFetch('/api/orders/stats');
+      setStats(res.data);
+    } catch {}
+  }
 
   async function fetchOrders() {
     setLoading(true);
@@ -80,14 +101,6 @@ export default function DashboardPage() {
     }
   }
 
-  // Compute quick stats from loaded orders
-  const needsAction = orders.filter((o) => o.status === 'submitted' || o.status === 'awaiting_deposit').length;
-  const totalRevenue = orders.reduce((sum, o) => sum + o.pricing.total, 0);
-  const upcomingCount = orders.filter((o) => {
-    if (o.status === 'completed' || o.status === 'cancelled') return false;
-    return o.eventDate && new Date(o.eventDate) > new Date();
-  }).length;
-
   return (
     <div>
       <SetupChecklist />
@@ -95,25 +108,47 @@ export default function DashboardPage() {
       {/* Page header */}
       <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 20px', color: '#1C1917' }}>Dashboard</h1>
 
-      {/* KPI cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 28 }}>
+      {/* KPI cards - Row 1: Revenue */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 12 }}>
         <KpiCard
-          label="Needs Action"
-          value={needsAction}
-          sub={needsAction > 0 ? 'New or awaiting deposit' : 'All caught up'}
-          accent={needsAction > 0 ? '#F59E0B' : '#10B981'}
+          label="Revenue (7d)"
+          value={stats ? `$${(stats.last7DaysRevenue / 100).toFixed(0)}` : '...'}
+          sub="Last 7 days"
+          accent="#10B981"
         />
         <KpiCard
-          label="Upcoming Events"
-          value={upcomingCount}
-          sub="Active orders with future dates"
+          label="Revenue (30d)"
+          value={stats ? `$${(stats.last30DaysRevenue / 100).toFixed(0)}` : '...'}
+          sub="Last 30 days"
           accent="#3B82F6"
         />
         <KpiCard
-          label="Revenue (Shown)"
-          value={`$${(totalRevenue / 100).toFixed(0)}`}
-          sub={`From ${pagination?.total ?? orders.length} orders`}
+          label="Avg Order Value"
+          value={stats ? `$${(stats.avgOrderValue / 100).toFixed(0)}` : '...'}
+          sub="Across all orders"
           accent="#1C1917"
+        />
+      </div>
+
+      {/* KPI cards - Row 2: Activity */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 28 }}>
+        <KpiCard
+          label="Active Orders"
+          value={stats?.activeOrders ?? '...'}
+          sub="Submitted, awaiting, or confirmed"
+          accent="#F59E0B"
+        />
+        <KpiCard
+          label="Repeat Customers"
+          value={stats?.repeatCustomers ?? '...'}
+          sub={stats ? `${stats.totalCustomers} total customers` : ''}
+          accent="#8B5CF6"
+        />
+        <KpiCard
+          label="Total Orders"
+          value={stats?.totalOrders ?? '...'}
+          sub={stats ? `${stats.completedOrders} completed` : ''}
+          accent="#6B7280"
         />
       </div>
 

@@ -19,6 +19,54 @@ import { logger } from '@trayloop/utils';
 import type { EventBus } from '../../lib/event-bus/index.js';
 import type { CreateOrderInput, UpdateOrderStatusInput, OrderListQuery, SendDepositLinkInput, ReorderInput } from './orders.schema.js';
 
+export async function getOrderStats(orgId: string) {
+  const now = new Date();
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+  const [totals] = await db
+    .select({
+      totalOrders: sql<number>`count(*)::int`,
+      totalRevenue: sql<number>`coalesce(sum(total_amount), 0)::int`,
+      last7DaysRevenue: sql<number>`coalesce(sum(case when created_at >= ${sevenDaysAgo} then total_amount else 0 end), 0)::int`,
+      last30DaysRevenue: sql<number>`coalesce(sum(case when created_at >= ${thirtyDaysAgo} then total_amount else 0 end), 0)::int`,
+      completedOrders: sql<number>`count(case when status = 'completed' then 1 end)::int`,
+      activeOrders: sql<number>`count(case when status in ('submitted', 'awaiting_deposit', 'confirmed') then 1 end)::int`,
+    })
+    .from(orders)
+    .where(eq(orders.organizationId, orgId));
+
+  const [customerStats] = await db
+    .select({
+      totalCustomers: sql<number>`count(distinct customer_id)::int`,
+      repeatCustomers: sql<number>`count(distinct case when ct > 1 then customer_id end)::int`,
+    })
+    .from(
+      db.select({
+        customerId: orders.customerId,
+        ct: sql<number>`count(*)`.as('ct'),
+      })
+      .from(orders)
+      .where(eq(orders.organizationId, orgId))
+      .groupBy(orders.customerId)
+      .as('sub')
+    );
+
+  const avgOrderValue = totals.totalOrders > 0 ? Math.round(totals.totalRevenue / totals.totalOrders) : 0;
+
+  return {
+    totalOrders: totals.totalOrders,
+    totalRevenue: totals.totalRevenue,
+    last7DaysRevenue: totals.last7DaysRevenue,
+    last30DaysRevenue: totals.last30DaysRevenue,
+    completedOrders: totals.completedOrders,
+    activeOrders: totals.activeOrders,
+    avgOrderValue,
+    totalCustomers: customerStats.totalCustomers,
+    repeatCustomers: customerStats.repeatCustomers,
+  };
+}
+
 // --- Status transition rules ---
 // Deposit required:  submitted → awaiting_deposit → confirmed → completed
 // No deposit:        submitted → confirmed → completed
@@ -62,6 +110,13 @@ async function getDepositRequired(locationId: string | null): Promise<boolean> {
 
 async function generateOrderNumber(orgId: string, txDb?: typeof db): Promise<string> {
   const database = txDb ?? db;
+
+  // Lock the organization row to serialize order number generation
+  // and prevent duplicate numbers from concurrent transactions.
+  await database.execute(
+    sql`SELECT id FROM organizations WHERE id = ${orgId} FOR UPDATE`
+  );
+
   const [result] = await database
     .select({ count: sql<number>`count(*)::int` })
     .from(orders)
@@ -419,6 +474,31 @@ export async function updateStatus(id: string, orgId: string, input: UpdateOrder
     oldStatus: existing.status,
     newStatus: input.status,
   });
+
+  // Auto-create follow-up when order is completed
+  if (input.status === 'completed') {
+    try {
+      const { followUps } = await import('@trayloop/database');
+      const followUpDate = new Date();
+      followUpDate.setDate(followUpDate.getDate() + 3); // 3 days after completion
+
+      // Check if follow-up already exists for this order
+      const [existing_followup] = await db.select({ id: followUps.id })
+        .from(followUps)
+        .where(eq(followUps.orderId, id))
+        .limit(1);
+
+      if (!existing_followup) {
+        await db.insert(followUps).values({
+          organizationId: orgId,
+          orderId: id,
+          status: 'pending',
+          dueDate: followUpDate,
+          note: 'Auto-created: check in with customer after completed order',
+        });
+      }
+    } catch {}
+  }
 
   return {
     id: updated.id,
