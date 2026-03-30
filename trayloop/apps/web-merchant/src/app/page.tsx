@@ -568,8 +568,17 @@ function OrderRow({ order }: { order: Order }) {
           </div>
         </div>
 
-        {/* Right: price + indicators + arrow */}
+        {/* Right: reorder hint + price + indicators + arrow */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, marginLeft: 16 }}>
+          {order.status === 'completed' && (
+            <span
+              title="Reorder — view order to reorder"
+              style={{
+                fontSize: 15, color: '#8B5CF6', fontWeight: 600,
+                lineHeight: 1,
+              }}
+            >↻</span>
+          )}
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 16, fontWeight: 700, color: '#1C1917' }}>
               {isHighValue && (
