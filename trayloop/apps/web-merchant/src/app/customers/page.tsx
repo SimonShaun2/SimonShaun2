@@ -77,7 +77,15 @@ export default function CustomersPage() {
     return c.name.toLowerCase().includes(q)
       || c.email.toLowerCase().includes(q)
       || (c.company?.toLowerCase().includes(q) ?? false);
-  });
+  }).sort((a, b) => b.totalSpend - a.totalSpend);
+
+  function recencyColor(dateStr: string | null): string {
+    if (!dateStr) return '#9CA3AF'; // gray
+    const days = (Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24);
+    if (days <= 30) return '#22C55E'; // green
+    if (days <= 90) return '#F59E0B'; // amber
+    return '#9CA3AF'; // gray
+  }
 
   return (
     <div style={{ display: 'flex', gap: 24 }}>
@@ -132,7 +140,14 @@ export default function CustomersPage() {
                   onMouseLeave={(e) => { if (selected?.id !== c.id) e.currentTarget.style.background = 'transparent'; }}
                 >
                   <td style={{ padding: '10px 8px 10px 0' }}>
-                    <div style={{ fontWeight: 600 }}>{c.name}</div>
+                    <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {c.name}
+                      {c.orderCount > 1 && (
+                        <span style={{ fontSize: 11, color: '#8B5CF6', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 2 }} title={`${c.orderCount} orders — repeat customer`}>
+                          ↻{c.orderCount}
+                        </span>
+                      )}
+                    </div>
                     <div style={{ fontSize: 12, color: '#6b7280' }}>
                       {c.company && <span>{c.company} · </span>}
                       {c.email}
@@ -141,7 +156,14 @@ export default function CustomersPage() {
                   <td style={{ padding: 8, fontWeight: 500 }}>{c.orderCount}</td>
                   <td style={{ padding: 8, fontWeight: 500 }}>${(c.totalSpend / 100).toFixed(2)}</td>
                   <td style={{ padding: 8, color: '#6b7280', fontSize: 13 }}>
-                    {c.lastOrderDate ? new Date(c.lastOrderDate).toLocaleDateString() : '—'}
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{
+                        width: 8, height: 8, borderRadius: '50%',
+                        background: recencyColor(c.lastOrderDate),
+                        display: 'inline-block', flexShrink: 0,
+                      }} />
+                      {c.lastOrderDate ? new Date(c.lastOrderDate).toLocaleDateString() : '—'}
+                    </span>
                   </td>
                 </tr>
               ))}

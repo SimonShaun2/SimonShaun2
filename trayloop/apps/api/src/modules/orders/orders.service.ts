@@ -54,16 +54,50 @@ export async function getOrderStats(orgId: string) {
 
   const avgOrderValue = totals.totalOrders > 0 ? Math.round(totals.totalRevenue / totals.totalOrders) : 0;
 
+  // Daily revenue for last 7 days
+  const dailyRevenue = await db
+    .select({
+      date: sql<string>`to_char(created_at, 'YYYY-MM-DD')`.as('date'),
+      revenue: sql<number>`coalesce(sum(total_amount), 0)::int`,
+      orderCount: sql<number>`count(*)::int`,
+    })
+    .from(orders)
+    .where(and(eq(orders.organizationId, orgId), gte(orders.createdAt, sevenDaysAgo)))
+    .groupBy(sql`to_char(created_at, 'YYYY-MM-DD')`)
+    .orderBy(sql`to_char(created_at, 'YYYY-MM-DD')`);
+
+  // Per-location breakdown
+  const locationBreakdown = await db
+    .select({
+      locationId: orders.locationId,
+      locationName: locations.name,
+      orderCount: sql<number>`count(*)::int`,
+      revenue: sql<number>`coalesce(sum(orders.total_amount), 0)::int`,
+    })
+    .from(orders)
+    .leftJoin(locations, eq(locations.id, orders.locationId))
+    .where(eq(orders.organizationId, orgId))
+    .groupBy(orders.locationId, locations.name);
+
+  // 7-day order count
+  const [last7DaysOrders] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(orders)
+    .where(and(eq(orders.organizationId, orgId), gte(orders.createdAt, sevenDaysAgo)));
+
   return {
     totalOrders: totals.totalOrders,
     totalRevenue: totals.totalRevenue,
     last7DaysRevenue: totals.last7DaysRevenue,
     last30DaysRevenue: totals.last30DaysRevenue,
+    last7DaysOrders: last7DaysOrders.count,
     completedOrders: totals.completedOrders,
     activeOrders: totals.activeOrders,
     avgOrderValue,
     totalCustomers: customerStats.totalCustomers,
     repeatCustomers: customerStats.repeatCustomers,
+    dailyRevenue,
+    locationBreakdown,
   };
 }
 
