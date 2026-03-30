@@ -44,3 +44,9 @@ variable "api_desired_count" {
   type        = number
   default     = 2
 }
+
+variable "acm_certificate_arn" {
+  description = "ACM certificate ARN for HTTPS. Leave empty to use HTTP only."
+  type        = string
+  default     = ""
+}

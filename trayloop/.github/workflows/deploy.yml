@@ -28,6 +28,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: trayloop/package-lock.json
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -38,15 +45,61 @@ jobs:
         id: ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Set environment
+        id: env
+        run: echo "env_name=${{ github.event.inputs.environment || 'staging' }}" >> $GITHUB_OUTPUT
+
       - name: Build and push API image
         working-directory: trayloop
         run: |
-          docker build -f infrastructure/docker/Dockerfile.api -t ${{ steps.ecr.outputs.registry }}/trayloop-api:${{ github.sha }} .
-          docker push ${{ steps.ecr.outputs.registry }}/trayloop-api:${{ github.sha }}
+          IMAGE="${{ steps.ecr.outputs.registry }}/trayloop-api:${{ github.sha }}"
+          docker build -f infrastructure/docker/Dockerfile.api -t $IMAGE .
+          docker tag $IMAGE ${{ steps.ecr.outputs.registry }}/trayloop-api:latest
+          docker push $IMAGE
+          docker push ${{ steps.ecr.outputs.registry }}/trayloop-api:latest
+          echo "image=$IMAGE" >> $GITHUB_OUTPUT
+        id: build
 
-      - name: Deploy to ECS
+      - name: Run database migrations
+        working-directory: trayloop
         run: |
+          npm ci
+          npx turbo build --filter=@trayloop/database
+          node -e "
+            const { execSync } = require('child_process');
+            const result = execSync('aws secretsmanager get-secret-value --secret-id trayloop/${{ steps.env.outputs.env_name }}/app --query SecretString --output text');
+            const secrets = JSON.parse(result.toString());
+            process.env.DATABASE_URL = secrets.DATABASE_URL;
+            require('child_process').execSync('npx drizzle-kit push', {
+              cwd: 'packages/database',
+              env: { ...process.env, DATABASE_URL: secrets.DATABASE_URL },
+              stdio: 'inherit'
+            });
+          "
+
+      - name: Update ECS task definition
+        run: |
+          TASK_DEF=$(aws ecs describe-task-definition \
+            --task-definition trayloop-${{ steps.env.outputs.env_name }}-api \
+            --query 'taskDefinition' --output json)
+
+          NEW_TASK_DEF=$(echo $TASK_DEF | jq \
+            --arg IMAGE "${{ steps.build.outputs.image }}" \
+            '.containerDefinitions[0].image = $IMAGE |
+             del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
+
+          NEW_ARN=$(aws ecs register-task-definition \
+            --cli-input-json "$NEW_TASK_DEF" \
+            --query 'taskDefinition.taskDefinitionArn' --output text)
+
           aws ecs update-service \
-            --cluster trayloop-${{ github.event.inputs.environment || 'staging' }} \
-            --service trayloop-${{ github.event.inputs.environment || 'staging' }}-api \
-            --force-new-deployment
+            --cluster trayloop-${{ steps.env.outputs.env_name }} \
+            --service trayloop-${{ steps.env.outputs.env_name }}-api \
+            --task-definition $NEW_ARN
+
+      - name: Wait for deployment
+        run: |
+          aws ecs wait services-stable \
+            --cluster trayloop-${{ steps.env.outputs.env_name }} \
+            --services trayloop-${{ steps.env.outputs.env_name }}-api
+          echo "Deployment complete!"

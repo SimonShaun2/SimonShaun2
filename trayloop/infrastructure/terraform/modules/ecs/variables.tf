@@ -11,3 +11,11 @@ variable "ecr_repository_url" {
   type    = string
   default = ""
 }
+variable "domain_name" {
+  type    = string
+  default = ""
+}
+variable "acm_certificate_arn" {
+  type    = string
+  default = ""
+}
