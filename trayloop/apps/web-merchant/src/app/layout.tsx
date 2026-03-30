@@ -38,8 +38,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <a href="/" style={{ color: '#D6D3D1', textDecoration: 'none' }}>Orders</a>
             <a href="/follow-ups" style={{ color: '#D6D3D1', textDecoration: 'none' }}>Follow-Ups</a>
             <a href="/customers" style={{ color: '#D6D3D1', textDecoration: 'none' }}>Customers</a>
-            <a href="/catalog" style={{ color: '#D6D3D1', textDecoration: 'none' }}>Menu</a>
-            <a href="/settings" style={{ color: '#D6D3D1', textDecoration: 'none' }}>Settings</a>
+            <a href="/catalog" style={{ color: '#D6D3D1', textDecoration: 'none' }}>Offerings</a>
+            <a href="/settings" style={{ color: '#D6D3D1', textDecoration: 'none' }}>Setup</a>
             <NotificationBell />
           </div>
         </nav>

@@ -55,11 +55,11 @@ export default function CatalogPage() {
   if (catalogs.length === 0) {
     return (
       <div>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1rem' }}>Menu</h1>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1rem' }}>Your Offerings</h1>
         <div style={{ border: '1px dashed #D6D3D1', borderRadius: 12, padding: '48px 24px', textAlign: 'center', maxWidth: 500 }}>
           <p style={{ fontSize: 32, marginBottom: 8 }}>🍽️</p>
-          <p style={{ fontSize: 16, fontWeight: 600, color: '#1C1917', marginBottom: 4 }}>No Catalogs Yet</p>
-          <p style={{ fontSize: 14, color: '#78716C' }}>Create your first catalog to start building your menu.</p>
+          <p style={{ fontSize: 16, fontWeight: 600, color: '#1C1917', marginBottom: 4 }}>No offerings yet</p>
+          <p style={{ fontSize: 14, color: '#78716C' }}>Add your first catering option to start accepting orders.</p>
         </div>
       </div>
     );
@@ -71,7 +71,7 @@ export default function CatalogPage() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Menu</h1>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>Your Offerings</h1>
         <div style={{ display: 'flex', gap: 12, fontSize: 13, color: '#6b7280' }}>
           <span>{catalogs.length} catalog{catalogs.length !== 1 ? 's' : ''}</span>
           <span>·</span>

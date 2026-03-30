@@ -101,7 +101,7 @@ function SettingsContent() {
     loading: { icon: '', desc: 'Checking payment setup...', badge: '', badgeColor: '', badgeBg: '', cta: null },
     not_started: {
       icon: '💳',
-      desc: 'Connect a Stripe account to start accepting deposits and payments from your customers. Setup takes about 5 minutes.',
+      desc: 'You can\'t accept real orders until payments are connected. Setup takes about 2–3 minutes. Securely powered by Stripe.',
       badge: 'Not Started', badgeColor: '#92400E', badgeBg: '#FEF3C7',
       cta: 'Set Up Payments',
     },
@@ -123,7 +123,7 @@ function SettingsContent() {
 
   return (
     <div>
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1.5rem' }}>Settings</h1>
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1.5rem' }}>Get Ready</h1>
 
       {stripeParam === 'complete' && (
         <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 8, padding: '12px 16px', marginBottom: 16 }}>

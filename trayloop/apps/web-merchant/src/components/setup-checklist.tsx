@@ -11,24 +11,45 @@ interface SetupStep {
 
 interface SetupStatus {
   isComplete: boolean;
+  slug: string;
   completedSteps: number;
   totalSteps: number;
   steps: {
-    profile: SetupStep;
+    offering: SetupStep;
     location: SetupStep;
-    catalog: SetupStep;
-    packages: SetupStep;
     payments: SetupStep;
   };
 }
 
-const STEP_LINKS: Record<string, { href: string; action: string }> = {
-  profile: { href: '/settings', action: 'Edit Profile' },
-  location: { href: '/settings/locations/new', action: 'Add Location' },
-  catalog: { href: '/catalog/new', action: 'Create Catalog' },
-  packages: { href: '/catalog/packages/new', action: 'Add Package' },
-  payments: { href: '/settings', action: 'Connect Payments' },
-};
+const STEPS: Array<{
+  key: string;
+  title: string;
+  description: string;
+  cta: string;
+  href: string;
+}> = [
+  {
+    key: 'offering',
+    title: 'Add your first offering',
+    description: 'Create a catering package so customers can start ordering from your storefront.',
+    cta: 'Add Package',
+    href: '/catalog',
+  },
+  {
+    key: 'location',
+    title: 'Set your order requirements',
+    description: 'Configure your location details, lead time, minimum order, and delivery settings.',
+    cta: 'Edit Location',
+    href: '/settings',
+  },
+  {
+    key: 'payments',
+    title: 'Connect payments',
+    description: 'Link your Stripe account to accept deposits and get paid. Takes about 2–3 minutes. Securely powered by Stripe.',
+    cta: 'Set Up Stripe',
+    href: '/settings',
+  },
+];
 
 export default function SetupChecklist() {
   const [status, setStatus] = useState<SetupStatus | null>(null);
@@ -42,66 +63,148 @@ export default function SetupChecklist() {
   }, []);
 
   if (loading) return null;
-  if (!status || status.isComplete) return null;
+  if (!status) return null;
 
-  const steps = Object.entries(status.steps) as Array<[string, SetupStep]>;
+  // "You're Live" completion state
+  if (status.isComplete) {
+    const storefrontUrl = `${window.location.origin.replace(':3003', ':3002')}/${status.slug}`;
+    return (
+      <div style={{
+        border: '2px solid #22C55E', borderRadius: 12, padding: '28px 24px',
+        marginBottom: 24, background: '#F0FDF4',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+          <span style={{ fontSize: 28 }}>🎉</span>
+          <div>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: '#166534', margin: 0 }}>You're live!</h2>
+            <p style={{ fontSize: 14, color: '#15803D', margin: '2px 0 0' }}>Your storefront is ready to accept orders.</p>
+          </div>
+        </div>
+
+        <div style={{
+          background: '#FFFFFF', border: '1px solid #BBF7D0', borderRadius: 8,
+          padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#374151',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{storefrontUrl}</span>
+          <button
+            onClick={() => navigator.clipboard.writeText(storefrontUrl)}
+            style={{
+              background: 'none', border: '1px solid #D6D3D1', borderRadius: 6,
+              padding: '4px 10px', fontSize: 12, cursor: 'pointer', color: '#57534E',
+            }}
+          >
+            Copy
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <a href={storefrontUrl} target="_blank" rel="noopener noreferrer" style={{
+            padding: '10px 20px', background: '#1C1917', color: '#FFF',
+            borderRadius: 8, textDecoration: 'none', fontSize: 14, fontWeight: 600,
+            display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+            🔗 View Your Storefront
+          </a>
+          <a href={storefrontUrl} target="_blank" rel="noopener noreferrer" style={{
+            padding: '10px 20px', background: '#FFF', color: '#1C1917',
+            border: '1px solid #E7E5E4', borderRadius: 8, textDecoration: 'none',
+            fontSize: 14, fontWeight: 600,
+          }}>
+            Place a Test Order
+          </a>
+        </div>
+
+        <p style={{ fontSize: 12, color: '#6B7280', marginTop: 12, marginBottom: 0 }}>
+          Test your ordering experience before sharing with customers.
+        </p>
+      </div>
+    );
+  }
+
+  // Guided onboarding — show one active step at a time
+  const stepEntries = STEPS.map((s) => ({
+    ...s,
+    done: (status.steps as Record<string, SetupStep>)[s.key]?.done ?? false,
+  }));
+
+  const activeStepIndex = stepEntries.findIndex((s) => !s.done);
   const progressPercent = Math.round((status.completedSteps / status.totalSteps) * 100);
 
   return (
-    <div style={{ border: '1px solid #e5e7eb', borderRadius: '0.75rem', padding: '1.5rem', marginBottom: '2rem', background: '#fafafa' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Get Started</h2>
-        <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>
-          {status.completedSteps}/{status.totalSteps} complete
+    <div style={{
+      border: '1px solid #E7E5E4', borderRadius: 12, padding: '24px',
+      marginBottom: 24, background: '#FFFFFF',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: '#1C1917', margin: 0 }}>Get ready to accept orders</h2>
+        <span style={{ fontSize: 12, color: '#9CA3AF' }}>
+          {status.completedSteps} of {status.totalSteps}
         </span>
       </div>
 
       {/* Progress bar */}
-      <div style={{ height: 6, background: '#e5e7eb', borderRadius: 3, marginBottom: '1.25rem', overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${progressPercent}%`, background: '#10b981', borderRadius: 3, transition: 'width 0.3s' }} />
+      <div style={{ height: 4, background: '#E7E5E4', borderRadius: 2, marginBottom: 20, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${progressPercent}%`, background: '#22C55E', borderRadius: 2, transition: 'width 0.3s' }} />
       </div>
 
-      <div style={{ display: 'grid', gap: '0.75rem' }}>
-        {steps.map(([key, step]) => {
-          const link = STEP_LINKS[key];
+      {/* Steps */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {stepEntries.map((step, i) => {
+          const isActive = i === activeStepIndex;
+          const isDone = step.done;
+
           return (
-            <div key={key} style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              padding: '0.75rem 1rem', background: 'white', border: '1px solid #e5e7eb', borderRadius: '0.5rem',
-              opacity: step.done ? 0.6 : 1,
+            <div key={step.key} style={{
+              border: `1px solid ${isActive ? '#1C1917' : '#E7E5E4'}`,
+              borderRadius: 10,
+              padding: isActive ? '16px 18px' : '12px 18px',
+              background: isDone ? '#FAFAF9' : isActive ? '#FFFFFF' : '#FAFAF9',
+              transition: 'all 0.2s',
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <span style={{
-                  width: 22, height: 22, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '0.75rem', fontWeight: 700,
-                  background: step.done ? '#10b981' : '#e5e7eb',
-                  color: step.done ? 'white' : '#6b7280',
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                {/* Step indicator */}
+                <div style={{
+                  width: 28, height: 28, borderRadius: 14, flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 13, fontWeight: 700,
+                  background: isDone ? '#22C55E' : isActive ? '#1C1917' : '#E7E5E4',
+                  color: isDone || isActive ? '#FFF' : '#9CA3AF',
                 }}>
-                  {step.done ? '✓' : ''}
-                </span>
-                <span style={{ fontWeight: 500, textDecoration: step.done ? 'line-through' : 'none', color: step.done ? '#9ca3af' : '#111827' }}>
-                  {step.label}
-                </span>
-                {step.count !== undefined && step.count > 0 && (
-                  <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>({step.count})</span>
+                  {isDone ? '✓' : i + 1}
+                </div>
+
+                {/* Step content */}
+                <div style={{ flex: 1 }}>
+                  <span style={{
+                    fontSize: 15, fontWeight: 600,
+                    color: isDone ? '#9CA3AF' : '#1C1917',
+                    textDecoration: isDone ? 'line-through' : 'none',
+                  }}>
+                    {step.title}
+                  </span>
+                  {isActive && (
+                    <p style={{ fontSize: 13, color: '#78716C', margin: '4px 0 0', lineHeight: 1.5 }}>
+                      {step.description}
+                    </p>
+                  )}
+                </div>
+
+                {/* CTA */}
+                {isActive && (
+                  <a href={step.href} style={{
+                    padding: '8px 18px', background: '#1C1917', color: '#FFF',
+                    borderRadius: 8, textDecoration: 'none', fontSize: 13,
+                    fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0,
+                  }}>
+                    {step.cta}
+                  </a>
                 )}
               </div>
-              {!step.done && link && (
-                <a href={link.href} style={{
-                  fontSize: '0.8rem', fontWeight: 600, color: '#2563eb', textDecoration: 'none',
-                  padding: '0.3rem 0.75rem', border: '1px solid #2563eb', borderRadius: '0.375rem',
-                }}>
-                  {link.action}
-                </a>
-              )}
             </div>
           );
         })}
       </div>
-
-      <p style={{ marginTop: '1rem', fontSize: '0.8rem', color: '#6b7280' }}>
-        Complete these steps so customers can find and order from your storefront.
-      </p>
     </div>
   );
 }

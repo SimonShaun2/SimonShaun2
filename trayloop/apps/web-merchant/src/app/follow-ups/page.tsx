@@ -132,7 +132,7 @@ export default function FollowUpsPage() {
         }}>
           <p style={{ fontSize: 28, marginBottom: 8 }}>✓</p>
           <p style={{ fontSize: 15, fontWeight: 600, color: '#1C1917', marginBottom: 4 }}>
-            {statusFilter === 'pending' ? 'No pending follow-ups' : statusFilter === 'completed' ? 'No completed follow-ups' : 'No follow-ups yet'}
+            {statusFilter === 'pending' ? 'No pending follow-ups' : statusFilter === 'completed' ? 'No completed follow-ups' : 'No follow-ups yet — they\'re created automatically after completed orders'}
           </p>
           <p style={{ fontSize: 13, color: '#78716C' }}>
             Follow-ups are created from order details to track customer outreach.

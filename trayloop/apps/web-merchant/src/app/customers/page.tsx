@@ -113,7 +113,7 @@ export default function CustomersPage() {
 
         {!loading && filtered.length === 0 && (
           <div style={{ border: '1px dashed #d1d5db', borderRadius: 8, padding: 32, textAlign: 'center', color: '#6b7280' }}>
-            {search ? 'No customers match your search' : 'No customers yet'}
+            {search ? 'No customers match your search' : 'No customers yet — they\'ll appear here after your first order'}
           </div>
         )}
 
