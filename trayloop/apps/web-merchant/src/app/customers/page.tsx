@@ -243,6 +243,21 @@ export default function CustomersPage() {
                     ))}
                   </div>
                 )}
+                {/* Reorder from most recent order */}
+                {selected.recentOrders.length > 0 && (
+                  <a
+                    href={`/orders/${selected.recentOrders[0].id}`}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      marginTop: 10, padding: '8px 14px', borderRadius: 8,
+                      background: '#1C1917', color: '#FFFFFF',
+                      textDecoration: 'none', fontSize: 13, fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    ↻ Reorder from Last Order
+                  </a>
+                )}
               </div>
             </>
           )}

@@ -183,6 +183,11 @@ export default function FollowUpsPage() {
                     }}>
                       {isDone ? 'Done' : 'Pending'}
                     </span>
+                    {/* Potential value */}
+                    <span style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0 }}>
+                      <span style={{ fontSize: 10, color: '#A8A29E', fontWeight: 500, lineHeight: 1 }}>Potential value</span>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: '#D97706', lineHeight: 1.3 }}>${(f.order.total / 100).toFixed(2)}</span>
+                    </span>
                   </div>
                   {/* Detail line */}
                   <div style={{ fontSize: 13, color: '#78716C', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
