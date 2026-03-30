@@ -41,7 +41,6 @@ export function initStripe(): boolean {
   }
 
   stripeClient = new Stripe(config.secretKey, {
-    apiVersion: '2025-03-31.basil',
     typescript: true,
   });
 

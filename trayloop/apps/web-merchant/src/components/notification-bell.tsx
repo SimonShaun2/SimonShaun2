@@ -18,7 +18,6 @@ export default function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   // Close on outside click
@@ -52,7 +51,7 @@ export default function NotificationBell() {
       await apiFetch('/api/notifications/mark-all-read', { method: 'POST' });
       setUnread(0);
       setNotifications((prev) => prev.map((n) => ({ ...n, readAt: new Date().toISOString(), status: 'read' })));
-    } catch {}
+    } catch { /* non-critical */ }
   }
 
   async function handleClick(n: Notification) {
@@ -62,7 +61,7 @@ export default function NotificationBell() {
         await apiFetch(`/api/notifications/${n.id}/read`, { method: 'PATCH' });
         setNotifications((prev) => prev.map((x) => x.id === n.id ? { ...x, readAt: new Date().toISOString(), status: 'read' } : x));
         setUnread((prev) => Math.max(0, prev - 1));
-      } catch {}
+      } catch { /* non-critical */ }
     }
     // Navigate
     if (n.actionUrl) {

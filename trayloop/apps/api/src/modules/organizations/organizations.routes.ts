@@ -5,6 +5,8 @@ import { validateBody } from '../../lib/middleware/validate.js';
 import { createOrganizationSchema, updateOrganizationSchema } from './organizations.schema.js';
 import * as service from './organizations.service.js';
 import { getConnectStatus, createConnectAccount, syncConnectStatus, createOnboardingLink } from '../../lib/stripe-connect.js';
+import { db, organizations as orgsTable } from '@trayloop/database';
+import { eq } from 'drizzle-orm';
 
 export function registerRoutes(app: FastifyInstance) {
   // List organizations the authenticated user belongs to
@@ -54,15 +56,10 @@ export function registerRoutes(app: FastifyInstance) {
     try {
       const orgId = request.ctx.tenant!.organizationId;
 
-      // Inline query — only references stripe_account_id (safe column)
-      const { db } = await import('@trayloop/database');
-      const { organizations: orgs } = await import('@trayloop/database');
-      const { eq } = await import('drizzle-orm');
-
       const [org] = await db
-        .select({ stripeAccountId: orgs.stripeAccountId })
-        .from(orgs)
-        .where(eq(orgs.id, orgId))
+        .select({ stripeAccountId: orgsTable.stripeAccountId })
+        .from(orgsTable)
+        .where(eq(orgsTable.id, orgId))
         .limit(1);
 
       if (!org || !org.stripeAccountId) {

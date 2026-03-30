@@ -19,6 +19,9 @@ import { logger } from '@trayloop/utils';
 import type { EventBus } from '../../lib/event-bus/index.js';
 import type { CreateOrderInput, UpdateOrderStatusInput, OrderListQuery, SendDepositLinkInput, ReorderInput } from './orders.schema.js';
 
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+type DbOrTx = typeof db | Transaction;
+
 export async function getOrderStats(orgId: string) {
   const now = new Date();
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -142,7 +145,7 @@ async function getDepositRequired(locationId: string | null): Promise<boolean> {
 
 // --- Order number generation ---
 
-async function generateOrderNumber(orgId: string, txDb?: typeof db): Promise<string> {
+async function generateOrderNumber(orgId: string, txDb?: DbOrTx): Promise<string> {
   const database = txDb ?? db;
 
   // Lock the organization row to serialize order number generation

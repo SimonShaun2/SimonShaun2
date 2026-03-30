@@ -7,7 +7,7 @@ import * as service from './auth.service.js';
 export function registerRoutes(app: FastifyInstance) {
   // Public routes
   app.post('/register', { preHandler: [validateBody(registerSchema)] }, async (request, reply) => {
-    const result = await service.register(request.ctx?.validatedBody ?? (request as any).validatedBody, (app as any).eventBus);
+    const result = await service.register((request as any).validatedBody, (app as any).eventBus);
     return reply.status(201).send({ data: result });
   });
 

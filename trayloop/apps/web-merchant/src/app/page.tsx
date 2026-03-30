@@ -115,7 +115,7 @@ export default function DashboardPage() {
     try {
       const res = await apiFetch('/api/orders/stats');
       setStats(res.data);
-    } catch {}
+    } catch { /* non-critical */ }
   }
 
   async function fetchOrders() {
