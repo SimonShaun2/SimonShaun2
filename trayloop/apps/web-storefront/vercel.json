@@ -1,5 +1,5 @@
 {
   "framework": "nextjs",
-  "installCommand": "npm install --workspace=apps/web-storefront",
-  "buildCommand": "npx turbo build --filter=@trayloop/web-storefront"
+  "installCommand": "cd ../.. && npm install",
+  "buildCommand": "next build"
 }
