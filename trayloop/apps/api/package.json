@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "tsx src/server.ts",
     "lint": "eslint src/",
     "type-check": "tsc --noEmit"
   },
@@ -17,13 +17,13 @@
     "ioredis": "^5.4.0",
     "zod": "^3.23.0",
     "drizzle-orm": "0.44.2",
+    "tsx": "^4.0.0",
     "@trayloop/database": "*",
     "@trayloop/types": "*",
     "@trayloop/auth": "*",
     "@trayloop/utils": "*"
   },
   "devDependencies": {
-    "tsx": "^4.0.0",
     "typescript": "^5.5.0",
     "@types/node": "^20.0.0",
     "@types/nodemailer": "^6.4.0"
