@@ -14,15 +14,9 @@ const connectionString =
 const url = new URL(connectionString);
 const hostname = url.hostname;
 const port = url.port || '5432';
-
-console.log('[db] connecting to', {
-  host: hostname,
-  port,
-  user: url.username,
-  database: url.pathname.slice(1),
-  ssl: url.searchParams.get('sslmode') ?? 'auto',
-  hasDatabaseUrl: !!DATABASE_URL,
-});
+const username = decodeURIComponent(url.username);
+const password = decodeURIComponent(url.password);
+const database = url.pathname.slice(1);
 
 const isSupabase =
   hostname.endsWith('.supabase.co') ||
@@ -33,9 +27,24 @@ const hasExplicitSsl =
 
 const isTransactionPooler = port === '6543';
 
-const client = postgres(connectionString, {
-  ...(isSupabase && !hasExplicitSsl ? { ssl: 'require' } : {}),
-  ...(isTransactionPooler ? { prepare: false } : {}),
+console.log('[db] connecting to', {
+  host: hostname,
+  port,
+  user: username,
+  database,
+  ssl: hasExplicitSsl ? url.searchParams.get('sslmode') ?? url.searchParams.get('ssl') : (isSupabase ? 'require (auto)' : 'off'),
+  prepare: isTransactionPooler ? false : true,
+  hasDatabaseUrl: !!DATABASE_URL,
+});
+
+const client = postgres({
+  host: hostname,
+  port: Number(port),
+  username,
+  password,
+  database,
+  ssl: isSupabase || hasExplicitSsl ? 'require' : undefined,
+  prepare: isTransactionPooler ? false : true,
 });
 
 export const db = drizzle(client, { schema });
