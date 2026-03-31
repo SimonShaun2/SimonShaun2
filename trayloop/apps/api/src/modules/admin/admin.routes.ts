@@ -1,10 +1,18 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { requireAuth } from '../../lib/middleware/auth.js';
+import { ForbiddenError } from '../../lib/errors.js';
 import * as service from './admin.service.js';
 
+async function requirePlatformAdmin(request: FastifyRequest, _reply: FastifyReply) {
+  if (request.ctx?.user?.role !== 'admin') {
+    throw new ForbiddenError('Platform admin access required');
+  }
+}
+
 export function registerRoutes(app: FastifyInstance) {
-  // All admin routes require auth + admin role check
+  // All admin routes require auth + platform admin role
   app.addHook('preHandler', requireAuth);
+  app.addHook('preHandler', requirePlatformAdmin);
 
   app.get('/organizations', async (request) => {
     const orgs = await service.listOrganizations();

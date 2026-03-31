@@ -10,7 +10,20 @@ if (!DATABASE_URL && process.env.NODE_ENV === 'production') {
 
 const connectionString = DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/trayloop';
 
-const client = postgres(connectionString);
+const url = new URL(connectionString);
+const isSupabase =
+  url.hostname.endsWith('.supabase.co') ||
+  url.hostname.endsWith('.pooler.supabase.com');
+
+const hasExplicitSsl =
+  url.searchParams.has('sslmode') || url.searchParams.has('ssl');
+
+const isTransactionPooler = url.port === '6543';
+
+const client = postgres(connectionString, {
+  ...(isSupabase && !hasExplicitSsl ? { ssl: 'require' } : {}),
+  ...(isTransactionPooler ? { prepare: false } : {}),
+});
 
 export const db = drizzle(client, { schema });
 export type Database = typeof db;

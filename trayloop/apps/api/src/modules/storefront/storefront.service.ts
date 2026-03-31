@@ -55,6 +55,7 @@ export async function getStorefront(slug: string) {
       pickupEnabled: locationSettings.pickupEnabled,
       deliveryRadius: locationSettings.deliveryRadius,
       operatingHours: locationSettings.operatingHours,
+      depositRequired: locationSettings.depositRequired,
     })
     .from(locations)
     .leftJoin(locationSettings, eq(locationSettings.locationId, locations.id))
@@ -76,6 +77,7 @@ export async function getStorefront(slug: string) {
     pickupEnabled: row.pickupEnabled ?? false,
     deliveryRadiusMiles: row.deliveryRadius ?? null,
     operatingHours: row.operatingHours ?? null,
+    depositRequired: row.depositRequired ?? true,
   }));
 
   // 3. Fetch active catalogs
