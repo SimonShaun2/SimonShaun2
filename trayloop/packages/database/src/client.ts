@@ -8,17 +8,21 @@ if (!DATABASE_URL && process.env.NODE_ENV === 'production') {
   throw new Error('DATABASE_URL is required in production');
 }
 
-const connectionString = DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/trayloop';
+const connectionString =
+  DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/trayloop';
 
 const url = new URL(connectionString);
+const hostname = url.hostname;
+const port = url.port || '5432';
+
 const isSupabase =
-  url.hostname.endsWith('.supabase.co') ||
-  url.hostname.endsWith('.pooler.supabase.com');
+  hostname.endsWith('.supabase.co') ||
+  hostname.endsWith('.pooler.supabase.com');
 
 const hasExplicitSsl =
   url.searchParams.has('sslmode') || url.searchParams.has('ssl');
 
-const isTransactionPooler = url.port === '6543';
+const isTransactionPooler = port === '6543';
 
 const client = postgres(connectionString, {
   ...(isSupabase && !hasExplicitSsl ? { ssl: 'require' } : {}),
