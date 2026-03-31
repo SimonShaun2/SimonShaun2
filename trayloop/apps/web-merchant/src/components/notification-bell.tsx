@@ -37,13 +37,13 @@ export default function NotificationBell() {
   }, []);
 
   async function fetchNotifications() {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) return;
     try {
       const res = await apiFetch('/api/notifications');
       setNotifications(res.data);
       setUnread(res.meta?.unread ?? 0);
-    } catch {
-      // Silent fail — notifications are non-critical
-    }
+    } catch { /* non-critical */ }
   }
 
   async function handleMarkAllRead() {
