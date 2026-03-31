@@ -73,9 +73,6 @@ export default function LoginPage() {
       <p style={{ marginTop: '1rem', fontSize: '0.8rem', color: '#6b7280', textAlign: 'center' }}>
         New merchant? <a href="/register" style={{ color: '#2563eb' }}>Create an account</a>
       </p>
-      <p style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#9ca3af', textAlign: 'center' }}>
-        Test: owner@trayloop.dev / password123
-      </p>
     </div>
   );
 }
