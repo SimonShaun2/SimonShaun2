@@ -15,6 +15,15 @@ const url = new URL(connectionString);
 const hostname = url.hostname;
 const port = url.port || '5432';
 
+console.log('[db] connecting to', {
+  host: hostname,
+  port,
+  user: url.username,
+  database: url.pathname.slice(1),
+  ssl: url.searchParams.get('sslmode') ?? 'auto',
+  hasDatabaseUrl: !!DATABASE_URL,
+});
+
 const isSupabase =
   hostname.endsWith('.supabase.co') ||
   hostname.endsWith('.pooler.supabase.com');
