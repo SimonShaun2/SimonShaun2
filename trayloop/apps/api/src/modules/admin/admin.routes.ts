@@ -10,33 +10,30 @@ async function requirePlatformAdmin(request: FastifyRequest, _reply: FastifyRepl
 }
 
 export function registerRoutes(app: FastifyInstance) {
-  // All admin routes require auth + platform admin role
   app.addHook('preHandler', requireAuth);
   app.addHook('preHandler', requirePlatformAdmin);
 
-  app.get('/organizations', async (request) => {
+  app.get('/organizations', async () => {
     const orgs = await service.listOrganizations();
     return { data: orgs };
   });
 
-  // ADM-004: Restaurant directory with health, GMV, owner data
-  app.get('/restaurants', async (request) => {
+  app.get('/restaurants', async () => {
     const restaurants = await service.listRestaurantDirectory();
     return { data: restaurants };
   });
 
-  app.get('/users', async (request) => {
+  app.get('/users', async () => {
     const users = await service.listUsers();
     return { data: users };
   });
 
-  app.get('/stats', async (request) => {
+  app.get('/stats', async () => {
     const stats = await service.getPlatformStats();
     return { data: stats };
   });
 
-  // ADM-002: Consolidated platform overview for master dashboard
-  app.get('/overview', async (request) => {
+  app.get('/overview', async () => {
     const overview = await service.getPlatformOverview();
     return { data: overview };
   });

@@ -15,7 +15,7 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
       localStorage.removeItem('admin_token');
       window.location.href = '/login';
     }
-    throw new Error('Unauthorized');
+    throw new Error(res.status === 403 ? 'Admin access required' : 'Unauthorized');
   }
 
   const json = await res.json();
