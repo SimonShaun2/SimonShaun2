@@ -1,10 +1,10 @@
 import { db } from '@trayloop/database';
-import { users, organizationMemberships, organizations } from '@trayloop/database';
+import { users, organizationMemberships, organizations, customers, orders } from '@trayloop/database';
 import { hashPassword, comparePassword, createToken, verifyToken } from '@trayloop/auth';
-import { eq } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { ValidationError, UnauthorizedError, NotFoundError } from '../../lib/errors.js';
 import type { EventBus } from '../../lib/event-bus/index.js';
-import type { RegisterInput, LoginInput } from './auth.schema.js';
+import type { RegisterInput, LoginInput, CustomerRegisterInput } from './auth.schema.js';
 
 export async function register(input: RegisterInput, eventBus: EventBus) {
   const [existing] = await db
@@ -35,6 +35,63 @@ export async function register(input: RegisterInput, eventBus: EventBus) {
       name: users.name,
       role: users.role,
     });
+
+  const token = await createToken({
+    sub: user.id,
+    email: user.email,
+    role: user.role,
+  });
+
+  await eventBus.emit('user.registered', { userId: user.id, email: user.email });
+
+  return {
+    user: { id: user.id, email: user.email, name: user.name, role: user.role },
+    token,
+  };
+}
+
+async function linkCustomersByEmailToUser(userId: string, email: string) {
+  await db
+    .update(customers)
+    .set({
+      userId,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(customers.email, email), isNull(customers.userId)));
+}
+
+export async function registerCustomer(input: CustomerRegisterInput, eventBus: EventBus) {
+  const [existing] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, input.email))
+    .limit(1);
+
+  if (existing) {
+    throw new ValidationError('Email already registered');
+  }
+
+  const passwordHash = await hashPassword(input.password);
+  const displayName = `${input.firstName} ${input.lastName}`.trim();
+
+  const [user] = await db
+    .insert(users)
+    .values({
+      email: input.email,
+      name: displayName,
+      passwordHash,
+      role: 'customer',
+      emailVerified: false,
+      isActive: true,
+    })
+    .returning({
+      id: users.id,
+      email: users.email,
+      name: users.name,
+      role: users.role,
+    });
+
+  await linkCustomersByEmailToUser(user.id, user.email);
 
   const token = await createToken({
     sub: user.id,
@@ -172,6 +229,121 @@ export async function getMe(userId: string) {
       name: m.orgName,
       slug: m.orgSlug,
       role: m.role,
+    })),
+  };
+}
+
+export async function getCustomerAccount(userId: string) {
+  const [user] = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      name: users.name,
+      role: users.role,
+      emailVerified: users.emailVerified,
+      createdAt: users.createdAt,
+    })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  if (!user) {
+    throw new NotFoundError('User');
+  }
+
+  if (user.role !== 'customer') {
+    throw new UnauthorizedError('Customer account required');
+  }
+
+  const linkedCustomers = await db
+    .select({
+      id: customers.id,
+      organizationId: customers.organizationId,
+      email: customers.email,
+      firstName: customers.firstName,
+      lastName: customers.lastName,
+      phone: customers.phone,
+      companyName: customers.companyName,
+      createdAt: customers.createdAt,
+      organizationName: organizations.name,
+      organizationSlug: organizations.slug,
+    })
+    .from(customers)
+    .innerJoin(organizations, eq(organizations.id, customers.organizationId))
+    .where(eq(customers.userId, userId))
+    .orderBy(desc(customers.updatedAt), desc(customers.createdAt));
+
+  const customerIds = linkedCustomers.map((customer) => customer.id);
+  const orderRows = customerIds.length === 0
+    ? []
+    : await db
+        .select({
+          id: orders.id,
+          orderNumber: orders.orderNumber,
+          status: orders.status,
+          totalAmount: orders.totalAmount,
+          currency: orders.currency,
+          headCount: orders.headCount,
+          scheduledAt: orders.scheduledAt,
+          createdAt: orders.createdAt,
+          customerId: orders.customerId,
+          organizationName: organizations.name,
+          organizationSlug: organizations.slug,
+        })
+        .from(orders)
+        .innerJoin(organizations, eq(organizations.id, orders.organizationId))
+        .where(inArray(orders.customerId, customerIds))
+        .orderBy(desc(orders.scheduledAt), desc(orders.createdAt));
+
+  const primaryCustomer = linkedCustomers[0] ?? null;
+
+  return {
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      emailVerified: user.emailVerified,
+      createdAt: user.createdAt,
+    },
+    profile: primaryCustomer
+      ? {
+          firstName: primaryCustomer.firstName,
+          lastName: primaryCustomer.lastName,
+          email: primaryCustomer.email,
+          phone: primaryCustomer.phone,
+          companyName: primaryCustomer.companyName,
+        }
+      : {
+          firstName: user.name.split(' ')[0] ?? '',
+          lastName: user.name.split(' ').slice(1).join(' '),
+          email: user.email,
+          phone: null,
+          companyName: null,
+        },
+    customerRecords: linkedCustomers.map((customer) => ({
+      id: customer.id,
+      organizationId: customer.organizationId,
+      organizationName: customer.organizationName,
+      organizationSlug: customer.organizationSlug,
+      firstName: customer.firstName,
+      lastName: customer.lastName,
+      email: customer.email,
+      phone: customer.phone,
+      companyName: customer.companyName,
+      createdAt: customer.createdAt,
+    })),
+    orders: orderRows.map((order) => ({
+      id: order.id,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      totalAmount: order.totalAmount,
+      currency: order.currency,
+      headCount: order.headCount,
+      scheduledAt: order.scheduledAt,
+      createdAt: order.createdAt,
+      organizationName: order.organizationName,
+      organizationSlug: order.organizationSlug,
     })),
   };
 }

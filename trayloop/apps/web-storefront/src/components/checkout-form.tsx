@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { StorefrontData, OrderSubmission, OrderConfirmation } from '../lib/api';
-import { submitOrder, OrderError } from '../lib/api';
+import { fetchCustomerAccount, submitOrder, OrderError } from '../lib/api';
 
 interface Props {
   data: StorefrontData;
@@ -108,6 +108,7 @@ export default function CheckoutForm({ data }: Props) {
   const [notes, setNotes] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
+  const [customerSignedIn, setCustomerSignedIn] = useState(false);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Array<{ field: string; message: string }>>([]);
   const [confirmation, setConfirmation] = useState<OrderConfirmation | null>(null);
@@ -115,6 +116,33 @@ export default function CheckoutForm({ data }: Props) {
   const searchParams = useSearchParams();
 
   const selectedLocation = locations.find((l) => l.slug === selectedLocationSlug) ?? locations[0] ?? null;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function hydrateCustomer() {
+      try {
+        const account = await fetchCustomerAccount();
+        if (cancelled) return;
+
+        setCustomerSignedIn(true);
+        setFirstName((current) => current || account.profile.firstName || '');
+        setLastName((current) => current || account.profile.lastName || '');
+        setEmail((current) => current || account.profile.email || '');
+        setPhone((current) => current || account.profile.phone || '');
+        setCompanyName((current) => current || account.profile.companyName || '');
+      } catch {
+        if (!cancelled) {
+          setCustomerSignedIn(false);
+        }
+      }
+    }
+
+    void hydrateCustomer();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const togglePkg = (id: string) => {
     setSelectedPkgs((prev) => {
@@ -925,6 +953,22 @@ export default function CheckoutForm({ data }: Props) {
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>Your Details</h2>
           <p style={sectionSubtitleStyle}>We'll send confirmation + payment link here</p>
+          {customerSignedIn && (
+            <div style={{
+              marginTop: 16,
+              background: '#F5F5F4',
+              border: `1px solid ${T.cardBorder}`,
+              borderRadius: 10,
+              padding: '12px 14px',
+            }}>
+              <p style={{ margin: 0, fontSize: 13, color: T.textPrimary, fontWeight: 600 }}>
+                Signed in customer
+              </p>
+              <p style={{ margin: '4px 0 0', fontSize: 12, color: T.textMuted }}>
+                We prefilled your details from your TrayLoop account. You can still edit them for this order.
+              </p>
+            </div>
+          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: 20 }}>
             <div>

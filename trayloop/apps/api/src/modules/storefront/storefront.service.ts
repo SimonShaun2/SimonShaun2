@@ -257,7 +257,7 @@ export async function getStorefront(slug: string) {
   };
 }
 
-export async function submitPublicOrder(slug: string, input: CreateOrderInput, eventBus: EventBus) {
+export async function submitPublicOrder(slug: string, input: CreateOrderInput, eventBus: EventBus, customerUserId?: string) {
   // Resolve org from slug
   const [org] = await db
     .select({
@@ -273,7 +273,7 @@ export async function submitPublicOrder(slug: string, input: CreateOrderInput, e
     throw new NotFoundError('Storefront');
   }
 
-  const order = await createOrder(org.id, input, eventBus);
+  const order = await createOrder(org.id, input, eventBus, customerUserId);
   const selectedLocation = input.locationId
     ? (await db
         .select({ depositRequired: locationSettings.depositRequired })

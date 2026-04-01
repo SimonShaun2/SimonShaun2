@@ -3,6 +3,7 @@ import { fetchStorefront } from '../../lib/api';
 import type { StorefrontData } from '../../lib/api';
 import type { Metadata } from 'next';
 import CheckoutForm from '../../components/checkout-form';
+import StorefrontAuthNav from '../../components/storefront-auth-nav';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -94,9 +95,11 @@ function Header({ merchantName, merchantDescription }: { merchantName: string; m
           fontSize: 13,
           fontWeight: 500,
           letterSpacing: '0.5px',
+          flex: 1,
         }}>
           {merchantDescription || 'Catering & Events'}
         </span>
+        <StorefrontAuthNav />
       </div>
     </header>
   );

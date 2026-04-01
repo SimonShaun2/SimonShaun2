@@ -940,7 +940,7 @@ function validateLeadTime(
 
 // --- Create Order ---
 
-export async function create(orgId: string, input: CreateOrderInput, eventBus: EventBus) {
+export async function create(orgId: string, input: CreateOrderInput, eventBus: EventBus, customerUserId?: string) {
   const eventDate = new Date(input.eventDate);
 
   // 1. Validate location ownership, active status, and fetch settings
@@ -967,7 +967,7 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
   const result = await db.transaction(async (tx) => {
     // 5a. Find or create customer (scoped to org)
     const [existingCustomer] = await tx
-      .select({ id: customers.id, phone: customers.phone, companyName: customers.companyName })
+      .select({ id: customers.id, userId: customers.userId, phone: customers.phone, companyName: customers.companyName })
       .from(customers)
       .where(and(
         eq(customers.email, input.customer.email),
@@ -978,9 +978,13 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
     let customerId: string;
     if (existingCustomer) {
       customerId = existingCustomer.id;
+      if (customerUserId && existingCustomer.userId && existingCustomer.userId !== customerUserId) {
+        throw new ValidationError('This email is already linked to a different customer account for this merchant');
+      }
       await tx
         .update(customers)
         .set({
+          userId: customerUserId ?? existingCustomer.userId ?? undefined,
           firstName: input.customer.firstName,
           lastName: input.customer.lastName,
           phone: input.customer.phone ?? existingCustomer.phone,
@@ -993,6 +997,7 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
         .insert(customers)
         .values({
           organizationId: orgId,
+          userId: customerUserId,
           email: input.customer.email,
           firstName: input.customer.firstName,
           lastName: input.customer.lastName,

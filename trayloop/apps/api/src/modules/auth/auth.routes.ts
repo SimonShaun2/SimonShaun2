@@ -1,13 +1,18 @@
 import type { FastifyInstance } from 'fastify';
 import { validateBody } from '../../lib/middleware/validate.js';
 import { requireAuth } from '../../lib/middleware/auth.js';
-import { registerSchema, loginSchema, refreshSchema } from './auth.schema.js';
+import { registerSchema, customerRegisterSchema, loginSchema, refreshSchema } from './auth.schema.js';
 import * as service from './auth.service.js';
 
 export function registerRoutes(app: FastifyInstance) {
   // Public routes
   app.post('/register', { preHandler: [validateBody(registerSchema)] }, async (request, reply) => {
     const result = await service.register((request as any).validatedBody, (app as any).eventBus);
+    return reply.status(201).send({ data: result });
+  });
+
+  app.post('/register/customer', { preHandler: [validateBody(customerRegisterSchema)] }, async (request, reply) => {
+    const result = await service.registerCustomer((request as any).validatedBody, (app as any).eventBus);
     return reply.status(201).send({ data: result });
   });
 
@@ -25,6 +30,11 @@ export function registerRoutes(app: FastifyInstance) {
   // Protected routes
   app.get('/me', { preHandler: [requireAuth] }, async (request) => {
     const result = await service.getMe(request.ctx.user.id);
+    return { data: result };
+  });
+
+  app.get('/customer/account', { preHandler: [requireAuth] }, async (request) => {
+    const result = await service.getCustomerAccount(request.ctx.user.id);
     return { data: result };
   });
 

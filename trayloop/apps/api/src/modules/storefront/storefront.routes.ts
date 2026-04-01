@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { calculatePricing } from '../../lib/pricing.js';
+import { optionalAuth } from '../../lib/middleware/auth.js';
 import { createOrderSchema } from '../orders/orders.schema.js';
 import * as service from './storefront.service.js';
 
@@ -58,10 +59,11 @@ export function registerRoutes(app: FastifyInstance) {
   });
 
   // Public order submission — resolves org from slug, no auth needed
-  app.post('/:slug/order', async (request, reply) => {
+  app.post('/:slug/order', { preHandler: [optionalAuth] }, async (request, reply) => {
     const { slug } = request.params as { slug: string };
     const body = createOrderSchema.parse(request.body);
-    const result = await service.submitPublicOrder(slug, body, (app as any).eventBus);
+    const customerUserId = (request as any).ctx?.user?.role === 'customer' ? (request as any).ctx.user.id : undefined;
+    const result = await service.submitPublicOrder(slug, body, (app as any).eventBus, customerUserId);
     return reply.status(201).send({ data: result });
   });
 }
