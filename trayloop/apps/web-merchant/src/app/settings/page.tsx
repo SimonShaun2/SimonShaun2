@@ -2,7 +2,15 @@
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { apiFetch, fetchStorefrontContext, type MerchantStorefrontContext } from '../../lib/api';
+import {
+  apiFetch,
+  createBillingCheckout,
+  createBillingPortal,
+  fetchBillingSubscription,
+  fetchStorefrontContext,
+  type MerchantBillingSubscription,
+  type MerchantStorefrontContext,
+} from '../../lib/api';
 import { clearMerchantSession, merchantResetHref } from '../../lib/session';
 import { useMobile } from '../../lib/use-mobile';
 
@@ -168,6 +176,7 @@ function SettingsContent() {
   const isMobile = useMobile();
   const searchParams = useSearchParams();
   const stripeParam = searchParams.get('stripe');
+  const billingParam = searchParams.get('billing');
 
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>(DEFAULTS);
@@ -175,6 +184,7 @@ function SettingsContent() {
   const [stats, setStats] = useState<OrderStats | null>(null);
   const [locations, setLocations] = useState<Location[]>([]);
   const [storefrontContext, setStorefrontContext] = useState<MerchantStorefrontContext | null>(null);
+  const [billingSubscription, setBillingSubscription] = useState<MerchantBillingSubscription | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<string | 'new'>('new');
   const [organizationForm, setOrganizationForm] = useState<OrganizationFormState>({
     name: '',
@@ -187,6 +197,7 @@ function SettingsContent() {
   const [setupState, setSetupState] = useState<SetupState>('loading');
   const [loading, setLoading] = useState(true);
   const [paymentActionLoading, setPaymentActionLoading] = useState(false);
+  const [billingActionLoading, setBillingActionLoading] = useState<'checkout' | 'portal' | null>(null);
   const [bannerMessage, setBannerMessage] = useState('');
   const [bannerTone, setBannerTone] = useState<'success' | 'warning' | 'error'>('success');
   const [profileSaving, setProfileSaving] = useState(false);
@@ -234,13 +245,14 @@ function SettingsContent() {
     setBannerMessage('');
 
     try {
-      const [orgRes, setupRes, initialPaymentRes, statsRes, locationsRes, storefrontRes] = await Promise.all([
+      const [orgRes, setupRes, initialPaymentRes, statsRes, locationsRes, storefrontRes, billingRes] = await Promise.all([
         apiFetch('/api/organizations/current'),
         apiFetch('/api/organizations/current/setup-status'),
         apiFetch('/api/organizations/current/payment-status').catch(() => ({ data: DEFAULTS })),
         apiFetch('/api/orders/stats').catch(() => ({ data: null })),
         apiFetch('/api/locations').catch(() => ({ data: [] })),
         fetchStorefrontContext().catch(() => null),
+        fetchBillingSubscription().catch(() => null),
       ]);
 
       const paymentRes =
@@ -257,6 +269,7 @@ function SettingsContent() {
       setStats(statsRes.data);
       setLocations(nextLocations);
       setStorefrontContext(storefrontRes);
+      setBillingSubscription(billingRes);
       applyStatus(paymentRes.data ?? DEFAULTS);
 
       localStorage.setItem('orgSlug', storefrontRes?.organization.slug ?? setupRes.data?.slug ?? nextOrganization.slug);
@@ -336,6 +349,39 @@ function SettingsContent() {
       setBannerMessage(err instanceof Error ? err.message : 'Failed to start payment setup');
     } finally {
       setPaymentActionLoading(false);
+    }
+  }
+
+  async function handleStartSubscription() {
+    setBillingActionLoading('checkout');
+    setBannerMessage('');
+    try {
+      const result = await createBillingCheckout({
+        successUrl: `${window.location.origin}/settings?billing=success`,
+        cancelUrl: `${window.location.origin}/settings?billing=cancel`,
+      });
+      window.location.href = result.url;
+    } catch (err) {
+      setBannerTone('error');
+      setBannerMessage(err instanceof Error ? err.message : 'Failed to start subscription checkout');
+    } finally {
+      setBillingActionLoading(null);
+    }
+  }
+
+  async function handleManageSubscription() {
+    setBillingActionLoading('portal');
+    setBannerMessage('');
+    try {
+      const result = await createBillingPortal({
+        returnUrl: `${window.location.origin}/settings#billing`,
+      });
+      window.location.href = result.url;
+    } catch (err) {
+      setBannerTone('error');
+      setBannerMessage(err instanceof Error ? err.message : 'Failed to open subscription manager');
+    } finally {
+      setBillingActionLoading(null);
     }
   }
 
@@ -438,6 +484,36 @@ function SettingsContent() {
     },
   }[setupState];
 
+  const billingState = billingSubscription?.state ?? 'not_started';
+  const billingHeadline =
+    billingState === 'trialing'
+      ? `${billingSubscription?.planName ?? 'TrayLoop Pro'} trial`
+      : billingState === 'active'
+        ? `${billingSubscription?.planName ?? 'TrayLoop Pro'} active`
+        : billingState === 'past_due'
+          ? 'Billing attention required'
+          : billingState === 'unpaid'
+            ? 'Subscription unpaid'
+            : billingState === 'canceled'
+              ? 'Subscription canceled'
+              : 'Start your subscription';
+  const billingDetail =
+    billingState === 'trialing'
+      ? billingSubscription?.trialDaysRemaining != null
+        ? `${billingSubscription.trialDaysRemaining} day${billingSubscription.trialDaysRemaining === 1 ? '' : 's'} remaining in your free trial`
+        : 'Your free trial is active.'
+      : billingState === 'active'
+        ? billingSubscription?.subscription?.currentPeriodEnd
+          ? `Next billing ${new Date(billingSubscription.subscription.currentPeriodEnd).toLocaleDateString()}`
+          : '$99/mo subscription is active'
+        : billingState === 'past_due'
+          ? 'Update your payment method to keep your storefront live.'
+          : billingState === 'unpaid'
+            ? 'Stripe marked this subscription unpaid. Open billing to resolve it.'
+            : billingState === 'canceled'
+              ? 'Resubscribe to reactivate TrayLoop Pro.'
+              : 'Subscribe to TrayLoop Pro to start your billing trial and keep your storefront live.';
+
   if (loading && !organization) {
     return <p style={{ color: '#6b7280' }}>Loading settings...</p>;
   }
@@ -456,6 +532,12 @@ function SettingsContent() {
       ) : null}
       {stripeParam === 'refresh' ? (
         <Banner bg="#FEF3C7" border="#FDE68A" color="#92400E" text="Your Stripe session expired. Continue below to finish setup." />
+      ) : null}
+      {billingParam === 'success' ? (
+        <Banner bg="#F0FDF4" border="#BBF7D0" color="#166534" text="Subscription checkout completed. Stripe will sync your billing status shortly." />
+      ) : null}
+      {billingParam === 'cancel' ? (
+        <Banner bg="#FFFBEB" border="#FDE68A" color="#92400E" text="Subscription checkout was canceled before completion." />
       ) : null}
       {bannerMessage ? (
         <Banner
@@ -890,29 +972,97 @@ function SettingsContent() {
             </div>
           </SectionCard>
 
-          <SectionCard id="billing" title="Billing & Security" subtitle="Billing visibility is tied to Stripe setup today; deeper subscription controls can follow later.">
-            <KeyValueGrid
-              items={[
-                ['Merchant billing state', paymentStatus.onboardingComplete ? 'Payment-ready' : 'Setup in progress'],
-                ['Storefront readiness', setupStatus?.isComplete ? 'Live' : 'Incomplete'],
-                ['Security basics', 'Password reset and sign-out are live'],
-                ['Advanced billing tools', 'Coming soon'],
-              ]}
-            />
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
-              <a href={merchantResetHref()} style={secondaryButtonStyle}>
-                Reset Password
-              </a>
-              {selectedLocationStorefrontUrl || storefrontUrl ? (
-                <a
-                  href={selectedLocationStorefrontUrl ?? storefrontUrl ?? '#'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={primaryButtonStyle}
-                >
-                  {selectedLocation ? 'Open Selected Location' : 'Open Storefront'}
-                </a>
-              ) : null}
+          <SectionCard id="billing" title="Billing & Security" subtitle="Manage your TrayLoop Pro subscription and basic account security from one place.">
+            <div
+              style={{
+                border: '1px solid #E7E5E4',
+                borderRadius: 12,
+                padding: '16px 18px',
+                background:
+                  billingState === 'active'
+                    ? '#F8FAFC'
+                    : billingState === 'trialing'
+                      ? '#FFFBEB'
+                      : billingState === 'past_due' || billingState === 'unpaid'
+                        ? '#FEF2F2'
+                        : '#FAFAF9',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
+                <div style={{ minWidth: 260, flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        padding: '4px 10px',
+                        borderRadius: 999,
+                        background:
+                          billingState === 'active'
+                            ? '#DCFCE7'
+                            : billingState === 'trialing'
+                              ? '#FEF3C7'
+                              : billingState === 'past_due' || billingState === 'unpaid'
+                                ? '#FEE2E2'
+                                : billingState === 'canceled'
+                                  ? '#F3F4F6'
+                                  : '#E7E5E4',
+                        color:
+                          billingState === 'active'
+                            ? '#166534'
+                            : billingState === 'trialing'
+                              ? '#92400E'
+                              : billingState === 'past_due' || billingState === 'unpaid'
+                                ? '#B91C1C'
+                                : '#57534E',
+                      }}
+                    >
+                      {billingState.replace('_', ' ')}
+                    </span>
+                    <strong style={{ fontSize: 16, color: '#1C1917' }}>{billingHeadline}</strong>
+                  </div>
+                  <p style={{ fontSize: 14, color: '#57534E', margin: '0 0 14px', lineHeight: 1.6 }}>
+                    {billingDetail}
+                  </p>
+                  <KeyValueGrid
+                    items={[
+                      ['Plan', `${billingSubscription?.planName ?? 'TrayLoop Pro'} - $${((billingSubscription?.priceCents ?? 9900) / 100).toFixed(0)}/${billingSubscription?.interval ?? 'month'}`],
+                      ['Subscription status', billingState.replace('_', ' ')],
+                      ['Storefront readiness', setupStatus?.isComplete ? 'Live' : 'Incomplete'],
+                      ['Security basics', 'Password reset and sign-out are live'],
+                    ]}
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {billingSubscription?.canCheckout ? (
+                    <button type="button" onClick={handleStartSubscription} disabled={billingActionLoading !== null} style={primaryButtonStyle}>
+                      {billingActionLoading === 'checkout'
+                        ? 'Redirecting...'
+                        : billingState === 'canceled'
+                          ? 'Resubscribe'
+                          : 'Subscribe'}
+                    </button>
+                  ) : null}
+                  {billingSubscription?.canManage ? (
+                    <button type="button" onClick={handleManageSubscription} disabled={billingActionLoading !== null} style={secondaryButtonStyle}>
+                      {billingActionLoading === 'portal' ? 'Opening...' : 'Manage Subscription'}
+                    </button>
+                  ) : null}
+                  <a href={merchantResetHref()} style={secondaryButtonStyle}>
+                    Reset Password
+                  </a>
+                  {selectedLocationStorefrontUrl || storefrontUrl ? (
+                    <a
+                      href={selectedLocationStorefrontUrl ?? storefrontUrl ?? '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={secondaryButtonStyle}
+                    >
+                      {selectedLocation ? 'Open Selected Location' : 'Open Storefront'}
+                    </a>
+                  ) : null}
+                </div>
+              </div>
             </div>
           </SectionCard>
         </div>

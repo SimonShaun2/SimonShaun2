@@ -28,6 +28,7 @@ DROP TABLE IF EXISTS catalogs CASCADE;
 DROP TABLE IF EXISTS location_settings CASCADE;
 DROP TABLE IF EXISTS locations CASCADE;
 DROP TABLE IF EXISTS organization_memberships CASCADE;
+DROP TABLE IF EXISTS subscriptions CASCADE;
 DROP TABLE IF EXISTS organizations CASCADE;
 DROP TABLE IF EXISTS password_reset_tokens CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
@@ -40,6 +41,7 @@ DROP TYPE IF EXISTS member_role CASCADE;
 DROP TYPE IF EXISTS member_status CASCADE;
 DROP TYPE IF EXISTS order_status CASCADE;
 DROP TYPE IF EXISTS service_mode CASCADE;
+DROP TYPE IF EXISTS subscription_status CASCADE;
 DROP TYPE IF EXISTS payment_status CASCADE;
 DROP TYPE IF EXISTS payment_method CASCADE;
 DROP TYPE IF EXISTS deposit_status CASCADE;
@@ -59,6 +61,7 @@ CREATE TYPE member_role AS ENUM ('owner', 'admin', 'manager', 'staff');
 CREATE TYPE member_status AS ENUM ('invited', 'active', 'suspended', 'removed');
 CREATE TYPE order_status AS ENUM ('submitted', 'awaiting_deposit', 'confirmed', 'completed', 'cancelled');
 CREATE TYPE service_mode AS ENUM ('delivery', 'pickup', 'full_service', 'on_site', 'food_truck');
+CREATE TYPE subscription_status AS ENUM ('trialing', 'active', 'past_due', 'canceled', 'unpaid');
 CREATE TYPE payment_status AS ENUM ('pending', 'processing', 'succeeded', 'failed', 'refunded', 'partially_refunded');
 CREATE TYPE payment_method AS ENUM ('card', 'ach', 'cash', 'check', 'other');
 CREATE TYPE deposit_status AS ENUM ('pending', 'paid', 'refunded');
@@ -122,6 +125,25 @@ CREATE TABLE IF NOT EXISTS organizations (
   stripe_details_submitted BOOLEAN NOT NULL DEFAULT false,
   stripe_onboarding_complete BOOLEAN NOT NULL DEFAULT false,
   is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ---------------------------------------------------------------------------
+-- subscriptions
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS subscriptions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE UNIQUE,
+  stripe_customer_id TEXT NOT NULL UNIQUE,
+  stripe_subscription_id TEXT UNIQUE,
+  stripe_price_id TEXT,
+  status subscription_status NOT NULL DEFAULT 'trialing',
+  trial_start TIMESTAMPTZ,
+  trial_end TIMESTAMPTZ,
+  current_period_start TIMESTAMPTZ,
+  current_period_end TIMESTAMPTZ,
+  canceled_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

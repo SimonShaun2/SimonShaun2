@@ -1,8 +1,9 @@
 import type { FastifyInstance } from 'fastify';
+import Stripe from 'stripe';
 import { db } from '@trayloop/database';
-import { deposits, orders, customers, organizations } from '@trayloop/database';
-import { eq, and } from 'drizzle-orm';
-import { getStripe, isStripeEnabled, getWebhookSecret } from '../../lib/stripe.js';
+import { customers, deposits, orders, organizations, subscriptions } from '@trayloop/database';
+import { and, eq, inArray } from 'drizzle-orm';
+import { getStripe, getWebhookSecret, isStripeEnabled } from '../../lib/stripe.js';
 import { recordOrderEvent } from '../../lib/order-events.js';
 import { notifyDepositPaid } from '../../lib/notifications.js';
 import { logger } from '@trayloop/utils';
@@ -17,6 +18,8 @@ type DepositSession = {
   stripePaymentIntentId: string | null;
 };
 
+type LocalSubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid';
+
 function logDepositWebhook(
   level: 'info' | 'warn' | 'error',
   message: string,
@@ -24,8 +27,42 @@ function logDepositWebhook(
 ) {
   logger[level](message, {
     source: 'stripe-webhook',
+    area: 'deposit',
     ...context,
   });
+}
+
+function logSubscriptionWebhook(
+  level: 'info' | 'warn' | 'error',
+  message: string,
+  context: Record<string, unknown>,
+) {
+  logger[level](message, {
+    source: 'stripe-webhook',
+    area: 'subscription',
+    ...context,
+  });
+}
+
+function normalizeSubscriptionStatus(status: Stripe.Subscription.Status | string): LocalSubscriptionStatus {
+  switch (status) {
+    case 'trialing':
+      return 'trialing';
+    case 'active':
+      return 'active';
+    case 'past_due':
+      return 'past_due';
+    case 'unpaid':
+      return 'unpaid';
+    case 'canceled':
+    case 'incomplete_expired':
+      return 'canceled';
+    case 'incomplete':
+    case 'paused':
+      return 'past_due';
+    default:
+      return 'unpaid';
+  }
 }
 
 async function getDepositBySession(checkoutSessionId: string): Promise<DepositSession | null> {
@@ -46,8 +83,130 @@ async function getDepositBySession(checkoutSessionId: string): Promise<DepositSe
   return deposit ?? null;
 }
 
+async function resolveSubscriptionOrganizationId(subscription: Stripe.Subscription) {
+  const metadataOrgId = subscription.metadata?.trayloop_org_id;
+  if (metadataOrgId) {
+    return metadataOrgId;
+  }
+
+  const [existingBySubscription] = await db
+    .select({ organizationId: subscriptions.organizationId })
+    .from(subscriptions)
+    .where(eq(subscriptions.stripeSubscriptionId, subscription.id))
+    .limit(1);
+
+  if (existingBySubscription) {
+    return existingBySubscription.organizationId;
+  }
+
+  const stripeCustomerId =
+    typeof subscription.customer === 'string'
+      ? subscription.customer
+      : subscription.customer?.id ?? null;
+
+  if (!stripeCustomerId) {
+    return null;
+  }
+
+  const [existingByCustomer] = await db
+    .select({ organizationId: subscriptions.organizationId })
+    .from(subscriptions)
+    .where(eq(subscriptions.stripeCustomerId, stripeCustomerId))
+    .limit(1);
+
+  return existingByCustomer?.organizationId ?? null;
+}
+
+async function upsertSubscriptionSnapshot(
+  eventId: string,
+  eventType: string,
+  subscription: Stripe.Subscription,
+  overrideStatus?: LocalSubscriptionStatus,
+) {
+  const organizationId = await resolveSubscriptionOrganizationId(subscription);
+  const stripeCustomerId =
+    typeof subscription.customer === 'string'
+      ? subscription.customer
+      : subscription.customer?.id ?? null;
+
+  if (!organizationId || !stripeCustomerId) {
+    logSubscriptionWebhook('warn', 'Subscription webhook skipped because merchant mapping was missing', {
+      eventId,
+      eventType,
+      stripeSubscriptionId: subscription.id,
+      stripeCustomerId,
+      action: 'skipped',
+    });
+    return null;
+  }
+
+  const primaryItem = subscription.items.data[0];
+  const status = overrideStatus ?? normalizeSubscriptionStatus(subscription.status);
+  const currentPeriodStart = subscription.items.data.length > 0
+    ? new Date(subscription.current_period_start * 1000)
+    : null;
+  const currentPeriodEnd = subscription.items.data.length > 0
+    ? new Date(subscription.current_period_end * 1000)
+    : null;
+
+  const [record] = await db
+    .insert(subscriptions)
+    .values({
+      organizationId,
+      stripeCustomerId,
+      stripeSubscriptionId: subscription.id,
+      stripePriceId:
+        typeof primaryItem?.price === 'string'
+          ? primaryItem.price
+          : primaryItem?.price?.id ?? null,
+      status,
+      trialStart: subscription.trial_start ? new Date(subscription.trial_start * 1000) : null,
+      trialEnd: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null,
+      currentPeriodStart,
+      currentPeriodEnd,
+      canceledAt: subscription.canceled_at ? new Date(subscription.canceled_at * 1000) : null,
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: subscriptions.organizationId,
+      set: {
+        stripeCustomerId,
+        stripeSubscriptionId: subscription.id,
+        stripePriceId:
+          typeof primaryItem?.price === 'string'
+            ? primaryItem.price
+            : primaryItem?.price?.id ?? null,
+        status,
+        trialStart: subscription.trial_start ? new Date(subscription.trial_start * 1000) : null,
+        trialEnd: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null,
+        currentPeriodStart,
+        currentPeriodEnd,
+        canceledAt: subscription.canceled_at ? new Date(subscription.canceled_at * 1000) : null,
+        updatedAt: new Date(),
+      },
+    })
+    .returning({
+      id: subscriptions.id,
+      organizationId: subscriptions.organizationId,
+      stripeCustomerId: subscriptions.stripeCustomerId,
+      stripeSubscriptionId: subscriptions.stripeSubscriptionId,
+      status: subscriptions.status,
+    });
+
+  logSubscriptionWebhook('info', 'Subscription snapshot synced', {
+    eventId,
+    eventType,
+    organizationId,
+    stripeCustomerId,
+    stripeSubscriptionId: subscription.id,
+    status: record.status,
+    action: 'applied',
+  });
+
+  return record;
+}
+
 export async function webhookModule(app: FastifyInstance) {
-  // Stripe sends raw body — we need to access it before JSON parsing
   app.addContentTypeParser('application/json', { parseAs: 'buffer' }, (_req, body, done) => {
     done(null, body);
   });
@@ -62,7 +221,6 @@ export async function webhookModule(app: FastifyInstance) {
       return reply.status(400).send({ error: { code: 'MISSING_SIGNATURE', message: 'Missing stripe-signature header' } });
     }
 
-    // Verify webhook signature
     const stripe = getStripe();
     let event;
     try {
@@ -76,23 +234,30 @@ export async function webhookModule(app: FastifyInstance) {
       return reply.status(400).send({ error: { code: 'INVALID_SIGNATURE', message: 'Invalid webhook signature' } });
     }
 
-    logDepositWebhook('info', 'Stripe webhook received', {
+    logger.info('Stripe webhook received', {
+      source: 'stripe-webhook',
       eventId: event.id,
       eventType: event.type,
     });
 
-    // Route event to handler
     switch (event.type) {
       case 'checkout.session.completed':
-        await handleCheckoutSessionCompleted(event.id, event.data.object);
+        await handleCheckoutSessionCompleted(event.id, event.data.object as Stripe.Checkout.Session);
         break;
-
       case 'checkout.session.expired':
-        await handleCheckoutSessionExpired(event.id, event.data.object);
+        await handleCheckoutSessionExpired(event.id, event.data.object as Stripe.Checkout.Session);
         break;
-
+      case 'customer.subscription.created':
+      case 'customer.subscription.updated':
+      case 'customer.subscription.deleted':
+        await handleSubscriptionChanged(event.id, event.type, event.data.object as Stripe.Subscription);
+        break;
+      case 'invoice.payment_failed':
+        await handleInvoicePaymentFailed(event.id, event.data.object as Stripe.Invoice);
+        break;
       default:
-        logDepositWebhook('info', 'Unhandled webhook event type', {
+        logger.info('Unhandled webhook event type', {
+          source: 'stripe-webhook',
           eventId: event.id,
           eventType: event.type,
         });
@@ -102,21 +267,81 @@ export async function webhookModule(app: FastifyInstance) {
   });
 }
 
-// --- Event handlers ---
+async function handleSubscriptionChanged(
+  eventId: string,
+  eventType: string,
+  subscription: Stripe.Subscription,
+) {
+  const overrideStatus = eventType === 'customer.subscription.deleted' ? 'canceled' : undefined;
+  await upsertSubscriptionSnapshot(eventId, eventType, subscription, overrideStatus);
+}
 
-async function handleCheckoutSessionCompleted(eventId: string, session: any) {
-  // Only handle deposit sessions
+async function handleInvoicePaymentFailed(eventId: string, invoice: Stripe.Invoice) {
+  const stripeSubscriptionId =
+    typeof invoice.subscription === 'string'
+      ? invoice.subscription
+      : invoice.subscription?.id ?? null;
+
+  if (!stripeSubscriptionId) {
+    logSubscriptionWebhook('warn', 'Invoice payment failed event skipped because subscription was missing', {
+      eventId,
+      invoiceId: invoice.id,
+      action: 'skipped',
+    });
+    return;
+  }
+
+  const [updated] = await db
+    .update(subscriptions)
+    .set({
+      status: 'past_due',
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(subscriptions.stripeSubscriptionId, stripeSubscriptionId),
+        inArray(subscriptions.status, ['trialing', 'active', 'past_due', 'unpaid']),
+      ),
+    )
+    .returning({
+      id: subscriptions.id,
+      organizationId: subscriptions.organizationId,
+      status: subscriptions.status,
+    });
+
+  if (!updated) {
+    logSubscriptionWebhook('info', 'Invoice payment failed event skipped because subscription snapshot was not mutable', {
+      eventId,
+      invoiceId: invoice.id,
+      stripeSubscriptionId,
+      action: 'skipped',
+    });
+    return;
+  }
+
+  logSubscriptionWebhook('warn', 'Subscription marked past_due after invoice payment failure', {
+    eventId,
+    invoiceId: invoice.id,
+    stripeSubscriptionId,
+    organizationId: updated.organizationId,
+    status: updated.status,
+    action: 'applied',
+  });
+}
+
+async function handleCheckoutSessionCompleted(eventId: string, session: Stripe.Checkout.Session) {
   if (session.metadata?.trayloop_deposit !== 'true') {
     logDepositWebhook('info', 'Ignoring non-deposit checkout session', {
       eventId,
       checkoutSessionId: session.id,
+      action: 'skipped',
     });
     return;
   }
 
   const orderId = session.metadata?.trayloop_order_id;
   const checkoutSessionId = session.id;
-  const paymentIntentId = session.payment_intent as string | null;
+  const paymentIntentId = typeof session.payment_intent === 'string' ? session.payment_intent : null;
   const amount = session.amount_total ?? 0;
 
   if (!orderId) {
@@ -238,7 +463,6 @@ async function handleCheckoutSessionCompleted(eventId: string, session: any) {
     return;
   }
 
-  // Record timeline events (non-critical, idempotent by being after status check)
   try {
     await recordOrderEvent(orderId, 'deposit_paid', `Deposit of $${(amount / 100).toFixed(2)} paid via Stripe`);
     if (result.order?.status === 'confirmed') {
@@ -246,7 +470,6 @@ async function handleCheckoutSessionCompleted(eventId: string, session: any) {
     }
   } catch {}
 
-  // Send payment confirmation notifications
   try {
     if (result.order?.status === 'confirmed') {
       const [[customer], [org]] = await Promise.all([
@@ -299,11 +522,12 @@ async function handleCheckoutSessionCompleted(eventId: string, session: any) {
   });
 }
 
-async function handleCheckoutSessionExpired(eventId: string, session: any) {
+async function handleCheckoutSessionExpired(eventId: string, session: Stripe.Checkout.Session) {
   if (session.metadata?.trayloop_deposit !== 'true') {
     logDepositWebhook('info', 'Ignoring non-deposit expired checkout session', {
       eventId,
       checkoutSessionId: session.id,
+      action: 'skipped',
     });
     return;
   }

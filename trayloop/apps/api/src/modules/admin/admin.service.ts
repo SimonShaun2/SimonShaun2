@@ -1,5 +1,5 @@
 import { db } from '@trayloop/database';
-import { customers, deposits, orders, organizationMemberships, organizations, payments, recurringOrders, users } from '@trayloop/database';
+import { customers, deposits, orders, organizationMemberships, organizations, payments, recurringOrders, subscriptions, users } from '@trayloop/database';
 import { and, asc, desc, eq, gte, inArray, sql } from 'drizzle-orm';
 
 const FINAL_ORDER_STATUSES = ['confirmed', 'completed'] as const;
@@ -37,6 +37,31 @@ function formatServiceMode(mode: string) {
       return 'Food Truck';
     default:
       return mode.charAt(0).toUpperCase() + mode.slice(1);
+  }
+}
+
+function isPaidSubscription(status: string | null | undefined) {
+  return status === 'active';
+}
+
+function countsTowardProjectedMrr(status: string | null | undefined) {
+  return status === 'active' || status === 'trialing';
+}
+
+function formatSubscriptionLabel(status: string | null | undefined, trialEnd: Date | string | null | undefined) {
+  switch (status) {
+    case 'active':
+      return '$99/mo';
+    case 'trialing':
+      return trialEnd ? `Trial until ${new Date(trialEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : 'Trialing';
+    case 'past_due':
+      return 'Past due';
+    case 'unpaid':
+      return 'Unpaid';
+    case 'canceled':
+      return 'Canceled';
+    default:
+      return 'Not started';
   }
 }
 
@@ -172,17 +197,18 @@ export async function getPlatformOverview() {
   const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  const [activeOrgsResult, paidOrgsResult, gmvResult, serviceModeRows] = await Promise.all([
+  const [activeOrgsResult, subscriptionRows, gmvResult, serviceModeRows, restaurantDirectory] = await Promise.all([
     db
       .select({ count: sql<number>`count(*)::int` })
       .from(organizations)
       .where(eq(organizations.isActive, true)),
-
     db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(organizations)
-      .where(and(eq(organizations.isActive, true), eq(organizations.stripeChargesEnabled, true))),
-
+      .select({
+        organizationId: subscriptions.organizationId,
+        status: subscriptions.status,
+        trialEnd: subscriptions.trialEnd,
+      })
+      .from(subscriptions),
     db
       .select({
         total: sql<number>`coalesce(sum(total_amount), 0)::int`,
@@ -199,36 +225,24 @@ export async function getPlatformOverview() {
       .from(orders)
       .where(and(inArray(orders.status, ['confirmed', 'completed']), gte(orders.createdAt, monthStart)))
       .groupBy(orders.serviceType),
+    listRestaurantDirectory(),
   ]);
 
   const activeRestaurants = activeOrgsResult[0]?.count ?? 0;
-  const paidRestaurants = paidOrgsResult[0]?.count ?? 0;
-  const trialRestaurants = activeRestaurants - paidRestaurants;
+  const paidRestaurants = subscriptionRows.filter((subscription) => subscription.status === 'active').length;
+  const trialRestaurants = subscriptionRows.filter((subscription) => subscription.status === 'trialing').length;
   const mrr = paidRestaurants * PLAN_PRICE_CENTS;
   const gmvThisMonth = gmvResult[0]?.total ?? 0;
-  const projectedMrr = activeRestaurants * PLAN_PRICE_CENTS;
+  const projectedMrr = subscriptionRows.filter((subscription) => countsTowardProjectedMrr(subscription.status)).length * PLAN_PRICE_CENTS;
 
-  const restaurantsByGmv = await db
-    .select({
-      id: organizations.id,
-      name: organizations.name,
-      slug: organizations.slug,
-      isPaid: organizations.stripeChargesEnabled,
-      orderCount: sql<number>`count(${orders.id})::int`,
-      gmv: sql<number>`coalesce(sum(${orders.totalAmount}), 0)::int`,
-    })
-    .from(organizations)
-    .leftJoin(orders, eq(orders.organizationId, organizations.id))
-    .where(eq(organizations.isActive, true))
-    .groupBy(organizations.id, organizations.name, organizations.slug, organizations.stripeChargesEnabled)
-    .orderBy(desc(sql`coalesce(sum(${orders.totalAmount}), 0)`));
+  const restaurantsByGmv = restaurantDirectory.filter((restaurant) => restaurant.isActive);
 
   const mrrBreakdown = restaurantsByGmv.map((restaurant) => ({
     id: restaurant.id,
     name: restaurant.name,
     isPaid: restaurant.isPaid,
     mrr: restaurant.isPaid ? PLAN_PRICE_CENTS : 0,
-    label: restaurant.isPaid ? '$99/mo' : '$0 -> $99',
+    label: formatSubscriptionLabel(restaurant.subscriptionStatus, restaurant.subscriptionTrialEnd),
   }));
 
   const customerOrderRows = await getFinalizedCustomerOrderActivity();
@@ -378,43 +392,21 @@ export async function getPlatformOverview() {
  */
 export async function getTrialConversions() {
   const now = new Date();
-  const TRIAL_DAYS = 30;
-  const trialWindow = sql`interval '30 days'`;
-  const finalOrderStatuses = sql`('confirmed', 'completed')`;
-
-  // All trial orgs: active but not stripeChargesEnabled
   const trialOrgs = await db.select({
     id: organizations.id,
     name: organizations.name,
     slug: organizations.slug,
-    createdAt: organizations.createdAt,
-    orderCount: sql<number>`count(
-      case
-        when ${orders.status} in ${finalOrderStatuses}
-         and ${orders.createdAt} >= ${organizations.createdAt}
-         and ${orders.createdAt} < ${organizations.createdAt} + ${trialWindow}
-        then 1
-      end
-    )::int`,
-    gmv: sql<number>`coalesce(sum(
-      case
-        when ${orders.status} in ${finalOrderStatuses}
-         and ${orders.createdAt} >= ${organizations.createdAt}
-         and ${orders.createdAt} < ${organizations.createdAt} + ${trialWindow}
-        then ${orders.totalAmount}
-        else 0
-      end
-    ), 0)::int`,
-    lastOrderAt: sql<string | null>`max(${orders.createdAt})`,
+    subscriptionCreatedAt: subscriptions.createdAt,
+    trialStart: subscriptions.trialStart,
+    trialEnd: subscriptions.trialEnd,
   })
-    .from(organizations)
-    .leftJoin(orders, eq(orders.organizationId, organizations.id))
+    .from(subscriptions)
+    .innerJoin(organizations, eq(organizations.id, subscriptions.organizationId))
     .where(and(
       eq(organizations.isActive, true),
-      eq(organizations.stripeChargesEnabled, false),
+      eq(subscriptions.status, 'trialing'),
     ))
-    .groupBy(organizations.id, organizations.name, organizations.slug, organizations.createdAt)
-    .orderBy(desc(sql`count(${orders.id})`));
+    .orderBy(asc(subscriptions.trialEnd), desc(subscriptions.createdAt));
 
   // Owner lookup
   const ownerRows = await db.select({
@@ -430,12 +422,48 @@ export async function getTrialConversions() {
     if (!ownerMap.has(row.organizationId)) ownerMap.set(row.organizationId, row.userName);
   }
 
+  const finalizedOrders = trialOrgs.length === 0
+    ? []
+    : await db.select({
+        organizationId: orders.organizationId,
+        totalAmount: orders.totalAmount,
+        createdAt: orders.createdAt,
+      })
+        .from(orders)
+        .where(and(
+          inArray(orders.organizationId, trialOrgs.map((org) => org.id)),
+          inArray(orders.status, ['confirmed', 'completed']),
+        ));
+
   const restaurants = trialOrgs.map((r) => {
-    const daysSinceCreation = Math.floor((now.getTime() - new Date(r.createdAt).getTime()) / (86400000));
-    const daysRemaining = Math.max(0, TRIAL_DAYS - daysSinceCreation);
+    const trialStart = r.trialStart ?? r.subscriptionCreatedAt;
+    const trialEnd = r.trialEnd;
+    const orderWindow = finalizedOrders.filter((order) => {
+      if (order.organizationId !== r.id) {
+        return false;
+      }
+
+      const createdAt = new Date(order.createdAt);
+      if (trialStart && createdAt < new Date(trialStart)) {
+        return false;
+      }
+
+      if (trialEnd && createdAt > new Date(trialEnd)) {
+        return false;
+      }
+
+      return true;
+    });
+    const orderCount = orderWindow.length;
+    const gmv = orderWindow.reduce((sum, order) => sum + order.totalAmount, 0);
+    const lastOrderAt = orderWindow
+      .map((order) => new Date(order.createdAt))
+      .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
+    const daysRemaining = r.trialEnd ? Math.max(0, Math.ceil((new Date(r.trialEnd).getTime() - now.getTime()) / 86400000)) : null;
+    const daysSinceCreation = Math.floor((now.getTime() - new Date(r.subscriptionCreatedAt).getTime()) / (86400000));
     let heat: 'hot' | 'warm' | 'cold';
-    if (r.orderCount >= 3) heat = 'hot';
-    else if (r.orderCount >= 1) heat = 'warm';
+    if (orderCount >= 3) heat = 'hot';
+    else if (orderCount >= 1) heat = 'warm';
     else heat = 'cold';
 
     return {
@@ -443,12 +471,13 @@ export async function getTrialConversions() {
       name: r.name,
       slug: r.slug,
       ownerName: ownerMap.get(r.id) ?? null,
-      orderCount: r.orderCount,
-      gmv: r.gmv,
-      lastOrderAt: r.lastOrderAt,
-      daysRemaining,
+      orderCount,
+      gmv,
+      lastOrderAt: lastOrderAt?.toISOString() ?? null,
+      daysRemaining: daysRemaining ?? 0,
       daysSinceCreation,
       heat,
+      trialEnd: r.trialEnd?.toISOString() ?? null,
     };
   });
 
@@ -485,16 +514,19 @@ export async function getMrrMovement() {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  // All orgs with payment state
   const allOrgs = await db.select({
     id: organizations.id,
     name: organizations.name,
     slug: organizations.slug,
     isActive: organizations.isActive,
-    isPaid: organizations.stripeChargesEnabled,
     createdAt: organizations.createdAt,
     updatedAt: organizations.updatedAt,
-  }).from(organizations);
+    subscriptionStatus: subscriptions.status,
+    subscriptionCreatedAt: subscriptions.createdAt,
+    subscriptionCanceledAt: subscriptions.canceledAt,
+  })
+    .from(organizations)
+    .leftJoin(subscriptions, eq(subscriptions.organizationId, organizations.id));
 
   // Owner lookup
   const ownerRows = await db.select({
@@ -512,20 +544,15 @@ export async function getMrrMovement() {
 
   const restaurants = allOrgs.map((r) => {
     let status: 'paid' | 'trial' | 'churned' | 'inactive';
-    let mrr = 0;
 
-    if (!r.isActive && r.isPaid) {
-      status = 'churned';
-      mrr = -PLAN_PRICE_CENTS; // lost revenue
-    } else if (!r.isActive) {
+    if (!r.isActive) {
       status = 'inactive';
-      mrr = 0;
-    } else if (r.isPaid) {
+    } else if (r.subscriptionStatus === 'canceled') {
+      status = 'churned';
+    } else if (r.subscriptionStatus === 'active') {
       status = 'paid';
-      mrr = PLAN_PRICE_CENTS;
     } else {
       status = 'trial';
-      mrr = 0;
     }
 
     return {
@@ -534,26 +561,28 @@ export async function getMrrMovement() {
       slug: r.slug,
       ownerName: ownerMap.get(r.id) ?? null,
       isActive: r.isActive,
-      isPaid: r.isPaid,
+      isPaid: r.subscriptionStatus === 'active',
       status,
-      mrr,
+      mrr: status === 'paid' ? PLAN_PRICE_CENTS : 0,
       label: status === 'paid' ? '$99/mo'
         : status === 'trial' ? '$0 → $99'
         : status === 'churned' ? '-$99/mo'
         : 'Inactive',
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,
+      subscriptionCreatedAt: r.subscriptionCreatedAt,
+      canceledAt: r.subscriptionCanceledAt,
     };
   });
 
-  // New MRR: paid orgs created this month
+  // New MRR = subscriptions created this month.
   const newMrr = restaurants
-    .filter((r) => r.status === 'paid' && new Date(r.createdAt) >= monthStart)
+    .filter((r) => r.status === 'paid' && new Date(r.subscriptionCreatedAt ?? r.createdAt) >= monthStart)
     .reduce((s) => s + PLAN_PRICE_CENTS, 0);
 
-  // Churned MRR: inactive orgs that were paid
+  // Churned MRR = subscriptions canceled this month.
   const churnedMrr = restaurants
-    .filter((r) => r.status === 'churned' && new Date(r.updatedAt) >= monthStart)
+    .filter((r) => r.status === 'churned' && r.canceledAt && new Date(r.canceledAt) >= monthStart)
     .reduce((s) => s + PLAN_PRICE_CENTS, 0);
 
   const currentMrr = restaurants
@@ -595,7 +624,8 @@ export async function listRestaurantDirectory() {
       name: organizations.name,
       slug: organizations.slug,
       isActive: organizations.isActive,
-      isPaid: organizations.stripeChargesEnabled,
+      subscriptionStatus: subscriptions.status,
+      subscriptionTrialEnd: subscriptions.trialEnd,
       createdAt: organizations.createdAt,
       totalOrderCount: sql<number>`count(${orders.id})::int`,
       orderCount: sql<number>`count(case when ${orders.status} in ${finalOrderStatuses} then 1 end)::int`,
@@ -612,12 +642,14 @@ export async function listRestaurantDirectory() {
     })
     .from(organizations)
     .leftJoin(orders, eq(orders.organizationId, organizations.id))
+    .leftJoin(subscriptions, eq(subscriptions.organizationId, organizations.id))
     .groupBy(
       organizations.id,
       organizations.name,
       organizations.slug,
       organizations.isActive,
-      organizations.stripeChargesEnabled,
+      subscriptions.status,
+      subscriptions.trialEnd,
       organizations.createdAt,
     )
     .orderBy(desc(sql`coalesce(sum(case when ${orders.status} in ${finalOrderStatuses} then ${orders.totalAmount} else 0 end), 0)`));
@@ -668,7 +700,9 @@ export async function listRestaurantDirectory() {
       name: restaurant.name,
       slug: restaurant.slug,
       isActive: restaurant.isActive,
-      isPaid: restaurant.isPaid,
+      isPaid: isPaidSubscription(restaurant.subscriptionStatus),
+      subscriptionStatus: restaurant.subscriptionStatus ?? null,
+      subscriptionTrialEnd: restaurant.subscriptionTrialEnd,
       createdAt: restaurant.createdAt,
       ownerName: owner?.name ?? null,
       ownerEmail: owner?.email ?? null,
@@ -874,10 +908,10 @@ export async function getRevenueForecast() {
       });
 
   const projectedGmv = recurringCustomers.reduce((s, c) => s + c.projectedMonthly, 0);
-  const paidOrgs = await db.select({ count: sql<number>`count(*)::int` })
-    .from(organizations)
-    .where(and(eq(organizations.isActive, true), eq(organizations.stripeChargesEnabled, true)));
-  const projectedMrr = (paidOrgs[0]?.count ?? 0) * PLAN_PRICE_CENTS;
+  const activeSubscriptions = await db.select({ count: sql<number>`count(*)::int` })
+    .from(subscriptions)
+    .where(eq(subscriptions.status, 'active'));
+  const projectedMrr = (activeSubscriptions[0]?.count ?? 0) * PLAN_PRICE_CENTS;
 
   return {
     summary: {

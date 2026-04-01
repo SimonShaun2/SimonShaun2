@@ -1,31 +1,29 @@
 import type { FastifyInstance } from 'fastify';
 import { requireAuth } from '../../lib/middleware/auth.js';
-import { requireTenant } from '../../lib/middleware/tenant.js';
+import { requireOrgAdmin, requireTenant } from '../../lib/middleware/tenant.js';
+import { validateBody } from '../../lib/middleware/validate.js';
+import { billingCheckoutSchema, billingPortalSchema } from './billing.schema.js';
 import * as service from './billing.service.js';
 
 export function registerRoutes(app: FastifyInstance) {
-  app.addHook('preHandler', requireAuth);
-  app.addHook('preHandler', requireTenant);
-
-  app.get('/invoices', async (request) => {
-    const invoices = await service.listInvoices(request.ctx.tenant!.organizationId);
-    return { data: invoices };
+  app.get('/subscription', { preHandler: [requireAuth, requireTenant] }, async (request) => {
+    const subscription = await service.getSubscription(request.ctx.tenant!.organizationId);
+    return { data: subscription };
   });
 
-  app.get('/customer/:customerId/invoices', async (request) => {
-    const { customerId } = request.params as { customerId: string };
-    const invoices = await service.listCustomerInvoices(customerId);
-    return { data: invoices };
+  app.post('/checkout', { preHandler: [requireAuth, requireTenant, requireOrgAdmin, validateBody(billingCheckoutSchema)] }, async (request, reply) => {
+    const result = await service.createCheckoutSession(
+      request.ctx.tenant!.organizationId,
+      (request as any).validatedBody,
+    );
+    return reply.status(201).send({ data: result });
   });
 
-  app.post('/invoices/:id/send', async (request, reply) => {
-    const { id } = request.params as { id: string };
-    await service.sendInvoice(id);
-    return reply.send({ data: { message: 'Invoice sent' } });
-  });
-
-  app.get('/summary', async (request) => {
-    const summary = await service.getBillingSummary(request.ctx.tenant!.organizationId);
-    return { data: summary };
+  app.post('/portal', { preHandler: [requireAuth, requireTenant, requireOrgAdmin, validateBody(billingPortalSchema)] }, async (request, reply) => {
+    const result = await service.createPortalSession(
+      request.ctx.tenant!.organizationId,
+      (request as any).validatedBody,
+    );
+    return reply.status(201).send({ data: result });
   });
 }

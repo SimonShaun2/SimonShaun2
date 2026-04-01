@@ -5,6 +5,7 @@ export const memberRoleEnum = pgEnum('member_role', ['owner', 'admin', 'manager'
 export const memberStatusEnum = pgEnum('member_status', ['invited', 'active', 'suspended', 'removed']);
 export const orderStatusEnum = pgEnum('order_status', ['submitted', 'awaiting_deposit', 'confirmed', 'completed', 'cancelled']);
 export const serviceModeEnum = pgEnum('service_mode', ['delivery', 'pickup', 'full_service', 'on_site', 'food_truck']);
+export const subscriptionStatusEnum = pgEnum('subscription_status', ['trialing', 'active', 'past_due', 'canceled', 'unpaid']);
 export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'processing', 'succeeded', 'failed', 'refunded', 'partially_refunded']);
 export const paymentMethodEnum = pgEnum('payment_method', ['card', 'ach', 'cash', 'check', 'other']);
 export const depositStatusEnum = pgEnum('deposit_status', ['pending', 'paid', 'refunded']);

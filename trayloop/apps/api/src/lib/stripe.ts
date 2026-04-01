@@ -7,12 +7,16 @@ export interface StripeConfig {
   secretKey: string;
   publishableKey: string;
   webhookSecret: string;
+  subscriptionPriceId: string | null;
+  subscriptionTrialDays: number;
 }
 
 function loadConfig(): StripeConfig | null {
   const secretKey = process.env.STRIPE_SECRET_KEY;
   const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const subscriptionPriceId = process.env.STRIPE_PRICE_ID ?? null;
+  const subscriptionTrialDays = Number.parseInt(process.env.STRIPE_SUBSCRIPTION_TRIAL_DAYS ?? '30', 10);
 
   if (!secretKey || !publishableKey || !webhookSecret) {
     return null;
@@ -23,7 +27,13 @@ function loadConfig(): StripeConfig | null {
     return null;
   }
 
-  return { secretKey, publishableKey, webhookSecret };
+  return {
+    secretKey,
+    publishableKey,
+    webhookSecret,
+    subscriptionPriceId,
+    subscriptionTrialDays: Number.isNaN(subscriptionTrialDays) ? 30 : subscriptionTrialDays,
+  };
 }
 
 /**
@@ -85,4 +95,17 @@ export function getWebhookSecret(): string {
     throw new Error('Stripe webhook secret is not configured.');
   }
   return config.webhookSecret;
+}
+
+export function getSubscriptionPriceId(): string {
+  const config = loadConfig();
+  if (!config?.subscriptionPriceId) {
+    throw new Error('Stripe subscription price is not configured. Set STRIPE_PRICE_ID.');
+  }
+  return config.subscriptionPriceId;
+}
+
+export function getSubscriptionTrialDays(): number {
+  const config = loadConfig();
+  return config?.subscriptionTrialDays ?? 30;
 }
