@@ -269,6 +269,8 @@ export async function getTrialConversions() {
   const now = new Date();
   const TRIAL_DAYS = 30;
   const PLAN_PRICE = 9900; // cents, $99/mo
+  const trialWindow = sql`interval '30 days'`;
+  const finalOrderStatuses = sql`('confirmed', 'completed')`;
 
   // All trial orgs: active but not stripeChargesEnabled
   const trialOrgs = await db.select({
@@ -276,8 +278,23 @@ export async function getTrialConversions() {
     name: organizations.name,
     slug: organizations.slug,
     createdAt: organizations.createdAt,
-    orderCount: sql<number>`count(${orders.id})::int`,
-    gmv: sql<number>`coalesce(sum(${orders.totalAmount}), 0)::int`,
+    orderCount: sql<number>`count(
+      case
+        when ${orders.status} in ${finalOrderStatuses}
+         and ${orders.createdAt} >= ${organizations.createdAt}
+         and ${orders.createdAt} < ${organizations.createdAt} + ${trialWindow}
+        then 1
+      end
+    )::int`,
+    gmv: sql<number>`coalesce(sum(
+      case
+        when ${orders.status} in ${finalOrderStatuses}
+         and ${orders.createdAt} >= ${organizations.createdAt}
+         and ${orders.createdAt} < ${organizations.createdAt} + ${trialWindow}
+        then ${orders.totalAmount}
+        else 0
+      end
+    ), 0)::int`,
     lastOrderAt: sql<string | null>`max(${orders.createdAt})`,
   })
     .from(organizations)
@@ -345,11 +362,11 @@ export async function getTrialConversions() {
  *   - Trial: active orgs with stripeChargesEnabled = false → $0 (pending)
  *   - Inactive: orgs with isActive = false → churned (lost $99/mo)
  *
- * Movement is approximated from org creation date and isActive status:
+ * Movement is approximated from org creation date and isActive/updatedAt status:
  *   - "New MRR" = paid orgs created this month × $99
- *   - "Churned MRR" = inactive orgs that were previously paid × $99
- *     (approximated as inactive orgs with stripeChargesEnabled still true,
- *      indicating they were paid before deactivation)
+ *   - "Churned MRR" = inactive orgs updated this month that were previously paid × $99
+ *     (approximated as inactive orgs with stripeChargesEnabled still true and
+ *      updatedAt in the current month, indicating a recent deactivation)
  *
  * These are documented approximations. When a real subscriptions table with
  * start/cancel dates is added, replace this logic.
@@ -367,6 +384,7 @@ export async function getMrrMovement() {
     isActive: organizations.isActive,
     isPaid: organizations.stripeChargesEnabled,
     createdAt: organizations.createdAt,
+    updatedAt: organizations.updatedAt,
   }).from(organizations);
 
   // Owner lookup
@@ -415,6 +433,7 @@ export async function getMrrMovement() {
         : status === 'churned' ? '-$99/mo'
         : 'Inactive',
       createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
     };
   });
 
@@ -425,7 +444,7 @@ export async function getMrrMovement() {
 
   // Churned MRR: inactive orgs that were paid
   const churnedMrr = restaurants
-    .filter((r) => r.status === 'churned')
+    .filter((r) => r.status === 'churned' && new Date(r.updatedAt) >= monthStart)
     .reduce((s) => s + PLAN_PRICE, 0);
 
   const currentMrr = restaurants
