@@ -8,6 +8,7 @@ interface OrderDetail {
   id: string;
   orderNumber: string;
   status: string;
+  serviceType: string;
   depositRequired: boolean;
   allowedTransitions: string[];
   eventDate: string;
@@ -39,6 +40,19 @@ const SC: Record<string, { bg: string; color: string; label: string }> = {
 
 const card: React.CSSProperties = { background: '#FFF', border: '1px solid #E7E5E4', borderRadius: 10, padding: '16px 18px' };
 const sectionLabel: React.CSSProperties = { fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: '#78716C', marginBottom: 8, display: 'block' };
+
+function formatServiceType(serviceType: string) {
+  switch (serviceType) {
+    case 'full_service':
+      return 'Full Service';
+    case 'on_site':
+      return 'On-Site';
+    case 'food_truck':
+      return 'Food Truck';
+    default:
+      return serviceType.charAt(0).toUpperCase() + serviceType.slice(1);
+  }
+}
 
 export default function OrderDetailPage() {
   const params = useParams();
@@ -131,6 +145,7 @@ export default function OrderDetailPage() {
           <span style={sectionLabel}>Event</span>
           <p style={{ fontSize: 14, margin: '0 0 4px' }}><strong>{new Date(order.eventDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</strong></p>
           <p style={{ fontSize: 13, color: '#78716C', margin: 0 }}>{order.headCount} guests{order.location ? ` · ${order.location.name}` : ''}</p>
+          <p style={{ fontSize: 13, color: '#78716C', margin: '4px 0 0' }}>Service mode: {formatServiceType(order.serviceType)}</p>
           {order.notes && <p style={{ fontSize: 13, color: '#57534E', margin: '8px 0 0', padding: '6px 8px', background: '#FAFAF9', borderRadius: 6 }}>{order.notes}</p>}
         </div>
 

@@ -3,7 +3,7 @@ import { organizations } from './organizations.js';
 import { locations } from './locations.js';
 import { customers } from './customers.js';
 import { packages } from './catalogs.js';
-import { orderStatusEnum, recurrenceIntervalEnum } from './enums.js';
+import { orderStatusEnum, recurrenceIntervalEnum, serviceModeEnum } from './enums.js';
 
 export const orders = pgTable('orders', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -12,6 +12,7 @@ export const orders = pgTable('orders', {
   locationId: uuid('location_id').references(() => locations.id),
   customerId: uuid('customer_id').notNull().references(() => customers.id),
   status: orderStatusEnum('status').notNull().default('submitted'),
+  serviceType: serviceModeEnum('service_type').notNull().default('delivery'),
   totalAmount: integer('total_amount').notNull().default(0),
   currency: varchar('currency', { length: 3 }).notNull().default('USD'),
   headCount: integer('head_count'),
@@ -41,6 +42,7 @@ export const recurringOrders = pgTable('recurring_orders', {
   locationId: uuid('location_id').references(() => locations.id),
   customerId: uuid('customer_id').notNull().references(() => customers.id),
   packageId: uuid('package_id').references(() => packages.id),
+  serviceType: serviceModeEnum('service_type').notNull().default('delivery'),
   interval: recurrenceIntervalEnum('interval').notNull(),
   startDate: timestamp('start_date', { withTimezone: true }).notNull(),
   endDate: timestamp('end_date', { withTimezone: true }),

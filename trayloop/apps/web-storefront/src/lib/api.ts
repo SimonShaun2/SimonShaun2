@@ -99,7 +99,7 @@ export async function fetchStorefront(slug: string): Promise<StorefrontData> {
 
 export interface OrderSubmission {
   locationId: string;
-  serviceType: 'delivery' | 'pickup';
+  serviceType: 'delivery' | 'pickup' | 'full_service' | 'on_site' | 'food_truck';
   eventDate: string;
   headcount: number;
   packages: Array<{ packageId: string; quantity: number }>;

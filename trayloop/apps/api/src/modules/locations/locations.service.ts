@@ -26,6 +26,28 @@ interface LocationDto {
   updatedAt: Date;
 }
 
+function normalizeServiceTypes(
+  serviceTypes: string[] | null | undefined,
+  deliveryEnabled: boolean | null | undefined,
+  pickupEnabled: boolean | null | undefined,
+) {
+  const next = new Set(serviceTypes ?? []);
+
+  if (deliveryEnabled ?? true) {
+    next.add('delivery');
+  } else {
+    next.delete('delivery');
+  }
+
+  if (pickupEnabled ?? false) {
+    next.add('pickup');
+  } else {
+    next.delete('pickup');
+  }
+
+  return next.size > 0 ? Array.from(next) : ['delivery'];
+}
+
 function toDto(
   loc: typeof locations.$inferSelect,
   settings: typeof locationSettings.$inferSelect | null,
@@ -40,7 +62,11 @@ function toDto(
     country: loc.country,
     phone: loc.phone,
     email: loc.email,
-    serviceTypes: settings?.serviceTypes ?? ['delivery'],
+    serviceTypes: normalizeServiceTypes(
+      settings?.serviceTypes,
+      settings?.deliveryEnabled,
+      settings?.pickupEnabled,
+    ),
     leadTimeHours: (settings?.leadTimeDays ?? 3) * 24,
     minimumOrderAmount: settings?.minOrderAmount ?? 0,
     deliveryEnabled: settings?.deliveryEnabled ?? true,
@@ -102,7 +128,7 @@ export async function create(orgId: string, input: CreateLocationInput) {
     .insert(locationSettings)
     .values({
       locationId: loc.id,
-      serviceTypes: serviceTypes ?? ['delivery'],
+      serviceTypes: normalizeServiceTypes(serviceTypes, deliveryEnabled, pickupEnabled),
       leadTimeDays: Math.ceil((leadTimeHours ?? 72) / 24),
       minOrderAmount: minimumOrderAmount ?? 0,
       deliveryEnabled: deliveryEnabled ?? true,
@@ -140,7 +166,23 @@ export async function update(id: string, input: UpdateLocationInput) {
   }
 
   const settingsUpdate: Record<string, unknown> = {};
-  if (serviceTypes !== undefined) settingsUpdate.serviceTypes = serviceTypes;
+  if (serviceTypes !== undefined || deliveryEnabled !== undefined || pickupEnabled !== undefined) {
+    const [existingSettings] = await db
+      .select({
+        serviceTypes: locationSettings.serviceTypes,
+        deliveryEnabled: locationSettings.deliveryEnabled,
+        pickupEnabled: locationSettings.pickupEnabled,
+      })
+      .from(locationSettings)
+      .where(eq(locationSettings.locationId, id))
+      .limit(1);
+
+    settingsUpdate.serviceTypes = normalizeServiceTypes(
+      serviceTypes ?? existingSettings?.serviceTypes,
+      deliveryEnabled ?? existingSettings?.deliveryEnabled,
+      pickupEnabled ?? existingSettings?.pickupEnabled,
+    );
+  }
   if (leadTimeHours !== undefined) settingsUpdate.leadTimeDays = Math.ceil(leadTimeHours / 24);
   if (minimumOrderAmount !== undefined) settingsUpdate.minOrderAmount = minimumOrderAmount;
   if (deliveryEnabled !== undefined) settingsUpdate.deliveryEnabled = deliveryEnabled;

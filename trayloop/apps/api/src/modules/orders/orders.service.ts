@@ -267,6 +267,14 @@ export async function getOrderStats(orgId: string) {
 
 const TERMINAL_STATUSES = new Set(['completed', 'cancelled']);
 
+const SERVICE_MODE_LABELS: Record<string, string> = {
+  delivery: 'delivery',
+  pickup: 'pickup',
+  full_service: 'full service',
+  on_site: 'on-site',
+  food_truck: 'food truck',
+};
+
 function getAllowedTransitions(currentStatus: string, depositRequired: boolean): string[] {
   const allowed: string[] = [];
 
@@ -287,6 +295,24 @@ function getAllowedTransitions(currentStatus: string, depositRequired: boolean):
   }
 
   return allowed;
+}
+
+function getAvailableServiceModes(settings: typeof locationSettings.$inferSelect | undefined) {
+  const next = new Set(settings?.serviceTypes ?? []);
+
+  if (settings?.deliveryEnabled ?? true) {
+    next.add('delivery');
+  } else {
+    next.delete('delivery');
+  }
+
+  if (settings?.pickupEnabled ?? false) {
+    next.add('pickup');
+  } else {
+    next.delete('pickup');
+  }
+
+  return next.size > 0 ? Array.from(next) : ['delivery'];
 }
 
 async function getDepositRequired(locationId: string | null): Promise<boolean> {
@@ -343,6 +369,7 @@ export async function listByOrg(orgId: string, query: OrderListQuery) {
         id: orders.id,
         orderNumber: orders.orderNumber,
         status: orders.status,
+        serviceType: orders.serviceType,
         totalAmount: orders.totalAmount,
         currency: orders.currency,
         headCount: orders.headCount,
@@ -393,6 +420,7 @@ export async function listByOrg(orgId: string, query: OrderListQuery) {
       id: r.id,
       orderNumber: r.orderNumber,
       status: r.status,
+      serviceType: r.serviceType,
       eventDate: r.scheduledAt,
       headCount: r.headCount,
       itemCount: r.itemCount,
@@ -433,6 +461,7 @@ export async function listByCustomer(customerId: string) {
     .select({
       id: orders.id,
       status: orders.status,
+      serviceType: orders.serviceType,
       totalAmount: orders.totalAmount,
       currency: orders.currency,
       headCount: orders.headCount,
@@ -448,6 +477,7 @@ export async function listByCustomer(customerId: string) {
   return rows.map((r) => ({
     id: r.id,
     status: r.status,
+    serviceType: r.serviceType,
     eventDate: r.scheduledAt,
     headCount: r.headCount,
     pricing: { total: r.totalAmount, currency: r.currency },
@@ -542,6 +572,7 @@ export async function getById(id: string, orgId: string) {
     id: order.id,
     orderNumber: order.orderNumber,
     status: order.status,
+    serviceType: order.serviceType,
     depositRequired,
     allowedTransitions,
     eventDate: order.scheduledAt,
@@ -908,16 +939,16 @@ function validateServiceType(
 ) {
   if (!settings) return;
 
-  if (serviceType === 'delivery' && !settings.deliveryEnabled) {
-    throw new ValidationError(
-      'Delivery is not available at this location. Available: pickup',
-    );
+  const availableModes = getAvailableServiceModes(settings);
+  if (availableModes.includes(serviceType)) {
+    return;
   }
-  if (serviceType === 'pickup' && !settings.pickupEnabled) {
-    throw new ValidationError(
-      'Pickup is not available at this location. Available: delivery',
-    );
-  }
+
+  const availableLabel = availableModes.map((mode) => SERVICE_MODE_LABELS[mode] ?? mode).join(', ');
+  throw new ValidationError(
+    `${SERVICE_MODE_LABELS[serviceType] ?? serviceType} is not available at this location. ` +
+    `Available: ${availableLabel}`,
+  );
 }
 
 function validateLeadTime(
@@ -1036,6 +1067,7 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
         locationId: input.locationId,
         customerId,
         status: 'submitted',
+        serviceType: input.serviceType,
         totalAmount,
         currency: 'USD',
         headCount: input.headcount,
@@ -1067,6 +1099,7 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
           locationId: input.locationId,
           customerId,
           packageId: input.packages[0].packageId,
+          serviceType: input.serviceType,
           interval: input.recurring.interval,
           startDate: eventDate,
           endDate: input.recurring.endDate ? new Date(input.recurring.endDate) : null,
@@ -1093,6 +1126,7 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
     id: result.order.id,
     orderNumber: result.order.orderNumber,
     status: result.order.status,
+    serviceType: result.order.serviceType,
     customerId: result.customerId,
     headCount: result.order.headCount,
     scheduledAt: result.order.scheduledAt,
@@ -1200,6 +1234,7 @@ export async function reorder(sourceOrderId: string, orgId: string, input: Reord
   // 5. Validate location is still active
   if (sourceOrder.locationId) {
     const { settings } = await validateLocation(orgId, sourceOrder.locationId);
+    validateServiceType(sourceOrder.serviceType, settings);
     validateLeadTime(eventDate, settings);
   }
 
@@ -1219,6 +1254,7 @@ export async function reorder(sourceOrderId: string, orgId: string, input: Reord
     const [newOrder] = await tx.insert(orders).values({
       orderNumber, organizationId: orgId, locationId: sourceOrder.locationId,
       customerId: sourceOrder.customerId, status: 'submitted', totalAmount,
+      serviceType: sourceOrder.serviceType,
       currency: 'USD', headCount: headcount, scheduledAt: eventDate,
       notes: input.notes ?? sourceOrder.notes,
     }).returning();
@@ -1246,7 +1282,7 @@ export async function reorder(sourceOrderId: string, orgId: string, input: Reord
 
   return {
     id: result.id, orderNumber: result.orderNumber, reorderedFrom: sourceOrderId,
-    status: result.status, eventDate: result.scheduledAt, headCount: result.headCount,
+    status: result.status, serviceType: result.serviceType, eventDate: result.scheduledAt, headCount: result.headCount,
     customer: { name: `${customer.firstName} ${customer.lastName}`, email: customer.email },
     pricing: { packageSubtotal: pricing.packageSubtotal, addOnSubtotal: pricing.addOnSubtotal, total: pricing.total, currency: pricing.currency },
     items: lineItems.map((item) => ({ type: item.type, name: item.name, quantity: item.quantity, unitPrice: item.unitPrice, totalPrice: item.totalPrice })),

@@ -699,6 +699,8 @@ function SettingsContent() {
                     { value: 'delivery', label: 'Delivery' },
                     { value: 'pickup', label: 'Pickup' },
                     { value: 'full_service', label: 'Full Service' },
+                    { value: 'on_site', label: 'On-Site' },
+                    { value: 'food_truck', label: 'Food Truck' },
                   ].map((option) => {
                     const checked = locationForm.serviceTypes.includes(option.value);
                     return (

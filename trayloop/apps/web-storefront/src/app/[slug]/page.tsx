@@ -134,6 +134,19 @@ function Header({ merchantName, merchantDescription }: { merchantName: string; m
   );
 }
 
+function formatServiceModeLabel(mode: string) {
+  switch (mode) {
+    case 'full_service':
+      return 'Full Service';
+    case 'on_site':
+      return 'On-Site';
+    case 'food_truck':
+      return 'Food Truck';
+    default:
+      return mode.charAt(0).toUpperCase() + mode.slice(1);
+  }
+}
+
 function PolicyBadges({ location }: { location: StorefrontData['locations'][0] }) {
   const badges: Array<{ label: string; value: string }> = [];
 
@@ -149,6 +162,13 @@ function PolicyBadges({ location }: { location: StorefrontData['locations'][0] }
 
   if (location.deliveryEnabled && location.deliveryRadiusMiles) {
     badges.push({ label: 'Delivery', value: `${location.deliveryRadiusMiles} mi radius` });
+  }
+
+  if (location.serviceTypes.length > 0) {
+    badges.push({
+      label: 'Service Modes',
+      value: location.serviceTypes.map(formatServiceModeLabel).join(', '),
+    });
   }
 
   return (

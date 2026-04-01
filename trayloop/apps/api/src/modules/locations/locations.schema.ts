@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const serviceType = z.enum(['delivery', 'pickup', 'full_service']);
+export const serviceType = z.enum(['delivery', 'pickup', 'full_service', 'on_site', 'food_truck']);
 
 export const createLocationSchema = z.object({
   name: z.string().min(1).max(255),

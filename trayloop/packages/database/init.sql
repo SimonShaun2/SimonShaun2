@@ -39,6 +39,7 @@ DROP TYPE IF EXISTS user_role CASCADE;
 DROP TYPE IF EXISTS member_role CASCADE;
 DROP TYPE IF EXISTS member_status CASCADE;
 DROP TYPE IF EXISTS order_status CASCADE;
+DROP TYPE IF EXISTS service_mode CASCADE;
 DROP TYPE IF EXISTS payment_status CASCADE;
 DROP TYPE IF EXISTS payment_method CASCADE;
 DROP TYPE IF EXISTS deposit_status CASCADE;
@@ -57,6 +58,7 @@ CREATE TYPE user_role AS ENUM ('customer', 'merchant', 'admin');
 CREATE TYPE member_role AS ENUM ('owner', 'admin', 'manager', 'staff');
 CREATE TYPE member_status AS ENUM ('invited', 'active', 'suspended', 'removed');
 CREATE TYPE order_status AS ENUM ('submitted', 'awaiting_deposit', 'confirmed', 'completed', 'cancelled');
+CREATE TYPE service_mode AS ENUM ('delivery', 'pickup', 'full_service', 'on_site', 'food_truck');
 CREATE TYPE payment_status AS ENUM ('pending', 'processing', 'succeeded', 'failed', 'refunded', 'partially_refunded');
 CREATE TYPE payment_method AS ENUM ('card', 'ach', 'cash', 'check', 'other');
 CREATE TYPE deposit_status AS ENUM ('pending', 'paid', 'refunded');
@@ -301,6 +303,7 @@ CREATE TABLE IF NOT EXISTS orders (
   location_id UUID REFERENCES locations(id),
   customer_id UUID NOT NULL REFERENCES customers(id),
   status order_status NOT NULL DEFAULT 'submitted',
+  service_type service_mode NOT NULL DEFAULT 'delivery',
   total_amount INTEGER NOT NULL DEFAULT 0,
   currency VARCHAR(3) NOT NULL DEFAULT 'USD',
   head_count INTEGER,
@@ -336,6 +339,7 @@ CREATE TABLE IF NOT EXISTS recurring_orders (
   location_id UUID REFERENCES locations(id),
   customer_id UUID NOT NULL REFERENCES customers(id),
   package_id UUID REFERENCES packages(id),
+  service_type service_mode NOT NULL DEFAULT 'delivery',
   "interval" recurrence_interval NOT NULL,
   start_date TIMESTAMPTZ NOT NULL,
   end_date TIMESTAMPTZ,

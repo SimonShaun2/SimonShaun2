@@ -10,6 +10,16 @@ interface Props {
   data: StorefrontData;
 }
 
+type StorefrontServiceMode = OrderSubmission['serviceType'];
+
+const SERVICE_MODE_LABELS: Record<StorefrontServiceMode, string> = {
+  delivery: 'Delivery',
+  pickup: 'Pickup',
+  full_service: 'Full Service',
+  on_site: 'On-Site',
+  food_truck: 'Food Truck',
+};
+
 /* ── Design tokens ── */
 const T = {
   pageBg: '#FAF9F7',
@@ -88,8 +98,8 @@ export default function CheckoutForm({ data }: Props) {
   const allAddOns = menu.flatMap((m) => m.addOns);
 
   // Form state
-  const [selectedLocationSlug] = useState(locations.length === 1 ? locations[0].slug : '');
-  const [serviceType, setServiceType] = useState<'delivery' | 'pickup'>('delivery');
+  const [selectedLocationSlug, setSelectedLocationSlug] = useState(locations[0]?.slug ?? '');
+  const [serviceType, setServiceType] = useState<StorefrontServiceMode>('delivery');
   const [eventDate, setEventDate] = useState('');
   const [eventTime, setEventTime] = useState('');
   const [headcount, setHeadcount] = useState(10);
@@ -118,6 +128,28 @@ export default function CheckoutForm({ data }: Props) {
   const searchParams = useSearchParams();
 
   const selectedLocation = locations.find((l) => l.slug === selectedLocationSlug) ?? locations[0] ?? null;
+  const availableServiceModes = (() => {
+    if (!selectedLocation) return ['delivery'] as StorefrontServiceMode[];
+    const next = new Set<StorefrontServiceMode>();
+
+    if (selectedLocation.deliveryEnabled !== false) next.add('delivery');
+    if (selectedLocation.pickupEnabled !== false) next.add('pickup');
+
+    for (const mode of selectedLocation.serviceTypes) {
+      if (mode in SERVICE_MODE_LABELS) {
+        next.add(mode as StorefrontServiceMode);
+      }
+    }
+
+    return next.size > 0 ? Array.from(next) : (['delivery'] as StorefrontServiceMode[]);
+  })();
+
+  useEffect(() => {
+    if (!selectedLocation) return;
+    if (!availableServiceModes.includes(serviceType)) {
+      setServiceType(availableServiceModes[0]);
+    }
+  }, [availableServiceModes, selectedLocation, serviceType]);
 
   useEffect(() => {
     let cancelled = false;
@@ -296,7 +328,7 @@ export default function CheckoutForm({ data }: Props) {
 
   /* ── Helpers ── */
   const hasPackages = Object.keys(selectedPkgs).length > 0;
-  const canSubmit = !submitting && hasPackages && eventDate;
+  const canSubmit = !submitting && hasPackages && eventDate && !!selectedLocationSlug;
   const minOrder = selectedLocation?.minimumOrderAmount ? (selectedLocation.minimumOrderAmount / 100).toFixed(0) : null;
   const leadTime = selectedLocation?.leadTimeHours ?? null;
 
@@ -350,6 +382,23 @@ export default function CheckoutForm({ data }: Props) {
             <p style={sectionSubtitleStyle}>Please order at least {leadTime} hours in advance</p>
           )}
 
+          {locations.length > 1 && (
+            <div style={{ marginTop: 20 }}>
+              <label style={labelStyle}>Location</label>
+              <select
+                value={selectedLocationSlug}
+                onChange={(e) => setSelectedLocationSlug(e.target.value)}
+                style={inputStyle}
+              >
+                {locations.map((location) => (
+                  <option key={location.slug} value={location.slug}>
+                    {location.name} - {location.city}, {location.state}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginTop: 20 }}>
             <div>
               <label style={labelStyle}>Event Date</label>
@@ -375,45 +424,27 @@ export default function CheckoutForm({ data }: Props) {
           {/* Service Type Toggle */}
           <div style={{ marginTop: 20 }}>
             <label style={labelStyle}>Service Type</label>
-            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 12 }}>
-              {selectedLocation?.deliveryEnabled !== false && (
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
+              {availableServiceModes.map((mode) => (
                 <button
+                  key={mode}
                   type="button"
-                  onClick={() => setServiceType('delivery')}
+                  onClick={() => setServiceType(mode)}
                   style={{
                     flex: 1,
                     height: 42,
-                    border: serviceType === 'delivery' ? `2px solid ${T.toggleSelectedBorder}` : `1px solid ${T.borderInput}`,
+                    border: serviceType === mode ? `2px solid ${T.toggleSelectedBorder}` : `1px solid ${T.borderInput}`,
                     borderRadius: 8,
-                    background: serviceType === 'delivery' ? T.toggleSelectedBg : T.cardBg,
-                    color: serviceType === 'delivery' ? T.gold : T.textPrimary,
+                    background: serviceType === mode ? T.toggleSelectedBg : T.cardBg,
+                    color: serviceType === mode ? T.gold : T.textPrimary,
                     fontSize: 14,
                     fontWeight: 600,
                     cursor: 'pointer',
                   }}
                 >
-                  Delivery
+                  {SERVICE_MODE_LABELS[mode]}
                 </button>
-              )}
-              {selectedLocation?.pickupEnabled !== false && (
-                <button
-                  type="button"
-                  onClick={() => setServiceType('pickup')}
-                  style={{
-                    flex: 1,
-                    height: 42,
-                    border: serviceType === 'pickup' ? `2px solid ${T.toggleSelectedBorder}` : `1px solid ${T.borderInput}`,
-                    borderRadius: 8,
-                    background: serviceType === 'pickup' ? T.toggleSelectedBg : T.cardBg,
-                    color: serviceType === 'pickup' ? T.gold : T.textPrimary,
-                    fontSize: 14,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Pickup
-                </button>
-              )}
+              ))}
             </div>
           </div>
 
@@ -1070,6 +1101,11 @@ export default function CheckoutForm({ data }: Props) {
             <div style={{ fontSize: 18, fontWeight: 700, color: T.textPrimary }}>
               {data.merchant.name}
             </div>
+            {selectedLocation && (
+              <div style={{ fontSize: 12, color: T.textMuted, marginTop: 4 }}>
+                {selectedLocation.name} · {SERVICE_MODE_LABELS[serviceType]}
+              </div>
+            )}
           </div>
 
           <div style={{ padding: '20px 24px 24px' }}>

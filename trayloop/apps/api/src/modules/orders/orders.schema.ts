@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 // --- Order creation (storefront submission) ---
 
-export const serviceType = z.enum(['delivery', 'pickup']);
+export const serviceType = z.enum(['delivery', 'pickup', 'full_service', 'on_site', 'food_truck']);
 
 export const customerInfoSchema = z.object({
   firstName: z.string().min(1, 'First name is required').max(255).trim(),

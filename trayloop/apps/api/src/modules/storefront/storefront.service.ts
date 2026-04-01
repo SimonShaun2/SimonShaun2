@@ -15,6 +15,28 @@ import { create as createOrder, createDepositCheckoutForOrder } from '../orders/
 import type { CreateOrderInput } from '../orders/orders.schema.js';
 import type { EventBus } from '../../lib/event-bus/index.js';
 
+function normalizeLocationServiceTypes(
+  serviceTypes: string[] | null | undefined,
+  deliveryEnabled: boolean | null | undefined,
+  pickupEnabled: boolean | null | undefined,
+) {
+  const next = new Set(serviceTypes ?? []);
+
+  if (deliveryEnabled ?? true) {
+    next.add('delivery');
+  } else {
+    next.delete('delivery');
+  }
+
+  if (pickupEnabled ?? false) {
+    next.add('pickup');
+  } else {
+    next.delete('pickup');
+  }
+
+  return next.size > 0 ? Array.from(next) : ['delivery'];
+}
+
 export async function getStorefront(slug: string) {
   // 1. Resolve organization by slug
   const [org] = await db
@@ -70,7 +92,11 @@ export async function getStorefront(slug: string) {
     zipCode: row.zipCode,
     country: row.country,
     phone: row.phone,
-    serviceTypes: row.serviceTypes ?? ['delivery'],
+    serviceTypes: normalizeLocationServiceTypes(
+      row.serviceTypes,
+      row.deliveryEnabled,
+      row.pickupEnabled,
+    ),
     leadTimeHours: (row.leadTimeDays ?? 3) * 24,
     minimumOrderAmount: row.minOrderAmount ?? 0,
     deliveryEnabled: row.deliveryEnabled ?? true,
