@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import type { StorefrontData, OrderSubmission, OrderConfirmation } from '../lib/api';
 import { submitOrder, OrderError } from '../lib/api';
 
@@ -85,7 +86,7 @@ export default function CheckoutForm({ data }: Props) {
   const allAddOns = menu.flatMap((m) => m.addOns);
 
   // Form state
-  const [selectedLocationSlug, setSelectedLocationSlug] = useState(locations.length === 1 ? locations[0].slug : '');
+  const [selectedLocationSlug] = useState(locations.length === 1 ? locations[0].slug : '');
   const [serviceType, setServiceType] = useState<'delivery' | 'pickup'>('delivery');
   const [eventDate, setEventDate] = useState('');
   const [eventTime, setEventTime] = useState('');
@@ -110,6 +111,8 @@ export default function CheckoutForm({ data }: Props) {
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Array<{ field: string; message: string }>>([]);
   const [confirmation, setConfirmation] = useState<OrderConfirmation | null>(null);
+  const [confirmationMode, setConfirmationMode] = useState<'order_received' | 'deposit_pending' | null>(null);
+  const searchParams = useSearchParams();
 
   const selectedLocation = locations.find((l) => l.slug === selectedLocationSlug) ?? locations[0] ?? null;
 
@@ -179,7 +182,13 @@ export default function CheckoutForm({ data }: Props) {
 
     try {
       const result = await submitOrder(data.merchant.slug, payload);
-      setConfirmation(result);
+      if (result.mode === 'deposit_checkout' && result.checkout?.url) {
+        window.location.assign(result.checkout.url);
+        return;
+      }
+
+      setConfirmationMode(result.mode === 'deposit_pending' ? 'deposit_pending' : 'order_received');
+      setConfirmation(result.order);
     } catch (err) {
       if (err instanceof OrderError) {
         setError(err.message);
@@ -193,6 +202,21 @@ export default function CheckoutForm({ data }: Props) {
   }, [submitting, selectedLocationSlug, serviceType, eventDate, eventTime, headcount, selectedPkgs, selectedAddOnIds, firstName, lastName, email, phone, companyName, address, city, state, zipCode, notes, recurringEnabled, recurringInterval, recurringDays, locations, data.merchant.slug]);
 
   /* ── Confirmation state ── */
+  const checkoutState = searchParams.get('checkout');
+  const returnedOrderNumber = searchParams.get('orderNumber');
+  const confirmationTitle = confirmationMode === 'deposit_pending' ? 'Thank you for your order!' : 'Order received!';
+  const confirmationSteps = confirmationMode === 'deposit_pending'
+    ? [
+        "We'll review your order",
+        "You'll receive a confirmation email",
+        "If a deposit is required, you'll receive a payment link",
+      ]
+    : [
+        "We'll review your order",
+        "You'll receive a confirmation email",
+        'No deposit is due right now',
+      ];
+
   if (confirmation) {
     return (
       <div style={{
@@ -204,12 +228,12 @@ export default function CheckoutForm({ data }: Props) {
         padding: 40,
       }}>
         <div style={{ marginBottom: 24 }}>
-          <h2 style={{ fontSize: 24, fontWeight: 700, color: T.successBorder, margin: '0 0 4px' }}>&#10003; Thank you for your order!</h2>
+          <h2 style={{ fontSize: 24, fontWeight: 700, color: T.successBorder, margin: '0 0 4px' }}>&#10003; {confirmationTitle}</h2>
           <p style={{ fontSize: 14, color: T.textMuted, margin: '0 0 2px' }}>{data.merchant.name}</p>
           <p style={{ fontSize: 16, fontWeight: 600, fontFamily: 'monospace', color: T.textPrimary, margin: 0 }}>{confirmation.orderNumber}</p>
         </div>
         <div style={{ display: 'grid', gap: 8, fontSize: 14, color: T.textPrimary, marginBottom: 24 }}>
-          <p style={{ margin: 0 }}><span style={{ fontSize: 12, color: T.textMuted }}>Status</span><br /><strong>New</strong></p>
+          <p style={{ margin: 0 }}><span style={{ fontSize: 12, color: T.textMuted }}>Status</span><br /><strong>{confirmationMode === 'deposit_pending' ? 'Awaiting review' : 'Submitted'}</strong></p>
           <p style={{ margin: 0 }}><span style={{ fontSize: 12, color: T.textMuted }}>Event Date</span><br /><strong>{new Date(confirmation.scheduledAt).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong></p>
           <p style={{ margin: 0 }}><span style={{ fontSize: 12, color: T.textMuted }}>Guests</span><br /><strong>{confirmation.headCount}</strong></p>
           <p style={{ margin: 0 }}><span style={{ fontSize: 12, color: T.textMuted }}>Customer</span><br /><strong>{confirmation.customer.firstName} {confirmation.customer.lastName}</strong> ({confirmation.customer.email})</p>
@@ -231,9 +255,9 @@ export default function CheckoutForm({ data }: Props) {
         <div style={{ marginTop: 28, background: '#FAFAF9', borderRadius: 10, padding: '20px 24px' }}>
           <h4 style={{ fontSize: 14, fontWeight: 700, color: T.textPrimary, margin: '0 0 12px' }}>What happens next?</h4>
           <ol style={{ margin: 0, paddingLeft: 20, listStyleType: 'decimal', fontSize: 13, color: T.textMuted, lineHeight: 2 }}>
-            <li>We'll review your order</li>
-            <li>You'll receive a confirmation email</li>
-            <li>If a deposit is required, you'll receive a payment link</li>
+            {confirmationSteps.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
           </ol>
         </div>
       </div>
@@ -268,6 +292,28 @@ export default function CheckoutForm({ data }: Props) {
         )}
 
         {/* ── Section: When & How ── */}
+        {!error && checkoutState === 'success' && (
+          <div style={{ background: '#ECFDF5', border: `1px solid ${T.successBorder}`, borderRadius: 12, padding: '16px 20px' }}>
+            <p style={{ color: '#047857', fontWeight: 700, fontSize: 14, margin: 0 }}>
+              Deposit checkout complete{returnedOrderNumber ? ` for ${returnedOrderNumber}` : ''}.
+            </p>
+            <p style={{ color: '#065F46', fontSize: 13, margin: '6px 0 0' }}>
+              We&apos;re finalizing your confirmation and the merchant will follow up shortly.
+            </p>
+          </div>
+        )}
+
+        {!error && checkoutState === 'cancelled' && (
+          <div style={{ background: '#FFFBEB', border: '1px solid #FCD34D', borderRadius: 12, padding: '16px 20px' }}>
+            <p style={{ color: '#92400E', fontWeight: 700, fontSize: 14, margin: 0 }}>
+              Checkout was cancelled{returnedOrderNumber ? ` for ${returnedOrderNumber}` : ''}.
+            </p>
+            <p style={{ color: '#B45309', fontSize: 13, margin: '6px 0 0' }}>
+              Your order was saved. You can try checkout again or wait for the merchant to follow up.
+            </p>
+          </div>
+        )}
+
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>When &amp; How</h2>
           {leadTime && (
@@ -1132,7 +1178,7 @@ export default function CheckoutForm({ data }: Props) {
                       }} />
                       Placing order...
                     </span>
-                  ) : canSubmit ? 'Place Order' : !eventDate ? 'Select a date' : 'Select a package'}
+                  ) : canSubmit ? (selectedLocation?.depositRequired ? 'Continue to Payment' : 'Place Order') : !eventDate ? 'Select a date' : 'Select a package'}
                 </button>
 
                 {/* Deposit notice */}

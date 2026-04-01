@@ -22,6 +22,162 @@ import type { CreateOrderInput, UpdateOrderStatusInput, OrderListQuery, SendDepo
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type DbOrTx = typeof db | Transaction;
 
+interface DepositCheckoutOptions {
+  depositAmount?: number;
+  successUrl: string;
+  cancelUrl: string;
+}
+
+interface DepositCheckoutResult {
+  orderId: string;
+  status: string;
+  depositId: string;
+  depositAmount: number;
+  currency: string;
+  paymentLink: string;
+  stripeCheckoutSessionId: string | null;
+  sentTo: string;
+  depositRequired: true;
+  allowedTransitions: string[];
+}
+
+interface DepositCheckoutContext {
+  id: string;
+  orderNumber: string;
+  status: string;
+  totalAmount: number;
+  customerId: string;
+  locationId: string | null;
+}
+
+export async function createDepositCheckoutForOrder(
+  order: DepositCheckoutContext,
+  orgId: string,
+  eventBus: EventBus,
+  options: DepositCheckoutOptions,
+): Promise<DepositCheckoutResult> {
+  const depositRequired = await getDepositRequired(order.locationId);
+  if (!depositRequired) {
+    throw new ValidationError('This location does not require deposits. Confirm the order directly.');
+  }
+
+  const allowed = getAllowedTransitions(order.status, depositRequired);
+  if (!allowed.includes('awaiting_deposit') && order.status !== 'awaiting_deposit') {
+    throw new ValidationError(
+      `Cannot send deposit link for order in "${order.status}" status. ` +
+      `Allowed transitions: ${allowed.join(', ')}`,
+    );
+  }
+
+  const [[customer], [org]] = await Promise.all([
+    db.select({ email: customers.email, firstName: customers.firstName })
+      .from(customers).where(eq(customers.id, order.customerId)).limit(1),
+    db.select({
+      stripeAccountId: organizations.stripeAccountId,
+      stripeOnboardingComplete: organizations.stripeOnboardingComplete,
+      name: organizations.name,
+    })
+      .from(organizations).where(eq(organizations.id, orgId)).limit(1),
+  ]);
+
+  if (!customer || !org) {
+    throw new NotFoundError('Order payment context');
+  }
+
+  const depositAmount = options.depositAmount ?? order.totalAmount;
+
+  let paymentLink: string;
+  let checkoutSessionId: string | null = null;
+
+  if (isStripeEnabled() && org.stripeAccountId && org.stripeOnboardingComplete) {
+    const stripe = getStripe();
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      line_items: [{
+        price_data: {
+          currency: 'usd',
+          unit_amount: depositAmount,
+          product_data: {
+            name: `Deposit for ${order.orderNumber}`,
+            description: `Order deposit - ${org.name}`,
+          },
+        },
+        quantity: 1,
+      }],
+      payment_intent_data: {
+        application_fee_amount: Math.round(depositAmount * 0.05),
+        transfer_data: {
+          destination: org.stripeAccountId,
+        },
+      },
+      customer_email: customer.email,
+      metadata: {
+        trayloop_order_id: order.id,
+        trayloop_order_number: order.orderNumber,
+        trayloop_org_id: orgId,
+        trayloop_deposit: 'true',
+      },
+      success_url: options.successUrl,
+      cancel_url: options.cancelUrl,
+    });
+
+    paymentLink = session.url!;
+    checkoutSessionId = session.id;
+  } else {
+    paymentLink = `https://pay.trayloop.com/deposit/${crypto.randomUUID()}`;
+  }
+
+  const result = await db.transaction(async (tx) => {
+    await tx
+      .update(deposits)
+      .set({ status: 'refunded', updatedAt: new Date() })
+      .where(and(eq(deposits.orderId, order.id), eq(deposits.status, 'pending')));
+
+    const [deposit] = await tx.insert(deposits).values({
+      orderId: order.id,
+      amount: depositAmount,
+      currency: 'USD',
+      status: 'pending',
+      stripeCheckoutSessionId: checkoutSessionId,
+    }).returning();
+
+    const [updated] = await tx.update(orders).set({
+      status: 'awaiting_deposit',
+      updatedAt: new Date(),
+    }).where(eq(orders.id, order.id)).returning();
+
+    return { deposit, order: updated };
+  });
+
+  try {
+    await recordOrderEvent(
+      order.id,
+      'deposit_link_sent',
+      `Deposit link sent to ${customer.email} for $${(depositAmount / 100).toFixed(2)}`,
+    );
+  } catch {}
+  try {
+    await eventBus.emit('order.status_updated', {
+      orderId: order.id,
+      oldStatus: order.status,
+      newStatus: 'awaiting_deposit',
+    });
+  } catch {}
+
+  return {
+    orderId: result.order.id,
+    status: result.order.status,
+    depositId: result.deposit.id,
+    depositAmount: result.deposit.amount,
+    currency: result.deposit.currency,
+    paymentLink,
+    stripeCheckoutSessionId: checkoutSessionId,
+    sentTo: customer.email,
+    depositRequired: true,
+    allowedTransitions: getAllowedTransitions('awaiting_deposit', true),
+  };
+}
+
 export async function getOrderStats(orgId: string) {
   const now = new Date();
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -932,6 +1088,7 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
     id: result.order.id,
     orderNumber: result.order.orderNumber,
     status: result.order.status,
+    customerId: result.customerId,
     headCount: result.order.headCount,
     scheduledAt: result.order.scheduledAt,
     customer: {

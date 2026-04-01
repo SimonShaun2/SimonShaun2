@@ -126,6 +126,7 @@ export interface OrderConfirmation {
   id: string;
   orderNumber: string;
   status: string;
+  customerId: string;
   headCount: number;
   scheduledAt: string;
   customer: { firstName: string; lastName: string; email: string };
@@ -135,7 +136,21 @@ export interface OrderConfirmation {
   createdAt: string;
 }
 
-export async function submitOrder(slug: string, order: OrderSubmission): Promise<OrderConfirmation> {
+export interface DepositCheckoutPayload {
+  url: string;
+  depositId: string;
+  depositAmount: number;
+  currency: string;
+  stripeCheckoutSessionId: string | null;
+}
+
+export interface StorefrontOrderResponse {
+  mode: 'order_received' | 'deposit_pending' | 'deposit_checkout';
+  order: OrderConfirmation;
+  checkout?: DepositCheckoutPayload;
+}
+
+export async function submitOrder(slug: string, order: OrderSubmission): Promise<StorefrontOrderResponse> {
   const res = await fetch(`${API_URL}/api/storefront/${slug}/order`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

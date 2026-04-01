@@ -11,7 +11,7 @@ import {
 } from '@trayloop/database';
 import { eq, and } from 'drizzle-orm';
 import { NotFoundError } from '../../lib/errors.js';
-import { create as createOrder } from '../orders/orders.service.js';
+import { create as createOrder, createDepositCheckoutForOrder } from '../orders/orders.service.js';
 import type { CreateOrderInput } from '../orders/orders.schema.js';
 import type { EventBus } from '../../lib/event-bus/index.js';
 
@@ -260,7 +260,11 @@ export async function getStorefront(slug: string) {
 export async function submitPublicOrder(slug: string, input: CreateOrderInput, eventBus: EventBus) {
   // Resolve org from slug
   const [org] = await db
-    .select({ id: organizations.id })
+    .select({
+      id: organizations.id,
+      stripeAccountId: organizations.stripeAccountId,
+      stripeOnboardingComplete: organizations.stripeOnboardingComplete,
+    })
     .from(organizations)
     .where(and(eq(organizations.slug, slug), eq(organizations.isActive, true)))
     .limit(1);
@@ -269,5 +273,77 @@ export async function submitPublicOrder(slug: string, input: CreateOrderInput, e
     throw new NotFoundError('Storefront');
   }
 
-  return createOrder(org.id, input, eventBus);
+  const order = await createOrder(org.id, input, eventBus);
+  const selectedLocation = input.locationId
+    ? (await db
+        .select({ depositRequired: locationSettings.depositRequired })
+        .from(locationSettings)
+        .where(eq(locationSettings.locationId, input.locationId))
+        .limit(1))[0]
+    : null;
+
+  const depositRequired = selectedLocation?.depositRequired ?? true;
+  const stripeReady = Boolean(org.stripeAccountId && org.stripeOnboardingComplete);
+
+  if (!depositRequired) {
+    return {
+      mode: 'order_received' as const,
+      order: {
+        ...order,
+        depositRequired: false,
+      },
+    };
+  }
+
+  if (!stripeReady) {
+    return {
+      mode: 'deposit_pending' as const,
+      order: {
+        ...order,
+        depositRequired: true,
+      },
+    };
+  }
+
+  const storefrontBaseUrl =
+    process.env.STOREFRONT_URL ||
+    (process.env.NODE_ENV === 'production'
+      ? 'https://order.trayloophq.com'
+      : 'http://localhost:3002');
+  const checkout = await createDepositCheckoutForOrder(
+    {
+      id: order.id,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      totalAmount: order.pricing.total,
+      customerId: order.customerId,
+      locationId: input.locationId,
+    },
+    org.id,
+    eventBus,
+    {
+      successUrl:
+        `${storefrontBaseUrl}/${slug}?checkout=success&orderId=${encodeURIComponent(order.id)}` +
+        `&orderNumber=${encodeURIComponent(order.orderNumber)}`,
+      cancelUrl:
+        `${storefrontBaseUrl}/${slug}?checkout=cancelled&orderId=${encodeURIComponent(order.id)}` +
+        `&orderNumber=${encodeURIComponent(order.orderNumber)}`,
+    },
+  );
+
+  return {
+    mode: 'deposit_checkout' as const,
+    order: {
+      ...order,
+      status: checkout.status,
+      depositRequired: true,
+    },
+    checkout: {
+      url: checkout.paymentLink,
+      depositId: checkout.depositId,
+      depositAmount: checkout.depositAmount,
+      currency: checkout.currency,
+      stripeCheckoutSessionId: checkout.stripeCheckoutSessionId,
+    },
+  };
 }
