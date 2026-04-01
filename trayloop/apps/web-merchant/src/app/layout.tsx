@@ -21,10 +21,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         lineHeight: 1.5,
         backgroundColor: '#FAFAF9',
       }}>
-        <NavBar />
-        <main style={{ padding: '24px 28px', maxWidth: 1100, margin: '0 auto' }}>
-          {children}
-        </main>
+        <div style={{ display: 'flex', minHeight: '100vh' }}>
+          <NavBar />
+          <main style={{ flex: 1, minWidth: 0, padding: '28px 32px', maxWidth: 'calc(100vw - 236px)' }}>
+            <div style={{ maxWidth: 1180 }}>
+              {children}
+            </div>
+          </main>
+        </div>
       </body>
     </html>
   );
