@@ -40,7 +40,7 @@ export default function ChurnRiskPage() {
       <h1 style={{ fontSize: 22, fontWeight: 700, marginTop: 0, marginBottom: 4 }}>Churn Risk</h1>
       <p style={{ fontSize: 13, color: '#78716C', marginTop: 0, marginBottom: 28 }}>Restaurants and customers that need attention before revenue is lost</p>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 28 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
         <Card label="AT-RISK RESTAURANTS" value={summary.atRiskRestaurants} color={summary.atRiskRestaurants > 0 ? '#DC2626' : undefined} />
         <Card label="MRR AT RISK" value={cents(summary.mrrAtRisk)} color={summary.mrrAtRisk > 0 ? '#DC2626' : undefined} />
         <Card label="LAPSED CUSTOMERS" value={summary.atRiskCustomers} color={summary.atRiskCustomers > 0 ? '#DC2626' : undefined} />
@@ -53,8 +53,8 @@ export default function ChurnRiskPage() {
           <p style={{ fontSize: 13, color: '#A8A29E', textAlign: 'center', padding: 20, margin: 0 }}>No restaurants at risk right now</p>
         ) : (
           restaurants.map((r) => (
-            <div key={r.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #F5F5F4' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div key={r.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, padding: '12px 0', borderBottom: '1px solid #F5F5F4' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
                 <div style={{
                   fontSize: 13, fontWeight: 700, borderRadius: 6, padding: '4px 8px', minWidth: 36, textAlign: 'center',
                   background: r.risk === 'high' ? '#FEF2F2' : '#FEF3C7',
@@ -85,8 +85,8 @@ export default function ChurnRiskPage() {
           <p style={{ fontSize: 13, color: '#A8A29E', textAlign: 'center', padding: 20, margin: 0 }}>No lapsed customers detected</p>
         ) : (
           customers.map((c) => (
-            <div key={c.customerId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #F5F5F4' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div key={c.customerId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, padding: '12px 0', borderBottom: '1px solid #F5F5F4' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#DC2626', background: '#FEF2F2', borderRadius: 6, padding: '4px 8px', minWidth: 36, textAlign: 'center' }}>{c.daysSinceLastOrder}d</div>
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 500 }}>{c.name}</div>

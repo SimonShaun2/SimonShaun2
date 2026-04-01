@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../../lib/api';
+import { useMobile } from '../../lib/use-mobile';
 
 interface Customer {
   id: string;
@@ -34,6 +35,7 @@ interface CustomerDetail {
 }
 
 export default function CustomersPage() {
+  const isMobile = useMobile();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -88,7 +90,7 @@ export default function CustomersPage() {
   }
 
   return (
-    <div style={{ display: 'flex', gap: 24 }}>
+    <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 24 }}>
       {/* Left: customer list */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -118,7 +120,8 @@ export default function CustomersPage() {
         )}
 
         {!loading && filtered.length > 0 && (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+          <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', minWidth: isMobile ? 640 : '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr style={{ borderBottom: '2px solid #e5e7eb', textAlign: 'left' }}>
                 <th style={{ padding: '8px 8px 8px 0', fontWeight: 600, color: '#6b7280', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Customer</th>
@@ -169,15 +172,16 @@ export default function CustomersPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
       {/* Right: customer detail panel */}
       {(selected || detailLoading) && (
         <div style={{
-          width: 360, flexShrink: 0,
+          width: isMobile ? '100%' : 360, flexShrink: 0,
           border: '1px solid #e5e7eb', borderRadius: 10, padding: 20,
-          position: 'sticky', top: 24, alignSelf: 'flex-start',
+          position: isMobile ? 'static' : 'sticky', top: isMobile ? undefined : 24, alignSelf: 'flex-start',
           background: '#fff',
         }}>
           {detailLoading ? (
@@ -199,7 +203,7 @@ export default function CustomersPage() {
               </div>
 
               {/* Stats */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 8, marginBottom: 16 }}>
                 <div style={{ background: '#F9FAFB', borderRadius: 8, padding: 12, textAlign: 'center' }}>
                   <div style={{ fontSize: 22, fontWeight: 700 }}>{selected.orderCount}</div>
                   <div style={{ fontSize: 11, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Orders</div>

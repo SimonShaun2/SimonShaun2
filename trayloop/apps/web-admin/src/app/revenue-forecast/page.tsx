@@ -35,7 +35,7 @@ export default function RevenueForecastPage() {
       <h1 style={{ fontSize: 22, fontWeight: 700, marginTop: 0, marginBottom: 4 }}>Revenue Forecast</h1>
       <p style={{ fontSize: 13, color: '#78716C', marginTop: 0, marginBottom: 28 }}>Projected order volume based on recurring clients across all restaurants</p>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 28 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
         <Card label="PROJECTED GMV (30 DAYS)" value={cents(summary.projectedGmv30d)} sub="Based on recurring orders" accent />
         <Card label="RECURRING CLIENTS" value={summary.recurringClients} sub="Locked in weekly/monthly" />
         <Card label="YOUR PROJECTED MRR" value={cents(summary.projectedMrr)} sub="Current paid subscribers" />
@@ -47,7 +47,7 @@ export default function RevenueForecastPage() {
           <p style={{ fontSize: 13, color: '#A8A29E', textAlign: 'center', padding: 20, margin: 0 }}>No recurring clients detected yet</p>
         ) : (
           recurringCustomers.map((c) => (
-            <div key={c.customerId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #F5F5F4' }}>
+            <div key={c.customerId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, padding: '12px 0', borderBottom: '1px solid #F5F5F4' }}>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 500 }}>{c.name}</div>
                 <div style={{ fontSize: 11, color: '#78716C' }}>

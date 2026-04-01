@@ -42,7 +42,7 @@ export default function TrialConversionsPage() {
       </p>
 
       {/* Summary cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 28 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
         <Card label="TRIALS ACTIVE" value={summary.activeTrials} sub="Currently on free plan" />
         <Card label="MRR IF ALL CONVERT" value={cents(summary.projectedMrr)} sub="$99/mo each" />
         <Card label="AVG ORDERS ON TRIAL" value={summary.avgTrialOrders} sub="More orders = hotter lead" />
@@ -58,8 +58,8 @@ export default function TrialConversionsPage() {
           <p style={{ fontSize: 13, color: '#A8A29E', textAlign: 'center', padding: 20, margin: 0 }}>No active trials</p>
         ) : (
           restaurants.map((r) => (
-            <div key={r.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', borderBottom: '1px solid #F5F5F4' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div key={r.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14, padding: '14px 0', borderBottom: '1px solid #F5F5F4' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
                 <HeatIcon heat={r.heat} />
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 500 }}>{r.name}</div>

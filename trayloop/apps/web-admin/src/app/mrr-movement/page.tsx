@@ -51,7 +51,7 @@ export default function MrrMovementPage() {
       </p>
 
       {/* Summary cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 28 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
         <Card label="NEW MRR THIS MONTH" value={centsWithSign(summary.newMrr)} color={summary.newMrr > 0 ? '#166534' : undefined} />
         <Card label="CHURNED MRR" value={cents(summary.churnedMrr)} color={summary.churnedMrr > 0 ? '#DC2626' : undefined} />
         <Card label="NET MRR CHANGE" value={centsWithSign(summary.netChange)} color={summary.netChange > 0 ? '#166534' : summary.netChange < 0 ? '#DC2626' : undefined} />
@@ -67,8 +67,8 @@ export default function MrrMovementPage() {
           <p style={{ fontSize: 13, color: '#A8A29E', textAlign: 'center', padding: 20, margin: 0 }}>No restaurants yet</p>
         ) : (
           restaurants.map((r) => (
-            <div key={r.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #F5F5F4' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div key={r.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, padding: '12px 0', borderBottom: '1px solid #F5F5F4' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
                 <div style={{ fontSize: 13 }}>
                   <span style={{ fontWeight: 500, color: r.status === 'churned' || r.status === 'inactive' ? '#A8A29E' : '#1C1917' }}>
                     {r.name}

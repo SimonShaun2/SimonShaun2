@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { apiFetch } from '../../lib/api';
 import { clearMerchantSession, merchantResetHref } from '../../lib/session';
 import { getStorefrontUrl } from '../../lib/storefront';
+import { useMobile } from '../../lib/use-mobile';
 
 interface PaymentStatus {
   stripeAccountId: string | null;
@@ -165,6 +166,7 @@ export default function SettingsPage() {
 }
 
 function SettingsContent() {
+  const isMobile = useMobile();
   const searchParams = useSearchParams();
   const stripeParam = searchParams.get('stripe');
 
@@ -452,7 +454,7 @@ function SettingsContent() {
         />
       ) : null}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 24 }}>
         <SummaryCard
           label="Storefront"
           value={setupStatus?.isComplete ? 'Live' : 'In Setup'}
@@ -479,11 +481,11 @@ function SettingsContent() {
         />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '220px minmax(0, 1fr)', gap: 20, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '220px minmax(0, 1fr)', gap: 20, alignItems: 'start' }}>
         <aside
           style={{
-            position: 'sticky',
-            top: 24,
+            position: isMobile ? 'static' : 'sticky',
+            top: isMobile ? undefined : 24,
             border: '1px solid #E7E5E4',
             borderRadius: 12,
             padding: 14,
@@ -493,7 +495,7 @@ function SettingsContent() {
           <div style={{ fontSize: 11, fontWeight: 700, color: '#78716C', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
             Settings Sections
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div style={{ display: 'flex', flexDirection: isMobile ? 'row' : 'column', gap: 4, flexWrap: 'wrap', overflowX: isMobile ? 'auto' : 'visible' }}>
             {SECTION_LINKS.map((section) => (
               <a
                 key={section.id}
@@ -517,7 +519,7 @@ function SettingsContent() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           <SectionCard id="profile" title="Business Profile" subtitle="Update the core information customers and your team use to identify this merchant account.">
             <form onSubmit={handleProfileSave}>
-              <div style={formGridStyle}>
+              <div style={{ ...formGridStyle, gridTemplateColumns: isMobile ? '1fr' : formGridStyle.gridTemplateColumns }}>
                 <Field label="Business Name">
                   <input
                     value={organizationForm.name}
@@ -654,7 +656,7 @@ function SettingsContent() {
             </div>
 
             <form onSubmit={handleLocationSave}>
-              <div style={formGridStyle}>
+              <div style={{ ...formGridStyle, gridTemplateColumns: isMobile ? '1fr' : formGridStyle.gridTemplateColumns }}>
                 <Field label="Location Name">
                   <input value={locationForm.name} onChange={(event) => setLocationForm((current) => ({ ...current, name: event.target.value }))} style={inputStyle} placeholder="Downtown Kitchen" required />
                 </Field>
@@ -722,7 +724,7 @@ function SettingsContent() {
                 </div>
               </div>
 
-              <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
+              <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
                 <ToggleRow
                   title="Delivery enabled"
                   checked={locationForm.deliveryEnabled}
@@ -864,7 +866,7 @@ function SettingsContent() {
           </SectionCard>
 
           <SectionCard id="notifications" title="Notifications" subtitle="What the merchant experience supports today and what’s planned next.">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
               <InfoTile title="In-app notifications" body="Notification bell is live in the merchant sidebar." />
               <InfoTile title="Follow-up workflow" body="Follow-ups are created from order activity and managed in the dashboard." />
               <InfoTile title="Email alerts" body="Merchant-level notification preferences are not configurable yet." muted />

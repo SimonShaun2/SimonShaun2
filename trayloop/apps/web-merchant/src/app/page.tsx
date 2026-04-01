@@ -172,7 +172,7 @@ export default function DashboardPage() {
       <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 20px', color: '#1C1917' }}>Dashboard</h1>
 
       {/* KPI cards - Row 1: Primary (larger) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 12 }}>
         <KpiCard
           label="Revenue (7d)"
           value={stats ? `$${(stats.last7DaysRevenue / 100).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : '...'}
@@ -197,7 +197,7 @@ export default function DashboardPage() {
       </div>
 
       {/* KPI cards - Row 2: Secondary (smaller) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 28 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 28 }}>
         <KpiCard
           label="Avg Order Value"
           value={stats ? `$${(stats.avgOrderValue / 100).toFixed(0)}` : '...'}

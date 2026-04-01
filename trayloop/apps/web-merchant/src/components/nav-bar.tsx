@@ -6,6 +6,7 @@ import NotificationBell from './notification-bell';
 import { clearMerchantSession } from '../lib/session';
 import { getStorefrontUrl } from '../lib/storefront';
 import { apiFetch } from '../lib/api';
+import { useMobile } from '../lib/use-mobile';
 
 const NAV_ITEMS = [
   { href: '/', label: 'Dashboard', section: 'workspace' },
@@ -18,6 +19,7 @@ const NAV_ITEMS = [
 export default function NavBar() {
   const pathname = usePathname();
   const isAuthPage = pathname === '/login' || pathname === '/register' || pathname === '/reset-password';
+  const isMobile = useMobile();
   const [storefrontUrl, setStorefrontUrl] = useState<string | null>(null);
   const [signedIn, setSignedIn] = useState(false);
   const [orgName, setOrgName] = useState<string | null>(null);
@@ -61,6 +63,127 @@ export default function NavBar() {
   }
 
   if (isAuthPage) return null;
+
+  if (isMobile) {
+    return (
+      <aside
+        style={{
+          width: '100%',
+          background: '#1C1917',
+          color: '#FAFAF9',
+          display: 'flex',
+          flexDirection: 'column',
+          borderBottom: '1px solid #292524',
+        }}
+      >
+        <div style={{ padding: '16px 16px 12px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+            <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', color: '#FAFAF9', minWidth: 0 }}>
+              <div
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 10,
+                  background: '#D4A853',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#1C1917',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  flexShrink: 0,
+                }}
+              >
+                TL
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 15, fontWeight: 700 }}>TrayLoop</div>
+                <div style={{ fontSize: 12, color: '#E7E5E4', fontWeight: 600, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {orgName ?? 'Merchant Dashboard'}
+                </div>
+              </div>
+            </a>
+            <NotificationBell />
+          </div>
+          <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {storefrontUrl ? (
+              <a
+                href={storefrontUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 999,
+                  background: '#D4A853',
+                  color: '#1C1917',
+                  padding: '8px 12px',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                }}
+              >
+                Open Storefront
+              </a>
+            ) : null}
+            {signedIn ? (
+              <button
+                onClick={handleSignOut}
+                style={{
+                  border: '1px solid #44403C',
+                  borderRadius: 999,
+                  background: 'transparent',
+                  color: '#FAFAF9',
+                  padding: '8px 12px',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Sign Out
+              </button>
+            ) : null}
+          </div>
+        </div>
+
+        <nav
+          style={{
+            display: 'flex',
+            gap: 8,
+            overflowX: 'auto',
+            padding: '0 16px 16px',
+          }}
+        >
+          {NAV_ITEMS.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <a
+                key={item.href}
+                href={item.href}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 999,
+                  padding: '8px 12px',
+                  whiteSpace: 'nowrap',
+                  textDecoration: 'none',
+                  background: isActive ? 'rgba(212, 168, 83, 0.12)' : '#231F1C',
+                  color: isActive ? '#D4A853' : '#D6D3D1',
+                  fontSize: 13,
+                  fontWeight: isActive ? 700 : 500,
+                  border: isActive ? '1px solid rgba(212, 168, 83, 0.35)' : '1px solid #2C2724',
+                }}
+              >
+                {item.label}
+              </a>
+            );
+          })}
+        </nav>
+      </aside>
+    );
+  }
 
   return (
     <aside

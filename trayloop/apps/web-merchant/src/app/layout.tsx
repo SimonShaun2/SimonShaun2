@@ -21,10 +21,26 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         lineHeight: 1.5,
         backgroundColor: '#FAFAF9',
       }}>
-        <div style={{ display: 'flex', minHeight: '100vh' }}>
+        <style>{`
+          @media (max-width: 960px) {
+            .merchant-shell {
+              flex-direction: column;
+            }
+
+            .merchant-main {
+              max-width: none !important;
+              padding: 20px 16px 28px !important;
+            }
+
+            .merchant-main-inner {
+              max-width: none !important;
+            }
+          }
+        `}</style>
+        <div className="merchant-shell" style={{ display: 'flex', minHeight: '100vh' }}>
           <NavBar />
-          <main style={{ flex: 1, minWidth: 0, padding: '28px 32px', maxWidth: 'calc(100vw - 236px)' }}>
-            <div style={{ maxWidth: 1180 }}>
+          <main className="merchant-main" style={{ flex: 1, minWidth: 0, padding: '28px 32px', maxWidth: 'calc(100vw - 236px)' }}>
+            <div className="merchant-main-inner" style={{ maxWidth: 1180 }}>
               {children}
             </div>
           </main>

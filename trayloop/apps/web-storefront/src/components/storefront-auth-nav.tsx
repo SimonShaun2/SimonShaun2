@@ -85,7 +85,7 @@ export default function StorefrontAuthNav() {
 
   if (!customerName) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
         <Link href="/login" style={linkStyle}>Sign In</Link>
         <Link href="/signup" style={linkStyle}>Create Account</Link>
       </div>
@@ -93,7 +93,7 @@ export default function StorefrontAuthNav() {
   }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
       <Link href="/account" style={linkStyle}>Account</Link>
       <span style={{ color: '#D6D3D1', fontSize: 12, whiteSpace: 'nowrap' }}>{customerName}</span>
       <button

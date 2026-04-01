@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { StorefrontData, OrderSubmission, OrderConfirmation } from '../lib/api';
 import { fetchCustomerAccount, submitOrder, OrderError } from '../lib/api';
+import { useMobile } from '../lib/use-mobile';
 
 interface Props {
   data: StorefrontData;
@@ -76,6 +77,7 @@ const sectionSubtitleStyle: React.CSSProperties = {
 };
 
 export default function CheckoutForm({ data }: Props) {
+  const isMobile = useMobile();
   const { locations, menu } = data;
 
   // All packages and add-ons flattened
@@ -303,9 +305,9 @@ export default function CheckoutForm({ data }: Props) {
 
   /* ── Render ── */
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 32, alignItems: 'flex-start' }}>
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 32, alignItems: 'flex-start' }}>
       {/* ── LEFT COLUMN: Form sections ── */}
-      <div style={{ flex: '0 0 620px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div style={{ flex: isMobile ? '1 1 auto' : '0 0 620px', width: isMobile ? '100%' : undefined, display: 'flex', flexDirection: 'column', gap: 24 }}>
 
         {/* Error banner */}
         {error && (
@@ -348,7 +350,7 @@ export default function CheckoutForm({ data }: Props) {
             <p style={sectionSubtitleStyle}>Please order at least {leadTime} hours in advance</p>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: 20 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginTop: 20 }}>
             <div>
               <label style={labelStyle}>Event Date</label>
               <input
@@ -373,7 +375,7 @@ export default function CheckoutForm({ data }: Props) {
           {/* Service Type Toggle */}
           <div style={{ marginTop: 20 }}>
             <label style={labelStyle}>Service Type</label>
-            <div style={{ display: 'flex', gap: 12 }}>
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 12 }}>
               {selectedLocation?.deliveryEnabled !== false && (
                 <button
                   type="button"
@@ -426,7 +428,7 @@ export default function CheckoutForm({ data }: Props) {
                 required
                 style={{ ...inputStyle, marginBottom: 12 }}
               />
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: 12 }}>
                 <input
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
@@ -468,7 +470,7 @@ export default function CheckoutForm({ data }: Props) {
             padding: '24px 24px 20px',
           }}>
             <label style={{ ...labelStyle, marginBottom: 16 }}>Headcount</label>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', flexDirection: isMobile ? 'column' : 'row', gap: 20 }}>
               {/* Big display number */}
               <div>
                 <div style={{
@@ -481,7 +483,7 @@ export default function CheckoutForm({ data }: Props) {
               </div>
 
               {/* Stepper controls */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 <button
                   type="button"
                   onClick={() => setHeadcount(Math.max(1, headcount - 5))}
@@ -728,7 +730,7 @@ export default function CheckoutForm({ data }: Props) {
             </div>
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+              gridTemplateColumns: `repeat(auto-fill, minmax(${isMobile ? 220 : 260}px, 1fr))`,
               gap: 10,
               marginTop: 16,
             }}>
@@ -970,10 +972,10 @@ export default function CheckoutForm({ data }: Props) {
             </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: 20 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginTop: 20 }}>
             <div>
               <label style={labelStyle}>Full Name *</label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 8 }}>
                 <input
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
@@ -1001,7 +1003,7 @@ export default function CheckoutForm({ data }: Props) {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginTop: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginTop: 14 }}>
             <div>
               <label style={labelStyle}>Email *</label>
               <input
@@ -1045,7 +1047,7 @@ export default function CheckoutForm({ data }: Props) {
       </div>
 
       {/* ── RIGHT COLUMN: Summary Panel ── */}
-      <div style={{ flex: '0 0 320px', position: 'sticky', top: 24 }}>
+      <div style={{ flex: isMobile ? '1 1 auto' : '0 0 320px', width: isMobile ? '100%' : undefined, position: isMobile ? 'static' : 'sticky', top: isMobile ? undefined : 24 }}>
         <div style={{
           background: T.cardBg,
           border: `1px solid ${T.cardBorder}`,

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../lib/api';
+import { useMobile } from '../../lib/use-mobile';
 
 interface Package {
   id: string;
@@ -131,6 +132,7 @@ const EMPTY_ADDON_FORM: AddOnFormState = {
 };
 
 export default function CatalogPage() {
+  const isMobile = useMobile();
   const [catalogs, setCatalogs] = useState<Catalog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -493,7 +495,12 @@ export default function CatalogPage() {
           </button>
         </div>
       ) : (
-        <div style={layoutStyle}>
+      <div
+        style={{
+          ...layoutStyle,
+          gridTemplateColumns: isMobile ? '1fr' : layoutStyle.gridTemplateColumns,
+        }}
+      >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
             {catalogs.map((catalog) => (
               <div key={catalog.id} style={catalogCardStyle}>
@@ -598,7 +605,13 @@ export default function CatalogPage() {
             ))}
           </div>
 
-          <aside style={editorPanelStyle}>
+          <aside
+            style={{
+              ...editorPanelStyle,
+              position: isMobile ? 'static' : editorPanelStyle.position,
+              top: isMobile ? undefined : editorPanelStyle.top,
+            }}
+          >
             {editor ? (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 16 }}>

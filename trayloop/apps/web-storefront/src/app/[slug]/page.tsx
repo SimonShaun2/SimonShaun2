@@ -54,11 +54,40 @@ export default async function StorefrontPage({ params }: PageProps) {
 
   return (
     <main style={{ fontFamily: fontStack, background: '#FAF9F7', minHeight: '100vh' }}>
+      <style>{`
+        @media (max-width: 960px) {
+          .storefront-shell {
+            padding: 20px 16px 40px !important;
+          }
+
+          .storefront-header {
+            height: auto !important;
+            padding: 14px 16px !important;
+          }
+
+          .storefront-header-inner {
+            align-items: flex-start !important;
+            flex-wrap: wrap !important;
+          }
+
+          .storefront-header-name {
+            width: 100%;
+          }
+
+          .storefront-policy-bar {
+            height: auto !important;
+            padding: 12px 0 !important;
+            gap: 16px !important;
+            flex-wrap: wrap !important;
+            overflow: visible !important;
+          }
+        }
+      `}</style>
       <Header merchantName={merchant.name} merchantDescription={merchant.description} />
 
       {primaryLocation && <PolicyBadges location={primaryLocation} />}
 
-      <div style={{ maxWidth: 1040, margin: '0 auto', padding: '28px 24px 56px' }}>
+      <div className="storefront-shell" style={{ maxWidth: 1040, margin: '0 auto', padding: '28px 24px 56px' }}>
         <CheckoutForm data={data} />
       </div>
     </main>
@@ -67,7 +96,7 @@ export default async function StorefrontPage({ params }: PageProps) {
 
 function Header({ merchantName, merchantDescription }: { merchantName: string; merchantDescription?: string | null }) {
   return (
-    <header style={{
+    <header className="storefront-header" style={{
       background: '#1C1917',
       padding: '0 24px',
       height: 56,
@@ -75,14 +104,14 @@ function Header({ merchantName, merchantDescription }: { merchantName: string; m
       alignItems: 'center',
       justifyContent: 'center',
     }}>
-      <div style={{
+      <div className="storefront-header-inner" style={{
         maxWidth: 1040,
         width: '100%',
         display: 'flex',
         alignItems: 'center',
         gap: 12,
       }}>
-        <span style={{
+        <span className="storefront-header-name" style={{
           color: '#FFFFFF',
           fontSize: 18,
           fontWeight: 700,
@@ -128,7 +157,7 @@ function PolicyBadges({ location }: { location: StorefrontData['locations'][0] }
       borderBottom: '1px solid #E7E5E4',
       padding: '0 24px',
     }}>
-      <div style={{
+      <div className="storefront-policy-bar" style={{
         maxWidth: 1040,
         margin: '0 auto',
         display: 'flex',
