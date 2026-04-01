@@ -2,6 +2,93 @@ import { db } from '@trayloop/database';
 import { customers, deposits, orders, organizationMemberships, organizations, payments, recurringOrders, users } from '@trayloop/database';
 import { and, asc, desc, eq, gte, inArray, sql } from 'drizzle-orm';
 
+const FINAL_ORDER_STATUSES = ['confirmed', 'completed'] as const;
+const PLAN_PRICE_CENTS = 9900;
+
+type CustomerOrderActivityRow = {
+  customerId: string;
+  customerEmail: string;
+  orgName: string;
+  totalAmount: number;
+  createdAt: Date;
+};
+
+function daysBetween(now: Date, then: Date) {
+  return Math.floor((now.getTime() - then.getTime()) / 86400000);
+}
+
+function displayNameFromEmail(email: string) {
+  const localPart = email.split('@')[0] ?? email;
+  return localPart
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(' ');
+}
+
+async function getFinalizedCustomerOrderActivity() {
+  return db
+    .select({
+      customerId: customers.id,
+      customerEmail: customers.email,
+      orgName: organizations.name,
+      totalAmount: orders.totalAmount,
+      createdAt: orders.createdAt,
+    })
+    .from(orders)
+    .innerJoin(customers, eq(customers.id, orders.customerId))
+    .innerJoin(organizations, eq(organizations.id, orders.organizationId))
+    .where(inArray(orders.status, FINAL_ORDER_STATUSES))
+    .orderBy(desc(orders.createdAt)) as Promise<CustomerOrderActivityRow[]>;
+}
+
+function buildAtRiskCustomers(rows: CustomerOrderActivityRow[], now: Date, fourteenDaysAgo: Date) {
+  const grouped = new Map<
+    string,
+    {
+      customerEmail: string;
+      orgName: string;
+      orderCount: number;
+      totalSpend: number;
+      lastOrderAt: Date;
+    }
+  >();
+
+  for (const row of rows) {
+    const existing = grouped.get(row.customerId);
+    if (!existing) {
+      grouped.set(row.customerId, {
+        customerEmail: row.customerEmail,
+        orgName: row.orgName,
+        orderCount: 1,
+        totalSpend: row.totalAmount,
+        lastOrderAt: new Date(row.createdAt),
+      });
+      continue;
+    }
+
+    existing.orderCount += 1;
+    existing.totalSpend += row.totalAmount;
+    if (new Date(row.createdAt) > existing.lastOrderAt) {
+      existing.lastOrderAt = new Date(row.createdAt);
+    }
+  }
+
+  return Array.from(grouped.entries())
+    .map(([customerId, customer]) => ({
+      customerId,
+      name: displayNameFromEmail(customer.customerEmail),
+      company: null,
+      orgName: customer.orgName,
+      orderCount: customer.orderCount,
+      avgOrderValue: Math.round(customer.totalSpend / Math.max(1, customer.orderCount)),
+      lastOrderAt: customer.lastOrderAt.toISOString(),
+      daysSinceLastOrder: daysBetween(now, customer.lastOrderAt),
+    }))
+    .filter((customer) => customer.orderCount >= 2 && new Date(customer.lastOrderAt) < fourteenDaysAgo)
+    .sort((a, b) => b.avgOrderValue - a.avgOrderValue);
+}
+
 export async function listOrganizations() {
   return db
     .select({
@@ -90,12 +177,12 @@ export async function getPlatformOverview() {
       .where(and(inArray(orders.status, ['confirmed', 'completed']), gte(orders.createdAt, monthStart))),
   ]);
 
-  const activeRestaurants = activeOrgsResult[0].count;
-  const paidRestaurants = paidOrgsResult[0].count;
+  const activeRestaurants = activeOrgsResult[0]?.count ?? 0;
+  const paidRestaurants = paidOrgsResult[0]?.count ?? 0;
   const trialRestaurants = activeRestaurants - paidRestaurants;
-  const mrr = paidRestaurants * 9900;
-  const gmvThisMonth = gmvResult[0].total;
-  const projectedMrr = activeRestaurants * 9900;
+  const mrr = paidRestaurants * PLAN_PRICE_CENTS;
+  const gmvThisMonth = gmvResult[0]?.total ?? 0;
+  const projectedMrr = activeRestaurants * PLAN_PRICE_CENTS;
 
   const restaurantsByGmv = await db
     .select({
@@ -116,33 +203,12 @@ export async function getPlatformOverview() {
     id: restaurant.id,
     name: restaurant.name,
     isPaid: restaurant.isPaid,
-    mrr: restaurant.isPaid ? 9900 : 0,
+    mrr: restaurant.isPaid ? PLAN_PRICE_CENTS : 0,
     label: restaurant.isPaid ? '$99/mo' : '$0 -> $99',
   }));
 
-  const atRiskCustomers = await db
-    .select({
-      customerId: customers.id,
-      firstName: customers.firstName,
-      lastName: customers.lastName,
-      companyName: customers.companyName,
-      orgName: organizations.name,
-      orderCount: sql<number>`count(${orders.id})::int`,
-      avgOrderValue: sql<number>`(avg(${orders.totalAmount}))::int`,
-      lastOrderAt: sql<string>`max(${orders.createdAt})`,
-    })
-    .from(customers)
-    .innerJoin(orders, eq(orders.customerId, customers.id))
-    .innerJoin(organizations, eq(organizations.id, customers.organizationId))
-    .groupBy(
-      customers.id,
-      customers.firstName,
-      customers.lastName,
-      customers.companyName,
-      organizations.name,
-    )
-    .having(and(sql`count(${orders.id}) >= 2`, sql`max(${orders.createdAt}) < ${fourteenDaysAgo}`))
-    .orderBy(desc(sql`avg(${orders.totalAmount})`));
+  const customerOrderRows = await getFinalizedCustomerOrderActivity();
+  const atRiskCustomers = buildAtRiskCustomers(customerOrderRows, now, fourteenDaysAgo);
 
   const atRiskRevenue = atRiskCustomers.reduce((sum, customer) => sum + (customer.avgOrderValue ?? 0), 0);
 
@@ -229,15 +295,13 @@ export async function getPlatformOverview() {
     mrrBreakdown,
     atRiskCustomers: atRiskCustomers.map((customer) => ({
       customerId: customer.customerId,
-      name: `${customer.firstName} ${customer.lastName}`,
-      company: customer.companyName,
+      name: customer.name,
+      company: customer.company,
       orgName: customer.orgName,
       orderCount: customer.orderCount,
       avgOrderValue: customer.avgOrderValue,
       lastOrderAt: customer.lastOrderAt,
-      daysSinceLastOrder: Math.floor(
-        (now.getTime() - new Date(customer.lastOrderAt).getTime()) / (24 * 60 * 60 * 1000),
-      ),
+      daysSinceLastOrder: customer.daysSinceLastOrder,
     })),
     recentPayments: recentPayments.map((payment) => ({
       id: payment.id,
@@ -268,7 +332,6 @@ export async function getPlatformOverview() {
 export async function getTrialConversions() {
   const now = new Date();
   const TRIAL_DAYS = 30;
-  const PLAN_PRICE = 9900; // cents, $99/mo
   const trialWindow = sql`interval '30 days'`;
   const finalOrderStatuses = sql`('confirmed', 'completed')`;
 
@@ -347,7 +410,7 @@ export async function getTrialConversions() {
   return {
     summary: {
       activeTrials: restaurants.length,
-      projectedMrr: restaurants.length * PLAN_PRICE,
+      projectedMrr: restaurants.length * PLAN_PRICE_CENTS,
       avgTrialOrders: restaurants.length > 0 ? Math.round(totalOrders / restaurants.length) : 0,
     },
     restaurants,
@@ -374,7 +437,6 @@ export async function getTrialConversions() {
 export async function getMrrMovement() {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const PLAN_PRICE = 9900;
 
   // All orgs with payment state
   const allOrgs = await db.select({
@@ -407,13 +469,13 @@ export async function getMrrMovement() {
 
     if (!r.isActive && r.isPaid) {
       status = 'churned';
-      mrr = -PLAN_PRICE; // lost revenue
+      mrr = -PLAN_PRICE_CENTS; // lost revenue
     } else if (!r.isActive) {
       status = 'inactive';
       mrr = 0;
     } else if (r.isPaid) {
       status = 'paid';
-      mrr = PLAN_PRICE;
+      mrr = PLAN_PRICE_CENTS;
     } else {
       status = 'trial';
       mrr = 0;
@@ -440,16 +502,16 @@ export async function getMrrMovement() {
   // New MRR: paid orgs created this month
   const newMrr = restaurants
     .filter((r) => r.status === 'paid' && new Date(r.createdAt) >= monthStart)
-    .reduce((s, r) => s + PLAN_PRICE, 0);
+    .reduce((s) => s + PLAN_PRICE_CENTS, 0);
 
   // Churned MRR: inactive orgs that were paid
   const churnedMrr = restaurants
     .filter((r) => r.status === 'churned' && new Date(r.updatedAt) >= monthStart)
-    .reduce((s) => s + PLAN_PRICE, 0);
+    .reduce((s) => s + PLAN_PRICE_CENTS, 0);
 
   const currentMrr = restaurants
     .filter((r) => r.status === 'paid')
-    .reduce((s, r) => s + PLAN_PRICE, 0);
+    .reduce((s) => s + PLAN_PRICE_CENTS, 0);
 
   return {
     summary: {
@@ -588,73 +650,64 @@ export async function getPlatformHealth() {
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000);
   const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000);
   const fourteenDaysAgo = new Date(now.getTime() - 14 * 86400000);
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const finalOrderStatuses = sql`('confirmed', 'completed')`;
-
-  const [orderStats, recentOrderStats, depositStats, stripeOrgs, lastOrder, restaurantRows] = await Promise.all([
-    db.select({
-      count: sql<number>`count(case when ${orders.status} in ${finalOrderStatuses} then 1 end)::int`,
-      avgValue: sql<number>`coalesce(avg(case when ${orders.status} in ${finalOrderStatuses} then ${orders.totalAmount} end), 0)::int`,
-    }).from(orders).where(gte(orders.createdAt, thirtyDaysAgo)),
-
-    db.select({
-      count: sql<number>`count(case when ${orders.status} in ${finalOrderStatuses} then 1 end)::int`,
-    }).from(orders).where(gte(orders.createdAt, sevenDaysAgo)),
-
+  const [restaurantRows, finalizedOrders30d, recentOrders7d, depositStats, stripeOrgs] = await Promise.all([
+    listRestaurantDirectory(),
+    db
+      .select({
+        amount: orders.totalAmount,
+        createdAt: orders.createdAt,
+      })
+      .from(orders)
+      .where(and(inArray(orders.status, FINAL_ORDER_STATUSES), gte(orders.createdAt, thirtyDaysAgo))),
+    db
+      .select({
+        id: orders.id,
+      })
+      .from(orders)
+      .where(and(inArray(orders.status, FINAL_ORDER_STATUSES), gte(orders.createdAt, sevenDaysAgo))),
     db.select({ count: sql<number>`count(*)::int` })
       .from(deposits).where(gte(deposits.createdAt, thirtyDaysAgo)),
-
     db.select({ count: sql<number>`count(*)::int` })
       .from(organizations).where(eq(organizations.stripeChargesEnabled, true)),
-
-    db
-      .select({ latest: sql<string | null>`max(${orders.createdAt})` })
-      .from(orders)
-      .where(inArray(orders.status, ['confirmed', 'completed'])),
-
-    db.select({
-      id: organizations.id,
-      name: organizations.name,
-      isActive: organizations.isActive,
-      isPaid: organizations.stripeChargesEnabled,
-      ordersThisMonth: sql<number>`count(case when ${orders.createdAt} >= ${monthStart} and ${orders.status} in ${finalOrderStatuses} then 1 end)::int`,
-      avgOrderValue: sql<number>`coalesce(avg(case when ${orders.status} in ${finalOrderStatuses} then ${orders.totalAmount} end), 0)::int`,
-      lastOrderAt: sql<string | null>`max(case when ${orders.status} in ${finalOrderStatuses} then ${orders.createdAt} end)`,
-    })
-      .from(organizations)
-      .leftJoin(orders, eq(orders.organizationId, organizations.id))
-      .groupBy(organizations.id, organizations.name, organizations.isActive, organizations.stripeChargesEnabled)
-      .orderBy(desc(sql`max(${orders.createdAt})`)),
   ]);
 
-  const recentOrderExists = recentOrderStats[0].count > 0;
+  const totalOrders30d = finalizedOrders30d.length;
+  const totalRevenue30d = finalizedOrders30d.reduce((sum, order) => sum + order.amount, 0);
+  const avgOrderValue = totalOrders30d > 0 ? Math.round(totalRevenue30d / totalOrders30d) : 0;
+  const latestOrder = [...finalizedOrders30d].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  )[0];
+  const lastOrderAt = latestOrder ? new Date(latestOrder.createdAt).toISOString() : null;
+  const recentOrderExists = recentOrders7d.length > 0;
   const systems = [
     { name: 'API', status: 'healthy' as const, detail: 'Responding normally' },
-    { name: 'Stripe Payments', status: stripeOrgs[0].count > 0 ? 'active' as const : 'not_connected' as const, detail: stripeOrgs[0].count > 0 ? `${stripeOrgs[0].count} connected` : 'No orgs connected' },
-    { name: 'Deposit Flow', status: depositStats[0].count > 0 ? 'active' as const : 'inactive' as const, detail: depositStats[0].count > 0 ? `${depositStats[0].count} deposits (30d)` : 'No recent deposits' },
-    { name: 'Order Flow', status: recentOrderExists ? 'active' as const : 'inactive' as const, detail: recentOrderExists ? `${recentOrderStats[0].count} finalized orders (7d)` : 'No recent finalized orders' },
+    { name: 'Stripe Payments', status: (stripeOrgs[0]?.count ?? 0) > 0 ? 'active' as const : 'not_connected' as const, detail: (stripeOrgs[0]?.count ?? 0) > 0 ? `${stripeOrgs[0].count} connected` : 'No orgs connected' },
+    { name: 'Deposit Flow', status: (depositStats[0]?.count ?? 0) > 0 ? 'active' as const : 'inactive' as const, detail: (depositStats[0]?.count ?? 0) > 0 ? `${depositStats[0].count} deposits (30d)` : 'No recent deposits' },
+    { name: 'Order Flow', status: recentOrderExists ? 'active' as const : 'inactive' as const, detail: recentOrderExists ? `${recentOrders7d.length} finalized orders (7d)` : 'No recent finalized orders' },
   ];
 
   const restaurantHealth = restaurantRows.map((r) => {
-    let health: 'healthy' | 'at_risk' | 'new' | 'inactive';
-    if (!r.isActive) health = 'inactive';
-    else if (!r.lastOrderAt) health = 'new';
-    else if (new Date(r.lastOrderAt) >= fourteenDaysAgo) health = 'healthy';
-    else health = 'at_risk';
+    const health = !r.isActive
+      ? ('inactive' as const)
+      : !r.lastOrderAt
+        ? ('new' as const)
+        : new Date(r.lastOrderAt) >= fourteenDaysAgo
+          ? ('healthy' as const)
+          : ('at_risk' as const);
 
     return {
       id: r.id, name: r.name, isActive: r.isActive, isPaid: r.isPaid,
-      ordersThisMonth: r.ordersThisMonth, avgOrderValue: r.avgOrderValue,
+      ordersThisMonth: r.orderCount, avgOrderValue: r.avgOrderValue,
       lastOrderAt: r.lastOrderAt, health,
     };
   });
 
   return {
     summary: {
-      totalOrders30d: orderStats[0].count,
-      avgOrderValue: orderStats[0].avgValue,
-      lastOrderAt: lastOrder[0].latest,
-      depositsCount30d: depositStats[0].count,
+      totalOrders30d,
+      avgOrderValue,
+      lastOrderAt,
+      depositsCount30d: depositStats[0]?.count ?? 0,
     },
     systems,
     restaurantHealth,
@@ -674,7 +727,6 @@ export async function getPlatformHealth() {
 export async function getRevenueForecast() {
   const now = new Date();
   const sixtyDaysAgo = new Date(now.getTime() - 60 * 86400000);
-  const PLAN_PRICE = 9900;
   const finalOrderStatuses = sql`('confirmed', 'completed')`;
   const intervalOrdersPerMonth: Record<'weekly' | 'biweekly' | 'monthly' | 'quarterly', number> = {
     weekly: 4,
@@ -778,7 +830,7 @@ export async function getRevenueForecast() {
   const paidOrgs = await db.select({ count: sql<number>`count(*)::int` })
     .from(organizations)
     .where(and(eq(organizations.isActive, true), eq(organizations.stripeChargesEnabled, true)));
-  const projectedMrr = paidOrgs[0].count * PLAN_PRICE;
+  const projectedMrr = (paidOrgs[0]?.count ?? 0) * PLAN_PRICE_CENTS;
 
   return {
     summary: {
@@ -805,76 +857,27 @@ export async function getRevenueForecast() {
 export async function getChurnRisk() {
   const now = new Date();
   const fourteenDaysAgo = new Date(now.getTime() - 14 * 86400000);
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const PLAN_PRICE = 9900;
-  const finalOrderStatuses = sql`('confirmed', 'completed')`;
+  const [restaurants, customerOrderRows] = await Promise.all([
+    listRestaurantDirectory(),
+    getFinalizedCustomerOrderActivity(),
+  ]);
 
-  // Owner lookup
-  const ownerRows = await db.select({
-    organizationId: organizationMemberships.organizationId,
-    userName: users.name,
-  })
-    .from(organizationMemberships)
-    .innerJoin(users, eq(users.id, organizationMemberships.userId))
-    .where(eq(organizationMemberships.role, 'owner'));
-  const ownerMap = new Map<string, string>();
-  for (const r of ownerRows) { if (!ownerMap.has(r.organizationId)) ownerMap.set(r.organizationId, r.userName); }
+  const atRiskRestaurants = restaurants
+    .filter((restaurant) => restaurant.isActive && restaurant.lastOrderAt && new Date(restaurant.lastOrderAt) < fourteenDaysAgo)
+    .map((restaurant) => ({
+      id: restaurant.id,
+      name: restaurant.name,
+      isPaid: restaurant.isPaid,
+      ownerName: restaurant.ownerName,
+      ordersThisMonth: restaurant.orderCount,
+      lastOrderAt: restaurant.lastOrderAt,
+      daysSinceLastOrder: restaurant.lastOrderAt ? daysBetween(now, new Date(restaurant.lastOrderAt)) : null,
+      risk: restaurant.isPaid ? ('high' as const) : ('medium' as const),
+    }));
 
-  // At-risk restaurants: active orgs with orders but none recent
-  const restaurantRows = await db.select({
-    id: organizations.id,
-    name: organizations.name,
-    isPaid: organizations.stripeChargesEnabled,
-    isActive: organizations.isActive,
-    ordersThisMonth: sql<number>`count(case when ${orders.createdAt} >= ${monthStart} and ${orders.status} in ${finalOrderStatuses} then 1 end)::int`,
-    totalOrders: sql<number>`count(case when ${orders.status} in ${finalOrderStatuses} then 1 end)::int`,
-    lastOrderAt: sql<string | null>`max(case when ${orders.status} in ${finalOrderStatuses} then ${orders.createdAt} end)`,
-  })
-    .from(organizations)
-    .leftJoin(orders, eq(orders.organizationId, organizations.id))
-    .where(eq(organizations.isActive, true))
-    .groupBy(organizations.id, organizations.name, organizations.stripeChargesEnabled, organizations.isActive)
-    .having(sql`count(case when ${orders.status} in ${finalOrderStatuses} then 1 end) > 0 AND max(case when ${orders.status} in ${finalOrderStatuses} then ${orders.createdAt} end) < ${fourteenDaysAgo}`);
+  const atRiskCustomers = buildAtRiskCustomers(customerOrderRows, now, fourteenDaysAgo);
 
-  const atRiskRestaurants = restaurantRows.map((r) => ({
-    id: r.id, name: r.name, isPaid: r.isPaid,
-    ownerName: ownerMap.get(r.id) ?? null,
-    ordersThisMonth: r.ordersThisMonth,
-    lastOrderAt: r.lastOrderAt,
-    daysSinceLastOrder: r.lastOrderAt ? Math.floor((now.getTime() - new Date(r.lastOrderAt).getTime()) / 86400000) : null,
-    risk: r.isPaid ? 'high' as const : 'medium' as const,
-  }));
-
-  // At-risk customers: repeat buyers gone quiet
-  const customerRows = await db.select({
-    customerId: customers.id,
-    firstName: customers.firstName,
-    lastName: customers.lastName,
-    companyName: customers.companyName,
-    orgName: organizations.name,
-    orderCount: sql<number>`count(${orders.id})::int`,
-    avgOrderValue: sql<number>`(avg(${orders.totalAmount}))::int`,
-    lastOrderAt: sql<string>`max(${orders.createdAt})`,
-  })
-    .from(customers)
-    .innerJoin(orders, and(eq(orders.customerId, customers.id), inArray(orders.status, ['confirmed', 'completed'])))
-    .innerJoin(organizations, eq(organizations.id, customers.organizationId))
-    .groupBy(customers.id, customers.firstName, customers.lastName, customers.companyName, organizations.name)
-    .having(and(sql`count(${orders.id}) >= 2`, sql`max(${orders.createdAt}) < ${fourteenDaysAgo}`))
-    .orderBy(desc(sql`avg(${orders.totalAmount})`));
-
-  const atRiskCustomers = customerRows.map((c) => ({
-    customerId: c.customerId,
-    name: `${c.firstName} ${c.lastName}`,
-    company: c.companyName,
-    orgName: c.orgName,
-    orderCount: c.orderCount,
-    avgOrderValue: c.avgOrderValue,
-    lastOrderAt: c.lastOrderAt,
-    daysSinceLastOrder: Math.floor((now.getTime() - new Date(c.lastOrderAt).getTime()) / 86400000),
-  }));
-
-  const mrrAtRisk = atRiskRestaurants.filter((r) => r.isPaid).length * PLAN_PRICE;
+  const mrrAtRisk = atRiskRestaurants.filter((r) => r.isPaid).length * PLAN_PRICE_CENTS;
 
   return {
     summary: {
