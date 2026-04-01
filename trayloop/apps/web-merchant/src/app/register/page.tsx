@@ -68,6 +68,7 @@ export default function RegisterPage() {
       // Store auth and redirect to dashboard
       localStorage.setItem('token', token);
       localStorage.setItem('orgId', json.data.id);
+      localStorage.setItem('orgSlug', orgSlug);
       window.location.href = '/';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create organization');
