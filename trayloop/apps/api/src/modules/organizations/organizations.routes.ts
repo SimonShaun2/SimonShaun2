@@ -5,8 +5,6 @@ import { validateBody } from '../../lib/middleware/validate.js';
 import { createOrganizationSchema, updateOrganizationSchema } from './organizations.schema.js';
 import * as service from './organizations.service.js';
 import { getConnectStatus, createConnectAccount, syncConnectStatus, createOnboardingLink } from '../../lib/stripe-connect.js';
-import { db, organizations as orgsTable } from '@trayloop/database';
-import { eq } from 'drizzle-orm';
 
 export function registerRoutes(app: FastifyInstance) {
   // List organizations the authenticated user belongs to
@@ -41,42 +39,26 @@ export function registerRoutes(app: FastifyInstance) {
 
   // --- Stripe Connect ---
 
-  // Get payment setup status — guaranteed 200, never throws
+  // Get the persisted payment setup status.
   app.get('/current/payment-status', { preHandler: [requireAuth, requireTenant] }, async (request) => {
-    const fallback = {
-      data: {
-        stripeAccountId: null,
-        chargesEnabled: false,
-        payoutsEnabled: false,
-        detailsSubmitted: false,
-        onboardingComplete: false,
-      },
-    };
-
     try {
-      const orgId = request.ctx.tenant!.organizationId;
-
-      const [org] = await db
-        .select({ stripeAccountId: orgsTable.stripeAccountId })
-        .from(orgsTable)
-        .where(eq(orgsTable.id, orgId))
-        .limit(1);
-
-      if (!org || !org.stripeAccountId) {
-        return fallback;
-      }
-
+      const status = await getConnectStatus(request.ctx.tenant!.organizationId);
+      return { data: status };
+    } catch {
       return {
         data: {
-          stripeAccountId: org.stripeAccountId,
+          stripeAccountId: null,
           chargesEnabled: false,
           payoutsEnabled: false,
           detailsSubmitted: false,
           onboardingComplete: false,
+          status: 'not_started',
+          disabledReason: null,
+          requirementsCurrentlyDue: [],
+          requirementsPastDue: [],
+          requirementsEventuallyDue: [],
         },
       };
-    } catch {
-      return fallback;
     }
   });
 

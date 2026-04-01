@@ -1,5 +1,5 @@
-import { db } from '@trayloop/database';
-import { organizations } from '@trayloop/database';
+import Stripe from 'stripe';
+import { db, organizations } from '@trayloop/database';
 import { eq } from 'drizzle-orm';
 import { getStripe, isStripeEnabled } from './stripe.js';
 import { ValidationError } from './errors.js';
@@ -11,81 +11,135 @@ export interface ConnectAccountStatus {
   payoutsEnabled: boolean;
   detailsSubmitted: boolean;
   onboardingComplete: boolean;
+  status: 'not_started' | 'in_progress' | 'action_required' | 'ready';
+  disabledReason: string | null;
+  requirementsCurrentlyDue: string[];
+  requirementsPastDue: string[];
+  requirementsEventuallyDue: string[];
 }
 
-/**
- * Get the Stripe Connect status for an organization.
- */
-export async function getConnectStatus(orgId: string): Promise<ConnectAccountStatus> {
-  let stripeAccountId: string | null = null;
+function buildStatus(input: {
+  stripeAccountId: string | null;
+  chargesEnabled: boolean;
+  payoutsEnabled: boolean;
+  detailsSubmitted: boolean;
+  disabledReason?: string | null;
+  requirementsCurrentlyDue?: string[];
+  requirementsPastDue?: string[];
+  requirementsEventuallyDue?: string[];
+}): ConnectAccountStatus {
+  const requirementsCurrentlyDue = input.requirementsCurrentlyDue ?? [];
+  const requirementsPastDue = input.requirementsPastDue ?? [];
+  const requirementsEventuallyDue = input.requirementsEventuallyDue ?? [];
+  const disabledReason = input.disabledReason ?? null;
+  const onboardingComplete = input.chargesEnabled && input.payoutsEnabled && input.detailsSubmitted;
 
-  try {
-    const [org] = await db
-      .select({
-        stripeAccountId: organizations.stripeAccountId,
-      })
-      .from(organizations)
-      .where(eq(organizations.id, orgId))
-      .limit(1);
+  let status: ConnectAccountStatus['status'] = 'not_started';
 
-    if (!org) {
-      throw new ValidationError('Organization not found');
-    }
-
-    stripeAccountId = org.stripeAccountId;
-  } catch (err) {
-    // If the query fails (e.g. column doesn't exist), try a raw approach
-    if (err instanceof ValidationError) throw err;
-
-    logger.warn('getConnectStatus query failed, returning defaults', { orgId, error: (err as Error).message });
-    return {
-      stripeAccountId: null,
-      chargesEnabled: false,
-      payoutsEnabled: false,
-      detailsSubmitted: false,
-      onboardingComplete: false,
-    };
-  }
-
-  // If no Stripe account, return clean defaults
-  if (!stripeAccountId) {
-    return {
-      stripeAccountId: null,
-      chargesEnabled: false,
-      payoutsEnabled: false,
-      detailsSubmitted: false,
-      onboardingComplete: false,
-    };
-  }
-
-  // If Stripe is configured, sync live status
-  if (isStripeEnabled()) {
-    try {
-      return await syncConnectStatus(orgId, stripeAccountId);
-    } catch {
-      // Stripe API call failed — return safe defaults with account ID
-    }
+  if (!input.stripeAccountId) {
+    status = 'not_started';
+  } else if (onboardingComplete) {
+    status = 'ready';
+  } else if (disabledReason || requirementsPastDue.length > 0) {
+    status = 'action_required';
+  } else {
+    status = 'in_progress';
   }
 
   return {
-    stripeAccountId,
+    stripeAccountId: input.stripeAccountId,
+    chargesEnabled: input.chargesEnabled,
+    payoutsEnabled: input.payoutsEnabled,
+    detailsSubmitted: input.detailsSubmitted,
+    onboardingComplete,
+    status,
+    disabledReason,
+    requirementsCurrentlyDue,
+    requirementsPastDue,
+    requirementsEventuallyDue,
+  };
+}
+
+function emptyStatus(): ConnectAccountStatus {
+  return buildStatus({
+    stripeAccountId: null,
     chargesEnabled: false,
     payoutsEnabled: false,
     detailsSubmitted: false,
-    onboardingComplete: false,
-  };
+  });
+}
+
+function statusFromStripeAccount(account: Stripe.Account): ConnectAccountStatus {
+  return buildStatus({
+    stripeAccountId: account.id,
+    chargesEnabled: account.charges_enabled,
+    payoutsEnabled: account.payouts_enabled,
+    detailsSubmitted: account.details_submitted ?? false,
+    disabledReason: account.requirements?.disabled_reason ?? null,
+    requirementsCurrentlyDue: account.requirements?.currently_due ?? [],
+    requirementsPastDue: account.requirements?.past_due ?? [],
+    requirementsEventuallyDue: account.requirements?.eventually_due ?? [],
+  });
+}
+
+async function persistConnectStatus(orgId: string, status: ConnectAccountStatus) {
+  await db
+    .update(organizations)
+    .set({
+      stripeAccountId: status.stripeAccountId,
+      stripeChargesEnabled: status.chargesEnabled,
+      stripePayoutsEnabled: status.payoutsEnabled,
+      stripeDetailsSubmitted: status.detailsSubmitted,
+      stripeOnboardingComplete: status.onboardingComplete,
+      updatedAt: new Date(),
+    })
+    .where(eq(organizations.id, orgId));
+}
+
+/**
+ * Get the persisted Stripe Connect status for an organization.
+ * The merchant UI uses this for initial render; explicit sync endpoints refresh it from Stripe.
+ */
+export async function getConnectStatus(orgId: string): Promise<ConnectAccountStatus> {
+  const [org] = await db
+    .select({
+      stripeAccountId: organizations.stripeAccountId,
+      stripeChargesEnabled: organizations.stripeChargesEnabled,
+      stripePayoutsEnabled: organizations.stripePayoutsEnabled,
+      stripeDetailsSubmitted: organizations.stripeDetailsSubmitted,
+      stripeOnboardingComplete: organizations.stripeOnboardingComplete,
+    })
+    .from(organizations)
+    .where(eq(organizations.id, orgId))
+    .limit(1);
+
+  if (!org) {
+    throw new ValidationError('Organization not found');
+  }
+
+  if (!org.stripeAccountId) {
+    return emptyStatus();
+  }
+
+  // Persisted status is the fast path; live sync happens through the explicit sync endpoint
+  // or whenever we are already touching Stripe for onboarding.
+  return buildStatus({
+    stripeAccountId: org.stripeAccountId,
+    chargesEnabled: org.stripeChargesEnabled,
+    payoutsEnabled: org.stripePayoutsEnabled,
+    detailsSubmitted: org.stripeDetailsSubmitted,
+  });
 }
 
 /**
  * Create a Stripe Connect account for an organization.
- * Safe to call multiple times — returns existing account if already created.
+ * Safe to call multiple times; reuses the existing account when one is already linked.
  */
 export async function createConnectAccount(orgId: string): Promise<ConnectAccountStatus> {
   if (!isStripeEnabled()) {
     throw new ValidationError('Stripe is not configured. Contact support.');
   }
 
-  // Check if account already exists
   const [org] = await db
     .select({
       id: organizations.id,
@@ -101,12 +155,10 @@ export async function createConnectAccount(orgId: string): Promise<ConnectAccoun
     throw new ValidationError('Organization not found');
   }
 
-  // If account already exists, sync status from Stripe and return
   if (org.stripeAccountId) {
     return syncConnectStatus(orgId, org.stripeAccountId);
   }
 
-  // Create new Connect account
   const stripe = getStripe();
   const account = await stripe.accounts.create({
     type: 'express',
@@ -119,32 +171,19 @@ export async function createConnectAccount(orgId: string): Promise<ConnectAccoun
     },
   });
 
-  // Persist the account ID
-  await db
-    .update(organizations)
-    .set({
-      stripeAccountId: account.id,
-      updatedAt: new Date(),
-    })
-    .where(eq(organizations.id, orgId));
+  const status = statusFromStripeAccount(account);
+  await persistConnectStatus(orgId, status);
 
   logger.info('Stripe Connect account created', {
     orgId,
     stripeAccountId: account.id,
   });
 
-  return {
-    stripeAccountId: account.id,
-    chargesEnabled: account.charges_enabled,
-    payoutsEnabled: account.payouts_enabled,
-    detailsSubmitted: account.details_submitted ?? false,
-    onboardingComplete: false,
-  };
+  return status;
 }
 
 /**
- * Sync the Connect account status from Stripe into the DB.
- * Call after onboarding or on status check.
+ * Sync the Connect account status from Stripe into Railway Postgres.
  */
 export async function syncConnectStatus(orgId: string, stripeAccountId: string): Promise<ConnectAccountStatus> {
   if (!isStripeEnabled()) {
@@ -153,27 +192,19 @@ export async function syncConnectStatus(orgId: string, stripeAccountId: string):
 
   const stripe = getStripe();
   const account = await stripe.accounts.retrieve(stripeAccountId);
+  const status = statusFromStripeAccount(account);
 
-  const chargesEnabled = account.charges_enabled;
-  const payoutsEnabled = account.payouts_enabled;
-  const detailsSubmitted = account.details_submitted ?? false;
-  const onboardingComplete = chargesEnabled && payoutsEnabled && detailsSubmitted;
-
-  // Try to persist status — safe to fail if columns don't exist yet
   try {
-    await db
-      .update(organizations)
-      .set({ updatedAt: new Date() })
-      .where(eq(organizations.id, orgId));
-  } catch {}
+    await persistConnectStatus(orgId, status);
+  } catch (err) {
+    logger.warn('Failed to persist Stripe Connect status', {
+      orgId,
+      stripeAccountId,
+      error: (err as Error).message,
+    });
+  }
 
-  return {
-    stripeAccountId,
-    chargesEnabled,
-    payoutsEnabled,
-    detailsSubmitted,
-    onboardingComplete,
-  };
+  return status;
 }
 
 /**
@@ -189,14 +220,12 @@ export async function createOnboardingLink(
     throw new ValidationError('Stripe is not configured. Contact support.');
   }
 
-  // Ensure account exists (idempotent)
   const status = await createConnectAccount(orgId);
 
   if (!status.stripeAccountId) {
     throw new ValidationError('Failed to create Stripe account.');
   }
 
-  // If already fully onboarded, no link needed
   if (status.onboardingComplete) {
     return { url: returnUrl, status };
   }

@@ -14,6 +14,11 @@ interface PaymentStatus {
   payoutsEnabled: boolean;
   detailsSubmitted: boolean;
   onboardingComplete: boolean;
+  status: 'not_started' | 'in_progress' | 'action_required' | 'ready';
+  disabledReason: string | null;
+  requirementsCurrentlyDue: string[];
+  requirementsPastDue: string[];
+  requirementsEventuallyDue: string[];
 }
 
 interface Organization {
@@ -85,7 +90,7 @@ interface StorefrontSnapshot {
   locations: PublicLocation[];
 }
 
-type SetupState = 'loading' | 'not_started' | 'incomplete' | 'active';
+type SetupState = 'loading' | 'not_started' | 'in_progress' | 'action_required' | 'active';
 
 const DEFAULTS: PaymentStatus = {
   stripeAccountId: null,
@@ -93,6 +98,11 @@ const DEFAULTS: PaymentStatus = {
   payoutsEnabled: false,
   detailsSubmitted: false,
   onboardingComplete: false,
+  status: 'not_started',
+  disabledReason: null,
+  requirementsCurrentlyDue: [],
+  requirementsPastDue: [],
+  requirementsEventuallyDue: [],
 };
 
 const SECTION_LINKS = [
@@ -154,12 +164,17 @@ function SettingsContent() {
     setActionError('');
 
     try {
-      const [orgRes, setupRes, paymentRes, statsRes] = await Promise.all([
+      const [orgRes, setupRes, initialPaymentRes, statsRes] = await Promise.all([
         apiFetch('/api/organizations/current'),
         apiFetch('/api/organizations/current/setup-status'),
         apiFetch('/api/organizations/current/payment-status').catch(() => ({ data: DEFAULTS })),
         apiFetch('/api/orders/stats').catch(() => ({ data: null })),
       ]);
+
+      const paymentRes =
+        initialPaymentRes.data?.stripeAccountId && !initialPaymentRes.data?.onboardingComplete
+          ? await apiFetch('/api/organizations/current/payment-status/sync', { method: 'POST' }).catch(() => initialPaymentRes)
+          : initialPaymentRes;
 
       setOrganization(orgRes.data);
       setSetupStatus(setupRes.data);
@@ -199,10 +214,12 @@ function SettingsContent() {
 
   function applyStatus(status: PaymentStatus) {
     setPaymentStatus(status);
-    if (status.onboardingComplete) {
+    if (status.status === 'ready' || status.onboardingComplete) {
       setSetupState('active');
-    } else if (status.stripeAccountId) {
-      setSetupState('incomplete');
+    } else if (status.status === 'action_required') {
+      setSetupState('action_required');
+    } else if (status.status === 'in_progress' || status.stripeAccountId) {
+      setSetupState('in_progress');
     } else {
       setSetupState('not_started');
     }
@@ -219,6 +236,7 @@ function SettingsContent() {
       window.location.href = res.data.url;
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Failed to start payment setup');
+    } finally {
       setActionLoading(false);
     }
   }
@@ -236,11 +254,17 @@ function SettingsContent() {
       cta: 'Set Up Payments',
       body: 'Connect Stripe to collect deposits and move from setup to taking live orders.',
     },
-    incomplete: {
+    in_progress: {
       title: 'Stripe onboarding incomplete',
-      badge: 'Incomplete',
+      badge: 'In Progress',
       cta: 'Continue Stripe Onboarding',
       body: 'Your account exists, but Stripe still needs more information before charges and payouts are fully enabled.',
+    },
+    action_required: {
+      title: 'Action required in Stripe',
+      badge: 'Action Required',
+      cta: 'Fix Stripe Requirements',
+      body: 'Stripe flagged outstanding requirements that must be completed before you can take live payments.',
     },
     active: {
       title: 'Payments connected',
@@ -282,9 +306,9 @@ function SettingsContent() {
         />
         <SummaryCard
           label="Payments"
-          value={paymentStatus.onboardingComplete ? 'Connected' : paymentStatus.stripeAccountId ? 'Incomplete' : 'Not Started'}
-          sub={paymentStatus.chargesEnabled ? 'Charges enabled' : 'Charges not enabled'}
-          accent={paymentStatus.onboardingComplete ? '#22C55E' : '#D97706'}
+          value={paymentStatus.status === 'ready' ? 'Connected' : paymentStatus.status === 'action_required' ? 'Action Required' : paymentStatus.status === 'in_progress' ? 'In Progress' : 'Not Started'}
+          sub={paymentStatus.chargesEnabled ? 'Charges enabled' : paymentStatus.stripeAccountId ? 'Still needs Stripe approval' : 'Connect Stripe to accept payments'}
+          accent={paymentStatus.status === 'ready' ? '#22C55E' : paymentStatus.status === 'action_required' ? '#DC2626' : '#D97706'}
         />
         <SummaryCard
           label="Active Orders"
@@ -419,8 +443,22 @@ function SettingsContent() {
                       fontWeight: 700,
                       padding: '4px 10px',
                       borderRadius: 999,
-                      background: setupState === 'active' ? '#DCFCE7' : setupState === 'incomplete' ? '#FFF7ED' : '#FEF3C7',
-                      color: setupState === 'active' ? '#166534' : setupState === 'incomplete' ? '#C2410C' : '#92400E',
+                      background:
+                        setupState === 'active'
+                          ? '#DCFCE7'
+                          : setupState === 'action_required'
+                            ? '#FEE2E2'
+                            : setupState === 'in_progress'
+                              ? '#FFF7ED'
+                              : '#FEF3C7',
+                      color:
+                        setupState === 'active'
+                          ? '#166534'
+                          : setupState === 'action_required'
+                            ? '#B91C1C'
+                            : setupState === 'in_progress'
+                              ? '#C2410C'
+                              : '#92400E',
                     }}
                   >
                     {paymentCard.badge || 'Checking'}
@@ -436,6 +474,28 @@ function SettingsContent() {
                     ['Details submitted', paymentStatus.detailsSubmitted ? 'Yes' : 'No'],
                   ]}
                 />
+                {paymentStatus.disabledReason || paymentStatus.requirementsPastDue.length > 0 || paymentStatus.requirementsCurrentlyDue.length > 0 ? (
+                  <div style={{ marginTop: 14, padding: '12px 14px', borderRadius: 10, background: '#FFFBEB', border: '1px solid #FDE68A' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#92400E', marginBottom: 6 }}>
+                      Outstanding Stripe requirements
+                    </div>
+                    {paymentStatus.disabledReason ? (
+                      <div style={{ fontSize: 13, color: '#78350F', marginBottom: 6 }}>
+                        Reason: {paymentStatus.disabledReason.replaceAll('_', ' ')}
+                      </div>
+                    ) : null}
+                    {paymentStatus.requirementsPastDue.length > 0 ? (
+                      <div style={{ fontSize: 13, color: '#78350F', marginBottom: 4 }}>
+                        Past due: {paymentStatus.requirementsPastDue.join(', ')}
+                      </div>
+                    ) : null}
+                    {paymentStatus.requirementsCurrentlyDue.length > 0 ? (
+                      <div style={{ fontSize: 13, color: '#78350F' }}>
+                        Currently due: {paymentStatus.requirementsCurrentlyDue.join(', ')}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {paymentCard.cta ? (
