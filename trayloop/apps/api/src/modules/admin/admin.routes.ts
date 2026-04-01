@@ -19,6 +19,12 @@ export function registerRoutes(app: FastifyInstance) {
     return { data: orgs };
   });
 
+  // ADM-004: Restaurant directory with health, GMV, owner data
+  app.get('/restaurants', async (request) => {
+    const restaurants = await service.listRestaurantDirectory();
+    return { data: restaurants };
+  });
+
   app.get('/users', async (request) => {
     const users = await service.listUsers();
     return { data: users };

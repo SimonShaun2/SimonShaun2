@@ -220,3 +220,95 @@ export async function updateUserStatus(userId: string, status: string) {
   // TODO: Implement user status update
   return { id: userId, status };
 }
+
+/**
+ * ADM-004: Restaurant directory with health indicators.
+ *
+ * Health logic (derived from existing data, no new schema):
+ *   - Healthy:  isActive=true AND has an order created within the last 14 days
+ *   - At Risk:  isActive=true AND has orders but none in the last 14 days
+ *   - New:      isActive=true AND has zero orders
+ *   - Inactive: isActive=false
+ *
+ * Owner is derived from the organization_memberships table where role='owner'.
+ * If multiple owners exist, the first one (by joinedAt) is used.
+ *
+ * GMV, order count, avg order value, and last order date are all-time
+ * aggregates across confirmed + completed orders for accurate business context.
+ */
+export async function listRestaurantDirectory() {
+  const now = new Date();
+  const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+
+  // Main query: org + order aggregates
+  const rows = await db.select({
+    id: organizations.id,
+    name: organizations.name,
+    slug: organizations.slug,
+    isActive: organizations.isActive,
+    isPaid: organizations.stripeChargesEnabled,
+    createdAt: organizations.createdAt,
+    orderCount: sql<number>`count(${orders.id})::int`,
+    gmv: sql<number>`coalesce(sum(${orders.totalAmount}), 0)::int`,
+    avgOrderValue: sql<number>`case when count(${orders.id}) > 0 then (sum(${orders.totalAmount}) / count(${orders.id}))::int else 0 end`,
+    lastOrderAt: sql<string | null>`max(${orders.createdAt})`,
+  })
+    .from(organizations)
+    .leftJoin(orders, and(
+      eq(orders.organizationId, organizations.id),
+      inArray(orders.status, ['confirmed', 'completed', 'submitted', 'awaiting_deposit']),
+    ))
+    .groupBy(
+      organizations.id, organizations.name, organizations.slug,
+      organizations.isActive, organizations.stripeChargesEnabled, organizations.createdAt,
+    )
+    .orderBy(desc(sql`coalesce(sum(${orders.totalAmount}), 0)`));
+
+  // Owner lookup: get owner name + email for each org via memberships
+  const ownerRows = await db.select({
+    organizationId: organizationMemberships.organizationId,
+    userName: users.name,
+    userEmail: users.email,
+  })
+    .from(organizationMemberships)
+    .innerJoin(users, eq(users.id, organizationMemberships.userId))
+    .where(eq(organizationMemberships.role, 'owner'));
+
+  const ownerMap = new Map<string, { name: string; email: string }>();
+  for (const row of ownerRows) {
+    if (!ownerMap.has(row.organizationId)) {
+      ownerMap.set(row.organizationId, { name: row.userName, email: row.userEmail });
+    }
+  }
+
+  return rows.map((r) => {
+    let health: 'healthy' | 'at_risk' | 'new' | 'inactive';
+    if (!r.isActive) {
+      health = 'inactive';
+    } else if (r.orderCount === 0) {
+      health = 'new';
+    } else if (r.lastOrderAt && new Date(r.lastOrderAt) >= fourteenDaysAgo) {
+      health = 'healthy';
+    } else {
+      health = 'at_risk';
+    }
+
+    const owner = ownerMap.get(r.id);
+
+    return {
+      id: r.id,
+      name: r.name,
+      slug: r.slug,
+      isActive: r.isActive,
+      isPaid: r.isPaid,
+      createdAt: r.createdAt,
+      ownerName: owner?.name ?? null,
+      ownerEmail: owner?.email ?? null,
+      orderCount: r.orderCount,
+      gmv: r.gmv,
+      avgOrderValue: r.avgOrderValue,
+      lastOrderAt: r.lastOrderAt,
+      health,
+    };
+  });
+}
