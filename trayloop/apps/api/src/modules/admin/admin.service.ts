@@ -253,6 +253,197 @@ export async function getPlatformOverview() {
 }
 
 /**
+ * ADM-005 Part A: Trial conversion intelligence.
+ *
+ * Trial restaurants = active orgs where stripeChargesEnabled is false.
+ * No explicit trial-end date exists in the schema, so we use a 30-day
+ * window from org creation as a soft trial period. "Days remaining" is
+ * max(0, 30 - daysSinceCreation). This is a documented approximation.
+ *
+ * Conversion heat is derived from order activity during the trial window:
+ *   - hot:  3+ orders placed
+ *   - warm: 1-2 orders placed
+ *   - cold: 0 orders placed
+ */
+export async function getTrialConversions() {
+  const now = new Date();
+  const TRIAL_DAYS = 30;
+  const PLAN_PRICE = 9900; // cents, $99/mo
+
+  // All trial orgs: active but not stripeChargesEnabled
+  const trialOrgs = await db.select({
+    id: organizations.id,
+    name: organizations.name,
+    slug: organizations.slug,
+    createdAt: organizations.createdAt,
+    orderCount: sql<number>`count(${orders.id})::int`,
+    gmv: sql<number>`coalesce(sum(${orders.totalAmount}), 0)::int`,
+    lastOrderAt: sql<string | null>`max(${orders.createdAt})`,
+  })
+    .from(organizations)
+    .leftJoin(orders, eq(orders.organizationId, organizations.id))
+    .where(and(
+      eq(organizations.isActive, true),
+      eq(organizations.stripeChargesEnabled, false),
+    ))
+    .groupBy(organizations.id, organizations.name, organizations.slug, organizations.createdAt)
+    .orderBy(desc(sql`count(${orders.id})`));
+
+  // Owner lookup
+  const ownerRows = await db.select({
+    organizationId: organizationMemberships.organizationId,
+    userName: users.name,
+  })
+    .from(organizationMemberships)
+    .innerJoin(users, eq(users.id, organizationMemberships.userId))
+    .where(eq(organizationMemberships.role, 'owner'));
+
+  const ownerMap = new Map<string, string>();
+  for (const row of ownerRows) {
+    if (!ownerMap.has(row.organizationId)) ownerMap.set(row.organizationId, row.userName);
+  }
+
+  const restaurants = trialOrgs.map((r) => {
+    const daysSinceCreation = Math.floor((now.getTime() - new Date(r.createdAt).getTime()) / (86400000));
+    const daysRemaining = Math.max(0, TRIAL_DAYS - daysSinceCreation);
+    let heat: 'hot' | 'warm' | 'cold';
+    if (r.orderCount >= 3) heat = 'hot';
+    else if (r.orderCount >= 1) heat = 'warm';
+    else heat = 'cold';
+
+    return {
+      id: r.id,
+      name: r.name,
+      slug: r.slug,
+      ownerName: ownerMap.get(r.id) ?? null,
+      orderCount: r.orderCount,
+      gmv: r.gmv,
+      lastOrderAt: r.lastOrderAt,
+      daysRemaining,
+      daysSinceCreation,
+      heat,
+    };
+  });
+
+  const totalOrders = restaurants.reduce((s, r) => s + r.orderCount, 0);
+
+  return {
+    summary: {
+      activeTrials: restaurants.length,
+      projectedMrr: restaurants.length * PLAN_PRICE,
+      avgTrialOrders: restaurants.length > 0 ? Math.round(totalOrders / restaurants.length) : 0,
+    },
+    restaurants,
+  };
+}
+
+/**
+ * ADM-005 Part B: MRR movement.
+ *
+ * Since no subscription/billing table exists, MRR is modeled as:
+ *   - Paid: active orgs with stripeChargesEnabled = true → $99/mo each
+ *   - Trial: active orgs with stripeChargesEnabled = false → $0 (pending)
+ *   - Inactive: orgs with isActive = false → churned (lost $99/mo)
+ *
+ * Movement is approximated from org creation date and isActive status:
+ *   - "New MRR" = paid orgs created this month × $99
+ *   - "Churned MRR" = inactive orgs that were previously paid × $99
+ *     (approximated as inactive orgs with stripeChargesEnabled still true,
+ *      indicating they were paid before deactivation)
+ *
+ * These are documented approximations. When a real subscriptions table with
+ * start/cancel dates is added, replace this logic.
+ */
+export async function getMrrMovement() {
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const PLAN_PRICE = 9900;
+
+  // All orgs with payment state
+  const allOrgs = await db.select({
+    id: organizations.id,
+    name: organizations.name,
+    slug: organizations.slug,
+    isActive: organizations.isActive,
+    isPaid: organizations.stripeChargesEnabled,
+    createdAt: organizations.createdAt,
+  }).from(organizations);
+
+  // Owner lookup
+  const ownerRows = await db.select({
+    organizationId: organizationMemberships.organizationId,
+    userName: users.name,
+  })
+    .from(organizationMemberships)
+    .innerJoin(users, eq(users.id, organizationMemberships.userId))
+    .where(eq(organizationMemberships.role, 'owner'));
+
+  const ownerMap = new Map<string, string>();
+  for (const row of ownerRows) {
+    if (!ownerMap.has(row.organizationId)) ownerMap.set(row.organizationId, row.userName);
+  }
+
+  const restaurants = allOrgs.map((r) => {
+    let status: 'paid' | 'trial' | 'churned' | 'inactive';
+    let mrr = 0;
+
+    if (!r.isActive && r.isPaid) {
+      status = 'churned';
+      mrr = -PLAN_PRICE; // lost revenue
+    } else if (!r.isActive) {
+      status = 'inactive';
+      mrr = 0;
+    } else if (r.isPaid) {
+      status = 'paid';
+      mrr = PLAN_PRICE;
+    } else {
+      status = 'trial';
+      mrr = 0;
+    }
+
+    return {
+      id: r.id,
+      name: r.name,
+      slug: r.slug,
+      ownerName: ownerMap.get(r.id) ?? null,
+      isActive: r.isActive,
+      isPaid: r.isPaid,
+      status,
+      mrr,
+      label: status === 'paid' ? '$99/mo'
+        : status === 'trial' ? '$0 → $99'
+        : status === 'churned' ? '-$99/mo'
+        : 'Inactive',
+      createdAt: r.createdAt,
+    };
+  });
+
+  // New MRR: paid orgs created this month
+  const newMrr = restaurants
+    .filter((r) => r.status === 'paid' && new Date(r.createdAt) >= monthStart)
+    .reduce((s, r) => s + PLAN_PRICE, 0);
+
+  // Churned MRR: inactive orgs that were paid
+  const churnedMrr = restaurants
+    .filter((r) => r.status === 'churned')
+    .reduce((s) => s + PLAN_PRICE, 0);
+
+  const currentMrr = restaurants
+    .filter((r) => r.status === 'paid')
+    .reduce((s, r) => s + PLAN_PRICE, 0);
+
+  return {
+    summary: {
+      currentMrr,
+      newMrr,
+      churnedMrr,
+      netChange: newMrr - churnedMrr,
+    },
+    restaurants: restaurants.sort((a, b) => b.mrr - a.mrr),
+  };
+}
+
+/**
  * ADM-004: Restaurant directory with health indicators.
  *
  * Health logic:

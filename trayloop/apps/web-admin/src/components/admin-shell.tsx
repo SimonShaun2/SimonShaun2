@@ -4,9 +4,11 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 
 const NAV_ITEMS = [
-  { href: '/', label: 'Overview', icon: '◉' },
-  { href: '/organizations', label: 'Restaurants', icon: '▦' },
-  { href: '/users', label: 'Users', icon: '◎' },
+  { href: '/', label: 'Overview', icon: '◉', section: 'views' },
+  { href: '/organizations', label: 'Restaurants', icon: '▦', section: 'views' },
+  { href: '/users', label: 'Users', icon: '◎', section: 'views' },
+  { href: '/trial-conversions', label: 'Trial Conversions', icon: '◈', section: 'intelligence' },
+  { href: '/mrr-movement', label: 'MRR Movement', icon: '◆', section: 'intelligence' },
 ];
 
 function useAdminAuth() {
@@ -80,30 +82,34 @@ function AuthenticatedShell({ children, pathname }: { children: React.ReactNode;
 
         {/* Nav sections */}
         <nav style={{ flex: 1, padding: '0 12px' }}>
-          <div style={{ fontSize: 10, fontWeight: 600, color: '#78716C', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '16px 8px 6px' }}>
-            Views
-          </div>
-          {NAV_ITEMS.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <a
-                key={item.href}
-                href={item.href}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '8px 10px', borderRadius: 6, marginBottom: 2,
-                  fontSize: 13, fontWeight: isActive ? 600 : 400,
-                  color: isActive ? '#D4A853' : '#A8A29E',
-                  background: isActive ? 'rgba(212, 168, 83, 0.1)' : 'transparent',
-                  textDecoration: 'none',
-                  transition: 'background 0.15s',
-                }}
-              >
-                <span style={{ fontSize: 14, width: 18, textAlign: 'center' }}>{item.icon}</span>
-                {item.label}
-              </a>
-            );
-          })}
+          {(['views', 'intelligence'] as const).map((section) => (
+            <div key={section}>
+              <div style={{ fontSize: 10, fontWeight: 600, color: '#78716C', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '16px 8px 6px' }}>
+                {section === 'views' ? 'Views' : 'Intelligence'}
+              </div>
+              {NAV_ITEMS.filter((i) => i.section === section).map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      padding: '8px 10px', borderRadius: 6, marginBottom: 2,
+                      fontSize: 13, fontWeight: isActive ? 600 : 400,
+                      color: isActive ? '#D4A853' : '#A8A29E',
+                      background: isActive ? 'rgba(212, 168, 83, 0.1)' : 'transparent',
+                      textDecoration: 'none',
+                      transition: 'background 0.15s',
+                    }}
+                  >
+                    <span style={{ fontSize: 14, width: 18, textAlign: 'center' }}>{item.icon}</span>
+                    {item.label}
+                  </a>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         {/* Footer */}

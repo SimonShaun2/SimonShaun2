@@ -38,6 +38,18 @@ export function registerRoutes(app: FastifyInstance) {
     return { data: overview };
   });
 
+  // ADM-005: Trial conversions intelligence
+  app.get('/trial-conversions', async (request) => {
+    const data = await service.getTrialConversions();
+    return { data };
+  });
+
+  // ADM-005: MRR movement
+  app.get('/mrr-movement', async (request) => {
+    const data = await service.getMrrMovement();
+    return { data };
+  });
+
   app.patch('/organizations/:id/status', async (request, reply) => {
     const { id } = request.params as { id: string };
     const { status } = request.body as { status: string };
