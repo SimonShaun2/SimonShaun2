@@ -589,12 +589,17 @@ export async function getPlatformHealth() {
   const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000);
   const fourteenDaysAgo = new Date(now.getTime() - 14 * 86400000);
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const finalOrderStatuses = sql`('confirmed', 'completed')`;
 
-  const [orderStats, depositStats, stripeOrgs, lastOrder, restaurantRows] = await Promise.all([
+  const [orderStats, recentOrderStats, depositStats, stripeOrgs, lastOrder, restaurantRows] = await Promise.all([
     db.select({
-      count: sql<number>`count(*)::int`,
-      avgValue: sql<number>`coalesce(avg(total_amount), 0)::int`,
+      count: sql<number>`count(case when ${orders.status} in ${finalOrderStatuses} then 1 end)::int`,
+      avgValue: sql<number>`coalesce(avg(case when ${orders.status} in ${finalOrderStatuses} then ${orders.totalAmount} end), 0)::int`,
     }).from(orders).where(gte(orders.createdAt, thirtyDaysAgo)),
+
+    db.select({
+      count: sql<number>`count(case when ${orders.status} in ${finalOrderStatuses} then 1 end)::int`,
+    }).from(orders).where(gte(orders.createdAt, sevenDaysAgo)),
 
     db.select({ count: sql<number>`count(*)::int` })
       .from(deposits).where(gte(deposits.createdAt, thirtyDaysAgo)),
@@ -602,16 +607,19 @@ export async function getPlatformHealth() {
     db.select({ count: sql<number>`count(*)::int` })
       .from(organizations).where(eq(organizations.stripeChargesEnabled, true)),
 
-    db.select({ latest: sql<string | null>`max(created_at)` }).from(orders),
+    db
+      .select({ latest: sql<string | null>`max(${orders.createdAt})` })
+      .from(orders)
+      .where(inArray(orders.status, ['confirmed', 'completed'])),
 
     db.select({
       id: organizations.id,
       name: organizations.name,
       isActive: organizations.isActive,
       isPaid: organizations.stripeChargesEnabled,
-      ordersThisMonth: sql<number>`count(case when ${orders.createdAt} >= ${monthStart} then 1 end)::int`,
-      avgOrderValue: sql<number>`coalesce(avg(${orders.totalAmount}), 0)::int`,
-      lastOrderAt: sql<string | null>`max(${orders.createdAt})`,
+      ordersThisMonth: sql<number>`count(case when ${orders.createdAt} >= ${monthStart} and ${orders.status} in ${finalOrderStatuses} then 1 end)::int`,
+      avgOrderValue: sql<number>`coalesce(avg(case when ${orders.status} in ${finalOrderStatuses} then ${orders.totalAmount} end), 0)::int`,
+      lastOrderAt: sql<string | null>`max(case when ${orders.status} in ${finalOrderStatuses} then ${orders.createdAt} end)`,
     })
       .from(organizations)
       .leftJoin(orders, eq(orders.organizationId, organizations.id))
@@ -619,12 +627,12 @@ export async function getPlatformHealth() {
       .orderBy(desc(sql`max(${orders.createdAt})`)),
   ]);
 
-  const recentOrderExists = orderStats[0].count > 0;
+  const recentOrderExists = recentOrderStats[0].count > 0;
   const systems = [
     { name: 'API', status: 'healthy' as const, detail: 'Responding normally' },
     { name: 'Stripe Payments', status: stripeOrgs[0].count > 0 ? 'active' as const : 'not_connected' as const, detail: stripeOrgs[0].count > 0 ? `${stripeOrgs[0].count} connected` : 'No orgs connected' },
     { name: 'Deposit Flow', status: depositStats[0].count > 0 ? 'active' as const : 'inactive' as const, detail: depositStats[0].count > 0 ? `${depositStats[0].count} deposits (30d)` : 'No recent deposits' },
-    { name: 'Order Flow', status: recentOrderExists ? 'active' as const : 'inactive' as const, detail: recentOrderExists ? `${orderStats[0].count} orders (30d)` : 'No recent orders' },
+    { name: 'Order Flow', status: recentOrderExists ? 'active' as const : 'inactive' as const, detail: recentOrderExists ? `${recentOrderStats[0].count} finalized orders (7d)` : 'No recent finalized orders' },
   ];
 
   const restaurantHealth = restaurantRows.map((r) => {
@@ -667,6 +675,13 @@ export async function getRevenueForecast() {
   const now = new Date();
   const sixtyDaysAgo = new Date(now.getTime() - 60 * 86400000);
   const PLAN_PRICE = 9900;
+  const finalOrderStatuses = sql`('confirmed', 'completed')`;
+  const intervalOrdersPerMonth: Record<'weekly' | 'biweekly' | 'monthly' | 'quarterly', number> = {
+    weekly: 4,
+    biweekly: 2,
+    monthly: 1,
+    quarterly: 1 / 3,
+  };
 
   // Check real recurring orders first
   const activeRecurring = await db.select({
@@ -680,8 +695,11 @@ export async function getRevenueForecast() {
     .from(recurringOrders)
     .where(eq(recurringOrders.isActive, true));
 
-  // Infer recurring customers from order history (2+ orders in 60 days)
-  const repeatCustomers = await db.select({
+  const metricCustomerIds = activeRecurring.length > 0
+    ? Array.from(new Set(activeRecurring.map((row) => row.customerId)))
+    : null;
+
+  const customerMetricsQuery = db.select({
     customerId: customers.id,
     firstName: customers.firstName,
     lastName: customers.lastName,
@@ -695,36 +713,66 @@ export async function getRevenueForecast() {
     lastOrderAt: sql<string>`max(${orders.createdAt})`,
   })
     .from(customers)
-    .innerJoin(orders, and(eq(orders.customerId, customers.id), gte(orders.createdAt, sixtyDaysAgo)))
+    .innerJoin(
+      orders,
+      and(
+        eq(orders.customerId, customers.id),
+        gte(orders.createdAt, sixtyDaysAgo),
+        inArray(orders.status, ['confirmed', 'completed']),
+      ),
+    )
     .innerJoin(organizations, eq(organizations.id, customers.organizationId))
-    .groupBy(customers.id, customers.firstName, customers.lastName, customers.companyName, customers.organizationId, organizations.name)
-    .having(sql`count(${orders.id}) >= 2`)
-    .orderBy(desc(sql`sum(${orders.totalAmount})`));
+    .groupBy(customers.id, customers.firstName, customers.lastName, customers.companyName, customers.organizationId, organizations.name);
 
-  const recurringCustomers = repeatCustomers.map((c) => {
-    const firstDate = new Date(c.firstOrderAt);
-    const lastDate = new Date(c.lastOrderAt);
-    const daySpan = Math.max(1, (lastDate.getTime() - firstDate.getTime()) / 86400000);
-    // Estimate orders per month from observed frequency
-    const ordersPerMonth = Math.round((c.orderCount / daySpan) * 30 * 10) / 10;
-    const projectedMonthly = Math.round(c.avgOrderValue * ordersPerMonth);
+  const customerMetrics = metricCustomerIds && metricCustomerIds.length > 0
+    ? await customerMetricsQuery.where(inArray(customers.id, metricCustomerIds)).orderBy(desc(sql`sum(${orders.totalAmount})`))
+    : await customerMetricsQuery.having(sql`count(${orders.id}) >= 2`).orderBy(desc(sql`sum(${orders.totalAmount})`));
 
-    // Estimate next order: lastOrder + average interval
-    const avgInterval = daySpan / Math.max(1, c.orderCount - 1);
-    const nextExpected = new Date(lastDate.getTime() + avgInterval * 86400000);
+  const metricMap = new Map(customerMetrics.map((row) => [row.customerId, row]));
 
-    return {
-      customerId: c.customerId,
-      name: `${c.firstName} ${c.lastName}`,
-      company: c.companyName,
-      orgName: c.orgName,
-      orderCount: c.orderCount,
-      avgOrderValue: c.avgOrderValue,
-      ordersPerMonth,
-      projectedMonthly,
-      nextExpectedOrder: nextExpected.toISOString(),
-    };
-  });
+  const recurringCustomers = activeRecurring.length > 0
+    ? activeRecurring
+        .map((row) => {
+          const metrics = metricMap.get(row.customerId);
+          if (!metrics) return null;
+          const ordersPerMonth = intervalOrdersPerMonth[row.interval];
+          const projectedMonthly = Math.round(metrics.avgOrderValue * ordersPerMonth);
+
+          return {
+            customerId: row.customerId,
+            name: `${metrics.firstName} ${metrics.lastName}`,
+            company: metrics.companyName,
+            orgName: metrics.orgName,
+            orderCount: metrics.orderCount,
+            avgOrderValue: metrics.avgOrderValue,
+            ordersPerMonth,
+            projectedMonthly,
+            nextExpectedOrder: (row.nextOccurrence ?? new Date(metrics.lastOrderAt)).toISOString(),
+          };
+        })
+        .filter((row): row is NonNullable<typeof row> => row !== null)
+        .sort((a, b) => b.projectedMonthly - a.projectedMonthly)
+    : customerMetrics.map((c) => {
+        const firstDate = new Date(c.firstOrderAt);
+        const lastDate = new Date(c.lastOrderAt);
+        const daySpan = Math.max(1, (lastDate.getTime() - firstDate.getTime()) / 86400000);
+        const ordersPerMonth = Math.round((c.orderCount / daySpan) * 30 * 10) / 10;
+        const projectedMonthly = Math.round(c.avgOrderValue * ordersPerMonth);
+        const avgInterval = daySpan / Math.max(1, c.orderCount - 1);
+        const nextExpected = new Date(lastDate.getTime() + avgInterval * 86400000);
+
+        return {
+          customerId: c.customerId,
+          name: `${c.firstName} ${c.lastName}`,
+          company: c.companyName,
+          orgName: c.orgName,
+          orderCount: c.orderCount,
+          avgOrderValue: c.avgOrderValue,
+          ordersPerMonth,
+          projectedMonthly,
+          nextExpectedOrder: nextExpected.toISOString(),
+        };
+      });
 
   const projectedGmv = recurringCustomers.reduce((s, c) => s + c.projectedMonthly, 0);
   const paidOrgs = await db.select({ count: sql<number>`count(*)::int` })
@@ -759,6 +807,7 @@ export async function getChurnRisk() {
   const fourteenDaysAgo = new Date(now.getTime() - 14 * 86400000);
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const PLAN_PRICE = 9900;
+  const finalOrderStatuses = sql`('confirmed', 'completed')`;
 
   // Owner lookup
   const ownerRows = await db.select({
@@ -777,15 +826,15 @@ export async function getChurnRisk() {
     name: organizations.name,
     isPaid: organizations.stripeChargesEnabled,
     isActive: organizations.isActive,
-    ordersThisMonth: sql<number>`count(case when ${orders.createdAt} >= ${monthStart} then 1 end)::int`,
-    totalOrders: sql<number>`count(${orders.id})::int`,
-    lastOrderAt: sql<string | null>`max(${orders.createdAt})`,
+    ordersThisMonth: sql<number>`count(case when ${orders.createdAt} >= ${monthStart} and ${orders.status} in ${finalOrderStatuses} then 1 end)::int`,
+    totalOrders: sql<number>`count(case when ${orders.status} in ${finalOrderStatuses} then 1 end)::int`,
+    lastOrderAt: sql<string | null>`max(case when ${orders.status} in ${finalOrderStatuses} then ${orders.createdAt} end)`,
   })
     .from(organizations)
     .leftJoin(orders, eq(orders.organizationId, organizations.id))
     .where(eq(organizations.isActive, true))
     .groupBy(organizations.id, organizations.name, organizations.stripeChargesEnabled, organizations.isActive)
-    .having(sql`count(${orders.id}) > 0 AND max(${orders.createdAt}) < ${fourteenDaysAgo}`);
+    .having(sql`count(case when ${orders.status} in ${finalOrderStatuses} then 1 end) > 0 AND max(case when ${orders.status} in ${finalOrderStatuses} then ${orders.createdAt} end) < ${fourteenDaysAgo}`);
 
   const atRiskRestaurants = restaurantRows.map((r) => ({
     id: r.id, name: r.name, isPaid: r.isPaid,
@@ -808,7 +857,7 @@ export async function getChurnRisk() {
     lastOrderAt: sql<string>`max(${orders.createdAt})`,
   })
     .from(customers)
-    .innerJoin(orders, eq(orders.customerId, customers.id))
+    .innerJoin(orders, and(eq(orders.customerId, customers.id), inArray(orders.status, ['confirmed', 'completed'])))
     .innerJoin(organizations, eq(organizations.id, customers.organizationId))
     .groupBy(customers.id, customers.firstName, customers.lastName, customers.companyName, organizations.name)
     .having(and(sql`count(${orders.id}) >= 2`, sql`max(${orders.createdAt}) < ${fourteenDaysAgo}`))
