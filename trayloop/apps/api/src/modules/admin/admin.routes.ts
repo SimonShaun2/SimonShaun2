@@ -29,6 +29,12 @@ export function registerRoutes(app: FastifyInstance) {
     return { data: stats };
   });
 
+  // ADM-002: Consolidated platform overview for master dashboard
+  app.get('/overview', async (request) => {
+    const overview = await service.getPlatformOverview();
+    return { data: overview };
+  });
+
   app.patch('/organizations/:id/status', async (request, reply) => {
     const { id } = request.params as { id: string };
     const { status } = request.body as { status: string };
