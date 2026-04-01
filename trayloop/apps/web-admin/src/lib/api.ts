@@ -10,7 +10,7 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
 
   const res = await fetch(`${API_URL}${path}`, { ...options, headers });
 
-  if (res.status === 401) {
+  if (res.status === 401 || res.status === 403) {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('admin_token');
       window.location.href = '/login';
