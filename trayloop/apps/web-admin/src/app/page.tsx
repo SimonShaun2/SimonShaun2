@@ -15,44 +15,50 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('admin_token');
-    if (!token) { window.location.href = '/login'; return; }
-
-    // The admin stats endpoint may not return these yet; we show what we can
-    setLoading(true);
-    Promise.resolve().then(async () => {
-      try {
-        const res = await apiFetch('/api/admin/stats');
-        setStats(res.data);
-      } catch {
-        // Stats endpoint may not be fully implemented yet
-        setStats({ organizations: 0, users: 0, orders: 0, revenue: 0 });
-      } finally {
-        setLoading(false);
-      }
-    });
+    apiFetch('/api/admin/stats')
+      .then((res) => setStats(res.data))
+      .catch(() => setStats({ organizations: 0, users: 0, orders: 0, revenue: 0 }))
+      .finally(() => setLoading(false));
   }, []);
-
-  if (loading) return <p style={{ color: '#6b7280' }}>Loading...</p>;
 
   return (
     <div>
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1.5rem' }}>Platform Overview</h1>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
-        <StatCard label="Organizations" value={stats?.organizations ?? 0} />
-        <StatCard label="Users" value={stats?.users ?? 0} />
-        <StatCard label="Orders" value={stats?.orders ?? 0} />
-        <StatCard label="Revenue" value={`$${((stats?.revenue ?? 0) / 100).toFixed(2)}`} />
+      <h1 style={{ fontSize: 22, fontWeight: 700, marginTop: 0, marginBottom: 4 }}>Overview</h1>
+      <p style={{ fontSize: 13, color: '#78716C', marginTop: 0, marginBottom: 28 }}>
+        Every restaurant, every dollar — your TrayLoop business at a glance
+      </p>
+
+      {loading ? (
+        <p style={{ color: '#78716C', fontSize: 14 }}>Loading platform data...</p>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+          <KpiCard label="ACTIVE RESTAURANTS" value={stats?.organizations ?? 0} />
+          <KpiCard label="USERS" value={stats?.users ?? 0} />
+          <KpiCard label="ORDERS" value={stats?.orders ?? 0} />
+          <KpiCard label="GMV" value={`$${((stats?.revenue ?? 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}`} />
+        </div>
+      )}
+
+      <div style={{
+        marginTop: 40, padding: 32, border: '1px solid #E7E5E4', borderRadius: 10,
+        background: '#FFFFFF', textAlign: 'center',
+      }}>
+        <p style={{ fontSize: 14, color: '#78716C', margin: 0 }}>
+          Platform analytics, MRR tracking, and restaurant health views are coming in the next sprint.
+        </p>
       </div>
     </div>
   );
 }
 
-function StatCard({ label, value }: { label: string; value: string | number }) {
+function KpiCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div style={{ border: '1px solid #e5e7eb', borderRadius: '0.5rem', padding: '1.5rem', textAlign: 'center' }}>
-      <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '0.5rem' }}>{label}</p>
-      <p style={{ fontSize: '2rem', fontWeight: 700 }}>{value}</p>
+    <div style={{
+      border: '1px solid #E7E5E4', borderRadius: 10, padding: '20px 24px',
+      background: '#FFFFFF',
+    }}>
+      <p style={{ fontSize: 10, fontWeight: 600, color: '#78716C', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: 0, marginBottom: 8 }}>{label}</p>
+      <p style={{ fontSize: 28, fontWeight: 700, margin: 0, color: '#1C1917' }}>{value}</p>
     </div>
   );
 }
