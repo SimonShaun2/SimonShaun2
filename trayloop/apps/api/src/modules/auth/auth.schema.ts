@@ -24,7 +24,20 @@ export const refreshSchema = z.object({
   token: z.string(),
 });
 
+export const passwordResetRequestSchema = z.object({
+  email: z.string().email(),
+  app: z.enum(['merchant', 'admin', 'customer']),
+});
+
+export const passwordResetConfirmSchema = z.object({
+  token: z.string().min(20),
+  password: z.string().min(8),
+  app: z.enum(['merchant', 'admin', 'customer']),
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type CustomerRegisterInput = z.infer<typeof customerRegisterSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RefreshInput = z.infer<typeof refreshSchema>;
+export type PasswordResetRequestInput = z.infer<typeof passwordResetRequestSchema>;
+export type PasswordResetConfirmInput = z.infer<typeof passwordResetConfirmSchema>;

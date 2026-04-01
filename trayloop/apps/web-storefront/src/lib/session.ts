@@ -14,5 +14,5 @@ export function clearCustomerSession() {
 }
 
 export function customerResetHref() {
-  return 'mailto:orders@trayloophq.com?subject=TrayLoop%20customer%20password%20reset';
+  return '/reset-password';
 }

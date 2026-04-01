@@ -17,7 +17,7 @@ const NAV_ITEMS = [
 
 export default function NavBar() {
   const pathname = usePathname();
-  const isAuthPage = pathname === '/login' || pathname === '/register';
+  const isAuthPage = pathname === '/login' || pathname === '/register' || pathname === '/reset-password';
   const [storefrontUrl, setStorefrontUrl] = useState<string | null>(null);
   const [signedIn, setSignedIn] = useState(false);
 

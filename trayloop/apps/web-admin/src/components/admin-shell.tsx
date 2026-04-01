@@ -33,9 +33,9 @@ function useAdminAuth() {
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isLoginPage = pathname === '/login';
+  const isAuthPage = pathname === '/login' || pathname === '/reset-password';
 
-  if (isLoginPage) {
+  if (isAuthPage) {
     return <>{children}</>;
   }
 

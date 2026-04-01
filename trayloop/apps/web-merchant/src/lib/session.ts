@@ -6,5 +6,5 @@ export function clearMerchantSession() {
 }
 
 export function merchantResetHref() {
-  return 'mailto:admin@trayloophq.com?subject=TrayLoop%20merchant%20password%20reset';
+  return '/reset-password';
 }

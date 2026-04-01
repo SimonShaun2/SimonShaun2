@@ -1,7 +1,14 @@
 import type { FastifyInstance } from 'fastify';
 import { validateBody } from '../../lib/middleware/validate.js';
 import { requireAuth } from '../../lib/middleware/auth.js';
-import { registerSchema, customerRegisterSchema, loginSchema, refreshSchema } from './auth.schema.js';
+import {
+  registerSchema,
+  customerRegisterSchema,
+  loginSchema,
+  refreshSchema,
+  passwordResetRequestSchema,
+  passwordResetConfirmSchema,
+} from './auth.schema.js';
 import * as service from './auth.service.js';
 
 export function registerRoutes(app: FastifyInstance) {
@@ -24,6 +31,16 @@ export function registerRoutes(app: FastifyInstance) {
   app.post('/refresh', { preHandler: [validateBody(refreshSchema)] }, async (request, reply) => {
     const { token } = (request as any).validatedBody;
     const result = await service.refreshToken(token);
+    return reply.send({ data: result });
+  });
+
+  app.post('/password-reset/request', { preHandler: [validateBody(passwordResetRequestSchema)] }, async (request, reply) => {
+    const result = await service.requestPasswordReset((request as any).validatedBody);
+    return reply.send({ data: result });
+  });
+
+  app.post('/password-reset/confirm', { preHandler: [validateBody(passwordResetConfirmSchema)] }, async (request, reply) => {
+    const result = await service.confirmPasswordReset((request as any).validatedBody);
     return reply.send({ data: result });
   });
 

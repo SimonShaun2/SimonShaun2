@@ -1,10 +1,20 @@
 import { db } from '@trayloop/database';
-import { users, organizationMemberships, organizations, customers, orders } from '@trayloop/database';
+import { users, organizationMemberships, organizations, customers, orders, passwordResetTokens } from '@trayloop/database';
 import { hashPassword, comparePassword, createToken, verifyToken } from '@trayloop/auth';
-import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, desc, eq, gt, inArray, isNull } from 'drizzle-orm';
 import { ValidationError, UnauthorizedError, NotFoundError } from '../../lib/errors.js';
 import type { EventBus } from '../../lib/event-bus/index.js';
-import type { RegisterInput, LoginInput, CustomerRegisterInput } from './auth.schema.js';
+import { sendEmail } from '../../lib/email.js';
+import type {
+  RegisterInput,
+  LoginInput,
+  CustomerRegisterInput,
+  PasswordResetRequestInput,
+  PasswordResetConfirmInput,
+} from './auth.schema.js';
+import { createHash, randomBytes } from 'node:crypto';
+
+type ResetApp = 'merchant' | 'admin' | 'customer';
 
 export async function register(input: RegisterInput, eventBus: EventBus) {
   const [existing] = await db
@@ -346,4 +356,167 @@ export async function getCustomerAccount(userId: string) {
       organizationSlug: order.organizationSlug,
     })),
   };
+}
+
+function hashResetToken(token: string) {
+  return createHash('sha256').update(token).digest('hex');
+}
+
+function resolveResetBaseUrl(app: ResetApp) {
+  if (app === 'admin') {
+    return process.env.ADMIN_URL || 'https://master.trayloophq.com';
+  }
+
+  if (app === 'merchant') {
+    const configured = process.env.MERCHANT_URL || 'https://dashboard.trayloophq.com';
+    try {
+      const url = new URL(configured);
+      return url.origin;
+    } catch {
+      return configured.replace(/\/+$/, '');
+    }
+  }
+
+  return process.env.STOREFRONT_URL || 'https://order.trayloophq.com';
+}
+
+function roleMatchesResetApp(role: string, app: ResetApp) {
+  return role === app;
+}
+
+function buildResetEmail(userName: string, resetLink: string, app: ResetApp) {
+  const subjectPrefix = app === 'admin' ? 'TrayLoop Admin' : app === 'merchant' ? 'TrayLoop Merchant' : 'TrayLoop';
+  return {
+    subject: `${subjectPrefix} password reset`,
+    text: [
+      `Hi ${userName || 'there'},`,
+      '',
+      'We received a request to reset your password.',
+      `Reset it here: ${resetLink}`,
+      '',
+      'This link expires in 2 hours. If you did not request this, you can ignore this email.',
+    ].join('\n'),
+    html: `
+      <p>Hi ${userName || 'there'},</p>
+      <p>We received a request to reset your password.</p>
+      <p><a href="${resetLink}">Reset your password</a></p>
+      <p>This link expires in 2 hours. If you did not request this, you can ignore this email.</p>
+    `,
+  };
+}
+
+export async function requestPasswordReset(input: PasswordResetRequestInput) {
+  const normalizedEmail = input.email.trim().toLowerCase();
+  const [user] = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      name: users.name,
+      role: users.role,
+      isActive: users.isActive,
+    })
+    .from(users)
+    .where(eq(users.email, normalizedEmail))
+    .limit(1);
+
+  if (!user || !user.isActive || !roleMatchesResetApp(user.role, input.app)) {
+    return { success: true };
+  }
+
+  const rawToken = randomBytes(32).toString('hex');
+  const tokenHash = hashResetToken(rawToken);
+  const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(passwordResetTokens)
+      .set({ usedAt: new Date() })
+      .where(and(eq(passwordResetTokens.userId, user.id), isNull(passwordResetTokens.usedAt)));
+
+    await tx.insert(passwordResetTokens).values({
+      userId: user.id,
+      app: input.app,
+      tokenHash,
+      expiresAt,
+    });
+  });
+
+  const resetBaseUrl = resolveResetBaseUrl(input.app);
+  const resetLink = `${resetBaseUrl}/reset-password?token=${encodeURIComponent(rawToken)}&app=${encodeURIComponent(input.app)}`;
+  const message = buildResetEmail(user.name, resetLink, input.app);
+
+  const delivered = await sendEmail({
+    to: user.email,
+    subject: message.subject,
+    text: message.text,
+    html: message.html,
+  });
+
+  if (!delivered) {
+    console.info('[auth] password reset email not delivered; fallback link', {
+      email: user.email,
+      app: input.app,
+      resetLink,
+    });
+  }
+
+  return { success: true };
+}
+
+export async function confirmPasswordReset(input: PasswordResetConfirmInput) {
+  const tokenHash = hashResetToken(input.token);
+  const now = new Date();
+
+  const [resetToken] = await db
+    .select({
+      id: passwordResetTokens.id,
+      userId: passwordResetTokens.userId,
+      app: passwordResetTokens.app,
+      expiresAt: passwordResetTokens.expiresAt,
+      usedAt: passwordResetTokens.usedAt,
+    })
+    .from(passwordResetTokens)
+    .where(eq(passwordResetTokens.tokenHash, tokenHash))
+    .limit(1);
+
+  if (!resetToken || resetToken.app !== input.app) {
+    throw new ValidationError('This reset link is invalid or has already been used');
+  }
+
+  if (resetToken.usedAt || resetToken.expiresAt <= now) {
+    throw new ValidationError('This reset link has expired. Request a new one.');
+  }
+
+  const passwordHash = await hashPassword(input.password);
+
+  await db.transaction(async (tx) => {
+    const [updated] = await tx
+      .update(passwordResetTokens)
+      .set({ usedAt: now })
+      .where(and(
+        eq(passwordResetTokens.id, resetToken.id),
+        isNull(passwordResetTokens.usedAt),
+        gt(passwordResetTokens.expiresAt, now),
+      ))
+      .returning({ id: passwordResetTokens.id });
+
+    if (!updated) {
+      throw new ValidationError('This reset link has expired. Request a new one.');
+    }
+
+    await tx
+      .update(users)
+      .set({
+        passwordHash,
+        updatedAt: now,
+      })
+      .where(eq(users.id, resetToken.userId));
+
+    await tx
+      .update(passwordResetTokens)
+      .set({ usedAt: now })
+      .where(and(eq(passwordResetTokens.userId, resetToken.userId), isNull(passwordResetTokens.usedAt)));
+  });
+
+  return { success: true };
 }

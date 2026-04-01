@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-const ADMIN_RESET_HREF = 'mailto:admin@trayloophq.com?subject=TrayLoop%20admin%20password%20reset';
+const ADMIN_RESET_HREF = '/reset-password';
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
