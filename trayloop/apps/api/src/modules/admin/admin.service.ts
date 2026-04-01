@@ -4,6 +4,7 @@ import { and, asc, desc, eq, gte, inArray, sql } from 'drizzle-orm';
 
 const FINAL_ORDER_STATUSES = ['confirmed', 'completed'] as const;
 const PLAN_PRICE_CENTS = 9900;
+const SERVICE_MODE_ORDER = ['delivery', 'pickup', 'full_service', 'on_site', 'food_truck'] as const;
 
 type CustomerOrderActivityRow = {
   customerId: string;
@@ -24,6 +25,19 @@ function displayNameFromEmail(email: string) {
     .filter(Boolean)
     .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
     .join(' ');
+}
+
+function formatServiceMode(mode: string) {
+  switch (mode) {
+    case 'full_service':
+      return 'Full Service';
+    case 'on_site':
+      return 'On-Site';
+    case 'food_truck':
+      return 'Food Truck';
+    default:
+      return mode.charAt(0).toUpperCase() + mode.slice(1);
+  }
 }
 
 async function getFinalizedCustomerOrderActivity() {
@@ -158,7 +172,7 @@ export async function getPlatformOverview() {
   const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  const [activeOrgsResult, paidOrgsResult, gmvResult] = await Promise.all([
+  const [activeOrgsResult, paidOrgsResult, gmvResult, serviceModeRows] = await Promise.all([
     db
       .select({ count: sql<number>`count(*)::int` })
       .from(organizations)
@@ -175,6 +189,16 @@ export async function getPlatformOverview() {
       })
       .from(orders)
       .where(and(inArray(orders.status, ['confirmed', 'completed']), gte(orders.createdAt, monthStart))),
+
+    db
+      .select({
+        serviceType: orders.serviceType,
+        orderCount: sql<number>`count(*)::int`,
+        revenue: sql<number>`coalesce(sum(${orders.totalAmount}), 0)::int`,
+      })
+      .from(orders)
+      .where(and(inArray(orders.status, ['confirmed', 'completed']), gte(orders.createdAt, monthStart)))
+      .groupBy(orders.serviceType),
   ]);
 
   const activeRestaurants = activeOrgsResult[0]?.count ?? 0;
@@ -211,6 +235,28 @@ export async function getPlatformOverview() {
   const atRiskCustomers = buildAtRiskCustomers(customerOrderRows, now, fourteenDaysAgo);
 
   const atRiskRevenue = atRiskCustomers.reduce((sum, customer) => sum + (customer.avgOrderValue ?? 0), 0);
+
+  const serviceModeMap = new Map(
+    serviceModeRows.map((row) => [
+      row.serviceType ?? 'delivery',
+      {
+        serviceType: row.serviceType ?? 'delivery',
+        label: formatServiceMode(row.serviceType ?? 'delivery'),
+        orderCount: row.orderCount,
+        revenue: row.revenue,
+      },
+    ]),
+  );
+
+  const serviceModeBreakdown = SERVICE_MODE_ORDER.map((serviceType) => {
+    const existing = serviceModeMap.get(serviceType);
+    return existing ?? {
+      serviceType,
+      label: formatServiceMode(serviceType),
+      orderCount: 0,
+      revenue: 0,
+    };
+  });
 
   const recentPaymentRows = await db
     .select({
@@ -284,6 +330,7 @@ export async function getPlatformOverview() {
       atRiskRevenue,
       projectedMrr,
     },
+    serviceModeBreakdown,
     restaurantsByGmv: restaurantsByGmv.map((restaurant) => ({
       id: restaurant.id,
       name: restaurant.name,

@@ -13,6 +13,12 @@ interface OverviewData {
     atRiskRevenue: number;
     projectedMrr: number;
   };
+  serviceModeBreakdown: Array<{
+    serviceType: string;
+    label: string;
+    orderCount: number;
+    revenue: number;
+  }>;
   restaurantsByGmv: Array<{
     id: string;
     name: string;
@@ -105,7 +111,7 @@ export default function AdminDashboard() {
     );
   }
 
-  const { summary, restaurantsByGmv, mrrBreakdown, atRiskCustomers, recentPayments } = data;
+  const { summary, serviceModeBreakdown, restaurantsByGmv, mrrBreakdown, atRiskCustomers, recentPayments } = data;
 
   return (
     <div>
@@ -261,6 +267,45 @@ export default function AdminDashboard() {
             </div>
           ))
         )}
+      </Panel>
+
+      <Panel title="Revenue by Service Mode" badge="Month to date" style={{ marginBottom: 28 }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gap: 12,
+          }}
+        >
+          {serviceModeBreakdown.map((mode) => (
+            <div
+              key={mode.serviceType}
+              style={{
+                border: '1px solid #E7E5E4',
+                borderRadius: 10,
+                background: '#FAFAF9',
+                padding: '14px 16px',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                  color: '#78716C',
+                  marginBottom: 6,
+                }}
+              >
+                {mode.label}
+              </div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: '#1C1917' }}>{cents(mode.revenue)}</div>
+              <div style={{ fontSize: 12, color: '#78716C', marginTop: 4 }}>
+                {mode.orderCount} {mode.orderCount === 1 ? 'order' : 'orders'}
+              </div>
+            </div>
+          ))}
+        </div>
       </Panel>
 
       <Panel title="Recent Payments" badge="Last 7 days">
