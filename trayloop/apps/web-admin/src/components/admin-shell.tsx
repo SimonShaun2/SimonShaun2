@@ -9,6 +9,9 @@ const NAV_ITEMS = [
   { href: '/users', label: 'Users', icon: '◎', section: 'views' },
   { href: '/trial-conversions', label: 'Trial Conversions', icon: '◈', section: 'intelligence' },
   { href: '/mrr-movement', label: 'MRR Movement', icon: '◆', section: 'intelligence' },
+  { href: '/platform-health', label: 'Platform Health', icon: '●', section: 'intelligence' },
+  { href: '/revenue-forecast', label: 'Revenue Forecast', icon: '◇', section: 'intelligence' },
+  { href: '/churn-risk', label: 'Churn Risk', icon: '▲', section: 'intelligence' },
 ];
 
 function useAdminAuth() {

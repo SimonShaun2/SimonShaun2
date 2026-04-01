@@ -50,6 +50,11 @@ export function registerRoutes(app: FastifyInstance) {
     return { data };
   });
 
+  // ADM-006
+  app.get('/platform-health', async () => { return { data: await service.getPlatformHealth() }; });
+  app.get('/revenue-forecast', async () => { return { data: await service.getRevenueForecast() }; });
+  app.get('/churn-risk', async () => { return { data: await service.getChurnRisk() }; });
+
   app.patch('/organizations/:id/status', async (request, reply) => {
     const { id } = request.params as { id: string };
     const { status } = request.body as { status: string };
