@@ -6,8 +6,6 @@ import { apiFetch } from '../../lib/api';
 import { clearMerchantSession, merchantResetHref } from '../../lib/session';
 import { getStorefrontUrl } from '../../lib/storefront';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
 interface PaymentStatus {
   stripeAccountId: string | null;
   chargesEnabled: boolean;
@@ -65,13 +63,16 @@ interface OrderStats {
   repeatCustomers: number;
 }
 
-interface PublicLocation {
+interface Location {
+  id: string;
   name: string;
   address: string;
   city: string;
   state: string;
   zipCode: string;
+  country: string;
   phone: string | null;
+  email: string | null;
   serviceTypes: string[];
   leadTimeHours: number;
   minimumOrderAmount: number;
@@ -79,15 +80,36 @@ interface PublicLocation {
   pickupEnabled: boolean;
   deliveryRadiusMiles: number | null;
   depositRequired: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
-interface StorefrontSnapshot {
-  merchant: {
-    description: string | null;
-    website: string | null;
-    phone: string | null;
-  };
-  locations: PublicLocation[];
+interface OrganizationFormState {
+  name: string;
+  slug: string;
+  website: string;
+  phone: string;
+  description: string;
+}
+
+interface LocationFormState {
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  phone: string;
+  email: string;
+  leadTimeHours: string;
+  minimumOrderAmount: string;
+  deliveryRadiusMiles: string;
+  deliveryEnabled: boolean;
+  pickupEnabled: boolean;
+  depositRequired: boolean;
+  isActive: boolean;
+  serviceTypes: string[];
 }
 
 type SetupState = 'loading' | 'not_started' | 'in_progress' | 'action_required' | 'active';
@@ -115,6 +137,25 @@ const SECTION_LINKS = [
   { id: 'billing', label: 'Billing & Security' },
 ];
 
+const EMPTY_LOCATION_FORM: LocationFormState = {
+  name: '',
+  address: '',
+  city: '',
+  state: '',
+  zipCode: '',
+  country: 'US',
+  phone: '',
+  email: '',
+  leadTimeHours: '72',
+  minimumOrderAmount: '0',
+  deliveryRadiusMiles: '',
+  deliveryEnabled: true,
+  pickupEnabled: false,
+  depositRequired: true,
+  isActive: true,
+  serviceTypes: ['delivery'],
+};
+
 export default function SettingsPage() {
   return (
     <Suspense fallback={<p style={{ color: '#6b7280' }}>Loading settings...</p>}>
@@ -131,11 +172,25 @@ function SettingsContent() {
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>(DEFAULTS);
   const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null);
   const [stats, setStats] = useState<OrderStats | null>(null);
-  const [storefront, setStorefront] = useState<StorefrontSnapshot | null>(null);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [selectedLocationId, setSelectedLocationId] = useState<string | 'new'>('new');
+  const [organizationForm, setOrganizationForm] = useState<OrganizationFormState>({
+    name: '',
+    slug: '',
+    website: '',
+    phone: '',
+    description: '',
+  });
+  const [locationForm, setLocationForm] = useState<LocationFormState>(EMPTY_LOCATION_FORM);
   const [setupState, setSetupState] = useState<SetupState>('loading');
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [actionError, setActionError] = useState('');
+  const [paymentActionLoading, setPaymentActionLoading] = useState(false);
+  const [bannerMessage, setBannerMessage] = useState('');
+  const [bannerTone, setBannerTone] = useState<'success' | 'warning' | 'error'>('success');
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [locationSaving, setLocationSaving] = useState(false);
+  const [profileMessage, setProfileMessage] = useState('');
+  const [locationMessage, setLocationMessage] = useState('');
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -153,22 +208,26 @@ function SettingsContent() {
   }, [stripeParam]);
 
   const storefrontUrl = useMemo(() => {
-    if (!setupStatus?.slug) return null;
-    return getStorefrontUrl(setupStatus.slug);
-  }, [setupStatus]);
+    const slug = organization?.slug || setupStatus?.slug;
+    return slug ? getStorefrontUrl(slug) : null;
+  }, [organization?.slug, setupStatus?.slug]);
 
-  const primaryLocation = storefront?.locations?.[0] ?? null;
+  const selectedLocation = useMemo(
+    () => locations.find((location) => location.id === selectedLocationId) ?? null,
+    [locations, selectedLocationId],
+  );
 
-  async function loadSettings() {
-    setLoading(true);
-    setActionError('');
+  async function loadSettings(showLoader = true) {
+    if (showLoader) setLoading(true);
+    setBannerMessage('');
 
     try {
-      const [orgRes, setupRes, initialPaymentRes, statsRes] = await Promise.all([
+      const [orgRes, setupRes, initialPaymentRes, statsRes, locationsRes] = await Promise.all([
         apiFetch('/api/organizations/current'),
         apiFetch('/api/organizations/current/setup-status'),
         apiFetch('/api/organizations/current/payment-status').catch(() => ({ data: DEFAULTS })),
         apiFetch('/api/orders/stats').catch(() => ({ data: null })),
+        apiFetch('/api/locations').catch(() => ({ data: [] })),
       ]);
 
       const paymentRes =
@@ -176,25 +235,33 @@ function SettingsContent() {
           ? await apiFetch('/api/organizations/current/payment-status/sync', { method: 'POST' }).catch(() => initialPaymentRes)
           : initialPaymentRes;
 
-      setOrganization(orgRes.data);
+      const nextOrganization = orgRes.data as Organization;
+      const nextLocations = (locationsRes.data ?? []) as Location[];
+
+      setOrganization(nextOrganization);
+      setOrganizationForm(toOrganizationForm(nextOrganization));
       setSetupStatus(setupRes.data);
       setStats(statsRes.data);
+      setLocations(nextLocations);
       applyStatus(paymentRes.data ?? DEFAULTS);
 
-      if (setupRes.data?.slug) {
-        localStorage.setItem('orgSlug', setupRes.data.slug);
-        const publicRes = await fetch(`${API_URL}/api/storefront/${setupRes.data.slug}`);
-        if (publicRes.ok) {
-          const json = await publicRes.json();
-          setStorefront(json.data);
-        } else {
-          setStorefront(null);
-        }
+      localStorage.setItem('orgSlug', setupRes.data?.slug ?? nextOrganization.slug);
+      localStorage.setItem('orgName', nextOrganization.name);
+
+      if (nextLocations.length > 0) {
+        const locationToUse =
+          nextLocations.find((location) => location.id === selectedLocationId) ?? nextLocations[0];
+        setSelectedLocationId(locationToUse.id);
+        setLocationForm(toLocationForm(locationToUse));
+      } else {
+        setSelectedLocationId('new');
+        setLocationForm(EMPTY_LOCATION_FORM);
       }
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Failed to load settings');
+      setBannerTone('error');
+      setBannerMessage(err instanceof Error ? err.message : 'Failed to load settings');
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
   }
 
@@ -202,6 +269,8 @@ function SettingsContent() {
     try {
       const res = await apiFetch('/api/organizations/current/payment-status/sync', { method: 'POST' });
       applyStatus(res.data);
+      setBannerTone('success');
+      setBannerMessage('Stripe status refreshed.');
     } catch {
       try {
         const res = await apiFetch('/api/organizations/current/payment-status');
@@ -209,6 +278,20 @@ function SettingsContent() {
       } catch {
         applyStatus(DEFAULTS);
       }
+    }
+  }
+
+  function selectLocation(locationId: string | 'new') {
+    setLocationMessage('');
+    setSelectedLocationId(locationId);
+    if (locationId === 'new') {
+      setLocationForm(EMPTY_LOCATION_FORM);
+      return;
+    }
+
+    const location = locations.find((item) => item.id === locationId);
+    if (location) {
+      setLocationForm(toLocationForm(location));
     }
   }
 
@@ -226,8 +309,8 @@ function SettingsContent() {
   }
 
   async function handleSetupPayments() {
-    setActionLoading(true);
-    setActionError('');
+    setPaymentActionLoading(true);
+    setBannerMessage('');
     try {
       const res = await apiFetch('/api/organizations/current/payment-onboarding-link', {
         method: 'POST',
@@ -235,9 +318,76 @@ function SettingsContent() {
       });
       window.location.href = res.data.url;
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Failed to start payment setup');
+      setBannerTone('error');
+      setBannerMessage(err instanceof Error ? err.message : 'Failed to start payment setup');
     } finally {
-      setActionLoading(false);
+      setPaymentActionLoading(false);
+    }
+  }
+
+  async function handleProfileSave(event: React.FormEvent) {
+    event.preventDefault();
+    setProfileSaving(true);
+    setProfileMessage('');
+    try {
+      const payload = {
+        name: organizationForm.name.trim(),
+        slug: organizationForm.slug.trim().toLowerCase(),
+        website: optionalTrimmed(organizationForm.website),
+        phone: optionalTrimmed(organizationForm.phone),
+        description: optionalTrimmed(organizationForm.description),
+      };
+
+      if (!payload.name || !payload.slug) {
+        throw new Error('Business name and slug are required');
+      }
+
+      await apiFetch('/api/organizations/current', {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      });
+
+      setBannerTone('success');
+      setBannerMessage('Business profile updated.');
+      setProfileMessage('Saved');
+      await loadSettings(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to save business profile';
+      setBannerTone('error');
+      setBannerMessage(message);
+      setProfileMessage(message);
+    } finally {
+      setProfileSaving(false);
+    }
+  }
+
+  async function handleLocationSave(event: React.FormEvent) {
+    event.preventDefault();
+    setLocationSaving(true);
+    setLocationMessage('');
+    try {
+      const payload = buildLocationPayload(locationForm);
+      const path = selectedLocationId === 'new' ? '/api/locations' : `/api/locations/${selectedLocationId}`;
+      const method = selectedLocationId === 'new' ? 'POST' : 'PATCH';
+
+      const response = await apiFetch(path, {
+        method,
+        body: JSON.stringify(payload),
+      });
+
+      const savedLocation = response.data as Location;
+      setBannerTone('success');
+      setBannerMessage(selectedLocationId === 'new' ? 'Location created.' : 'Location settings updated.');
+      setLocationMessage('Saved');
+      setSelectedLocationId(savedLocation.id);
+      await loadSettings(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to save location settings';
+      setBannerTone('error');
+      setBannerMessage(message);
+      setLocationMessage(message);
+    } finally {
+      setLocationSaving(false);
     }
   }
 
@@ -293,8 +443,13 @@ function SettingsContent() {
       {stripeParam === 'refresh' ? (
         <Banner bg="#FEF3C7" border="#FDE68A" color="#92400E" text="Your Stripe session expired. Continue below to finish setup." />
       ) : null}
-      {actionError ? (
-        <Banner bg="#FEF2F2" border="#FECACA" color="#DC2626" text={actionError} />
+      {bannerMessage ? (
+        <Banner
+          bg={bannerTone === 'success' ? '#F0FDF4' : bannerTone === 'warning' ? '#FFFBEB' : '#FEF2F2'}
+          border={bannerTone === 'success' ? '#BBF7D0' : bannerTone === 'warning' ? '#FDE68A' : '#FECACA'}
+          color={bannerTone === 'success' ? '#166534' : bannerTone === 'warning' ? '#92400E' : '#DC2626'}
+          text={bannerMessage}
+        />
       ) : null}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12, marginBottom: 24 }}>
@@ -360,22 +515,69 @@ function SettingsContent() {
         </aside>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-          <SectionCard id="profile" title="Business Profile" subtitle="The core information customers and your team use to identify this merchant account.">
-            <KeyValueGrid
-              items={[
-                ['Business name', organization?.name ?? 'Not set'],
-                ['Store slug', organization?.slug ?? 'Not set'],
-                ['Website', organization?.website ?? storefront?.merchant.website ?? 'Not set'],
-                ['Phone', organization?.phone ?? storefront?.merchant.phone ?? 'Not set'],
-                ['Status', organization?.isActive ? 'Active' : 'Inactive'],
-                ['Last updated', organization?.updatedAt ? new Date(organization.updatedAt).toLocaleDateString() : 'Unknown'],
-              ]}
-            />
-            {(organization?.description || storefront?.merchant.description) ? (
-              <div style={{ marginTop: 14, padding: '12px 14px', borderRadius: 10, background: '#FAFAF9', color: '#57534E', fontSize: 13, lineHeight: 1.6 }}>
-                {organization?.description ?? storefront?.merchant.description}
+          <SectionCard id="profile" title="Business Profile" subtitle="Update the core information customers and your team use to identify this merchant account.">
+            <form onSubmit={handleProfileSave}>
+              <div style={formGridStyle}>
+                <Field label="Business Name">
+                  <input
+                    value={organizationForm.name}
+                    onChange={(event) => setOrganizationForm((current) => ({ ...current, name: event.target.value }))}
+                    style={inputStyle}
+                    placeholder="TrayLoop Catering Co."
+                    required
+                  />
+                </Field>
+                <Field label="Store Slug">
+                  <input
+                    value={organizationForm.slug}
+                    onChange={(event) =>
+                      setOrganizationForm((current) => ({
+                        ...current,
+                        slug: event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
+                      }))
+                    }
+                    style={inputStyle}
+                    placeholder="trayloop-catering"
+                    required
+                  />
+                </Field>
+                <Field label="Website">
+                  <input
+                    value={organizationForm.website}
+                    onChange={(event) => setOrganizationForm((current) => ({ ...current, website: event.target.value }))}
+                    style={inputStyle}
+                    placeholder="https://example.com"
+                  />
+                </Field>
+                <Field label="Phone">
+                  <input
+                    value={organizationForm.phone}
+                    onChange={(event) => setOrganizationForm((current) => ({ ...current, phone: event.target.value }))}
+                    style={inputStyle}
+                    placeholder="(555) 000-0000"
+                  />
+                </Field>
               </div>
-            ) : null}
+
+              <Field label="Business Description" style={{ marginTop: 14 }}>
+                <textarea
+                  value={organizationForm.description}
+                  onChange={(event) => setOrganizationForm((current) => ({ ...current, description: event.target.value }))}
+                  style={textareaStyle}
+                  rows={4}
+                  placeholder="Premium corporate catering, private events, and recurring office meals."
+                />
+              </Field>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 12, color: profileMessage === 'Saved' ? '#166534' : '#78716C' }}>
+                  {profileMessage || 'Changes here update your merchant profile and storefront identity.'}
+                </span>
+                <button type="submit" disabled={profileSaving} style={primaryButtonStyle}>
+                  {profileSaving ? 'Saving...' : 'Save Profile'}
+                </button>
+              </div>
+            </form>
           </SectionCard>
 
           <SectionCard id="storefront" title="Storefront" subtitle="Preview and share the public ordering page tied to your merchant slug.">
@@ -415,22 +617,154 @@ function SettingsContent() {
             </div>
           </SectionCard>
 
-          <SectionCard id="operations" title="Operations" subtitle="Operational settings your storefront communicates today from your live data.">
-            {primaryLocation ? (
-              <KeyValueGrid
-                items={[
-                  ['Primary location', primaryLocation.name],
-                  ['Address', `${primaryLocation.address}, ${primaryLocation.city}, ${primaryLocation.state} ${primaryLocation.zipCode}`],
-                  ['Lead time', `${primaryLocation.leadTimeHours} hours`],
-                  ['Minimum order', `$${(primaryLocation.minimumOrderAmount / 100).toFixed(0)}`],
-                  ['Service types', primaryLocation.serviceTypes.join(', ')],
-                  ['Delivery radius', primaryLocation.deliveryRadiusMiles ? `${primaryLocation.deliveryRadiusMiles} miles` : 'Not set'],
-                  ['Deposit required', primaryLocation.depositRequired ? 'Yes' : 'No'],
-                ]}
-              />
-            ) : (
-              <EmptyHint text="Location and order requirement details will appear here after your storefront settings are configured." />
-            )}
+          <SectionCard id="operations" title="Operations" subtitle="Manage the locations, service settings, and order requirements that power your storefront.">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#78716C', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                  Active Location
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {locations.map((location) => (
+                    <button
+                      key={location.id}
+                      type="button"
+                      onClick={() => selectLocation(location.id)}
+                      style={{
+                        ...secondaryButtonStyle,
+                        background: selectedLocationId === location.id ? '#1C1917' : '#FFFFFF',
+                        color: selectedLocationId === location.id ? '#FFFFFF' : '#57534E',
+                        borderColor: selectedLocationId === location.id ? '#1C1917' : '#D6D3D1',
+                      }}
+                    >
+                      {location.name}
+                    </button>
+                  ))}
+                  <button type="button" onClick={() => selectLocation('new')} style={secondaryButtonStyle}>
+                    {locations.length > 0 ? 'Add Location' : 'Create Location'}
+                  </button>
+                </div>
+              </div>
+              {selectedLocation ? (
+                <div style={{ fontSize: 12, color: '#78716C' }}>Editing {selectedLocation.name}</div>
+              ) : (
+                <div style={{ fontSize: 12, color: '#78716C' }}>
+                  {locations.length > 0 ? 'Create a new location or choose one to edit.' : 'No locations yet. Create your first one now.'}
+                </div>
+              )}
+            </div>
+
+            <form onSubmit={handleLocationSave}>
+              <div style={formGridStyle}>
+                <Field label="Location Name">
+                  <input value={locationForm.name} onChange={(event) => setLocationForm((current) => ({ ...current, name: event.target.value }))} style={inputStyle} placeholder="Downtown Kitchen" required />
+                </Field>
+                <Field label="Phone">
+                  <input value={locationForm.phone} onChange={(event) => setLocationForm((current) => ({ ...current, phone: event.target.value }))} style={inputStyle} placeholder="(555) 111-2222" />
+                </Field>
+                <Field label="Street Address">
+                  <input value={locationForm.address} onChange={(event) => setLocationForm((current) => ({ ...current, address: event.target.value }))} style={inputStyle} placeholder="123 Main Street" required />
+                </Field>
+                <Field label="Support Email">
+                  <input value={locationForm.email} onChange={(event) => setLocationForm((current) => ({ ...current, email: event.target.value }))} style={inputStyle} placeholder="events@example.com" />
+                </Field>
+                <Field label="City">
+                  <input value={locationForm.city} onChange={(event) => setLocationForm((current) => ({ ...current, city: event.target.value }))} style={inputStyle} required />
+                </Field>
+                <Field label="State">
+                  <input value={locationForm.state} onChange={(event) => setLocationForm((current) => ({ ...current, state: event.target.value }))} style={inputStyle} required />
+                </Field>
+                <Field label="ZIP Code">
+                  <input value={locationForm.zipCode} onChange={(event) => setLocationForm((current) => ({ ...current, zipCode: event.target.value }))} style={inputStyle} required />
+                </Field>
+                <Field label="Country">
+                  <input value={locationForm.country} onChange={(event) => setLocationForm((current) => ({ ...current, country: event.target.value.toUpperCase().slice(0, 2) }))} style={inputStyle} placeholder="US" required />
+                </Field>
+                <Field label="Lead Time (Hours)">
+                  <input value={locationForm.leadTimeHours} onChange={(event) => setLocationForm((current) => ({ ...current, leadTimeHours: event.target.value }))} style={inputStyle} inputMode="numeric" required />
+                </Field>
+                <Field label="Minimum Order ($)">
+                  <input value={locationForm.minimumOrderAmount} onChange={(event) => setLocationForm((current) => ({ ...current, minimumOrderAmount: event.target.value }))} style={inputStyle} inputMode="decimal" required />
+                </Field>
+                <Field label="Delivery Radius (Miles)">
+                  <input value={locationForm.deliveryRadiusMiles} onChange={(event) => setLocationForm((current) => ({ ...current, deliveryRadiusMiles: event.target.value }))} style={inputStyle} inputMode="numeric" placeholder="25" />
+                </Field>
+              </div>
+
+              <div style={{ marginTop: 16 }}>
+                <div style={fieldLabelStyle}>Service Types</div>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  {[
+                    { value: 'delivery', label: 'Delivery' },
+                    { value: 'pickup', label: 'Pickup' },
+                    { value: 'full_service', label: 'Full Service' },
+                  ].map((option) => {
+                    const checked = locationForm.serviceTypes.includes(option.value);
+                    return (
+                      <label key={option.value} style={toggleChipStyle}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() =>
+                            setLocationForm((current) => ({
+                              ...current,
+                              serviceTypes: checked
+                                ? current.serviceTypes.filter((item) => item !== option.value)
+                                : [...current.serviceTypes, option.value],
+                              deliveryEnabled: option.value === 'delivery' ? !checked : current.deliveryEnabled,
+                              pickupEnabled: option.value === 'pickup' ? !checked : current.pickupEnabled,
+                            }))
+                          }
+                        />
+                        <span>{option.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
+                <ToggleRow
+                  title="Delivery enabled"
+                  checked={locationForm.deliveryEnabled}
+                  onChange={(checked) =>
+                    setLocationForm((current) => ({
+                      ...current,
+                      deliveryEnabled: checked,
+                      serviceTypes: checked
+                        ? Array.from(new Set([...current.serviceTypes, 'delivery']))
+                        : current.serviceTypes.filter((item) => item !== 'delivery'),
+                    }))
+                  }
+                />
+                <ToggleRow
+                  title="Pickup enabled"
+                  checked={locationForm.pickupEnabled}
+                  onChange={(checked) =>
+                    setLocationForm((current) => ({
+                      ...current,
+                      pickupEnabled: checked,
+                      serviceTypes: checked
+                        ? Array.from(new Set([...current.serviceTypes, 'pickup']))
+                        : current.serviceTypes.filter((item) => item !== 'pickup'),
+                    }))
+                  }
+                />
+                <ToggleRow title="Deposit required" checked={locationForm.depositRequired} onChange={(checked) => setLocationForm((current) => ({ ...current, depositRequired: checked }))} />
+                <ToggleRow title="Location active" checked={locationForm.isActive} onChange={(checked) => setLocationForm((current) => ({ ...current, isActive: checked }))} />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginTop: 18, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 12, color: locationMessage === 'Saved' ? '#166534' : '#78716C' }}>
+                  {locationMessage ||
+                    (selectedLocationId === 'new'
+                      ? 'Create a location to make your storefront multi-location ready.'
+                      : 'Save to update how this location appears on the storefront.')}
+                </span>
+                <button type="submit" disabled={locationSaving} style={primaryButtonStyle}>
+                  {locationSaving ? 'Saving...' : selectedLocationId === 'new' ? 'Create Location' : 'Save Operations'}
+                </button>
+              </div>
+            </form>
           </SectionCard>
 
           <SectionCard id="payments" title="Payments" subtitle="Stripe connection status, onboarding progress, and live payment readiness.">
@@ -499,8 +833,8 @@ function SettingsContent() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {paymentCard.cta ? (
-                  <button type="button" onClick={handleSetupPayments} disabled={actionLoading} style={primaryButtonStyle}>
-                    {actionLoading ? 'Redirecting...' : paymentCard.cta}
+                  <button type="button" onClick={handleSetupPayments} disabled={paymentActionLoading} style={primaryButtonStyle}>
+                    {paymentActionLoading ? 'Redirecting...' : paymentCard.cta}
                   </button>
                 ) : null}
                 <button type="button" onClick={syncStatus} style={secondaryButtonStyle}>
@@ -572,6 +906,100 @@ function Banner({ bg, border, color, text }: { bg: string; border: string; color
   );
 }
 
+function toOrganizationForm(org: Organization): OrganizationFormState {
+  return {
+    name: org.name,
+    slug: org.slug,
+    website: org.website ?? '',
+    phone: org.phone ?? '',
+    description: org.description ?? '',
+  };
+}
+
+function toLocationForm(location: Location): LocationFormState {
+  return {
+    name: location.name,
+    address: location.address,
+    city: location.city,
+    state: location.state,
+    zipCode: location.zipCode,
+    country: location.country,
+    phone: location.phone ?? '',
+    email: location.email ?? '',
+    leadTimeHours: String(location.leadTimeHours),
+    minimumOrderAmount: String(location.minimumOrderAmount / 100),
+    deliveryRadiusMiles: location.deliveryRadiusMiles ? String(location.deliveryRadiusMiles) : '',
+    deliveryEnabled: location.deliveryEnabled,
+    pickupEnabled: location.pickupEnabled,
+    depositRequired: location.depositRequired,
+    isActive: location.isActive,
+    serviceTypes: location.serviceTypes,
+  };
+}
+
+function buildLocationPayload(form: LocationFormState) {
+  const serviceTypes = Array.from(
+    new Set(
+      form.serviceTypes
+        .filter(Boolean)
+        .concat(form.deliveryEnabled ? ['delivery'] : [])
+        .concat(form.pickupEnabled ? ['pickup'] : []),
+    ),
+  );
+
+  if (serviceTypes.length === 0) {
+    throw new Error('Select at least one service type');
+  }
+
+  return {
+    name: requiredTrimmed(form.name, 'Location name'),
+    address: requiredTrimmed(form.address, 'Address'),
+    city: requiredTrimmed(form.city, 'City'),
+    state: requiredTrimmed(form.state, 'State'),
+    zipCode: requiredTrimmed(form.zipCode, 'ZIP code'),
+    country: requiredTrimmed(form.country, 'Country').toUpperCase(),
+    phone: optionalTrimmed(form.phone),
+    email: optionalTrimmed(form.email),
+    leadTimeHours: parseInteger(form.leadTimeHours, 'Lead time'),
+    minimumOrderAmount: dollarsToCents(form.minimumOrderAmount),
+    deliveryRadiusMiles: form.deliveryRadiusMiles ? parseInteger(form.deliveryRadiusMiles, 'Delivery radius') : undefined,
+    deliveryEnabled: form.deliveryEnabled,
+    pickupEnabled: form.pickupEnabled,
+    depositRequired: form.depositRequired,
+    isActive: form.isActive,
+    serviceTypes,
+  };
+}
+
+function requiredTrimmed(value: string, label: string) {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new Error(`${label} is required`);
+  }
+  return trimmed;
+}
+
+function optionalTrimmed(value: string) {
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function parseInteger(value: string, label: string) {
+  const parsed = Number.parseInt(value, 10);
+  if (Number.isNaN(parsed) || parsed < 0) {
+    throw new Error(`${label} must be a valid number`);
+  }
+  return parsed;
+}
+
+function dollarsToCents(value: string) {
+  const parsed = Number.parseFloat(value);
+  if (Number.isNaN(parsed) || parsed < 0) {
+    throw new Error('Minimum order must be a valid amount');
+  }
+  return Math.round(parsed * 100);
+}
+
 function SectionCard({
   id,
   title,
@@ -617,6 +1045,51 @@ function KeyValueGrid({ items }: { items: Array<[string, string]> }) {
   );
 }
 
+function Field({
+  label,
+  children,
+  style,
+}: {
+  label: string;
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <label style={{ display: 'block', ...style }}>
+      <span style={fieldLabelStyle}>{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function ToggleRow({
+  title,
+  checked,
+  onChange,
+}: {
+  title: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        border: '1px solid #E7E5E4',
+        borderRadius: 10,
+        background: '#FAFAF9',
+        padding: '12px 14px',
+        cursor: 'pointer',
+      }}
+    >
+      <span style={{ fontSize: 13, fontWeight: 600, color: '#1C1917' }}>{title}</span>
+      <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
+    </label>
+  );
+}
+
 function InfoTile({ title, body, muted }: { title: string; body: string; muted?: boolean }) {
   return (
     <div style={{ padding: '14px 16px', borderRadius: 10, border: '1px solid #E7E5E4', background: muted ? '#FAFAF9' : '#FFFFFF' }}>
@@ -626,13 +1099,38 @@ function InfoTile({ title, body, muted }: { title: string; body: string; muted?:
   );
 }
 
-function EmptyHint({ text }: { text: string }) {
-  return (
-    <div style={{ padding: '18px 16px', borderRadius: 10, border: '1px dashed #D6D3D1', background: '#FAFAF9', color: '#78716C', fontSize: 13 }}>
-      {text}
-    </div>
-  );
-}
+const formGridStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+  gap: 14,
+};
+
+const fieldLabelStyle: React.CSSProperties = {
+  display: 'block',
+  fontSize: 11,
+  fontWeight: 700,
+  textTransform: 'uppercase',
+  letterSpacing: '0.08em',
+  color: '#78716C',
+  marginBottom: 6,
+};
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  borderRadius: 10,
+  border: '1px solid #D6D3D1',
+  background: '#FFFFFF',
+  padding: '10px 12px',
+  fontSize: 14,
+  color: '#1C1917',
+  boxSizing: 'border-box',
+};
+
+const textareaStyle: React.CSSProperties = {
+  ...inputStyle,
+  minHeight: 120,
+  resize: 'vertical',
+};
 
 const primaryButtonStyle: React.CSSProperties = {
   display: 'inline-flex',
@@ -662,4 +1160,16 @@ const secondaryButtonStyle: React.CSSProperties = {
   fontSize: 13,
   fontWeight: 600,
   textDecoration: 'none',
+};
+
+const toggleChipStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 8,
+  padding: '8px 10px',
+  borderRadius: 999,
+  border: '1px solid #D6D3D1',
+  background: '#FFFFFF',
+  fontSize: 13,
+  color: '#44403C',
 };

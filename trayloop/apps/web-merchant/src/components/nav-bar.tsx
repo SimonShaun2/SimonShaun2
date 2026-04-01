@@ -20,14 +20,28 @@ export default function NavBar() {
   const isAuthPage = pathname === '/login' || pathname === '/register' || pathname === '/reset-password';
   const [storefrontUrl, setStorefrontUrl] = useState<string | null>(null);
   const [signedIn, setSignedIn] = useState(false);
+  const [orgName, setOrgName] = useState<string | null>(null);
 
   useEffect(() => {
     if (isAuthPage) return;
 
     const token = localStorage.getItem('token');
     const orgSlug = localStorage.getItem('orgSlug');
+    const storedOrgName = localStorage.getItem('orgName');
     setSignedIn(Boolean(token));
     setStorefrontUrl(orgSlug ? getStorefrontUrl(orgSlug) : null);
+    setOrgName(storedOrgName);
+
+    if (token) {
+      apiFetch('/api/organizations/current')
+        .then((res) => {
+          if (res.data?.name) {
+            localStorage.setItem('orgName', res.data.name);
+            setOrgName(res.data.name);
+          }
+        })
+        .catch(() => {});
+    }
 
     if (token && !orgSlug) {
       apiFetch('/api/organizations/current/setup-status')
@@ -80,6 +94,9 @@ export default function NavBar() {
           </div>
           <div>
             <div style={{ fontSize: 15, fontWeight: 700 }}>TrayLoop</div>
+            <div style={{ fontSize: 12, color: '#E7E5E4', fontWeight: 600, marginTop: 2 }}>
+              {orgName ?? 'Merchant Dashboard'}
+            </div>
             <div style={{ fontSize: 11, color: '#A8A29E' }}>Merchant Dashboard</div>
           </div>
         </a>
