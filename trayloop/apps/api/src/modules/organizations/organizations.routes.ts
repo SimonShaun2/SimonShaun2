@@ -31,6 +31,12 @@ export function registerRoutes(app: FastifyInstance) {
     return { data: status };
   });
 
+  // Canonical storefront link and active location context for merchant UI
+  app.get('/current/storefront-context', { preHandler: [requireAuth, requireTenant] }, async (request) => {
+    const context = await service.getStorefrontContext(request.ctx.tenant!.organizationId);
+    return { data: context };
+  });
+
   // Update current organization (requires owner/admin)
   app.patch('/current', { preHandler: [requireAuth, requireTenant, requireOrgAdmin, validateBody(updateOrganizationSchema)] }, async (request, reply) => {
     const result = await service.update(request.ctx.tenant!.organizationId, (request as any).validatedBody);

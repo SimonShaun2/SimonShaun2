@@ -4,8 +4,7 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import NotificationBell from './notification-bell';
 import { clearMerchantSession } from '../lib/session';
-import { getStorefrontUrl } from '../lib/storefront';
-import { apiFetch } from '../lib/api';
+import { apiFetch, fetchStorefrontContext, type MerchantStorefrontContext } from '../lib/api';
 import { useMobile } from '../lib/use-mobile';
 
 const NAV_ITEMS = [
@@ -23,34 +22,41 @@ export default function NavBar() {
   const [storefrontUrl, setStorefrontUrl] = useState<string | null>(null);
   const [signedIn, setSignedIn] = useState(false);
   const [orgName, setOrgName] = useState<string | null>(null);
+  const [defaultLocationName, setDefaultLocationName] = useState<string | null>(null);
 
   useEffect(() => {
     if (isAuthPage) return;
 
     const token = localStorage.getItem('token');
-    const orgSlug = localStorage.getItem('orgSlug');
     const storedOrgName = localStorage.getItem('orgName');
     setSignedIn(Boolean(token));
-    setStorefrontUrl(orgSlug ? getStorefrontUrl(orgSlug) : null);
     setOrgName(storedOrgName);
+    setStorefrontUrl(null);
+    setDefaultLocationName(null);
 
     if (token) {
-      apiFetch('/api/organizations/current')
-        .then((res) => {
-          if (res.data?.name) {
-            localStorage.setItem('orgName', res.data.name);
-            setOrgName(res.data.name);
+      Promise.all([
+        apiFetch('/api/organizations/current').catch(() => null),
+        fetchStorefrontContext().catch(() => null),
+      ])
+        .then(([orgRes, storefrontContext]) => {
+          if (orgRes?.data?.name) {
+            localStorage.setItem('orgName', orgRes.data.name);
+            setOrgName(orgRes.data.name);
           }
-        })
-        .catch(() => {});
-    }
 
-    if (token && !orgSlug) {
-      apiFetch('/api/organizations/current/setup-status')
-        .then((res) => {
-          if (res.data?.slug) {
-            localStorage.setItem('orgSlug', res.data.slug);
-            setStorefrontUrl(getStorefrontUrl(res.data.slug));
+          const context = storefrontContext as MerchantStorefrontContext | null;
+          if (context) {
+            localStorage.setItem('orgSlug', context.organization.slug);
+            setStorefrontUrl(context.storefrontUrl);
+            setDefaultLocationName(context.defaultLocationName);
+            if (!orgRes?.data?.name) {
+              localStorage.setItem('orgName', context.organization.name);
+              setOrgName(context.organization.name);
+            }
+          } else {
+            setStorefrontUrl(null);
+            setDefaultLocationName(null);
           }
         })
         .catch(() => {});
@@ -240,6 +246,11 @@ export default function NavBar() {
               <div style={{ fontSize: 12, color: '#D6D3D1', marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {storefrontUrl ?? 'Link available after setup'}
               </div>
+              {defaultLocationName ? (
+                <div style={{ fontSize: 11, color: '#A8A29E', marginTop: 4 }}>
+                  Default location: {defaultLocationName}
+                </div>
+              ) : null}
             </div>
             <NotificationBell />
           </div>

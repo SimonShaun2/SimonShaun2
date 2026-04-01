@@ -2,9 +2,8 @@
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { apiFetch } from '../../lib/api';
+import { apiFetch, fetchStorefrontContext, type MerchantStorefrontContext } from '../../lib/api';
 import { clearMerchantSession, merchantResetHref } from '../../lib/session';
-import { getStorefrontUrl } from '../../lib/storefront';
 import { useMobile } from '../../lib/use-mobile';
 
 interface PaymentStatus {
@@ -175,6 +174,7 @@ function SettingsContent() {
   const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null);
   const [stats, setStats] = useState<OrderStats | null>(null);
   const [locations, setLocations] = useState<Location[]>([]);
+  const [storefrontContext, setStorefrontContext] = useState<MerchantStorefrontContext | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<string | 'new'>('new');
   const [organizationForm, setOrganizationForm] = useState<OrganizationFormState>({
     name: '',
@@ -209,27 +209,38 @@ function SettingsContent() {
     }
   }, [stripeParam]);
 
-  const storefrontUrl = useMemo(() => {
-    const slug = organization?.slug || setupStatus?.slug;
-    return slug ? getStorefrontUrl(slug) : null;
-  }, [organization?.slug, setupStatus?.slug]);
+  const storefrontUrl = storefrontContext?.storefrontUrl ?? null;
 
   const selectedLocation = useMemo(
     () => locations.find((location) => location.id === selectedLocationId) ?? null,
     [locations, selectedLocationId],
   );
 
+  const selectedLocationStorefrontUrl = useMemo(() => {
+    if (!storefrontContext) {
+      return null;
+    }
+
+    if (!selectedLocation || selectedLocationId === 'new') {
+      return storefrontContext.storefrontUrl;
+    }
+
+    return storefrontContext.locations.find((location) => location.id === selectedLocation.id)?.storefrontUrl
+      ?? storefrontContext.storefrontUrl;
+  }, [selectedLocation, selectedLocationId, storefrontContext]);
+
   async function loadSettings(showLoader = true) {
     if (showLoader) setLoading(true);
     setBannerMessage('');
 
     try {
-      const [orgRes, setupRes, initialPaymentRes, statsRes, locationsRes] = await Promise.all([
+      const [orgRes, setupRes, initialPaymentRes, statsRes, locationsRes, storefrontRes] = await Promise.all([
         apiFetch('/api/organizations/current'),
         apiFetch('/api/organizations/current/setup-status'),
         apiFetch('/api/organizations/current/payment-status').catch(() => ({ data: DEFAULTS })),
         apiFetch('/api/orders/stats').catch(() => ({ data: null })),
         apiFetch('/api/locations').catch(() => ({ data: [] })),
+        fetchStorefrontContext().catch(() => null),
       ]);
 
       const paymentRes =
@@ -245,9 +256,10 @@ function SettingsContent() {
       setSetupStatus(setupRes.data);
       setStats(statsRes.data);
       setLocations(nextLocations);
+      setStorefrontContext(storefrontRes);
       applyStatus(paymentRes.data ?? DEFAULTS);
 
-      localStorage.setItem('orgSlug', setupRes.data?.slug ?? nextOrganization.slug);
+      localStorage.setItem('orgSlug', storefrontRes?.organization.slug ?? setupRes.data?.slug ?? nextOrganization.slug);
       localStorage.setItem('orgName', nextOrganization.name);
 
       if (nextLocations.length > 0) {
@@ -589,22 +601,22 @@ function SettingsContent() {
                   Live URL
                 </div>
                 <div style={{ padding: '12px 14px', borderRadius: 10, background: '#FAFAF9', border: '1px solid #E7E5E4', fontFamily: 'monospace', fontSize: 12, color: '#44403C', wordBreak: 'break-all' }}>
-                  {storefrontUrl ?? 'Complete your setup to generate a live storefront link.'}
+                  {selectedLocationStorefrontUrl ?? storefrontUrl ?? 'Complete your setup to generate a live storefront link.'}
                 </div>
               </div>
-              {storefrontUrl ? (
+              {selectedLocationStorefrontUrl || storefrontUrl ? (
                 <div style={{ display: 'flex', gap: 8 }}>
                   <a
-                    href={storefrontUrl}
+                    href={selectedLocationStorefrontUrl ?? storefrontUrl ?? '#'}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={primaryButtonStyle}
                   >
-                    View Storefront
+                    {selectedLocation ? 'View Selected Location' : 'View Storefront'}
                   </a>
                   <button
                     type="button"
-                    onClick={() => navigator.clipboard.writeText(storefrontUrl)}
+                    onClick={() => navigator.clipboard.writeText(selectedLocationStorefrontUrl ?? storefrontUrl ?? '')}
                     style={secondaryButtonStyle}
                   >
                     Copy Link
@@ -647,7 +659,9 @@ function SettingsContent() {
                 </div>
               </div>
               {selectedLocation ? (
-                <div style={{ fontSize: 12, color: '#78716C' }}>Editing {selectedLocation.name}</div>
+                <div style={{ fontSize: 12, color: '#78716C' }}>
+                  Editing {selectedLocation.name} • {selectedLocation.city}, {selectedLocation.state}
+                </div>
               ) : (
                 <div style={{ fontSize: 12, color: '#78716C' }}>
                   {locations.length > 0 ? 'Create a new location or choose one to edit.' : 'No locations yet. Create your first one now.'}
@@ -889,9 +903,14 @@ function SettingsContent() {
               <a href={merchantResetHref()} style={secondaryButtonStyle}>
                 Reset Password
               </a>
-              {storefrontUrl ? (
-                <a href={storefrontUrl} target="_blank" rel="noopener noreferrer" style={primaryButtonStyle}>
-                  Open Storefront
+              {selectedLocationStorefrontUrl || storefrontUrl ? (
+                <a
+                  href={selectedLocationStorefrontUrl ?? storefrontUrl ?? '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={primaryButtonStyle}
+                >
+                  {selectedLocation ? 'Open Selected Location' : 'Open Storefront'}
                 </a>
               ) : null}
             </div>

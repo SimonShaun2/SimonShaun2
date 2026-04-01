@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import type { StorefrontData, OrderSubmission, OrderConfirmation } from '../lib/api';
 import { fetchCustomerAccount, submitOrder, OrderError } from '../lib/api';
 import { useMobile } from '../lib/use-mobile';
 
 interface Props {
   data: StorefrontData;
+  initialLocationSlug?: string | null;
 }
 
 type StorefrontServiceMode = OrderSubmission['serviceType'];
@@ -86,9 +87,11 @@ const sectionSubtitleStyle: React.CSSProperties = {
   lineHeight: 1.5,
 };
 
-export default function CheckoutForm({ data }: Props) {
+export default function CheckoutForm({ data, initialLocationSlug }: Props) {
   const isMobile = useMobile();
   const { locations, menu } = data;
+  const router = useRouter();
+  const pathname = usePathname();
 
   // All packages and add-ons flattened
   const allPackages = menu.flatMap((m) => [
@@ -98,7 +101,7 @@ export default function CheckoutForm({ data }: Props) {
   const allAddOns = menu.flatMap((m) => m.addOns);
 
   // Form state
-  const [selectedLocationSlug, setSelectedLocationSlug] = useState(locations[0]?.slug ?? '');
+  const [selectedLocationSlug, setSelectedLocationSlug] = useState(initialLocationSlug ?? locations[0]?.slug ?? '');
   const [serviceType, setServiceType] = useState<StorefrontServiceMode>('delivery');
   const [eventDate, setEventDate] = useState('');
   const [eventTime, setEventTime] = useState('');
@@ -145,11 +148,39 @@ export default function CheckoutForm({ data }: Props) {
   })();
 
   useEffect(() => {
+    if (!locations.length) {
+      return;
+    }
+
+    if (initialLocationSlug && locations.some((location) => location.slug === initialLocationSlug)) {
+      setSelectedLocationSlug(initialLocationSlug);
+      return;
+    }
+
+    setSelectedLocationSlug((current) => current || locations[0]?.slug || '');
+  }, [initialLocationSlug, locations]);
+
+  useEffect(() => {
     if (!selectedLocation) return;
     if (!availableServiceModes.includes(serviceType)) {
       setServiceType(availableServiceModes[0]);
     }
   }, [availableServiceModes, selectedLocation, serviceType]);
+
+  useEffect(() => {
+    if (!selectedLocationSlug || !pathname) {
+      return;
+    }
+
+    if (searchParams.get('location') === selectedLocationSlug) {
+      return;
+    }
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('location', selectedLocationSlug);
+    const nextUrl = `${pathname}?${params.toString()}`;
+    router.replace(nextUrl, { scroll: false });
+  }, [pathname, router, searchParams, selectedLocationSlug]);
 
   useEffect(() => {
     let cancelled = false;

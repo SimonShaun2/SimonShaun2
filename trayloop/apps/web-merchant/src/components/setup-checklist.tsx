@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { apiFetch } from '../lib/api';
-import { getStorefrontUrl } from '../lib/storefront';
+import { apiFetch, fetchStorefrontContext, type MerchantStorefrontContext } from '../lib/api';
 
 interface SetupStep {
   done: boolean;
@@ -54,11 +53,20 @@ const STEPS: Array<{
 
 export default function SetupChecklist() {
   const [status, setStatus] = useState<SetupStatus | null>(null);
+  const [storefrontContext, setStorefrontContext] = useState<MerchantStorefrontContext | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiFetch('/api/organizations/current/setup-status')
-      .then((res) => setStatus(res.data))
+    Promise.all([
+      apiFetch('/api/organizations/current/setup-status').catch(() => null),
+      fetchStorefrontContext().catch(() => null),
+    ])
+      .then(([statusRes, storefrontRes]) => {
+        if (statusRes?.data) {
+          setStatus(statusRes.data);
+        }
+        setStorefrontContext(storefrontRes);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -66,7 +74,11 @@ export default function SetupChecklist() {
   if (loading || !status) return null;
 
   if (status.isComplete) {
-    const storefrontUrl = getStorefrontUrl(status.slug);
+    const storefrontUrl = storefrontContext?.storefrontUrl ?? null;
+
+    if (!storefrontUrl) {
+      return null;
+    }
 
     return (
       <div
@@ -181,7 +193,7 @@ export default function SetupChecklist() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h2 style={{ fontSize: 18, fontWeight: 700, color: '#1C1917', margin: 0 }}>Get ready to accept orders</h2>
         <span style={{ fontSize: 12, color: '#9CA3AF' }}>
-          {status.completedSteps} of {status.totalSteps}
+                {status.completedSteps} of {status.totalSteps}
         </span>
       </div>
 

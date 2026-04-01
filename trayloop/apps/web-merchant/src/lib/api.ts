@@ -1,5 +1,24 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
+export interface MerchantStorefrontContext {
+  organization: {
+    id: string;
+    name: string;
+    slug: string;
+  };
+  storefrontUrl: string;
+  locations: Array<{
+    id: string;
+    name: string;
+    city: string;
+    state: string;
+    isDefault: boolean;
+    storefrontUrl: string;
+  }>;
+  defaultLocationId: string | null;
+  defaultLocationName: string | null;
+}
+
 export async function apiFetch(path: string, options: RequestInit = {}) {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   const headers: Record<string, string> = {
@@ -24,4 +43,9 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
   const json = await res.json();
   if (!res.ok) throw new Error(json.error?.message ?? 'Request failed');
   return json;
+}
+
+export async function fetchStorefrontContext(): Promise<MerchantStorefrontContext> {
+  const response = await apiFetch('/api/organizations/current/storefront-context');
+  return response.data;
 }

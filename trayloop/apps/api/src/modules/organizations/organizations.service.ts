@@ -32,6 +32,17 @@ function toDto(org: typeof organizations.$inferSelect): OrgDto {
   };
 }
 
+function getStorefrontBaseUrl() {
+  const configured = process.env.STOREFRONT_URL?.replace(/\/+$/, '');
+  if (configured) {
+    return configured;
+  }
+
+  return process.env.NODE_ENV === 'production'
+    ? 'https://order.trayloophq.com'
+    : 'http://localhost:3002';
+}
+
 export async function listByUser(userId: string) {
   const rows = await db
     .select({
@@ -175,5 +186,59 @@ export async function getSetupStatus(orgId: string) {
       location: { done: hasLocation, label: 'Set your order requirements', count: locationCount.count },
       payments: { done: hasPayments, label: 'Connect payments' },
     },
+  };
+}
+
+export async function getStorefrontContext(orgId: string) {
+  const [org] = await db
+    .select({
+      id: organizations.id,
+      name: organizations.name,
+      slug: organizations.slug,
+    })
+    .from(organizations)
+    .where(eq(organizations.id, orgId))
+    .limit(1);
+
+  if (!org) {
+    throw new NotFoundError('Organization');
+  }
+
+  const locationRows = await db
+    .select({
+      id: locations.id,
+      name: locations.name,
+      city: locations.city,
+      state: locations.state,
+      isActive: locations.isActive,
+      createdAt: locations.createdAt,
+    })
+    .from(locations)
+    .where(eq(locations.organizationId, orgId));
+
+  const storefrontBaseUrl = getStorefrontBaseUrl();
+  const storefrontUrl = `${storefrontBaseUrl}/${org.slug}`;
+  const activeLocations = locationRows
+    .filter((location) => location.isActive)
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  const defaultLocation = activeLocations[0] ?? null;
+
+  return {
+    organization: {
+      id: org.id,
+      name: org.name,
+      slug: org.slug,
+    },
+    storefrontUrl,
+    locations: activeLocations.map((location, index) => ({
+      id: location.id,
+      name: location.name,
+      city: location.city,
+      state: location.state,
+      isDefault: index === 0,
+      storefrontUrl: `${storefrontUrl}?location=${encodeURIComponent(location.id)}`,
+    })),
+    defaultLocationId: defaultLocation?.id ?? null,
+    defaultLocationName: defaultLocation?.name ?? null,
   };
 }

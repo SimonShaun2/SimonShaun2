@@ -3,10 +3,11 @@ import { fetchStorefront } from '../../lib/api';
 import type { StorefrontData } from '../../lib/api';
 import type { Metadata } from 'next';
 import CheckoutForm from '../../components/checkout-form';
-import StorefrontAuthNav from '../../components/storefront-auth-nav';
+import StorefrontBrandContext from '../../components/storefront-brand-context';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -24,8 +25,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 const fontStack = 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 
-export default async function StorefrontPage({ params }: PageProps) {
+export default async function StorefrontPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
+  const resolvedSearchParams = (await searchParams) ?? ({} as Record<string, string | string[] | undefined>);
+  const requestedLocation = typeof resolvedSearchParams.location === 'string' ? resolvedSearchParams.location : undefined;
 
   let data: StorefrontData;
   try {
@@ -42,15 +45,13 @@ export default async function StorefrontPage({ params }: PageProps) {
   if (menu.length === 0) {
     return (
       <main style={{ fontFamily: fontStack, background: '#FAF9F7', minHeight: '100vh' }}>
-        <Header merchantName={merchant.name} merchantDescription={merchant.description} />
+        <StorefrontBrandContext merchant={merchant} locations={locations} />
         <div style={{ maxWidth: 1040, margin: '0 auto', padding: '48px 24px' }}>
           <EmptyState message="This merchant hasn't published their menu yet." />
         </div>
       </main>
     );
   }
-
-  const primaryLocation = locations[0] ?? null;
 
   return (
     <main style={{ fontFamily: fontStack, background: '#FAF9F7', minHeight: '100vh' }}>
@@ -83,131 +84,12 @@ export default async function StorefrontPage({ params }: PageProps) {
           }
         }
       `}</style>
-      <Header merchantName={merchant.name} merchantDescription={merchant.description} />
-
-      {primaryLocation && <PolicyBadges location={primaryLocation} />}
+      <StorefrontBrandContext merchant={merchant} locations={locations} />
 
       <div className="storefront-shell" style={{ maxWidth: 1040, margin: '0 auto', padding: '28px 24px 56px' }}>
-        <CheckoutForm data={data} />
+        <CheckoutForm data={data} initialLocationSlug={requestedLocation} />
       </div>
     </main>
-  );
-}
-
-function Header({ merchantName, merchantDescription }: { merchantName: string; merchantDescription?: string | null }) {
-  return (
-    <header className="storefront-header" style={{
-      background: '#1C1917',
-      padding: '0 24px',
-      height: 56,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-    }}>
-      <div className="storefront-header-inner" style={{
-        maxWidth: 1040,
-        width: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-      }}>
-        <span className="storefront-header-name" style={{
-          color: '#FFFFFF',
-          fontSize: 18,
-          fontWeight: 700,
-          letterSpacing: '-0.01em',
-        }}>
-          {merchantName}
-        </span>
-        <span style={{
-          color: '#D4A853',
-          fontSize: 13,
-          fontWeight: 500,
-          letterSpacing: '0.5px',
-          flex: 1,
-        }}>
-          {merchantDescription || 'Catering & Events'}
-        </span>
-        <StorefrontAuthNav />
-      </div>
-    </header>
-  );
-}
-
-function formatServiceModeLabel(mode: string) {
-  switch (mode) {
-    case 'full_service':
-      return 'Full Service';
-    case 'on_site':
-      return 'On-Site';
-    case 'food_truck':
-      return 'Food Truck';
-    default:
-      return mode.charAt(0).toUpperCase() + mode.slice(1);
-  }
-}
-
-function PolicyBadges({ location }: { location: StorefrontData['locations'][0] }) {
-  const badges: Array<{ label: string; value: string }> = [];
-
-  if (location.minimumOrderAmount > 0) {
-    badges.push({ label: 'Min Order', value: `$${(location.minimumOrderAmount / 100).toFixed(0)}` });
-  }
-
-  badges.push({ label: 'Lead Time', value: `${location.leadTimeHours}h advance` });
-
-  if (location.depositRequired) {
-    badges.push({ label: 'Deposit', value: 'Required' });
-  }
-
-  if (location.deliveryEnabled && location.deliveryRadiusMiles) {
-    badges.push({ label: 'Delivery', value: `${location.deliveryRadiusMiles} mi radius` });
-  }
-
-  if (location.serviceTypes.length > 0) {
-    badges.push({
-      label: 'Service Modes',
-      value: location.serviceTypes.map(formatServiceModeLabel).join(', '),
-    });
-  }
-
-  return (
-    <div style={{
-      background: '#FFFFFF',
-      borderBottom: '1px solid #E7E5E4',
-      padding: '0 24px',
-    }}>
-      <div className="storefront-policy-bar" style={{
-        maxWidth: 1040,
-        margin: '0 auto',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 32,
-        height: 48,
-        overflowX: 'auto',
-      }}>
-        {badges.map((badge, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
-            <span style={{
-              fontSize: 11,
-              fontWeight: 600,
-              textTransform: 'uppercase' as const,
-              letterSpacing: '1px',
-              color: '#78716C',
-            }}>
-              {badge.label}
-            </span>
-            <span style={{
-              fontSize: 13,
-              fontWeight: 600,
-              color: '#1C1917',
-            }}>
-              {badge.value}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }
 

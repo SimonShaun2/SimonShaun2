@@ -30,6 +30,7 @@ export function getStorefrontBaseUrl() {
   return origin;
 }
 
-export function getStorefrontUrl(slug: string) {
-  return `${getStorefrontBaseUrl()}/${slug}`;
+export function getStorefrontUrl(slug: string, locationId?: string | null) {
+  const base = `${getStorefrontBaseUrl()}/${slug}`;
+  return locationId ? `${base}?location=${encodeURIComponent(locationId)}` : base;
 }

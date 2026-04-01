@@ -3,6 +3,7 @@ export function clearMerchantSession() {
   localStorage.removeItem('token');
   localStorage.removeItem('orgId');
   localStorage.removeItem('orgSlug');
+  localStorage.removeItem('orgName');
 }
 
 export function merchantResetHref() {
