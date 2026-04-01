@@ -70,6 +70,26 @@ export async function createCatalog(orgId: string, input: CreateCatalogInput) {
   return toCatalogDto(catalog);
 }
 
+export async function updateCatalog(orgId: string, id: string, input: UpdateCatalogInput) {
+  const [existing] = await db
+    .select({ id: catalogs.id })
+    .from(catalogs)
+    .where(and(eq(catalogs.id, id), eq(catalogs.organizationId, orgId)))
+    .limit(1);
+
+  if (!existing) {
+    throw new NotFoundError('Catalog');
+  }
+
+  const [updated] = await db
+    .update(catalogs)
+    .set({ ...input, updatedAt: new Date() })
+    .where(eq(catalogs.id, id))
+    .returning();
+
+  return toCatalogDto(updated);
+}
+
 // --- Categories ---
 
 export async function listCategories(orgId: string) {
@@ -104,6 +124,27 @@ export async function createCategory(orgId: string, input: CreateCategoryInput) 
   return toCategoryDto(category);
 }
 
+export async function updateCategory(orgId: string, id: string, input: UpdateCategoryInput) {
+  const [existing] = await db
+    .select({ id: catalogCategories.id })
+    .from(catalogCategories)
+    .innerJoin(catalogs, eq(catalogs.id, catalogCategories.catalogId))
+    .where(and(eq(catalogCategories.id, id), eq(catalogs.organizationId, orgId)))
+    .limit(1);
+
+  if (!existing) {
+    throw new NotFoundError('Category');
+  }
+
+  const [updated] = await db
+    .update(catalogCategories)
+    .set({ ...input, updatedAt: new Date() })
+    .where(eq(catalogCategories.id, id))
+    .returning();
+
+  return toCategoryDto(updated);
+}
+
 // --- Full menu tree ---
 
 export async function getFullMenu(orgId: string) {
@@ -123,6 +164,7 @@ export async function getFullMenu(orgId: string) {
       name: packages.name, description: packages.description,
       price: packages.price, currency: packages.currency, pricing: packages.pricing,
       minHeadCount: packages.minHeadCount, maxHeadCount: packages.maxHeadCount,
+      imageUrl: packages.imageUrl,
       isActive: packages.isActive, sortOrder: packages.sortOrder,
     }).from(packages)
       .innerJoin(catalogs, eq(catalogs.id, packages.catalogId))
@@ -147,16 +189,23 @@ export async function getFullMenu(orgId: string) {
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map((cat) => ({
         id: cat.id,
+        catalogId: cat.catalogId,
         name: cat.name,
         description: cat.description,
+        sortOrder: cat.sortOrder,
         isActive: cat.isActive,
         packages: packageRows
           .filter((p) => p.categoryId === cat.id)
           .sort((a, b) => a.sortOrder - b.sortOrder)
           .map((p) => ({
-            id: p.id, name: p.name, description: p.description,
+            id: p.id,
+            catalogId: p.catalogId,
+            categoryId: p.categoryId,
+            name: p.name,
+            description: p.description,
             pricePerHead: p.price, currency: p.currency, pricing: p.pricing,
             minHeadCount: p.minHeadCount, maxHeadCount: p.maxHeadCount,
+            imageUrl: p.imageUrl,
             isActive: p.isActive,
           })),
       })),
@@ -164,17 +213,28 @@ export async function getFullMenu(orgId: string) {
       .filter((p) => p.catalogId === catalog.id && !p.categoryId)
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map((p) => ({
-        id: p.id, name: p.name, description: p.description,
+        id: p.id,
+        catalogId: p.catalogId,
+        categoryId: p.categoryId,
+        name: p.name,
+        description: p.description,
         pricePerHead: p.price, currency: p.currency, pricing: p.pricing,
         minHeadCount: p.minHeadCount, maxHeadCount: p.maxHeadCount,
+        imageUrl: p.imageUrl,
         isActive: p.isActive,
       })),
     addOns: addOnRows
       .filter((a) => a.catalogId === catalog.id)
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map((a) => ({
-        id: a.id, name: a.name, description: a.description,
-        price: a.price, currency: a.currency, isActive: a.isActive,
+        id: a.id,
+        catalogId: a.catalogId,
+        name: a.name,
+        description: a.description,
+        price: a.price,
+        currency: a.currency,
+        sortOrder: a.sortOrder,
+        isActive: a.isActive,
       })),
   }));
 }

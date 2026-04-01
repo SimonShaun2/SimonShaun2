@@ -6,7 +6,11 @@ export const createCatalogSchema = z.object({
   description: z.string().optional(),
 });
 
-export const updateCatalogSchema = createCatalogSchema.partial();
+export const updateCatalogSchema = z.object({
+  name: z.string().min(1).max(255).optional(),
+  description: z.string().optional(),
+  isActive: z.boolean().optional(),
+});
 
 export type CreateCatalogInput = z.infer<typeof createCatalogSchema>;
 export type UpdateCatalogInput = z.infer<typeof updateCatalogSchema>;
@@ -19,7 +23,12 @@ export const createCategorySchema = z.object({
   sortOrder: z.number().int().nonnegative().default(0),
 });
 
-export const updateCategorySchema = createCategorySchema.omit({ catalogId: true }).partial();
+export const updateCategorySchema = z.object({
+  name: z.string().min(1).max(255).optional(),
+  description: z.string().optional(),
+  sortOrder: z.number().int().nonnegative().optional(),
+  isActive: z.boolean().optional(),
+});
 
 export type CreateCategoryInput = z.infer<typeof createCategorySchema>;
 export type UpdateCategoryInput = z.infer<typeof updateCategorySchema>;
