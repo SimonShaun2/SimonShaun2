@@ -21,6 +21,20 @@ const SERVICE_MODE_LABELS: Record<StorefrontServiceMode, string> = {
   food_truck: 'Food Truck',
 };
 
+function formatLocationSummary(location: StorefrontData['locations'][number]) {
+  return `${location.city}, ${location.state}`;
+}
+
+function formatLocationAddress(location: StorefrontData['locations'][number]) {
+  return [location.address, `${location.city}, ${location.state} ${location.zipCode}`]
+    .filter(Boolean)
+    .join(' • ');
+}
+
+function formatServiceModeList(modes: string[]) {
+  return modes.map((mode) => SERVICE_MODE_LABELS[mode as StorefrontServiceMode] ?? mode).join(' • ');
+}
+
 /* ── Design tokens ── */
 const T = {
   pageBg: '#FAF9F7',
@@ -85,6 +99,18 @@ const sectionSubtitleStyle: React.CSSProperties = {
   color: T.textMuted,
   margin: '3px 0 0',
   lineHeight: 1.5,
+};
+
+const locationMetaChipStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
+  padding: '6px 10px',
+  borderRadius: 999,
+  background: '#FFFFFF',
+  border: `1px solid ${T.cardBorder}`,
+  fontSize: 12,
+  color: T.textMuted,
 };
 
 export default function CheckoutForm({ data, initialLocationSlug }: Props) {
@@ -413,22 +439,110 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
             <p style={sectionSubtitleStyle}>Please order at least {leadTime} hours in advance</p>
           )}
 
-          {locations.length > 1 && (
-            <div style={{ marginTop: 20 }}>
-              <label style={labelStyle}>Location</label>
-              <select
-                value={selectedLocationSlug}
-                onChange={(e) => setSelectedLocationSlug(e.target.value)}
-                style={inputStyle}
+          <div style={{ marginTop: 20 }}>
+            <label style={labelStyle}>{locations.length > 1 ? 'Choose a Location' : 'Ordering From'}</label>
+            {locations.length > 1 ? (
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
+                {locations.map((location) => {
+                  const isSelected = location.slug === selectedLocationSlug;
+                  return (
+                    <button
+                      key={location.slug}
+                      type="button"
+                      onClick={() => setSelectedLocationSlug(location.slug)}
+                      style={{
+                        textAlign: 'left',
+                        border: isSelected ? `2px solid ${T.toggleSelectedBorder}` : `1px solid ${T.cardBorder}`,
+                        borderRadius: 12,
+                        background: isSelected ? '#FFFBEB' : '#FFFFFF',
+                        padding: '14px 16px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                        <div>
+                          <div style={{ fontSize: 15, fontWeight: 700, color: T.textPrimary }}>{location.name}</div>
+                          <div style={{ fontSize: 12, color: T.textMuted, marginTop: 3 }}>
+                            {formatLocationSummary(location)}
+                          </div>
+                        </div>
+                        {isSelected ? (
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 700,
+                              padding: '4px 8px',
+                              borderRadius: 999,
+                              background: '#D4A853',
+                              color: '#1C1917',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            Selected
+                          </span>
+                        ) : null}
+                      </div>
+                      <div style={{ fontSize: 12, color: T.textMuted, marginTop: 10, lineHeight: 1.5 }}>
+                        {formatLocationAddress(location)}
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+                        <span style={locationMetaChipStyle}>Lead time {location.leadTimeHours}h</span>
+                        {location.minimumOrderAmount > 0 ? (
+                          <span style={locationMetaChipStyle}>Min ${Math.round(location.minimumOrderAmount / 100)}</span>
+                        ) : null}
+                        {location.deliveryEnabled && location.deliveryRadiusMiles ? (
+                          <span style={locationMetaChipStyle}>{location.deliveryRadiusMiles} mi delivery</span>
+                        ) : null}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : selectedLocation ? (
+              <div
+                style={{
+                  border: `1px solid ${T.cardBorder}`,
+                  borderRadius: 12,
+                  background: '#FFFFFF',
+                  padding: '14px 16px',
+                }}
               >
-                {locations.map((location) => (
-                  <option key={location.slug} value={location.slug}>
-                    {location.name} - {location.city}, {location.state}
-                  </option>
-                ))}
-              </select>
+                <div style={{ fontSize: 15, fontWeight: 700, color: T.textPrimary }}>{selectedLocation.name}</div>
+                <div style={{ fontSize: 12, color: T.textMuted, marginTop: 4 }}>
+                  {formatLocationAddress(selectedLocation)}
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          {selectedLocation ? (
+            <div
+              style={{
+                marginTop: 16,
+                padding: '14px 16px',
+                borderRadius: 12,
+                background: '#FAFAF9',
+                border: `1px solid ${T.cardBorder}`,
+              }}
+            >
+              <div style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}>
+                Location Snapshot
+              </div>
+              <div style={{ fontSize: 14, color: T.textPrimary, fontWeight: 600 }}>
+                {selectedLocation.name}
+              </div>
+              <div style={{ fontSize: 12, color: T.textMuted, marginTop: 4, lineHeight: 1.5 }}>
+                {formatLocationAddress(selectedLocation)}
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+                <span style={locationMetaChipStyle}>Modes: {formatServiceModeList(selectedLocation.serviceTypes)}</span>
+                <span style={locationMetaChipStyle}>
+                  {selectedLocation.depositRequired ? 'Deposit required' : 'No deposit required'}
+                </span>
+                {selectedLocation.phone ? <span style={locationMetaChipStyle}>{selectedLocation.phone}</span> : null}
+              </div>
             </div>
-          )}
+          ) : null}
 
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginTop: 20 }}>
             <div>
@@ -455,6 +569,11 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
           {/* Service Type Toggle */}
           <div style={{ marginTop: 20 }}>
             <label style={labelStyle}>Service Type</label>
+            {selectedLocation ? (
+              <p style={{ ...sectionSubtitleStyle, marginTop: 0, marginBottom: 10 }}>
+                Available at {selectedLocation.name}: {formatServiceModeList(availableServiceModes)}
+              </p>
+            ) : null}
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
               {availableServiceModes.map((mode) => (
                 <button
@@ -1134,7 +1253,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
             </div>
             {selectedLocation && (
               <div style={{ fontSize: 12, color: T.textMuted, marginTop: 4 }}>
-                {selectedLocation.name} · {SERVICE_MODE_LABELS[serviceType]}
+                {selectedLocation.name} • {SERVICE_MODE_LABELS[serviceType]}
               </div>
             )}
           </div>
