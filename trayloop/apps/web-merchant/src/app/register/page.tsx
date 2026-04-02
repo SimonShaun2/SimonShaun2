@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useMobile } from '../../lib/use-mobile';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const TRIAL_PLAN = 'trayloop_pro_trial' as const;
@@ -18,6 +19,7 @@ export default function RegisterPage() {
 
 function RegisterContent() {
   const searchParams = useSearchParams();
+  const isMobile = useMobile(900);
   const existingMerchant = searchParams.get('step') === 'org';
   const [step, setStep] = useState<Step>(existingMerchant ? 'details' : 'plan');
   const [selectedPlan, setSelectedPlan] = useState<string>(existingMerchant ? TRIAL_PLAN : '');
@@ -110,10 +112,19 @@ function RegisterContent() {
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.12fr) minmax(300px, 0.88fr)', gap: 24, maxWidth: 1040, margin: '2.5rem auto' }}>
-      <section style={{ border: '1px solid #E7E5E4', borderRadius: 16, background: '#FFFFFF', padding: '28px 30px' }}>
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1.12fr) minmax(300px, 0.88fr)',
+        gap: isMobile ? 16 : 24,
+        maxWidth: 1040,
+        margin: isMobile ? '1rem auto' : '2.5rem auto',
+        padding: isMobile ? '0 12px 24px' : '0 16px',
+      }}
+    >
+      <section style={{ border: '1px solid #E7E5E4', borderRadius: 16, background: '#FFFFFF', padding: isMobile ? '22px 18px' : '28px 30px' }}>
         <div style={{ marginBottom: 22 }}>
-          <h1 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: '#1C1917' }}>
+          <h1 style={{ fontSize: isMobile ? 26 : 30, fontWeight: 700, margin: 0, color: '#1C1917', lineHeight: 1.15 }}>
             {existingMerchant
               ? 'Finish your TrayLoop workspace'
               : step === 'plan'
@@ -130,7 +141,7 @@ function RegisterContent() {
         </div>
 
         {!existingMerchant ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10, marginBottom: 20 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0, 1fr))', gap: 10, marginBottom: 20 }}>
             <StepCard active={step === 'plan'} done={step === 'details'} number="1" title="Plan" subtitle="TrayLoop Pro trial" />
             <StepCard active={step === 'details'} done={false} number="2" title="Merchant account" subtitle="Owner + business setup" />
           </div>
@@ -156,18 +167,18 @@ function RegisterContent() {
                 borderRadius: 16,
                 border: selectedPlan === TRIAL_PLAN ? '1px solid #1C1917' : '1px solid #E7E5E4',
                 background: selectedPlan === TRIAL_PLAN ? '#FAFAF9' : '#FFFFFF',
-                padding: '20px 20px 18px',
+                padding: isMobile ? '18px 16px 16px' : '20px 20px 18px',
                 cursor: 'pointer',
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 14 }}>
+              <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'flex-start', gap: 12, marginBottom: 14 }}>
                 <div>
-                  <div style={{ fontSize: 22, fontWeight: 700, color: '#1C1917' }}>TrayLoop Pro</div>
+                  <div style={{ fontSize: isMobile ? 20 : 22, fontWeight: 700, color: '#1C1917' }}>TrayLoop Pro</div>
                   <div style={{ fontSize: 14, color: '#57534E', marginTop: 6 }}>
                     $99/month after a 30-day free trial
                   </div>
                 </div>
-                <div style={{ display: 'inline-flex', alignItems: 'center', borderRadius: 999, background: '#FEF3C7', color: '#92400E', fontSize: 12, fontWeight: 700, padding: '6px 10px' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', alignSelf: isMobile ? 'flex-start' : 'auto', borderRadius: 999, background: '#FEF3C7', color: '#92400E', fontSize: 12, fontWeight: 700, padding: '6px 10px' }}>
                   30-day trial
                 </div>
               </div>
@@ -179,11 +190,11 @@ function RegisterContent() {
               </div>
             </button>
 
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 18 }}>
-              <button type="button" onClick={handlePlanContinue} style={primaryButtonStyle}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, max-content)', gap: 10, marginTop: 18 }}>
+              <button type="button" onClick={handlePlanContinue} style={{ ...primaryButtonStyle, width: isMobile ? '100%' : undefined }}>
                 Continue with TrayLoop Pro
               </button>
-              <a href="/login" style={secondaryLinkButtonStyle}>Sign in instead</a>
+              <a href="/login" style={{ ...secondaryLinkButtonStyle, width: isMobile ? '100%' : undefined }}>Sign in instead</a>
             </div>
           </div>
         ) : (
@@ -223,20 +234,20 @@ function RegisterContent() {
                 required
                 style={inputStyle}
               />
-              <div style={{ fontSize: 12, color: '#78716C', marginTop: 6 }}>
+              <div style={{ fontSize: 12, color: '#78716C', marginTop: 6, wordBreak: 'break-word' }}>
                 Your storefront: <code>{`order.trayloophq.com/${orgSlug || 'your-brand'}`}</code>
               </div>
             </Field>
             <Field label="Business phone (optional)">
               <input type="tel" value={orgPhone} onChange={(event) => setOrgPhone(event.target.value)} style={inputStyle} />
             </Field>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : undefined, gap: 10 }}>
               {!existingMerchant ? (
-                <button type="button" onClick={() => setStep('plan')} style={secondaryButtonStyle}>
+                <button type="button" onClick={() => setStep('plan')} style={{ ...secondaryButtonStyle, width: isMobile ? '100%' : undefined }}>
                   Back to plan
                 </button>
               ) : null}
-              <button type="submit" disabled={loading} style={primaryButtonStyle}>
+              <button type="submit" disabled={loading} style={{ ...primaryButtonStyle, width: isMobile ? '100%' : undefined }}>
                 {loading ? 'Creating merchant workspace...' : existingMerchant ? 'Finish workspace setup' : 'Create merchant workspace'}
               </button>
             </div>
@@ -248,11 +259,11 @@ function RegisterContent() {
         </p>
       </section>
 
-      <aside style={{ border: '1px solid #E7E5E4', borderRadius: 16, background: '#1C1917', color: '#FAFAF9', padding: '28px 26px' }}>
+      <aside style={{ border: '1px solid #E7E5E4', borderRadius: 16, background: '#1C1917', color: '#FAFAF9', padding: isMobile ? '22px 18px' : '28px 26px' }}>
         <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#D4A853', marginBottom: 12 }}>
           Clean onboarding flow
         </div>
-        <h2 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 10px' }}>Sales-ready and self-serve</h2>
+        <h2 style={{ fontSize: isMobile ? 20 : 22, fontWeight: 700, margin: '0 0 10px', lineHeight: 1.2 }}>Sales-ready and self-serve</h2>
         <p style={{ fontSize: 14, color: '#E7E5E4', lineHeight: 1.7, margin: 0 }}>
           Start with the TrayLoop Pro trial, create the merchant workspace, then finish billing and launch setup from inside TrayLoop.
         </p>
@@ -315,7 +326,7 @@ function PlanBullet({ text }: { text: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
       <div style={{ width: 18, height: 18, borderRadius: 999, background: '#F5F5F4', color: '#1C1917', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, marginTop: 1 }}>
-        ✓
+        OK
       </div>
       <div style={{ fontSize: 13, color: '#57534E', lineHeight: 1.6 }}>{text}</div>
     </div>

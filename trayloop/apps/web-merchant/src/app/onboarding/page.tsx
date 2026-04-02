@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useMobile } from '../../lib/use-mobile';
 import {
   createBillingCheckout,
   createBillingPortal,
@@ -15,6 +16,7 @@ type BannerTone = 'success' | 'warning' | 'error';
 
 function MerchantOnboardingPageContent() {
   const searchParams = useSearchParams();
+  const isMobile = useMobile(900);
   const [data, setData] = useState<MerchantOnboardingStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -169,7 +171,7 @@ function MerchantOnboardingPageContent() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
         <div>
-          <h1 style={headingStyle}>Launch Setup</h1>
+          <h1 style={{ ...headingStyle, fontSize: isMobile ? 24 : headingStyle.fontSize }}>Launch Setup</h1>
           <p style={{ margin: '6px 0 0', color: '#78716C', fontSize: 14, maxWidth: 720 }}>
             Finish the remaining launch steps after billing is in place.
           </p>
@@ -188,14 +190,14 @@ function MerchantOnboardingPageContent() {
       {banner ? <Banner tone={banner.tone} text={banner.text} /> : null}
       {error ? <Banner tone="error" text={error} /> : null}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 14, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(${isMobile ? 160 : 210}px, 1fr))`, gap: 14, marginBottom: 24 }}>
         <SummaryCard label="Launch Progress" value={`${data.launch.progressPercent}%`} sub={`${data.launch.completed}/${data.launch.total} milestone${data.launch.total === 1 ? '' : 's'}`} />
         <SummaryCard label="Payouts" value={data.paymentStatus.status === 'ready' ? 'Ready' : paymentBadge.label} sub={data.paymentStatus.chargesEnabled ? 'Charges enabled' : 'Stripe still needs action'} accent={data.paymentStatus.status === 'ready'} />
         <SummaryCard label="Billing" value={billingBadge.label} sub={billingDetail(data)} accent={data.billing.state === 'active'} />
         <SummaryCard label="Storefront" value={data.readiness.canLaunchStorefront ? 'Ready to launch' : 'Needs review'} sub={data.storefront.storefrontUrl} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) minmax(280px, 1fr)', gap: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1.5fr) minmax(280px, 1fr)', gap: 20 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           <SectionCard
             title="1. TrayLoop Pro billing"
@@ -211,9 +213,9 @@ function MerchantOnboardingPageContent() {
                 Trial ends on {new Date(data.billing.subscription.trialEnd).toLocaleDateString()}.
               </div>
             ) : null}
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : undefined, gap: 10, marginTop: 16 }}>
               {data.billing.canCheckout ? (
-                <button type="button" onClick={handleStartSubscription} disabled={billingAction !== null} style={primaryButtonStyle}>
+                <button type="button" onClick={handleStartSubscription} disabled={billingAction !== null} style={{ ...primaryButtonStyle, width: isMobile ? '100%' : undefined }}>
                   {billingAction === 'checkout'
                     ? 'Redirecting...'
                     : data.billing.state === 'canceled'
@@ -224,11 +226,11 @@ function MerchantOnboardingPageContent() {
                 </button>
               ) : null}
               {data.billing.canManage ? (
-                <button type="button" onClick={handleManageBilling} disabled={billingAction !== null} style={secondaryButtonStyle}>
+                <button type="button" onClick={handleManageBilling} disabled={billingAction !== null} style={{ ...secondaryButtonStyle, width: isMobile ? '100%' : undefined }}>
                   {billingAction === 'portal' ? 'Opening...' : 'Manage Subscription'}
                 </button>
               ) : null}
-              <a href="/billing" style={secondaryButtonStyle}>Open Billing Hub</a>
+              <a href="/billing" style={{ ...secondaryButtonStyle, width: isMobile ? '100%' : undefined }}>Open Billing Hub</a>
             </div>
           </SectionCard>
 
@@ -262,8 +264,8 @@ function MerchantOnboardingPageContent() {
                 ) : null}
               </div>
             ) : null}
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
-              <button type="button" onClick={handleStartPayments} disabled={paymentAction !== null} style={primaryButtonStyle}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : undefined, gap: 10, marginTop: 16 }}>
+              <button type="button" onClick={handleStartPayments} disabled={paymentAction !== null} style={{ ...primaryButtonStyle, width: isMobile ? '100%' : undefined }}>
                 {paymentAction === 'connect'
                   ? 'Redirecting...'
                   : data.paymentStatus.status === 'ready'
@@ -272,7 +274,7 @@ function MerchantOnboardingPageContent() {
                       ? 'Start Merchant Payments'
                       : 'Continue Stripe Onboarding'}
               </button>
-              <button type="button" onClick={handleRefreshPayments} disabled={paymentAction !== null} style={secondaryButtonStyle}>
+              <button type="button" onClick={handleRefreshPayments} disabled={paymentAction !== null} style={{ ...secondaryButtonStyle, width: isMobile ? '100%' : undefined }}>
                 {paymentAction === 'refresh' ? 'Refreshing...' : 'Refresh Status'}
               </button>
             </div>
@@ -307,7 +309,7 @@ function MerchantOnboardingPageContent() {
             <div style={{ marginTop: 16 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#1C1917', marginBottom: 6 }}>{data.launch.nextAction.title}</div>
               <div style={{ fontSize: 13, color: '#78716C', lineHeight: 1.6 }}>{data.launch.nextAction.description}</div>
-              <a href={data.launch.nextAction.href} style={{ ...primaryButtonStyle, display: 'inline-flex', marginTop: 12 }}>
+              <a href={data.launch.nextAction.href} style={{ ...primaryButtonStyle, display: 'inline-flex', marginTop: 12, width: isMobile ? '100%' : undefined }}>
                 {data.launch.nextAction.cta}
               </a>
             </div>
@@ -318,11 +320,11 @@ function MerchantOnboardingPageContent() {
               <div style={{ fontSize: 13, fontWeight: 700, color: '#1C1917', marginBottom: 6 }}>{data.storefront.organization.name}</div>
               <div style={{ fontSize: 12, color: '#57534E', wordBreak: 'break-all' }}>{data.launch.liveStorefrontUrl ?? data.storefront.storefrontUrl}</div>
             </div>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
-              <a href={data.launch.liveStorefrontUrl ?? data.storefront.storefrontUrl} target="_blank" rel="noopener noreferrer" style={primaryButtonStyle}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : undefined, gap: 10, marginTop: 16 }}>
+              <a href={data.launch.liveStorefrontUrl ?? data.storefront.storefrontUrl} target="_blank" rel="noopener noreferrer" style={{ ...primaryButtonStyle, width: isMobile ? '100%' : undefined }}>
                 View Storefront
               </a>
-              <a href="/settings#storefront" style={secondaryButtonStyle}>Review Storefront Links</a>
+              <a href="/settings#storefront" style={{ ...secondaryButtonStyle, width: isMobile ? '100%' : undefined }}>Review Storefront Links</a>
             </div>
           </SectionCard>
         </div>

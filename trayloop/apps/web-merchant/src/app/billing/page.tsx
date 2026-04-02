@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useMobile } from '../../lib/use-mobile';
 import {
   createBillingCheckout,
   createBillingPortal,
@@ -12,6 +13,7 @@ import { merchantResetHref } from '../../lib/session';
 
 function MerchantBillingPageContent() {
   const searchParams = useSearchParams();
+  const isMobile = useMobile(900);
   const [data, setData] = useState<MerchantOnboardingStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -108,7 +110,7 @@ function MerchantBillingPageContent() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
         <div>
-          <h1 style={headingStyle}>Billing</h1>
+          <h1 style={{ ...headingStyle, fontSize: isMobile ? 24 : headingStyle.fontSize }}>Billing</h1>
           <p style={{ margin: '6px 0 0', color: '#78716C', fontSize: 14, maxWidth: 720 }}>
             Manage your TrayLoop Pro subscription, payout setup, and storefront billing readiness.
           </p>
@@ -135,15 +137,15 @@ function MerchantBillingPageContent() {
 
       <Banner tone={statusBanner.tone} title={statusBanner.title} body={statusBanner.body} />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(${isMobile ? 160 : 220}px, 1fr))`, gap: 14, marginBottom: 24 }}>
         <SummaryCard label="Plan" value={data.billing.planName} sub={`$${(data.billing.priceCents / 100).toFixed(0)}/${data.billing.interval}`} />
         <SummaryCard label="Status" value={data.billing.state.replace('_', ' ')} sub={data.billing.trialDaysRemaining != null ? `${data.billing.trialDaysRemaining} days of trial left` : data.billing.subscription?.currentPeriodEnd ? `Period ends ${new Date(data.billing.subscription.currentPeriodEnd).toLocaleDateString()}` : 'No subscription yet'} />
         <SummaryCard label="Merchant payouts" value={data.paymentStatus.status === 'ready' ? 'Connected' : 'Needs setup'} sub={data.paymentStatus.chargesEnabled ? 'Customer transactions enabled' : 'Finish Connect onboarding'} />
         <SummaryCard label="Storefront readiness" value={data.readiness.canLaunchStorefront ? 'Launch ready' : 'Blocked'} sub={data.launch.blockers.length === 0 ? 'Billing and payouts aligned' : data.launch.blockers[0]} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.35fr) minmax(280px, 1fr)', gap: 20 }}>
-        <section style={sectionStyle}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1.35fr) minmax(280px, 1fr)', gap: 20 }}>
+        <section style={{ ...sectionStyle, padding: isMobile ? 18 : sectionStyle.padding }}>
           <header style={{ marginBottom: 18 }}>
             <h2 style={sectionTitleStyle}>TrayLoop Pro</h2>
             <p style={sectionSubtitleStyle}>Start, resume, or manage your merchant subscription from here.</p>
@@ -162,9 +164,9 @@ function MerchantBillingPageContent() {
             <InfoTile title="What this controls" body="TrayLoop Pro keeps the storefront live and unlocks the paid merchant workspace for this restaurant." />
           </div>
 
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 18 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : undefined, gap: 10, marginBottom: 18 }}>
             {data.billing.canCheckout ? (
-              <button type="button" onClick={handleCheckout} disabled={action !== null} style={primaryButtonStyle}>
+              <button type="button" onClick={handleCheckout} disabled={action !== null} style={{ ...primaryButtonStyle, width: isMobile ? '100%' : undefined }}>
                 {action === 'checkout'
                   ? 'Redirecting...'
                   : data.billing.state === 'canceled'
@@ -175,15 +177,15 @@ function MerchantBillingPageContent() {
               </button>
             ) : null}
             {data.billing.canManage ? (
-              <button type="button" onClick={handlePortal} disabled={action !== null} style={secondaryButtonStyle}>
+              <button type="button" onClick={handlePortal} disabled={action !== null} style={{ ...secondaryButtonStyle, width: isMobile ? '100%' : undefined }}>
                 {action === 'portal' ? 'Opening...' : 'Manage Subscription'}
               </button>
             ) : null}
-            <a href="/onboarding" style={secondaryButtonStyle}>Open Onboarding</a>
+            <a href="/onboarding" style={{ ...secondaryButtonStyle, width: isMobile ? '100%' : undefined }}>Open Onboarding</a>
           </div>
         </section>
 
-        <section style={sectionStyle}>
+        <section style={{ ...sectionStyle, padding: isMobile ? 18 : sectionStyle.padding }}>
           <header style={{ marginBottom: 18 }}>
             <h2 style={sectionTitleStyle}>Account health</h2>
             <p style={sectionSubtitleStyle}>What still needs attention before this storefront is fully billable.</p>
