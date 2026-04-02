@@ -155,7 +155,7 @@ function MerchantOnboardingPageContent() {
   if (error && !data) {
     return (
       <div>
-        <h1 style={headingStyle}>Payments Onboarding</h1>
+        <h1 style={headingStyle}>Launch Setup</h1>
         <Banner tone="error" text={error} />
       </div>
     );
@@ -169,9 +169,9 @@ function MerchantOnboardingPageContent() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
         <div>
-          <h1 style={headingStyle}>Payments Onboarding</h1>
+          <h1 style={headingStyle}>Launch Setup</h1>
           <p style={{ margin: '6px 0 0', color: '#78716C', fontSize: 14, maxWidth: 720 }}>
-            Finish your payout setup, activate billing, and confirm this storefront is ready to launch.
+            Finish the remaining launch steps after billing is in place.
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -198,12 +198,38 @@ function MerchantOnboardingPageContent() {
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) minmax(280px, 1fr)', gap: 20 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           <SectionCard
-            title="1. Business foundation"
-            subtitle="Make sure your storefront has a location and at least one orderable package."
-            badge={`${data.setup.completedSteps}/${data.setup.totalSteps} setup steps`}
+            title="1. TrayLoop Pro billing"
+            subtitle="This is the platform subscription for your TrayLoop workspace, separate from customer transactions."
+            badge={billingBadge.label}
           >
-            <ChecklistRow done={data.setup.steps.offering.done} title="Offerings" description={`${data.setup.steps.offering.count ?? 0} active package${(data.setup.steps.offering.count ?? 0) === 1 ? '' : 's'} ready for customers.`} href="/catalog" cta="Open Offerings" />
-            <ChecklistRow done={data.setup.steps.location.done} title="Operations" description={`${data.storefront.locations.length} active location${data.storefront.locations.length === 1 ? '' : 's'} available on the storefront.`} href="/settings#operations" cta="Edit Operations" />
+            <div style={{ marginBottom: 16 }}>
+              <Pill bg={billingBadge.bg} color={billingBadge.color}>{billingBadge.label}</Pill>
+            </div>
+            <p style={bodyStyle}>{billingDetail(data)}</p>
+            {data.billing.subscription?.trialEnd ? (
+              <div style={noteStyle}>
+                Trial ends on {new Date(data.billing.subscription.trialEnd).toLocaleDateString()}.
+              </div>
+            ) : null}
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
+              {data.billing.canCheckout ? (
+                <button type="button" onClick={handleStartSubscription} disabled={billingAction !== null} style={primaryButtonStyle}>
+                  {billingAction === 'checkout'
+                    ? 'Redirecting...'
+                    : data.billing.state === 'canceled'
+                      ? 'Resubscribe'
+                      : data.billing.state === 'not_started'
+                        ? 'Start 30-Day Trial'
+                        : 'Start TrayLoop Pro'}
+                </button>
+              ) : null}
+              {data.billing.canManage ? (
+                <button type="button" onClick={handleManageBilling} disabled={billingAction !== null} style={secondaryButtonStyle}>
+                  {billingAction === 'portal' ? 'Opening...' : 'Manage Subscription'}
+                </button>
+              ) : null}
+              <a href="/billing" style={secondaryButtonStyle}>Open Billing Hub</a>
+            </div>
           </SectionCard>
 
           <SectionCard
@@ -253,32 +279,12 @@ function MerchantOnboardingPageContent() {
           </SectionCard>
 
           <SectionCard
-            title="3. TrayLoop Pro billing"
-            subtitle="This is the platform subscription for your TrayLoop workspace, separate from customer transactions."
-            badge={billingBadge.label}
+            title="3. Business foundation"
+            subtitle="Make sure your storefront has a location and at least one orderable package."
+            badge={`${data.setup.completedSteps}/${data.setup.totalSteps} setup steps`}
           >
-            <div style={{ marginBottom: 16 }}>
-              <Pill bg={billingBadge.bg} color={billingBadge.color}>{billingBadge.label}</Pill>
-            </div>
-            <p style={bodyStyle}>{billingDetail(data)}</p>
-            {data.billing.subscription?.trialEnd ? (
-              <div style={noteStyle}>
-                Trial ends on {new Date(data.billing.subscription.trialEnd).toLocaleDateString()}.
-              </div>
-            ) : null}
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
-              {data.billing.canCheckout ? (
-                <button type="button" onClick={handleStartSubscription} disabled={billingAction !== null} style={primaryButtonStyle}>
-                  {billingAction === 'checkout' ? 'Redirecting...' : data.billing.state === 'canceled' ? 'Resubscribe' : 'Start TrayLoop Pro'}
-                </button>
-              ) : null}
-              {data.billing.canManage ? (
-                <button type="button" onClick={handleManageBilling} disabled={billingAction !== null} style={secondaryButtonStyle}>
-                  {billingAction === 'portal' ? 'Opening...' : 'Manage Subscription'}
-                </button>
-              ) : null}
-              <a href="/billing" style={secondaryButtonStyle}>Open Billing Hub</a>
-            </div>
+            <ChecklistRow done={data.setup.steps.offering.done} title="Offerings" description={`${data.setup.steps.offering.count ?? 0} active package${(data.setup.steps.offering.count ?? 0) === 1 ? '' : 's'} ready for customers.`} href="/catalog" cta="Open Offerings" />
+            <ChecklistRow done={data.setup.steps.location.done} title="Operations" description={`${data.storefront.locations.length} active location${data.storefront.locations.length === 1 ? '' : 's'} available on the storefront.`} href="/settings#operations" cta="Edit Operations" />
           </SectionCard>
         </div>
 

@@ -102,6 +102,7 @@ function MerchantBillingPageContent() {
   }
 
   const billingParam = searchParams.get('billing');
+  const welcomeParam = searchParams.get('welcome');
 
   return (
     <div>
@@ -117,6 +118,13 @@ function MerchantBillingPageContent() {
         </span>
       </div>
 
+      {welcomeParam === '1' ? (
+        <Banner
+          tone="success"
+          title="Merchant workspace created"
+          body="Start your 30-day TrayLoop Pro trial first. After billing is in place, finish payouts and launch setup."
+        />
+      ) : null}
       {billingParam === 'success' ? (
         <Banner tone="success" title="Subscription checkout completed" body="Stripe is syncing the new subscription into TrayLoop now." />
       ) : null}
@@ -157,7 +165,13 @@ function MerchantBillingPageContent() {
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 18 }}>
             {data.billing.canCheckout ? (
               <button type="button" onClick={handleCheckout} disabled={action !== null} style={primaryButtonStyle}>
-                {action === 'checkout' ? 'Redirecting...' : data.billing.state === 'canceled' ? 'Resubscribe' : 'Start Subscription'}
+                {action === 'checkout'
+                  ? 'Redirecting...'
+                  : data.billing.state === 'canceled'
+                    ? 'Resubscribe'
+                    : data.billing.state === 'not_started'
+                      ? 'Start 30-Day Trial'
+                      : 'Start Subscription'}
               </button>
             ) : null}
             {data.billing.canManage ? (
@@ -177,16 +191,16 @@ function MerchantBillingPageContent() {
 
           <div style={{ display: 'grid', gap: 10 }}>
             <StatusRow
-              label="Payout onboarding"
-              value={data.paymentStatus.status === 'ready' ? 'Connected' : 'Needs attention'}
-              detail={data.paymentStatus.status === 'ready' ? 'Customer payouts are enabled.' : 'Finish payout onboarding to collect customer deposits.'}
-              href="/onboarding"
-            />
-            <StatusRow
               label="Subscription"
               value={data.billing.state.replace('_', ' ')}
               detail={data.billing.canManage ? 'Manage payment method, invoices, and cancellation.' : 'Start billing to activate TrayLoop Pro.'}
               href="/billing"
+            />
+            <StatusRow
+              label="Payout onboarding"
+              value={data.paymentStatus.status === 'ready' ? 'Connected' : 'Needs attention'}
+              detail={data.paymentStatus.status === 'ready' ? 'Customer payouts are enabled.' : 'Finish payout onboarding to collect customer deposits.'}
+              href="/onboarding"
             />
             <StatusRow
               label="Storefront launch"

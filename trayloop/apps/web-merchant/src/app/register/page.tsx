@@ -4,6 +4,9 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const TRIAL_PLAN = 'trayloop_pro_trial' as const;
+
+type Step = 'plan' | 'details';
 
 export default function RegisterPage() {
   return (
@@ -15,43 +18,41 @@ export default function RegisterPage() {
 
 function RegisterContent() {
   const searchParams = useSearchParams();
-  const initialStep = searchParams.get('step') === 'org' ? 'org' : 'account';
-  const existingMerchant = initialStep === 'org';
-  const [step, setStep] = useState<'account' | 'org'>(initialStep);
+  const existingMerchant = searchParams.get('step') === 'org';
+  const [step, setStep] = useState<Step>(existingMerchant ? 'details' : 'plan');
+  const [selectedPlan, setSelectedPlan] = useState<string>(existingMerchant ? TRIAL_PLAN : '');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
   const [orgName, setOrgName] = useState('');
   const [orgSlug, setOrgSlug] = useState('');
   const [orgPhone, setOrgPhone] = useState('');
-
   const [token, setToken] = useState('');
-
-  useEffect(() => {
-    setStep(initialStep);
-  }, [initialStep]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
       return;
     }
 
-    if (initialStep === 'org') {
+    if (existingMerchant) {
       setToken(localStorage.getItem('token') ?? '');
     }
-  }, [initialStep]);
+  }, [existingMerchant]);
 
-  async function handleAccountSubmit(event: React.FormEvent) {
-    event.preventDefault();
+  function handlePlanContinue() {
+    if (!selectedPlan) {
+      setError('Select a TrayLoop plan before creating the merchant workspace.');
+      return;
+    }
+
     setError('');
-    setStep('org');
+    setStep('details');
   }
 
-  async function handleOrgSubmit(event: React.FormEvent) {
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError('');
     setLoading(true);
@@ -76,6 +77,7 @@ function RegisterContent() {
                   phone: orgPhone.trim() || undefined,
                 }
               : {
+                  selectedPlan,
                   name: name.trim(),
                   email: email.trim(),
                   password,
@@ -99,7 +101,7 @@ function RegisterContent() {
       localStorage.setItem('orgId', organization.id);
       localStorage.setItem('orgSlug', organization.slug ?? orgSlug.trim());
       localStorage.setItem('orgName', organization.name ?? orgName.trim());
-      window.location.href = '/onboarding?welcome=1';
+      window.location.href = '/billing?welcome=1';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create merchant workspace');
     } finally {
@@ -108,25 +110,31 @@ function RegisterContent() {
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.1fr) minmax(280px, 0.9fr)', gap: 24, maxWidth: 980, margin: '2.5rem auto' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.12fr) minmax(300px, 0.88fr)', gap: 24, maxWidth: 1040, margin: '2.5rem auto' }}>
       <section style={{ border: '1px solid #E7E5E4', borderRadius: 16, background: '#FFFFFF', padding: '28px 30px' }}>
         <div style={{ marginBottom: 22 }}>
           <h1 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: '#1C1917' }}>
-            {step === 'account' ? 'Create your merchant account' : existingMerchant ? 'Finish your TrayLoop workspace' : 'Create your TrayLoop workspace'}
+            {existingMerchant
+              ? 'Finish your TrayLoop workspace'
+              : step === 'plan'
+                ? 'Choose your TrayLoop plan'
+                : 'Create your merchant workspace'}
           </h1>
           <p style={{ color: '#78716C', margin: '8px 0 0', fontSize: 14, lineHeight: 1.6 }}>
-            {step === 'account'
-              ? 'Start with the account that will own the merchant workspace.'
-              : existingMerchant
-                ? 'You are signed in. Now create the workspace that powers your storefront, payouts, and billing.'
-                : 'Create the business profile that powers your storefront, payouts, and billing in one guided flow.'}
+            {existingMerchant
+              ? 'You are signed in. Finish the business workspace that powers billing, payouts, and your storefront.'
+              : step === 'plan'
+                ? 'Start with TrayLoop Pro and its 30-day trial. After that, create the owner account and business profile.'
+                : 'Create the owner account and business profile for the merchant workspace you just selected.'}
           </p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10, marginBottom: 20 }}>
-          <StepCard active={step === 'account'} done={Boolean(token) || existingMerchant} title="Account" subtitle="Owner login" />
-          <StepCard active={step === 'org'} done={false} title="Workspace" subtitle="Business profile" />
-        </div>
+        {!existingMerchant ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10, marginBottom: 20 }}>
+            <StepCard active={step === 'plan'} done={step === 'details'} number="1" title="Plan" subtitle="TrayLoop Pro trial" />
+            <StepCard active={step === 'details'} done={false} number="2" title="Merchant account" subtitle="Owner + business setup" />
+          </div>
+        ) : null}
 
         {error ? (
           <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 12, padding: '12px 14px', marginBottom: 16, color: '#DC2626', fontSize: 14, fontWeight: 600 }}>
@@ -134,23 +142,66 @@ function RegisterContent() {
           </div>
         ) : null}
 
-        {step === 'account' && !existingMerchant ? (
-          <form onSubmit={handleAccountSubmit}>
-            <Field label="Your name">
-              <input value={name} onChange={(event) => setName(event.target.value)} required style={inputStyle} />
-            </Field>
-            <Field label="Email">
-              <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required style={inputStyle} />
-            </Field>
-            <Field label="Password (min 8 characters)">
-              <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={8} style={inputStyle} />
-            </Field>
-            <button type="submit" disabled={loading} style={primaryButtonStyle}>
-              Continue to workspace
+        {!existingMerchant && step === 'plan' ? (
+          <div>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedPlan(TRIAL_PLAN);
+                setError('');
+              }}
+              style={{
+                width: '100%',
+                textAlign: 'left',
+                borderRadius: 16,
+                border: selectedPlan === TRIAL_PLAN ? '1px solid #1C1917' : '1px solid #E7E5E4',
+                background: selectedPlan === TRIAL_PLAN ? '#FAFAF9' : '#FFFFFF',
+                padding: '20px 20px 18px',
+                cursor: 'pointer',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, marginBottom: 14 }}>
+                <div>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: '#1C1917' }}>TrayLoop Pro</div>
+                  <div style={{ fontSize: 14, color: '#57534E', marginTop: 6 }}>
+                    $99/month after a 30-day free trial
+                  </div>
+                </div>
+                <div style={{ display: 'inline-flex', alignItems: 'center', borderRadius: 999, background: '#FEF3C7', color: '#92400E', fontSize: 12, fontWeight: 700, padding: '6px 10px' }}>
+                  30-day trial
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gap: 10 }}>
+                <PlanBullet text="Create the merchant workspace under the TrayLoop Pro trial flow." />
+                <PlanBullet text="Start billing first, then finish payouts, operations, offerings, and launch setup." />
+                <PlanBullet text="Future pricing tiers can be added here without changing the core signup flow." />
+              </div>
             </button>
-          </form>
+
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 18 }}>
+              <button type="button" onClick={handlePlanContinue} style={primaryButtonStyle}>
+                Continue with TrayLoop Pro
+              </button>
+              <a href="/login" style={secondaryLinkButtonStyle}>Sign in instead</a>
+            </div>
+          </div>
         ) : (
-          <form onSubmit={handleOrgSubmit}>
+          <form onSubmit={handleSubmit}>
+            {!existingMerchant ? (
+              <>
+                <Field label="Owner name">
+                  <input value={name} onChange={(event) => setName(event.target.value)} required style={inputStyle} />
+                </Field>
+                <Field label="Owner email">
+                  <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required style={inputStyle} />
+                </Field>
+                <Field label="Password (min 8 characters)">
+                  <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={8} style={inputStyle} />
+                </Field>
+              </>
+            ) : null}
+
             <Field label="Business name">
               <input
                 value={orgName}
@@ -176,17 +227,17 @@ function RegisterContent() {
                 Your storefront: <code>{`order.trayloophq.com/${orgSlug || 'your-brand'}`}</code>
               </div>
             </Field>
-            <Field label="Phone (optional)">
+            <Field label="Business phone (optional)">
               <input type="tel" value={orgPhone} onChange={(event) => setOrgPhone(event.target.value)} style={inputStyle} />
             </Field>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               {!existingMerchant ? (
-                <button type="button" onClick={() => setStep('account')} style={secondaryButtonStyle}>
-                  Back
+                <button type="button" onClick={() => setStep('plan')} style={secondaryButtonStyle}>
+                  Back to plan
                 </button>
               ) : null}
               <button type="submit" disabled={loading} style={primaryButtonStyle}>
-                {loading ? 'Creating workspace...' : existingMerchant ? 'Finish workspace setup' : 'Create workspace'}
+                {loading ? 'Creating merchant workspace...' : existingMerchant ? 'Finish workspace setup' : 'Create merchant workspace'}
               </button>
             </div>
           </form>
@@ -199,23 +250,23 @@ function RegisterContent() {
 
       <aside style={{ border: '1px solid #E7E5E4', borderRadius: 16, background: '#1C1917', color: '#FAFAF9', padding: '28px 26px' }}>
         <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#D4A853', marginBottom: 12 }}>
-          What happens next
+          Clean onboarding flow
         </div>
-        <h2 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 10px' }}>TrayLoop-owned onboarding</h2>
+        <h2 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 10px' }}>Sales-ready and self-serve</h2>
         <p style={{ fontSize: 14, color: '#E7E5E4', lineHeight: 1.7, margin: 0 }}>
-          After signup, TrayLoop guides the merchant through payouts, subscription billing, storefront setup, and launch readiness before they ever need to think about Stripe as a separate system.
+          Start with the TrayLoop Pro trial, create the merchant workspace, then finish billing and launch setup from inside TrayLoop.
         </p>
 
         <div style={{ display: 'grid', gap: 12, marginTop: 20 }}>
-          <SideCard title="1. Merchant payouts" body="Connect the merchant payout account so customer deposits can flow into the business." />
-          <SideCard title="2. TrayLoop Pro" body="Start the $99/month platform subscription from inside TrayLoop using a hosted checkout." />
-          <SideCard title="3. Launch storefront" body="Review the live storefront, place a test order, and go live with confidence." />
+          <SideCard title="1. Select TrayLoop Pro" body="Choose the 30-day trial plan first so every new merchant workspace starts in the correct billing flow." />
+          <SideCard title="2. Create the merchant workspace" body="Capture the owner login and business profile in one step so the workspace is ready immediately." />
+          <SideCard title="3. Finish setup in Billing" body="Start the trial-backed billing flow first, then move into payouts, operations, offerings, and launch review." />
         </div>
 
         <div style={{ marginTop: 22, padding: '14px 16px', borderRadius: 12, background: '#231F1C', border: '1px solid #2C2724' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#FAFAF9', marginBottom: 6 }}>Sandbox-friendly</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#FAFAF9', marginBottom: 6 }}>Why this flow</div>
           <div style={{ fontSize: 13, color: '#D6D3D1', lineHeight: 1.6 }}>
-            This flow is designed to work cleanly against the TrayLoop sandbox Stripe account first, then promote to live when the platform is ready.
+            It mirrors how a sales rep would onboard a merchant: choose the product, create the account, start billing, then finish launch setup without bouncing around.
           </div>
         </div>
       </aside>
@@ -223,12 +274,24 @@ function RegisterContent() {
   );
 }
 
-function StepCard({ active, done, title, subtitle }: { active: boolean; done: boolean; title: string; subtitle: string }) {
+function StepCard({
+  active,
+  done,
+  number,
+  title,
+  subtitle,
+}: {
+  active: boolean;
+  done: boolean;
+  number: string;
+  title: string;
+  subtitle: string;
+}) {
   return (
     <div style={{ border: `1px solid ${active ? '#1C1917' : '#E7E5E4'}`, borderRadius: 12, background: active ? '#FAFAF9' : '#FFFFFF', padding: '14px 16px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
         <div style={{ width: 24, height: 24, borderRadius: 999, background: done ? '#DCFCE7' : active ? '#1C1917' : '#F5F5F4', color: done ? '#166534' : active ? '#FFFFFF' : '#78716C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>
-          {done ? 'OK' : active ? '2' : '1'}
+          {done ? 'OK' : number}
         </div>
         <div style={{ fontSize: 14, fontWeight: 700, color: '#1C1917' }}>{title}</div>
       </div>
@@ -245,6 +308,17 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       </span>
       {children}
     </label>
+  );
+}
+
+function PlanBullet({ text }: { text: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+      <div style={{ width: 18, height: 18, borderRadius: 999, background: '#F5F5F4', color: '#1C1917', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, marginTop: 1 }}>
+        ✓
+      </div>
+      <div style={{ fontSize: 13, color: '#57534E', lineHeight: 1.6 }}>{text}</div>
+    </div>
   );
 }
 
@@ -288,6 +362,7 @@ const primaryButtonStyle: React.CSSProperties = {
   fontSize: 13,
   fontWeight: 700,
   cursor: 'pointer',
+  textDecoration: 'none',
 };
 
 const secondaryButtonStyle: React.CSSProperties = {
@@ -302,4 +377,9 @@ const secondaryButtonStyle: React.CSSProperties = {
   fontSize: 13,
   fontWeight: 600,
   cursor: 'pointer',
+};
+
+const secondaryLinkButtonStyle: React.CSSProperties = {
+  ...secondaryButtonStyle,
+  textDecoration: 'none',
 };

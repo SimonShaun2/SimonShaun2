@@ -9,12 +9,12 @@ import { useMobile } from '../lib/use-mobile';
 
 const NAV_ITEMS = [
   { href: '/', label: 'Dashboard', section: 'workspace' },
-  { href: '/onboarding', label: 'Onboarding', section: 'workspace' },
+  { href: '/billing', label: 'Billing', section: 'workspace' },
+  { href: '/onboarding', label: 'Launch Setup', section: 'workspace' },
   { href: '/follow-ups', label: 'Follow-Ups', section: 'workspace' },
   { href: '/customers', label: 'Customers', section: 'workspace' },
   { href: '/catalog', label: 'Offerings', section: 'workspace' },
   { href: '/settings', label: 'Settings', section: 'configure' },
-  { href: '/billing', label: 'Billing', section: 'configure' },
 ];
 
 export default function NavBar() {
