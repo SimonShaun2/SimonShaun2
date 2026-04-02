@@ -478,6 +478,7 @@ async function handleCheckoutSessionCompleted(eventId: string, session: Stripe.C
           email: customers.email,
           firstName: customers.firstName,
           lastName: customers.lastName,
+          phone: customers.phone,
         }).from(customers).where(eq(customers.id, result.order.customerId)).limit(1),
         db.select({
           name: organizations.name,
@@ -496,6 +497,7 @@ async function handleCheckoutSessionCompleted(eventId: string, session: Stripe.C
           customerUserId: customer.userId,
           customerEmail: customer.email,
           customerName: `${customer.firstName} ${customer.lastName}`,
+          customerPhone: customer.phone,
           merchantOwnerUserId: org.ownerId,
         });
       }

@@ -7,6 +7,7 @@ import {
   getMerchantDashboardUrl,
   getStorefrontAccountUrl,
   notifyCustomerEmail,
+  notifyCustomerSms,
   sendNotification,
 } from '../../lib/notifications.js';
 
@@ -259,6 +260,14 @@ export function registerEventHandlers(eventBus: EventBus) {
       actionUrl: getStorefrontAccountUrl(),
     });
 
+    await notifyCustomerSms({
+      customerUserId: ctx.customerUserId,
+      customerPhone: ctx.customerPhone,
+      subject: `Order received - ${ctx.orderNumber}`,
+      body: `${ctx.merchantName} received your order for ${formatEventDate(ctx.scheduledAt)}. Total: ${formatCurrency(ctx.totalAmount, ctx.currency)}.`,
+      actionUrl: getStorefrontAccountUrl(),
+    });
+
     const merchantBody = [
       `New order ${ctx.orderNumber} from ${ctx.customerName}.`,
       '',
@@ -310,6 +319,23 @@ export function registerEventHandlers(eventBus: EventBus) {
       customerEmail: ctx.customerEmail,
       subject: statusCopy.subject,
       body: statusCopy.body,
+      actionUrl: getStorefrontAccountUrl(),
+    });
+
+    let smsBody: string;
+    if (event.payload.newStatus === 'confirmed') {
+      smsBody = `${ctx.merchantName} confirmed ${ctx.orderNumber} for ${formatEventDate(ctx.scheduledAt)}.`;
+    } else if (event.payload.newStatus === 'completed') {
+      smsBody = `${ctx.merchantName} marked ${ctx.orderNumber} as complete. Thanks for ordering with TrayLoop.`;
+    } else {
+      smsBody = `${ctx.merchantName} cancelled ${ctx.orderNumber}.${event.payload.reason ? ` Reason: ${event.payload.reason}` : ''}`;
+    }
+
+    await notifyCustomerSms({
+      customerUserId: ctx.customerUserId,
+      customerPhone: ctx.customerPhone,
+      subject: statusCopy.subject,
+      body: smsBody,
       actionUrl: getStorefrontAccountUrl(),
     });
   });

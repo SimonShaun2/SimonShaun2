@@ -774,7 +774,7 @@ export async function sendDepositLink(orderId: string, orgId: string, input: Sen
   }
 
   const [[customer], [org]] = await Promise.all([
-    db.select({ email: customers.email, firstName: customers.firstName, userId: customers.userId })
+    db.select({ email: customers.email, firstName: customers.firstName, userId: customers.userId, phone: customers.phone })
       .from(customers).where(eq(customers.id, order.customerId)).limit(1),
     db.select({ stripeAccountId: organizations.stripeAccountId, name: organizations.name })
       .from(organizations).where(eq(organizations.id, orgId)).limit(1),
@@ -846,7 +846,7 @@ export async function sendDepositLink(orderId: string, orgId: string, input: Sen
 
   try { await recordOrderEvent(order.id, 'deposit_link_sent', `Deposit link sent to ${customer.email} for $${(depositAmount / 100).toFixed(2)}`); } catch {}
   try {
-    const { notifyCustomerEmail } = await import('../../lib/notifications.js');
+    const { notifyCustomerEmail, notifyCustomerSms } = await import('../../lib/notifications.js');
     await notifyCustomerEmail({
       customerUserId: customer.userId,
       customerEmail: customer.email,
@@ -860,6 +860,13 @@ export async function sendDepositLink(orderId: string, orgId: string, input: Sen
         '',
         'Use the secure payment link below to complete your deposit.',
       ].join('\n'),
+      actionUrl: paymentLink,
+    });
+    await notifyCustomerSms({
+      customerUserId: customer.userId,
+      customerPhone: customer.phone,
+      subject: `Deposit requested - ${order.orderNumber}`,
+      body: `${org?.name || 'Your merchant'} requested a deposit of $${(depositAmount / 100).toFixed(2)} for ${order.orderNumber}.`,
       actionUrl: paymentLink,
     });
   } catch (err) {
@@ -938,6 +945,7 @@ export async function markPaid(orderId: string, orgId: string, eventBus: EventBu
         email: customers.email,
         firstName: customers.firstName,
         lastName: customers.lastName,
+        phone: customers.phone,
       })
         .from(customers)
         .innerJoin(orders, eq(orders.customerId, customers.id))
@@ -964,6 +972,7 @@ export async function markPaid(orderId: string, orgId: string, eventBus: EventBu
         customerUserId: customer.userId,
         customerEmail: customer.email,
         customerName: `${customer.firstName} ${customer.lastName}`.trim(),
+        customerPhone: customer.phone,
         merchantOwnerUserId: org.ownerId,
       });
     }
@@ -1469,7 +1478,7 @@ export async function refundDeposit(orderId: string, orgId: string, eventBus: Ev
   try {
     const { notifyDepositRefunded } = await import('../../lib/notifications.js');
     const [[customer], [org]] = await Promise.all([
-      db.select({ userId: customers.userId, email: customers.email, firstName: customers.firstName, lastName: customers.lastName })
+      db.select({ userId: customers.userId, email: customers.email, firstName: customers.firstName, lastName: customers.lastName, phone: customers.phone })
         .from(customers).where(eq(customers.id, order.customerId)).limit(1),
       db.select({ name: organizations.name, ownerId: organizations.ownerId })
         .from(organizations).where(eq(organizations.id, orgId)).limit(1),
@@ -1480,6 +1489,7 @@ export async function refundDeposit(orderId: string, orgId: string, eventBus: Ev
         depositAmount: deposit.amount, currency: 'usd',
         customerUserId: customer.userId, customerEmail: customer.email,
         customerName: `${customer.firstName} ${customer.lastName}`,
+        customerPhone: customer.phone,
         merchantOwnerUserId: org.ownerId,
       });
     }

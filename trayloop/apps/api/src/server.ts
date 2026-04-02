@@ -2,6 +2,7 @@ import { buildApp } from './index.js';
 import { logger } from '@trayloop/utils';
 import { initStripe } from './lib/stripe.js';
 import { initEmail } from './lib/email.js';
+import { initSms } from './lib/sms.js';
 
 function validateEnv() {
   const required = ['DATABASE_URL', 'JWT_SECRET'];
@@ -21,6 +22,7 @@ const start = async () => {
   // Initialize external services
   initStripe();
   initEmail();
+  initSms();
 
   const app = await buildApp();
   const port = parseInt(process.env.PORT || process.env.API_PORT || '3001', 10);

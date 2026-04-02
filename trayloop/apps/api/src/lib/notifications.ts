@@ -3,6 +3,7 @@ import { notifications, users } from '@trayloop/database';
 import { eq } from 'drizzle-orm';
 import { logger } from '@trayloop/utils';
 import { sendEmail, isEmailEnabled } from './email.js';
+import { sendSms, isSmsEnabled } from './sms.js';
 
 export interface NotificationPayload {
   userId: string;
@@ -17,6 +18,11 @@ export interface DirectEmailNotificationPayload {
   subject: string;
   body: string;
   actionUrl?: string;
+}
+
+export interface DirectSmsNotificationPayload {
+  to: string;
+  body: string;
 }
 
 function renderNotificationHtml(body: string, actionUrl?: string) {
@@ -51,6 +57,44 @@ async function deliverEmail(payload: DirectEmailNotificationPayload): Promise<vo
   });
 }
 
+async function persistNotificationRecord(payload: {
+  userId: string;
+  type: 'email' | 'in_app' | 'sms';
+  subject: string;
+  body: string;
+  actionUrl?: string;
+}) {
+  try {
+    await db.insert(notifications).values({
+      userId: payload.userId,
+      type: payload.type,
+      status: 'sent',
+      subject: payload.subject,
+      body: payload.body,
+      actionUrl: payload.actionUrl,
+      sentAt: new Date(),
+    });
+  } catch (err) {
+    logger.error('Failed to persist notification', {
+      error: (err as Error).message,
+      subject: payload.subject,
+      type: payload.type,
+    });
+  }
+}
+
+async function deliverSms(payload: DirectSmsNotificationPayload): Promise<void> {
+  if (!isSmsEnabled()) {
+    logger.info('SMS skipped (not configured)', { to: payload.to });
+    return;
+  }
+
+  await sendSms({
+    to: payload.to,
+    body: payload.body,
+  });
+}
+
 export async function sendDirectEmailNotification(payload: DirectEmailNotificationPayload): Promise<void> {
   try {
     await deliverEmail(payload);
@@ -58,6 +102,17 @@ export async function sendDirectEmailNotification(payload: DirectEmailNotificati
     logger.error('Direct email send failed', {
       to: payload.to,
       subject: payload.subject,
+      error: (err as Error).message,
+    });
+  }
+}
+
+export async function sendDirectSmsNotification(payload: DirectSmsNotificationPayload): Promise<void> {
+  try {
+    await deliverSms(payload);
+  } catch (err) {
+    logger.error('Direct SMS send failed', {
+      to: payload.to,
       error: (err as Error).message,
     });
   }
@@ -89,6 +144,34 @@ export async function notifyCustomerEmail(input: {
   });
 }
 
+export async function notifyCustomerSms(input: {
+  customerUserId?: string | null;
+  customerPhone?: string | null;
+  subject: string;
+  body: string;
+  actionUrl?: string;
+}) {
+  if (!input.customerPhone) {
+    return;
+  }
+
+  if (input.customerUserId) {
+    await persistNotificationRecord({
+      userId: input.customerUserId,
+      type: 'sms',
+      subject: input.subject,
+      body: input.body,
+      actionUrl: input.actionUrl,
+    });
+  }
+
+  const smsBody = [input.subject, input.body, input.actionUrl].filter(Boolean).join('\n\n');
+  await sendDirectSmsNotification({
+    to: input.customerPhone,
+    body: smsBody,
+  });
+}
+
 export function getMerchantDashboardUrl(path: string) {
   return `${process.env.MERCHANT_URL || 'http://localhost:3003'}${path}`;
 }
@@ -98,22 +181,7 @@ export function getStorefrontAccountUrl() {
 }
 
 export async function sendNotification(payload: NotificationPayload): Promise<void> {
-  try {
-    await db.insert(notifications).values({
-      userId: payload.userId,
-      type: payload.type,
-      status: 'sent',
-      subject: payload.subject,
-      body: payload.body,
-      actionUrl: payload.actionUrl,
-      sentAt: new Date(),
-    });
-  } catch (err) {
-    logger.error('Failed to persist notification', {
-      error: (err as Error).message,
-      subject: payload.subject,
-    });
-  }
+  await persistNotificationRecord(payload);
 
   if (payload.type === 'email' && isEmailEnabled()) {
     try {
@@ -157,6 +225,7 @@ export interface DepositPaidContext {
   customerUserId: string | null;
   customerEmail: string;
   customerName: string;
+  customerPhone: string | null;
   merchantOwnerUserId: string;
 }
 
@@ -183,6 +252,14 @@ export async function notifyDepositPaid(ctx: DepositPaidContext): Promise<void> 
       '',
       'You will receive updates as your order progresses.',
     ].join('\n'),
+    actionUrl: getStorefrontAccountUrl(),
+  });
+
+  await notifyCustomerSms({
+    customerUserId: ctx.customerUserId,
+    customerPhone: ctx.customerPhone,
+    subject: `Deposit paid for ${ctx.orderNumber}`,
+    body: `${ctx.merchantName} received your ${amountStr} deposit. Event date: ${dateStr}.`,
     actionUrl: getStorefrontAccountUrl(),
   });
 
@@ -219,6 +296,7 @@ export interface DepositRefundedContext {
   customerUserId: string | null;
   customerEmail: string;
   customerName: string;
+  customerPhone: string | null;
   merchantOwnerUserId: string;
 }
 
@@ -242,6 +320,14 @@ export async function notifyDepositRefunded(ctx: DepositRefundedContext): Promis
       '',
       `If you have questions, please contact ${ctx.merchantName} directly.`,
     ].join('\n'),
+    actionUrl: getStorefrontAccountUrl(),
+  });
+
+  await notifyCustomerSms({
+    customerUserId: ctx.customerUserId,
+    customerPhone: ctx.customerPhone,
+    subject: `Refund processed for ${ctx.orderNumber}`,
+    body: `${ctx.merchantName} refunded ${amountStr} for your order.`,
     actionUrl: getStorefrontAccountUrl(),
   });
 

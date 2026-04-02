@@ -39,12 +39,14 @@ export async function buildApp() {
   app.get('/health', async () => {
     const { isStripeEnabled } = await import('./lib/stripe.js');
     const { isEmailEnabled } = await import('./lib/email.js');
+    const { isSmsEnabled } = await import('./lib/sms.js');
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),
       services: {
         stripe: isStripeEnabled() ? 'connected' : 'not configured',
         email: isEmailEnabled() ? 'connected' : 'not configured',
+        sms: isSmsEnabled() ? 'connected' : 'not configured',
       },
     };
   });
