@@ -23,6 +23,16 @@ function formatServiceModeLabel(mode: string) {
   }
 }
 
+function formatCurrencyAmount(cents: number) {
+  const hasCents = cents % 100 !== 0;
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: hasCents ? 2 : 0,
+    maximumFractionDigits: 2,
+  }).format(cents / 100);
+}
+
 function getLocationSummary(location: StorefrontData['locations'][number] | null, count: number) {
   if (!location) {
     return count > 1 ? `${count} locations available` : 'Storefront';
@@ -55,14 +65,12 @@ export default function StorefrontBrandContext({ merchant, locations }: Props) {
     const next: Array<{ label: string; value: string }> = [];
 
     if (selectedLocation.minimumOrderAmount > 0) {
-      next.push({ label: 'Min Order', value: `$${(selectedLocation.minimumOrderAmount / 100).toFixed(0)}` });
+      next.push({ label: 'Min Order', value: formatCurrencyAmount(selectedLocation.minimumOrderAmount) });
     }
 
     next.push({ label: 'Lead Time', value: `${selectedLocation.leadTimeHours}h advance` });
 
-    if (selectedLocation.depositRequired) {
-      next.push({ label: 'Deposit', value: 'Required' });
-    }
+    next.push({ label: 'Deposit', value: selectedLocation.depositRequired ? 'Required' : 'Not required' });
 
     if (selectedLocation.deliveryEnabled && selectedLocation.deliveryRadiusMiles) {
       next.push({ label: 'Delivery', value: `${selectedLocation.deliveryRadiusMiles} mi radius` });

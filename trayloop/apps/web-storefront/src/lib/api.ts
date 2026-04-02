@@ -83,7 +83,7 @@ export interface StorefrontData {
 
 export async function fetchStorefront(slug: string): Promise<StorefrontData> {
   const res = await fetch(`${API_URL}/api/storefront/${slug}`, {
-    next: { revalidate: 60 },
+    cache: 'no-store',
   });
 
   if (!res.ok) {

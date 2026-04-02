@@ -104,6 +104,20 @@ function formatServiceModeList(modes: string[]) {
   return modes.map((mode) => SERVICE_MODE_LABELS[mode as StorefrontServiceMode] ?? mode).join(' • ');
 }
 
+function formatCurrencyAmount(cents: number) {
+  const hasCents = cents % 100 !== 0;
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: hasCents ? 2 : 0,
+    maximumFractionDigits: 2,
+  }).format(cents / 100);
+}
+
+function formatLeadTimeRequirement(hours: number) {
+  return `${hours} hour${hours === 1 ? '' : 's'}`;
+}
+
 /* ── Design tokens ── */
 const T = {
   pageBg: '#FAF9F7',
@@ -511,7 +525,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
   /* ── Helpers ── */
   const hasPackages = Object.keys(selectedPkgs).length > 0;
   const canSubmit = !submitting && hasPackages && eventDate && !!selectedLocationSlug;
-  const minOrder = selectedLocation?.minimumOrderAmount ? (selectedLocation.minimumOrderAmount / 100).toFixed(0) : null;
+  const minOrder = selectedLocation?.minimumOrderAmount ? formatCurrencyAmount(selectedLocation.minimumOrderAmount) : null;
   const leadTime = selectedLocation?.leadTimeHours ?? null;
 
   const selectedPkgList = allPackages.filter((p) => selectedPkgs[p.id]);
@@ -550,7 +564,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>When &amp; How</h2>
           {leadTime && (
-            <p style={sectionSubtitleStyle}>Please order at least {leadTime} hours in advance</p>
+            <p style={sectionSubtitleStyle}>Please order at least {formatLeadTimeRequirement(leadTime)} in advance</p>
           )}
 
           <div style={{ marginTop: 20 }}>
@@ -602,7 +616,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
                         <span style={locationMetaChipStyle}>Lead time {location.leadTimeHours}h</span>
                         {location.minimumOrderAmount > 0 ? (
-                          <span style={locationMetaChipStyle}>Min ${Math.round(location.minimumOrderAmount / 100)}</span>
+                          <span style={locationMetaChipStyle}>Min {formatCurrencyAmount(location.minimumOrderAmount)}</span>
                         ) : null}
                         {location.deliveryEnabled && location.deliveryRadiusMiles ? (
                           <span style={locationMetaChipStyle}>{location.deliveryRadiusMiles} mi delivery</span>
@@ -649,10 +663,17 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                 {formatLocationAddress(selectedLocation)}
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+                <span style={locationMetaChipStyle}>Lead time {selectedLocation.leadTimeHours}h</span>
+                {selectedLocation.minimumOrderAmount > 0 ? (
+                  <span style={locationMetaChipStyle}>Min {formatCurrencyAmount(selectedLocation.minimumOrderAmount)}</span>
+                ) : null}
                 <span style={locationMetaChipStyle}>Modes: {formatServiceModeList(selectedLocation.serviceTypes)}</span>
                 <span style={locationMetaChipStyle}>
                   {selectedLocation.depositRequired ? 'Deposit required' : 'No deposit required'}
                 </span>
+                {selectedLocation.deliveryEnabled && selectedLocation.deliveryRadiusMiles ? (
+                  <span style={locationMetaChipStyle}>{selectedLocation.deliveryRadiusMiles} mi delivery radius</span>
+                ) : null}
                 {selectedLocation.phone ? <span style={locationMetaChipStyle}>{selectedLocation.phone}</span> : null}
               </div>
             </div>
@@ -754,7 +775,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>Choose a Package</h2>
           <p style={sectionSubtitleStyle}>
-            {minOrder ? `Min. $${minOrder} order · ` : ''}Select one or more · Price adjusts with headcount
+            {minOrder ? `Min. ${minOrder} order · ` : ''}Select one or more · Price adjusts with headcount
           </p>
 
           {/* Headcount */}
