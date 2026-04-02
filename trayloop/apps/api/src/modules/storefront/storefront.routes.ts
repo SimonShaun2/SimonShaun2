@@ -66,4 +66,16 @@ export function registerRoutes(app: FastifyInstance) {
     const result = await service.submitPublicOrder(slug, body, (app as any).eventBus, customerUserId);
     return reply.status(201).send({ data: result });
   });
+
+  app.get('/:slug/orders/:orderId/payment-status', async (request) => {
+    const { slug, orderId } = request.params as { slug: string; orderId: string };
+    const result = await service.getPublicOrderPaymentStatus(slug, orderId);
+    return { data: result };
+  });
+
+  app.post('/:slug/orders/:orderId/deposit-checkout', async (request, reply) => {
+    const { slug, orderId } = request.params as { slug: string; orderId: string };
+    const result = await service.restartPublicOrderDepositCheckout(slug, orderId, (app as any).eventBus);
+    return reply.status(201).send({ data: result });
+  });
 }

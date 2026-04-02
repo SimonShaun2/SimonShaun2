@@ -174,18 +174,17 @@ export async function getPlatformStats() {
 }
 
 /**
- * ADM-002: Platform overview metrics for the master dashboard.
+ * ADM-002 + BIL-003: Platform overview metrics for the master dashboard.
  *
- * MRR approximation:
- *   No subscription or billing table exists in the current schema. MRR is
- *   approximated as: (count of active orgs with stripeChargesEnabled) x $99/mo.
- *   This matches the pricing shown in the master dashboard designs. When a
- *   real subscriptions table is added, replace this calculation.
+ * Billing source of truth:
+ *   TrayLoop merchant subscription state now comes from the subscriptions
+ *   table, which is synchronized from Stripe webhooks. MRR, paid/trial counts,
+ *   and projected MRR are derived from that local subscription snapshot.
  *
  * At-risk revenue:
- *   Calculated from customers whose last order across any org was 14+ days ago
- *   but who have meaningful order volume (2+ orders). Their average order
- *   value represents revenue at risk of churn.
+ *   Calculated from customers whose last finalized order across any org was
+ *   14+ days ago but who have meaningful order volume (2+ orders). Their
+ *   average order value represents revenue at risk of churn.
  *
  * GMV this month:
  *   Sum of totalAmount for orders with status confirmed or completed created
@@ -488,6 +487,7 @@ export async function getTrialConversions() {
       activeTrials: restaurants.length,
       projectedMrr: restaurants.length * PLAN_PRICE_CENTS,
       avgTrialOrders: restaurants.length > 0 ? Math.round(totalOrders / restaurants.length) : 0,
+      avgDaysRemaining: restaurants.length > 0 ? Math.round(restaurants.reduce((sum, restaurant) => sum + restaurant.daysRemaining, 0) / restaurants.length) : 0,
     },
     restaurants,
   };

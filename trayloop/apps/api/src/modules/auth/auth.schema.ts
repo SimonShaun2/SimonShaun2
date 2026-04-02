@@ -15,6 +15,15 @@ export const customerRegisterSchema = z.object({
   companyName: z.string().min(1).max(255).optional(),
 });
 
+export const merchantWorkspaceRegisterSchema = z.object({
+  email: z.string().email(),
+  name: z.string().min(1).max(255),
+  password: z.string().min(8),
+  organizationName: z.string().min(1).max(255),
+  organizationSlug: z.string().min(1).max(100).regex(/^[a-z0-9-]+$/),
+  phone: z.string().optional(),
+});
+
 export const loginSchema = z.object({
   email: z.string().email(),
   password: z.string(),
@@ -37,6 +46,7 @@ export const passwordResetConfirmSchema = z.object({
 
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type CustomerRegisterInput = z.infer<typeof customerRegisterSchema>;
+export type MerchantWorkspaceRegisterInput = z.infer<typeof merchantWorkspaceRegisterSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RefreshInput = z.infer<typeof refreshSchema>;
 export type PasswordResetRequestInput = z.infer<typeof passwordResetRequestSchema>;

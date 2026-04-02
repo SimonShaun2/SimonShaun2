@@ -4,12 +4,13 @@ import { useEffect, useState } from 'react';
 import { apiFetch } from '../../lib/api';
 
 interface TrialData {
-  summary: { activeTrials: number; projectedMrr: number; avgTrialOrders: number };
+  summary: { activeTrials: number; projectedMrr: number; avgTrialOrders: number; avgDaysRemaining: number };
   restaurants: Array<{
     id: string; name: string; slug: string; ownerName: string | null;
     orderCount: number; gmv: number; lastOrderAt: string | null;
     daysRemaining: number; daysSinceCreation: number;
     heat: 'hot' | 'warm' | 'cold';
+    trialEnd: string | null;
   }>;
 }
 
@@ -46,6 +47,7 @@ export default function TrialConversionsPage() {
         <Card label="TRIALS ACTIVE" value={summary.activeTrials} sub="Currently on free plan" />
         <Card label="MRR IF ALL CONVERT" value={cents(summary.projectedMrr)} sub="$99/mo each" />
         <Card label="AVG ORDERS ON TRIAL" value={summary.avgTrialOrders} sub="More orders = hotter lead" />
+        <Card label="AVG DAYS REMAINING" value={summary.avgDaysRemaining} sub="Based on real trial end dates" />
       </div>
 
       {/* Ranked list */}

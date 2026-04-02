@@ -155,6 +155,27 @@ export interface StorefrontOrderResponse {
   checkout?: DepositCheckoutPayload;
 }
 
+export interface PublicOrderPaymentStatus {
+  orderId: string;
+  orderNumber: string;
+  orderStatus: string;
+  serviceType: string;
+  totalAmount: number;
+  currency: string;
+  scheduledAt: string;
+  depositRequired: boolean;
+  paymentState: 'pending' | 'paid' | 'refunded' | 'not_required';
+  deposit: null | {
+    id: string;
+    amount: number;
+    currency: string;
+    status: string;
+    paidAt: string | null;
+    createdAt: string;
+  };
+  canRetryCheckout: boolean;
+}
+
 export async function submitOrder(slug: string, order: OrderSubmission): Promise<StorefrontOrderResponse> {
   const token = getCustomerToken();
   const res = await fetch(`${API_URL}/api/storefront/${slug}/order`, {
@@ -256,6 +277,35 @@ export async function loginCustomer(email: string, password: string): Promise<Cu
 
   if (json.data.user.role !== 'customer') {
     throw new Error('This sign-in is only for customer accounts');
+  }
+
+  return json.data;
+}
+
+export async function fetchOrderPaymentStatus(slug: string, orderId: string): Promise<PublicOrderPaymentStatus> {
+  const res = await fetch(`${API_URL}/api/storefront/${slug}/orders/${orderId}/payment-status`, {
+    cache: 'no-store',
+  });
+
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(json.error?.message ?? 'Failed to load payment status');
+  }
+
+  return json.data;
+}
+
+export async function restartDepositCheckout(slug: string, orderId: string): Promise<DepositCheckoutPayload> {
+  const res = await fetch(`${API_URL}/api/storefront/${slug}/orders/${orderId}/deposit-checkout`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(json.error?.message ?? 'Failed to restart checkout');
   }
 
   return json.data;

@@ -9,6 +9,7 @@ import type {
   RegisterInput,
   LoginInput,
   CustomerRegisterInput,
+  MerchantWorkspaceRegisterInput,
   PasswordResetRequestInput,
   PasswordResetConfirmInput,
 } from './auth.schema.js';
@@ -56,6 +57,87 @@ export async function register(input: RegisterInput, eventBus: EventBus) {
 
   return {
     user: { id: user.id, email: user.email, name: user.name, role: user.role },
+    token,
+  };
+}
+
+export async function registerMerchantWorkspace(input: MerchantWorkspaceRegisterInput, eventBus: EventBus) {
+  const [existingUser] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, input.email))
+    .limit(1);
+
+  if (existingUser) {
+    throw new ValidationError('Email already registered');
+  }
+
+  const [existingOrganization] = await db
+    .select({ id: organizations.id })
+    .from(organizations)
+    .where(eq(organizations.slug, input.organizationSlug))
+    .limit(1);
+
+  if (existingOrganization) {
+    throw new ValidationError('Organization slug already taken');
+  }
+
+  const passwordHash = await hashPassword(input.password);
+
+  const result = await db.transaction(async (tx) => {
+    const [user] = await tx
+      .insert(users)
+      .values({
+        email: input.email,
+        name: input.name,
+        passwordHash,
+        role: 'merchant',
+        emailVerified: false,
+        isActive: true,
+      })
+      .returning({
+        id: users.id,
+        email: users.email,
+        name: users.name,
+        role: users.role,
+      });
+
+    const [organization] = await tx
+      .insert(organizations)
+      .values({
+        name: input.organizationName,
+        slug: input.organizationSlug,
+        phone: input.phone || null,
+        ownerId: user.id,
+      })
+      .returning({
+        id: organizations.id,
+        name: organizations.name,
+        slug: organizations.slug,
+      });
+
+    await tx.insert(organizationMemberships).values({
+      userId: user.id,
+      organizationId: organization.id,
+      role: 'owner',
+      status: 'active',
+      joinedAt: new Date(),
+    });
+
+    return { user, organization };
+  });
+
+  const token = await createToken({
+    sub: result.user.id,
+    email: result.user.email,
+    role: result.user.role,
+  });
+
+  await eventBus.emit('user.registered', { userId: result.user.id, email: result.user.email });
+
+  return {
+    user: result.user,
+    organization: result.organization,
     token,
   };
 }

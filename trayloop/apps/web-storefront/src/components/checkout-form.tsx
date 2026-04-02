@@ -2,13 +2,82 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import type { StorefrontData, OrderSubmission, OrderConfirmation } from '../lib/api';
-import { fetchCustomerAccount, submitOrder, OrderError } from '../lib/api';
+import type { StorefrontData, OrderSubmission, OrderConfirmation, PublicOrderPaymentStatus } from '../lib/api';
+import { fetchCustomerAccount, fetchOrderPaymentStatus, restartDepositCheckout, submitOrder, OrderError } from '../lib/api';
 import { useMobile } from '../lib/use-mobile';
 
 interface Props {
   data: StorefrontData;
   initialLocationSlug?: string | null;
+}
+
+function ReturnedCheckoutBanner({
+  checkoutState,
+  returnedOrderNumber,
+  paymentStatus,
+  paymentStatusError,
+  retryingCheckout,
+  onRetry,
+}: {
+  checkoutState: string;
+  returnedOrderNumber: string | null;
+  paymentStatus: PublicOrderPaymentStatus | null;
+  paymentStatusError: string;
+  retryingCheckout: boolean;
+  onRetry: () => void;
+}) {
+  const isSuccess = checkoutState === 'success';
+  const palette = isSuccess
+    ? { bg: '#ECFDF5', border: '#A7F3D0', title: '#047857', body: '#065F46' }
+    : { bg: '#FFFBEB', border: '#FCD34D', title: '#92400E', body: '#B45309' };
+
+  const paymentLabel = paymentStatus?.paymentState === 'paid'
+    ? 'Deposit paid'
+    : paymentStatus?.paymentState === 'refunded'
+      ? 'Checkout link expired'
+      : paymentStatus?.paymentState === 'not_required'
+        ? 'No deposit required'
+        : 'Deposit still pending';
+
+  return (
+    <div style={{ background: palette.bg, border: `1px solid ${palette.border}`, borderRadius: 12, padding: '16px 20px' }}>
+      <p style={{ color: palette.title, fontWeight: 700, fontSize: 14, margin: 0 }}>
+        {isSuccess ? 'Deposit checkout completed' : 'Checkout was cancelled'}
+        {returnedOrderNumber ? ` for ${returnedOrderNumber}` : ''}.
+      </p>
+      <p style={{ color: palette.body, fontSize: 13, margin: '6px 0 0', lineHeight: 1.6 }}>
+        {paymentStatus
+          ? `${paymentLabel}. ${paymentStatus.deposit?.amount ? `Deposit amount: $${(paymentStatus.deposit.amount / 100).toFixed(2)}.` : ''} Order status: ${paymentStatus.orderStatus.replace('_', ' ')}.`
+          : isSuccess
+            ? 'We are finalizing your payment status and confirmation.'
+            : 'Your order was saved. You can continue payment now or wait for merchant follow-up.'}
+      </p>
+      {paymentStatusError ? (
+        <p style={{ color: '#DC2626', fontSize: 12, margin: '10px 0 0' }}>{paymentStatusError}</p>
+      ) : null}
+      {paymentStatus?.canRetryCheckout ? (
+        <div style={{ marginTop: 12 }}>
+          <button
+            type="button"
+            onClick={onRetry}
+            disabled={retryingCheckout}
+            style={{
+              border: 'none',
+              borderRadius: 8,
+              background: '#1C1917',
+              color: '#FFFFFF',
+              padding: '9px 12px',
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            {retryingCheckout ? 'Redirecting...' : 'Continue to Payment'}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 type StorefrontServiceMode = OrderSubmission['serviceType'];
@@ -154,6 +223,9 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
   const [fieldErrors, setFieldErrors] = useState<Array<{ field: string; message: string }>>([]);
   const [confirmation, setConfirmation] = useState<OrderConfirmation | null>(null);
   const [confirmationMode, setConfirmationMode] = useState<'order_received' | 'deposit_pending' | null>(null);
+  const [returnedPaymentStatus, setReturnedPaymentStatus] = useState<PublicOrderPaymentStatus | null>(null);
+  const [paymentStatusError, setPaymentStatusError] = useState('');
+  const [retryingCheckout, setRetryingCheckout] = useState(false);
   const searchParams = useSearchParams();
 
   const selectedLocation = locations.find((l) => l.slug === selectedLocationSlug) ?? locations[0] ?? null;
@@ -234,6 +306,45 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
       cancelled = true;
     };
   }, []);
+
+  const checkoutState = searchParams.get('checkout');
+  const returnedOrderId = searchParams.get('orderId');
+  const returnedOrderNumber = searchParams.get('orderNumber');
+
+  useEffect(() => {
+    if (!checkoutState || !returnedOrderId) {
+      setReturnedPaymentStatus(null);
+      setPaymentStatusError('');
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadReturnedPaymentStatus() {
+      const orderId = returnedOrderId;
+      if (!orderId) {
+        return;
+      }
+
+      try {
+        const status = await fetchOrderPaymentStatus(data.merchant.slug, orderId);
+        if (!cancelled) {
+          setReturnedPaymentStatus(status);
+          setPaymentStatusError('');
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setReturnedPaymentStatus(null);
+          setPaymentStatusError(err instanceof Error ? err.message : 'Failed to load payment status');
+        }
+      }
+    }
+
+    void loadReturnedPaymentStatus();
+    return () => {
+      cancelled = true;
+    };
+  }, [checkoutState, data.merchant.slug, returnedOrderId]);
 
   const togglePkg = (id: string) => {
     setSelectedPkgs((prev) => {
@@ -321,8 +432,22 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
   }, [submitting, selectedLocationSlug, serviceType, eventDate, eventTime, headcount, selectedPkgs, selectedAddOnIds, firstName, lastName, email, phone, companyName, address, city, state, zipCode, notes, recurringEnabled, recurringInterval, recurringDays, locations, data.merchant.slug]);
 
   /* ── Confirmation state ── */
-  const checkoutState = searchParams.get('checkout');
-  const returnedOrderNumber = searchParams.get('orderNumber');
+  async function handleRetryCheckout() {
+    if (!returnedOrderId) {
+      return;
+    }
+
+    setRetryingCheckout(true);
+    setPaymentStatusError('');
+    try {
+      const checkout = await restartDepositCheckout(data.merchant.slug, returnedOrderId);
+      window.location.assign(checkout.url);
+    } catch (err) {
+      setPaymentStatusError(err instanceof Error ? err.message : 'Failed to reopen checkout');
+      setRetryingCheckout(false);
+    }
+  }
+
   const confirmationTitle = confirmationMode === 'deposit_pending' ? 'Thank you for your order!' : 'Order received!';
   const confirmationSteps = confirmationMode === 'deposit_pending'
     ? [
@@ -411,27 +536,16 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
         )}
 
         {/* ── Section: When & How ── */}
-        {!error && checkoutState === 'success' && (
-          <div style={{ background: '#ECFDF5', border: `1px solid ${T.successBorder}`, borderRadius: 12, padding: '16px 20px' }}>
-            <p style={{ color: '#047857', fontWeight: 700, fontSize: 14, margin: 0 }}>
-              Deposit checkout complete{returnedOrderNumber ? ` for ${returnedOrderNumber}` : ''}.
-            </p>
-            <p style={{ color: '#065F46', fontSize: 13, margin: '6px 0 0' }}>
-              We&apos;re finalizing your confirmation and the merchant will follow up shortly.
-            </p>
-          </div>
-        )}
-
-        {!error && checkoutState === 'cancelled' && (
-          <div style={{ background: '#FFFBEB', border: '1px solid #FCD34D', borderRadius: 12, padding: '16px 20px' }}>
-            <p style={{ color: '#92400E', fontWeight: 700, fontSize: 14, margin: 0 }}>
-              Checkout was cancelled{returnedOrderNumber ? ` for ${returnedOrderNumber}` : ''}.
-            </p>
-            <p style={{ color: '#B45309', fontSize: 13, margin: '6px 0 0' }}>
-              Your order was saved. You can try checkout again or wait for the merchant to follow up.
-            </p>
-          </div>
-        )}
+        {!error && checkoutState ? (
+          <ReturnedCheckoutBanner
+            checkoutState={checkoutState}
+            returnedOrderNumber={returnedOrderNumber}
+            paymentStatus={returnedPaymentStatus}
+            paymentStatusError={paymentStatusError}
+            retryingCheckout={retryingCheckout}
+            onRetry={handleRetryCheckout}
+          />
+        ) : null}
 
         <div style={cardStyle}>
           <h2 style={sectionTitleStyle}>When &amp; How</h2>

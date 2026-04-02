@@ -37,6 +37,12 @@ export function registerRoutes(app: FastifyInstance) {
     return { data: context };
   });
 
+  // Combined merchant onboarding state for TrayLoop-owned setup flows
+  app.get('/current/onboarding-status', { preHandler: [requireAuth, requireTenant] }, async (request) => {
+    const context = await service.getMerchantOnboardingStatus(request.ctx.tenant!.organizationId);
+    return { data: context };
+  });
+
   // Update current organization (requires owner/admin)
   app.patch('/current', { preHandler: [requireAuth, requireTenant, requireOrgAdmin, validateBody(updateOrganizationSchema)] }, async (request, reply) => {
     const result = await service.update(request.ctx.tenant!.organizationId, (request as any).validatedBody);

@@ -937,6 +937,9 @@ function SettingsContent() {
                     {paymentActionLoading ? 'Redirecting...' : paymentCard.cta}
                   </button>
                 ) : null}
+                <a href="/onboarding" style={secondaryButtonStyle}>
+                  Open Onboarding Hub
+                </a>
                 <button type="button" onClick={syncStatus} style={secondaryButtonStyle}>
                   Refresh Status
                 </button>
@@ -1048,6 +1051,9 @@ function SettingsContent() {
                       {billingActionLoading === 'portal' ? 'Opening...' : 'Manage Subscription'}
                     </button>
                   ) : null}
+                  <a href="/billing" style={secondaryButtonStyle}>
+                    Open Billing Hub
+                  </a>
                   <a href={merchantResetHref()} style={secondaryButtonStyle}>
                     Reset Password
                   </a>

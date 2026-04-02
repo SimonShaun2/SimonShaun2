@@ -3,6 +3,9 @@ import { organizations, organizationMemberships, locations, catalogs, packages }
 import { eq, and, sql } from 'drizzle-orm';
 import { NotFoundError, ValidationError } from '../../lib/errors.js';
 import type { CreateOrganizationInput, UpdateOrganizationInput } from './organizations.schema.js';
+import { getConnectStatus } from '../../lib/stripe-connect.js';
+import { getStripeMode } from '../../lib/stripe.js';
+import { getSubscription } from '../billing/billing.service.js';
 
 interface OrgDto {
   id: string;
@@ -240,5 +243,152 @@ export async function getStorefrontContext(orgId: string) {
     })),
     defaultLocationId: defaultLocation?.id ?? null,
     defaultLocationName: defaultLocation?.name ?? null,
+  };
+}
+
+function hasBillingAccess(state: string) {
+  return ['trialing', 'active', 'past_due', 'unpaid'].includes(state);
+}
+
+function getNextAction(input: {
+  hasOffering: boolean;
+  hasLocation: boolean;
+  paymentsStatus: string;
+  billingState: string;
+  storefrontReady: boolean;
+}) {
+  if (!input.hasOffering) {
+    return {
+      key: 'offerings',
+      title: 'Add your first offering',
+      description: 'Build at least one active package so customers have something to order.',
+      href: '/catalog',
+      cta: 'Open Offerings',
+    };
+  }
+
+  if (!input.hasLocation) {
+    return {
+      key: 'location',
+      title: 'Finish your location setup',
+      description: 'Add order rules, service types, and operating details before you share the storefront.',
+      href: '/settings#operations',
+      cta: 'Edit Operations',
+    };
+  }
+
+  if (input.paymentsStatus !== 'ready') {
+    return {
+      key: 'payments',
+      title: 'Finish merchant payouts',
+      description: 'Connect your Stripe payout account so TrayLoop can route customer deposits to your business.',
+      href: '/onboarding',
+      cta: 'Finish Payment Setup',
+    };
+  }
+
+  if (!hasBillingAccess(input.billingState)) {
+    return {
+      key: 'billing',
+      title: 'Activate TrayLoop Pro',
+      description: 'Start your platform subscription so your storefront can stay live after trial.',
+      href: '/billing',
+      cta: 'Open Billing',
+    };
+  }
+
+  if (!input.storefrontReady) {
+    return {
+      key: 'launch',
+      title: 'Review your storefront',
+      description: 'Test the live customer journey before you share your link.',
+      href: '/onboarding',
+      cta: 'Review Launch Plan',
+    };
+  }
+
+  return {
+    key: 'live',
+    title: 'You are ready to grow',
+    description: 'Your payouts, subscription, and storefront are all in place.',
+    href: '/billing',
+    cta: 'Manage Billing',
+  };
+}
+
+export async function getMerchantOnboardingStatus(orgId: string) {
+  const [organization, setup, storefront, paymentStatus, billing] = await Promise.all([
+    getById(orgId),
+    getSetupStatus(orgId),
+    getStorefrontContext(orgId),
+    getConnectStatus(orgId),
+    getSubscription(orgId),
+  ]);
+
+  const hasOffering = setup.steps.offering.done;
+  const hasLocation = setup.steps.location.done;
+  const paymentsReady = paymentStatus.status === 'ready';
+  const billingReady = hasBillingAccess(billing.state);
+  const storefrontReady = setup.isComplete;
+  const blockers: string[] = [];
+
+  if (!hasOffering) {
+    blockers.push('Add at least one active package to your storefront.');
+  }
+
+  if (!hasLocation) {
+    blockers.push('Create an active location with lead time and service settings.');
+  }
+
+  if (!paymentsReady) {
+    blockers.push('Complete merchant payout onboarding in Stripe Connect.');
+  }
+
+  if (!billingReady) {
+    blockers.push('Start or restore your TrayLoop Pro subscription.');
+  }
+
+  const completed = [hasOffering, hasLocation, paymentsReady, billingReady].filter(Boolean).length;
+  const total = 4;
+  const progressPercent = Math.round((completed / total) * 100);
+  const defaultStorefrontUrl = storefront.locations[0]?.storefrontUrl ?? storefront.storefrontUrl;
+
+  return {
+    organization: {
+      id: organization.id,
+      name: organization.name,
+      slug: organization.slug,
+      isActive: organization.isActive,
+      createdAt: organization.createdAt,
+      updatedAt: organization.updatedAt,
+    },
+    stripeMode: getStripeMode(),
+    setup,
+    paymentStatus,
+    billing,
+    storefront,
+    readiness: {
+      offeringsReady: hasOffering,
+      locationReady: hasLocation,
+      payoutsReady: paymentsReady,
+      billingReady,
+      storefrontReady,
+      canAcceptDeposits: hasOffering && hasLocation && paymentsReady,
+      canLaunchStorefront: storefrontReady && paymentsReady && billingReady,
+    },
+    launch: {
+      completed,
+      total,
+      progressPercent,
+      blockers,
+      nextAction: getNextAction({
+        hasOffering,
+        hasLocation,
+        paymentsStatus: paymentStatus.status,
+        billingState: billing.state,
+        storefrontReady,
+      }),
+      liveStorefrontUrl: defaultStorefrontUrl,
+    },
   };
 }

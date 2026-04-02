@@ -11,6 +11,8 @@ export interface StripeConfig {
   subscriptionTrialDays: number;
 }
 
+export type StripeMode = 'test' | 'live' | 'disabled';
+
 function loadConfig(): StripeConfig | null {
   const secretKey = process.env.STRIPE_SECRET_KEY;
   const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
@@ -108,4 +110,13 @@ export function getSubscriptionPriceId(): string {
 export function getSubscriptionTrialDays(): number {
   const config = loadConfig();
   return config?.subscriptionTrialDays ?? 30;
+}
+
+export function getStripeMode(): StripeMode {
+  const config = loadConfig();
+  if (!config) {
+    return 'disabled';
+  }
+
+  return config.secretKey.startsWith('sk_live_') ? 'live' : 'test';
 }

@@ -4,6 +4,7 @@ import { requireAuth } from '../../lib/middleware/auth.js';
 import {
   registerSchema,
   customerRegisterSchema,
+  merchantWorkspaceRegisterSchema,
   loginSchema,
   refreshSchema,
   passwordResetRequestSchema,
@@ -20,6 +21,11 @@ export function registerRoutes(app: FastifyInstance) {
 
   app.post('/register/customer', { preHandler: [validateBody(customerRegisterSchema)] }, async (request, reply) => {
     const result = await service.registerCustomer((request as any).validatedBody, (app as any).eventBus);
+    return reply.status(201).send({ data: result });
+  });
+
+  app.post('/register/merchant-workspace', { preHandler: [validateBody(merchantWorkspaceRegisterSchema)] }, async (request, reply) => {
+    const result = await service.registerMerchantWorkspace((request as any).validatedBody, (app as any).eventBus);
     return reply.status(201).send({ data: result });
   });
 

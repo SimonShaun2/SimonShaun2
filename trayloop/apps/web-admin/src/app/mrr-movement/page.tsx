@@ -52,6 +52,7 @@ export default function MrrMovementPage() {
 
       {/* Summary cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
+        <Card label="CURRENT MRR" value={cents(summary.currentMrr)} />
         <Card label="NEW MRR THIS MONTH" value={centsWithSign(summary.newMrr)} color={summary.newMrr > 0 ? '#166534' : undefined} />
         <Card label="CHURNED MRR" value={cents(summary.churnedMrr)} color={summary.churnedMrr > 0 ? '#DC2626' : undefined} />
         <Card label="NET MRR CHANGE" value={centsWithSign(summary.netChange)} color={summary.netChange > 0 ? '#166534' : summary.netChange < 0 ? '#DC2626' : undefined} />

@@ -45,9 +45,9 @@ const STEPS: Array<{
   {
     key: 'payments',
     title: 'Connect payments',
-    description: 'Link your Stripe account to accept deposits and get paid. Takes about 2-3 minutes. Securely powered by Stripe.',
-    cta: 'Set Up Stripe',
-    href: '/settings',
+    description: 'Finish TrayLoop payouts onboarding so customer deposits can route into your merchant account.',
+    cta: 'Open Onboarding',
+    href: '/onboarding',
   },
 ];
 

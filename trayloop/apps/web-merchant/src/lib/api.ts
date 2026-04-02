@@ -19,6 +19,19 @@ export interface MerchantStorefrontContext {
   defaultLocationName: string | null;
 }
 
+export interface MerchantPaymentStatus {
+  stripeAccountId: string | null;
+  chargesEnabled: boolean;
+  payoutsEnabled: boolean;
+  detailsSubmitted: boolean;
+  onboardingComplete: boolean;
+  status: 'not_started' | 'in_progress' | 'action_required' | 'ready';
+  disabledReason: string | null;
+  requirementsCurrentlyDue: string[];
+  requirementsPastDue: string[];
+  requirementsEventuallyDue: string[];
+}
+
 export interface MerchantBillingSubscription {
   organizationId: string;
   organizationName: string;
@@ -42,6 +55,55 @@ export interface MerchantBillingSubscription {
     canceledAt: string | null;
     createdAt: string | null;
     updatedAt: string | null;
+  };
+}
+
+export interface MerchantOnboardingStatus {
+  organization: {
+    id: string;
+    name: string;
+    slug: string;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+  };
+  stripeMode: 'test' | 'live' | 'disabled';
+  setup: {
+    isComplete: boolean;
+    slug: string;
+    completedSteps: number;
+    totalSteps: number;
+    steps: {
+      offering: { done: boolean; label: string; count?: number };
+      location: { done: boolean; label: string; count?: number };
+      payments: { done: boolean; label: string; count?: number };
+    };
+  };
+  paymentStatus: MerchantPaymentStatus;
+  billing: MerchantBillingSubscription;
+  storefront: MerchantStorefrontContext;
+  readiness: {
+    offeringsReady: boolean;
+    locationReady: boolean;
+    payoutsReady: boolean;
+    billingReady: boolean;
+    storefrontReady: boolean;
+    canAcceptDeposits: boolean;
+    canLaunchStorefront: boolean;
+  };
+  launch: {
+    completed: number;
+    total: number;
+    progressPercent: number;
+    blockers: string[];
+    nextAction: {
+      key: string;
+      title: string;
+      description: string;
+      href: string;
+      cta: string;
+    };
+    liveStorefrontUrl: string | null;
   };
 }
 
@@ -78,6 +140,31 @@ export async function fetchStorefrontContext(): Promise<MerchantStorefrontContex
 
 export async function fetchBillingSubscription(): Promise<MerchantBillingSubscription> {
   const response = await apiFetch('/api/billing/subscription');
+  return response.data;
+}
+
+export async function fetchPaymentStatus(): Promise<MerchantPaymentStatus> {
+  const response = await apiFetch('/api/organizations/current/payment-status');
+  return response.data;
+}
+
+export async function syncPaymentStatus(): Promise<MerchantPaymentStatus> {
+  const response = await apiFetch('/api/organizations/current/payment-status/sync', {
+    method: 'POST',
+  });
+  return response.data;
+}
+
+export async function createPaymentOnboardingLink(input: { returnUrl?: string; refreshUrl?: string } = {}) {
+  const response = await apiFetch('/api/organizations/current/payment-onboarding-link', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return response.data as { url: string; status: MerchantPaymentStatus };
+}
+
+export async function fetchOnboardingStatus(): Promise<MerchantOnboardingStatus> {
+  const response = await apiFetch('/api/organizations/current/onboarding-status');
   return response.data;
 }
 

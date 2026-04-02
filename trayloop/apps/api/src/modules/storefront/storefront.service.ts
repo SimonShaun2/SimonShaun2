@@ -8,8 +8,10 @@ import {
   packages,
   packageItems,
   addOns,
+  deposits,
+  orders,
 } from '@trayloop/database';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { NotFoundError } from '../../lib/errors.js';
 import { create as createOrder, createDepositCheckoutForOrder } from '../orders/orders.service.js';
 import type { CreateOrderInput } from '../orders/orders.schema.js';
@@ -371,5 +373,137 @@ export async function submitPublicOrder(slug: string, input: CreateOrderInput, e
       currency: checkout.currency,
       stripeCheckoutSessionId: checkout.stripeCheckoutSessionId,
     },
+  };
+}
+
+function getStorefrontBaseUrl() {
+  return process.env.STOREFRONT_URL ||
+    (process.env.NODE_ENV === 'production'
+      ? 'https://order.trayloophq.com'
+      : 'http://localhost:3002');
+}
+
+async function getPublicOrderPaymentContext(slug: string, orderId: string) {
+  const [order] = await db
+    .select({
+      id: orders.id,
+      orderNumber: orders.orderNumber,
+      status: orders.status,
+      totalAmount: orders.totalAmount,
+      currency: orders.currency,
+      serviceType: orders.serviceType,
+      customerId: orders.customerId,
+      locationId: orders.locationId,
+      organizationId: orders.organizationId,
+      organizationName: organizations.name,
+      organizationSlug: organizations.slug,
+      scheduledAt: orders.scheduledAt,
+    })
+    .from(orders)
+    .innerJoin(organizations, eq(organizations.id, orders.organizationId))
+    .where(and(eq(orders.id, orderId), eq(organizations.slug, slug), eq(organizations.isActive, true)))
+    .limit(1);
+
+  if (!order) {
+    throw new NotFoundError('Order');
+  }
+
+  const [latestDeposit] = await db
+    .select({
+      id: deposits.id,
+      amount: deposits.amount,
+      currency: deposits.currency,
+      status: deposits.status,
+      paidAt: deposits.paidAt,
+      createdAt: deposits.createdAt,
+      stripeCheckoutSessionId: deposits.stripeCheckoutSessionId,
+    })
+    .from(deposits)
+    .where(eq(deposits.orderId, order.id))
+    .orderBy(desc(deposits.createdAt))
+    .limit(1);
+
+  const [settings] = order.locationId
+    ? await db
+        .select({ depositRequired: locationSettings.depositRequired })
+        .from(locationSettings)
+        .where(eq(locationSettings.locationId, order.locationId))
+        .limit(1)
+    : [];
+
+  return {
+    order,
+    deposit: latestDeposit ?? null,
+    depositRequired: settings?.depositRequired ?? true,
+  };
+}
+
+export async function getPublicOrderPaymentStatus(slug: string, orderId: string) {
+  const { order, deposit, depositRequired } = await getPublicOrderPaymentContext(slug, orderId);
+
+  return {
+    orderId: order.id,
+    orderNumber: order.orderNumber,
+    orderStatus: order.status,
+    serviceType: order.serviceType,
+    totalAmount: order.totalAmount,
+    currency: order.currency,
+    scheduledAt: order.scheduledAt,
+    depositRequired,
+    paymentState: deposit?.status ?? (depositRequired ? 'pending' : 'not_required'),
+    deposit: deposit
+      ? {
+          id: deposit.id,
+          amount: deposit.amount,
+          currency: deposit.currency,
+          status: deposit.status,
+          paidAt: deposit.paidAt,
+          createdAt: deposit.createdAt,
+        }
+      : null,
+    canRetryCheckout: Boolean(
+      depositRequired &&
+      deposit &&
+      order.status === 'awaiting_deposit' &&
+      deposit.status !== 'paid',
+    ),
+  };
+}
+
+export async function restartPublicOrderDepositCheckout(slug: string, orderId: string, eventBus: EventBus) {
+  const { order, depositRequired } = await getPublicOrderPaymentContext(slug, orderId);
+
+  if (!depositRequired) {
+    throw new NotFoundError('Deposit checkout');
+  }
+
+  const storefrontBaseUrl = getStorefrontBaseUrl();
+  const checkout = await createDepositCheckoutForOrder(
+    {
+      id: order.id,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      totalAmount: order.totalAmount,
+      customerId: order.customerId,
+      locationId: order.locationId,
+    },
+    order.organizationId,
+    eventBus,
+    {
+      successUrl:
+        `${storefrontBaseUrl}/${slug}?checkout=success&orderId=${encodeURIComponent(order.id)}` +
+        `&orderNumber=${encodeURIComponent(order.orderNumber)}`,
+      cancelUrl:
+        `${storefrontBaseUrl}/${slug}?checkout=cancelled&orderId=${encodeURIComponent(order.id)}` +
+        `&orderNumber=${encodeURIComponent(order.orderNumber)}`,
+    },
+  );
+
+  return {
+    url: checkout.paymentLink,
+    depositId: checkout.depositId,
+    depositAmount: checkout.depositAmount,
+    currency: checkout.currency,
+    stripeCheckoutSessionId: checkout.stripeCheckoutSessionId,
   };
 }
