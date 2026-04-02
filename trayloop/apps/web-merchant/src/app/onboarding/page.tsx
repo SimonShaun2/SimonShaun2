@@ -171,7 +171,7 @@ function MerchantOnboardingPageContent() {
         <div>
           <h1 style={headingStyle}>Payments Onboarding</h1>
           <p style={{ margin: '6px 0 0', color: '#78716C', fontSize: 14, maxWidth: 720 }}>
-            Finish your merchant payout setup, activate TrayLoop Pro, and launch with a customer-ready storefront without leaving TrayLoop.
+            Finish your payout setup, activate billing, and confirm this storefront is ready to launch.
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -285,7 +285,7 @@ function MerchantOnboardingPageContent() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           <SectionCard
             title="Launch readiness"
-            subtitle="TrayLoop keeps the checklist in-app so merchants do not have to guess what Stripe handles behind the scenes."
+            subtitle="Review the remaining blockers, then finish the next required step."
           >
             {data.launch.blockers.length === 0 ? (
               <div style={{ ...noteStyle, background: '#F0FDF4', borderColor: '#BBF7D0', color: '#166534' }}>
@@ -318,15 +318,6 @@ function MerchantOnboardingPageContent() {
               </a>
               <a href="/settings#storefront" style={secondaryButtonStyle}>Review Storefront Links</a>
             </div>
-          </SectionCard>
-
-          <SectionCard title="How Stripe stays behind the curtain" subtitle="TrayLoop stays the control center while Stripe handles the regulated payment surfaces.">
-            <ul style={{ margin: 0, paddingLeft: 20, color: '#57534E', fontSize: 14, lineHeight: 1.8 }}>
-              <li>TrayLoop owns the merchant onboarding flow and explains every next step before redirecting.</li>
-              <li>TrayLoop Pro billing runs on the platform Stripe account.</li>
-              <li>Customer deposits route to each merchant's connected account after payout onboarding is complete.</li>
-              <li>Hosted checkout and portal keep PCI scope and billing operations lightweight while staying branded to TrayLoop.</li>
-            </ul>
           </SectionCard>
         </div>
       </div>
