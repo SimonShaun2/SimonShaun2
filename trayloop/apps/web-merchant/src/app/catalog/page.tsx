@@ -173,6 +173,7 @@ export default function CatalogPage() {
       ),
     [catalogs],
   );
+  const showEditorLayout = catalogs.length > 0 || editor !== null;
 
   async function fetchMenu() {
     setLoading(true);
@@ -484,125 +485,127 @@ export default function CatalogPage() {
       {notice ? <Banner tone="success" text={notice} /> : null}
       {error ? <Banner tone="error" text={error} /> : null}
 
-      {catalogs.length === 0 ? (
-        <div style={emptyStateStyle}>
-          <p style={{ fontSize: 18, fontWeight: 700, margin: 0, color: '#1C1917' }}>No offerings yet</p>
-          <p style={{ fontSize: 14, color: '#78716C', margin: '8px 0 18px' }}>
-            Start by creating a catalog, then add packages and add-ons your storefront can sell.
-          </p>
-          <button type="button" onClick={openNewCatalog} style={primaryButtonStyle}>
-            Create Your First Catalog
-          </button>
-        </div>
-      ) : (
-      <div
-        style={{
-          ...layoutStyle,
-          gridTemplateColumns: isMobile ? '1fr' : layoutStyle.gridTemplateColumns,
-        }}
-      >
+      {showEditorLayout ? (
+        <div
+          style={{
+            ...layoutStyle,
+            gridTemplateColumns: isMobile ? '1fr' : layoutStyle.gridTemplateColumns,
+          }}
+        >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-            {catalogs.map((catalog) => (
-              <div key={catalog.id} style={catalogCardStyle}>
-                <div style={catalogHeaderStyle}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>{catalog.name}</h2>
-                      <StatusBadge active={catalog.isActive} activeLabel="Active" inactiveLabel="Inactive" />
-                    </div>
-                    {catalog.description ? (
-                      <p style={{ fontSize: 13, color: '#6b7280', margin: '6px 0 0' }}>{catalog.description}</p>
-                    ) : null}
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    <button type="button" onClick={() => openEditCatalog(catalog)} style={ghostButtonStyle}>
-                      Edit Catalog
-                    </button>
-                    <button type="button" onClick={() => openNewCategory(catalog.id)} style={ghostButtonStyle}>
-                      New Category
-                    </button>
-                    <button type="button" onClick={() => openNewPackage(catalog.id)} style={ghostButtonStyle}>
-                      New Package
-                    </button>
-                    <button type="button" onClick={() => openNewAddOn(catalog.id)} style={ghostButtonStyle}>
-                      New Add-On
-                    </button>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  {catalog.categories.map((category) => (
-                    <div key={category.id} style={sectionBlockStyle}>
-                      <div style={sectionHeaderStyle}>
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                            <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>{category.name}</h3>
-                            <StatusBadge active={category.isActive} activeLabel="Active" inactiveLabel="Inactive" />
-                          </div>
-                          {category.description ? (
-                            <p style={{ fontSize: 12, color: '#78716C', margin: '4px 0 0' }}>{category.description}</p>
-                          ) : null}
-                        </div>
-                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                          <button type="button" onClick={() => openEditCategory(category)} style={ghostButtonStyle}>
-                            Edit Category
-                          </button>
-                          <button type="button" onClick={() => openNewPackage(catalog.id, category.id)} style={ghostButtonStyle}>
-                            Add Package
-                          </button>
-                        </div>
+            {catalogs.length === 0 ? (
+              <div style={emptyStateStyle}>
+                <p style={{ fontSize: 18, fontWeight: 700, margin: 0, color: '#1C1917' }}>No offerings yet</p>
+                <p style={{ fontSize: 14, color: '#78716C', margin: '8px 0 18px' }}>
+                  Start by creating a catalog, then add packages and add-ons your storefront can sell.
+                </p>
+                <button type="button" onClick={openNewCatalog} style={primaryButtonStyle}>
+                  Create Your First Catalog
+                </button>
+              </div>
+            ) : (
+              catalogs.map((catalog) => (
+                <div key={catalog.id} style={catalogCardStyle}>
+                  <div style={catalogHeaderStyle}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>{catalog.name}</h2>
+                        <StatusBadge active={catalog.isActive} activeLabel="Active" inactiveLabel="Inactive" />
                       </div>
+                      {catalog.description ? (
+                        <p style={{ fontSize: 13, color: '#6b7280', margin: '6px 0 0' }}>{catalog.description}</p>
+                      ) : null}
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <button type="button" onClick={() => openEditCatalog(catalog)} style={ghostButtonStyle}>
+                        Edit Catalog
+                      </button>
+                      <button type="button" onClick={() => openNewCategory(catalog.id)} style={ghostButtonStyle}>
+                        New Category
+                      </button>
+                      <button type="button" onClick={() => openNewPackage(catalog.id)} style={ghostButtonStyle}>
+                        New Package
+                      </button>
+                      <button type="button" onClick={() => openNewAddOn(catalog.id)} style={ghostButtonStyle}>
+                        New Add-On
+                      </button>
+                    </div>
+                  </div>
 
-                      {category.packages.length === 0 ? (
-                        <p style={hintStyle}>No packages in this category yet.</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {catalog.categories.map((category) => (
+                      <div key={category.id} style={sectionBlockStyle}>
+                        <div style={sectionHeaderStyle}>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>{category.name}</h3>
+                              <StatusBadge active={category.isActive} activeLabel="Active" inactiveLabel="Inactive" />
+                            </div>
+                            {category.description ? (
+                              <p style={{ fontSize: 12, color: '#78716C', margin: '4px 0 0' }}>{category.description}</p>
+                            ) : null}
+                          </div>
+                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            <button type="button" onClick={() => openEditCategory(category)} style={ghostButtonStyle}>
+                              Edit Category
+                            </button>
+                            <button type="button" onClick={() => openNewPackage(catalog.id, category.id)} style={ghostButtonStyle}>
+                              Add Package
+                            </button>
+                          </div>
+                        </div>
+
+                        {category.packages.length === 0 ? (
+                          <p style={hintStyle}>No packages in this category yet.</p>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {category.packages.map((pkg) => (
+                              <PackageRow key={pkg.id} pkg={pkg} onEdit={() => openEditPackage(pkg)} />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    <div style={sectionBlockStyle}>
+                      <div style={sectionHeaderStyle}>
+                        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>Uncategorized Packages</h3>
+                        <button type="button" onClick={() => openNewPackage(catalog.id)} style={ghostButtonStyle}>
+                          Add Package
+                        </button>
+                      </div>
+                      {catalog.uncategorizedPackages.length === 0 ? (
+                        <p style={hintStyle}>No uncategorized packages.</p>
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                          {category.packages.map((pkg) => (
+                          {catalog.uncategorizedPackages.map((pkg) => (
                             <PackageRow key={pkg.id} pkg={pkg} onEdit={() => openEditPackage(pkg)} />
                           ))}
                         </div>
                       )}
                     </div>
-                  ))}
 
-                  <div style={sectionBlockStyle}>
-                    <div style={sectionHeaderStyle}>
-                      <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>Uncategorized Packages</h3>
-                      <button type="button" onClick={() => openNewPackage(catalog.id)} style={ghostButtonStyle}>
-                        Add Package
-                      </button>
-                    </div>
-                    {catalog.uncategorizedPackages.length === 0 ? (
-                      <p style={hintStyle}>No uncategorized packages.</p>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        {catalog.uncategorizedPackages.map((pkg) => (
-                          <PackageRow key={pkg.id} pkg={pkg} onEdit={() => openEditPackage(pkg)} />
-                        ))}
+                    <div style={sectionBlockStyle}>
+                      <div style={sectionHeaderStyle}>
+                        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>Add-Ons</h3>
+                        <button type="button" onClick={() => openNewAddOn(catalog.id)} style={ghostButtonStyle}>
+                          Add Add-On
+                        </button>
                       </div>
-                    )}
-                  </div>
-
-                  <div style={sectionBlockStyle}>
-                    <div style={sectionHeaderStyle}>
-                      <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>Add-Ons</h3>
-                      <button type="button" onClick={() => openNewAddOn(catalog.id)} style={ghostButtonStyle}>
-                        Add Add-On
-                      </button>
+                      {catalog.addOns.length === 0 ? (
+                        <p style={hintStyle}>No add-ons yet.</p>
+                      ) : (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+                          {catalog.addOns.map((addOn) => (
+                            <AddOnCard key={addOn.id} addOn={addOn} onEdit={() => openEditAddOn(addOn)} />
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    {catalog.addOns.length === 0 ? (
-                      <p style={hintStyle}>No add-ons yet.</p>
-                    ) : (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
-                        {catalog.addOns.map((addOn) => (
-                          <AddOnCard key={addOn.id} addOn={addOn} onEdit={() => openEditAddOn(addOn)} />
-                        ))}
-                      </div>
-                    )}
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
 
           <aside
@@ -908,6 +911,16 @@ export default function CatalogPage() {
               </div>
             )}
           </aside>
+        </div>
+      ) : (
+        <div style={emptyStateStyle}>
+          <p style={{ fontSize: 18, fontWeight: 700, margin: 0, color: '#1C1917' }}>No offerings yet</p>
+          <p style={{ fontSize: 14, color: '#78716C', margin: '8px 0 18px' }}>
+            Start by creating a catalog, then add packages and add-ons your storefront can sell.
+          </p>
+          <button type="button" onClick={openNewCatalog} style={primaryButtonStyle}>
+            Create Your First Catalog
+          </button>
         </div>
       )}
     </div>
