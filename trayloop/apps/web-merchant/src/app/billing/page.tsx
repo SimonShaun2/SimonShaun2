@@ -109,7 +109,7 @@ function MerchantBillingPageContent() {
         <div>
           <h1 style={headingStyle}>Billing</h1>
           <p style={{ margin: '6px 0 0', color: '#78716C', fontSize: 14, maxWidth: 720 }}>
-            Manage the TrayLoop Pro subscription inside TrayLoop, then hand off payment method and invoicing mechanics to Stripe only when needed.
+            Manage your TrayLoop Pro subscription, payout setup, and storefront billing readiness.
           </p>
         </div>
         <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 10px', borderRadius: 999, background: data.stripeMode === 'test' ? '#FEF3C7' : '#DCFCE7', color: data.stripeMode === 'test' ? '#92400E' : '#166534', fontSize: 12, fontWeight: 700 }}>
@@ -138,13 +138,20 @@ function MerchantBillingPageContent() {
         <section style={sectionStyle}>
           <header style={{ marginBottom: 18 }}>
             <h2 style={sectionTitleStyle}>TrayLoop Pro</h2>
-            <p style={sectionSubtitleStyle}>Keep subscription management inside TrayLoop until the exact moment a secure payment surface is needed.</p>
+            <p style={sectionSubtitleStyle}>Start, resume, or manage your merchant subscription from here.</p>
           </header>
 
           <div style={{ display: 'grid', gap: 12, marginBottom: 18 }}>
-            <FeatureRow title="Hosted Stripe checkout" body="Merchants start the subscription from TrayLoop and only leave for the branded hosted checkout session." />
-            <FeatureRow title="Hosted billing portal" body="Payment method updates, cancellation, and invoice management happen through Stripe's managed portal when needed." />
-            <FeatureRow title="TrayLoop-owned merchant context" body="TrayLoop stays the control center for setup state, next actions, readiness, and customer-facing launch decisions." />
+            <InfoTile title="Current plan" body={`${data.billing.planName} at $${(data.billing.priceCents / 100).toFixed(0)}/${data.billing.interval}.`} />
+            <InfoTile
+              title="Subscription state"
+              body={
+                data.billing.subscription?.currentPeriodEnd
+                  ? `Status: ${data.billing.state.replace('_', ' ')}. Current period ends ${new Date(data.billing.subscription.currentPeriodEnd).toLocaleDateString()}.`
+                  : `Status: ${data.billing.state.replace('_', ' ')}.`
+              }
+            />
+            <InfoTile title="What this controls" body="TrayLoop Pro keeps the storefront live and unlocks the paid merchant workspace for this restaurant." />
           </div>
 
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 18 }}>
@@ -160,33 +167,39 @@ function MerchantBillingPageContent() {
             ) : null}
             <a href="/onboarding" style={secondaryButtonStyle}>Open Onboarding</a>
           </div>
-
-          <div style={noteStyle}>
-            <div style={{ fontWeight: 700, color: '#1C1917', marginBottom: 6 }}>White-label strategy</div>
-            <div style={{ color: '#57534E', fontSize: 13, lineHeight: 1.7 }}>
-              TrayLoop owns the UX framing, next steps, and merchant context. Stripe stays under the curtain for subscription checkout,
-              stored payment methods, retries, invoices, and compliance-heavy billing flows.
-            </div>
-          </div>
         </section>
 
         <section style={sectionStyle}>
           <header style={{ marginBottom: 18 }}>
-            <h2 style={sectionTitleStyle}>Branding and domains</h2>
-            <p style={sectionSubtitleStyle}>Use Stripe-hosted surfaces, but make them feel like TrayLoop instead of a disconnected third-party jump.</p>
+            <h2 style={sectionTitleStyle}>Account health</h2>
+            <p style={sectionSubtitleStyle}>What still needs attention before this storefront is fully billable.</p>
           </header>
-          <ul style={{ margin: 0, paddingLeft: 20, color: '#57534E', fontSize: 13, lineHeight: 1.8 }}>
-            <li>Stripe account branding should use the TrayLoop name, icon, logo, and colors.</li>
-            <li>Billing and Checkout should stay on the TrayLoop sandbox account while you test this phase.</li>
-            <li>Connect onboarding should return merchants to TrayLoop-owned routes like <code>/onboarding</code> and <code>/settings</code>.</li>
-            <li>Use Stripe hosted checkout, billing portal, and onboarding to avoid a much larger custom-payment build.</li>
-            <li>Keep customer transactions on connected accounts and TrayLoop Pro billing on the platform account.</li>
-          </ul>
 
-          <div style={{ marginTop: 18, display: 'grid', gap: 10 }}>
-            <ActionRow label="Payout onboarding" value={data.paymentStatus.status === 'ready' ? 'Connected' : 'Needs attention'} href="/onboarding" />
-            <ActionRow label="Billing hub" value={data.billing.state.replace('_', ' ')} href="/billing" />
-            <ActionRow label="Password reset" value="Security tools live" href={merchantResetHref()} />
+          <div style={{ display: 'grid', gap: 10 }}>
+            <StatusRow
+              label="Payout onboarding"
+              value={data.paymentStatus.status === 'ready' ? 'Connected' : 'Needs attention'}
+              detail={data.paymentStatus.status === 'ready' ? 'Customer payouts are enabled.' : 'Finish payout onboarding to collect customer deposits.'}
+              href="/onboarding"
+            />
+            <StatusRow
+              label="Subscription"
+              value={data.billing.state.replace('_', ' ')}
+              detail={data.billing.canManage ? 'Manage payment method, invoices, and cancellation.' : 'Start billing to activate TrayLoop Pro.'}
+              href="/billing"
+            />
+            <StatusRow
+              label="Storefront launch"
+              value={data.readiness.canLaunchStorefront ? 'Ready' : 'Blocked'}
+              detail={data.launch.blockers.length === 0 ? 'Billing and payouts are aligned for launch.' : data.launch.blockers[0]}
+              href="/settings"
+            />
+            <StatusRow
+              label="Password reset"
+              value="Available"
+              detail="Security tools are live for this merchant workspace."
+              href={merchantResetHref()}
+            />
           </div>
         </section>
       </div>
@@ -228,7 +241,7 @@ function SummaryCard({ label, value, sub }: { label: string; value: string; sub:
   );
 }
 
-function FeatureRow({ title, body }: { title: string; body: string }) {
+function InfoTile({ title, body }: { title: string; body: string }) {
   return (
     <div style={{ border: '1px solid #E7E5E4', borderRadius: 12, padding: '14px 16px', background: '#FAFAF9' }}>
       <div style={{ fontSize: 14, fontWeight: 700, color: '#1C1917', marginBottom: 4 }}>{title}</div>
@@ -237,11 +250,14 @@ function FeatureRow({ title, body }: { title: string; body: string }) {
   );
 }
 
-function ActionRow({ label, value, href }: { label: string; value: string; href: string }) {
+function StatusRow({ label, value, detail, href }: { label: string; value: string; detail: string; href: string }) {
   return (
-    <a href={href} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 12, border: '1px solid #E7E5E4', textDecoration: 'none', background: '#FFFFFF', color: '#1C1917' }}>
-      <span style={{ fontSize: 13, fontWeight: 600 }}>{label}</span>
-      <span style={{ fontSize: 12, color: '#78716C' }}>{value}</span>
+    <a href={href} style={{ display: 'grid', gap: 4, padding: '12px 14px', borderRadius: 12, border: '1px solid #E7E5E4', textDecoration: 'none', background: '#FFFFFF', color: '#1C1917' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+        <span style={{ fontSize: 13, fontWeight: 600 }}>{label}</span>
+        <span style={{ fontSize: 12, color: '#78716C' }}>{value}</span>
+      </div>
+      <span style={{ fontSize: 12, color: '#78716C', lineHeight: 1.5 }}>{detail}</span>
     </a>
   );
 }
@@ -272,13 +288,6 @@ const sectionSubtitleStyle: React.CSSProperties = {
   color: '#78716C',
   margin: '6px 0 0',
   lineHeight: 1.6,
-};
-
-const noteStyle: React.CSSProperties = {
-  background: '#F8FAFC',
-  border: '1px solid #E2E8F0',
-  borderRadius: 12,
-  padding: '14px 16px',
 };
 
 const primaryButtonStyle: React.CSSProperties = {
