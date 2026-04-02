@@ -107,6 +107,60 @@ function buildOrderSummaryLines(ctx: OrderNotificationContext) {
   return lines;
 }
 
+function buildStatusUpdateCopy(
+  ctx: OrderNotificationContext,
+  newStatus: string,
+  reason?: string,
+): { subject: string; body: string } | null {
+  if (newStatus === 'confirmed') {
+    return {
+      subject: `Your order is confirmed - ${ctx.orderNumber}`,
+      body: [
+        `Hi ${ctx.customerName},`,
+        '',
+        `${ctx.merchantName} confirmed your order.`,
+        '',
+        ...buildOrderSummaryLines(ctx),
+        '',
+        'Next step: keep an eye on your inbox for any final adjustments before service day.',
+      ].join('\n'),
+    };
+  }
+
+  if (newStatus === 'completed') {
+    return {
+      subject: `Your order is complete - ${ctx.orderNumber}`,
+      body: [
+        `Hi ${ctx.customerName},`,
+        '',
+        `${ctx.merchantName} marked your order as complete.`,
+        '',
+        ...buildOrderSummaryLines(ctx),
+        '',
+        'Next step: if you need another event, you can reorder from your TrayLoop account or contact the merchant directly.',
+      ].join('\n'),
+    };
+  }
+
+  if (newStatus === 'cancelled') {
+    return {
+      subject: `Your order was cancelled - ${ctx.orderNumber}`,
+      body: [
+        `Hi ${ctx.customerName},`,
+        '',
+        `${ctx.merchantName} cancelled your order.`,
+        ...(reason ? ['', `Reason: ${reason}`] : []),
+        '',
+        ...buildOrderSummaryLines(ctx),
+        '',
+        'Next step: reply to the merchant if you want to reschedule or discuss a replacement order.',
+      ].join('\n'),
+    };
+  }
+
+  return null;
+}
+
 async function loadOrderNotificationContext(orderId: string): Promise<OrderNotificationContext | null> {
   const [row] = await db
     .select({
@@ -246,53 +300,16 @@ export function registerEventHandlers(eventBus: EventBus) {
       return;
     }
 
-    let subject: string | null = null;
-    let body: string | null = null;
-
-    if (event.payload.newStatus === 'confirmed') {
-      subject = `Your order is confirmed - ${ctx.orderNumber}`;
-      body = [
-        `Hi ${ctx.customerName},`,
-        '',
-        `${ctx.merchantName} confirmed your order.`,
-        '',
-        ...buildOrderSummaryLines(ctx),
-        '',
-        'We will keep you updated if anything changes before service day.',
-      ].join('\n');
-    } else if (event.payload.newStatus === 'completed') {
-      subject = `Your order is complete - ${ctx.orderNumber}`;
-      body = [
-        `Hi ${ctx.customerName},`,
-        '',
-        `${ctx.merchantName} marked your order as complete.`,
-        '',
-        ...buildOrderSummaryLines(ctx),
-        '',
-        'Thank you for ordering with TrayLoop.',
-      ].join('\n');
-    } else if (event.payload.newStatus === 'cancelled') {
-      subject = `Your order was cancelled - ${ctx.orderNumber}`;
-      body = [
-        `Hi ${ctx.customerName},`,
-        '',
-        `${ctx.merchantName} cancelled your order.`,
-        '',
-        ...buildOrderSummaryLines(ctx),
-        '',
-        'If you have questions, please reach out to the merchant directly.',
-      ].join('\n');
-    }
-
-    if (!subject || !body) {
+    const statusCopy = buildStatusUpdateCopy(ctx, event.payload.newStatus, event.payload.reason);
+    if (!statusCopy) {
       return;
     }
 
     await notifyCustomerEmail({
       customerUserId: ctx.customerUserId,
       customerEmail: ctx.customerEmail,
-      subject,
-      body,
+      subject: statusCopy.subject,
+      body: statusCopy.body,
       actionUrl: getStorefrontAccountUrl(),
     });
   });

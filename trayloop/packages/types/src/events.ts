@@ -11,7 +11,7 @@ export type EventMap = {
   'membership.invited': { orgId: string; email: string; role: string };
   'customer.created': { customerId: string; orgId: string };
   'order.created': { orderId: string; customerId: string; orgId: string };
-  'order.status_updated': { orderId: string; oldStatus: string; newStatus: string };
+  'order.status_updated': { orderId: string; oldStatus: string; newStatus: string; reason?: string };
   'recurring_order.created': { recurringOrderId: string; customerId: string; orgId: string };
   'recurring_order.cancelled': { recurringOrderId: string; customerId: string };
   'payment.completed': { paymentId: string; orderId: string; amount: number };

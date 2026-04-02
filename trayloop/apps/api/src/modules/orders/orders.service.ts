@@ -703,6 +703,7 @@ export async function updateStatus(id: string, orgId: string, input: UpdateOrder
     orderId: id,
     oldStatus: existing.status,
     newStatus: input.status,
+    reason: input.reason,
   });
 
   // Auto-create follow-up when order is completed
@@ -1462,7 +1463,7 @@ export async function refundDeposit(orderId: string, orgId: string, eventBus: Ev
   } catch {}
 
   // Events
-  try { await eventBus.emit('order.status_updated', { orderId, oldStatus: order.status, newStatus: 'cancelled' }); } catch {}
+  try { await eventBus.emit('order.status_updated', { orderId, oldStatus: order.status, newStatus: 'cancelled', reason: 'Deposit refunded by merchant' }); } catch {}
 
   // Notifications
   try {
