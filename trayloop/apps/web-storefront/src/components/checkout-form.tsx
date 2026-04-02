@@ -476,9 +476,20 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
       ];
 
   if (confirmation) {
+    const confirmationServiceLabel =
+      SERVICE_MODE_LABELS[confirmation.serviceType as StorefrontServiceMode] ?? confirmation.serviceType;
+    const confirmationEventDate = new Date(confirmation.scheduledAt);
+    const merchantContact = data.merchant.phone || data.merchant.website || null;
+    const packageItems = confirmation.items.filter((item) => item.type === 'package');
+    const addOnItems = confirmation.items.filter((item) => item.type !== 'package');
+    const confirmationSections: Array<{ label: string; items: typeof confirmation.items }> = [
+      { label: 'Packages', items: packageItems },
+      { label: 'Add-ons', items: addOnItems },
+    ];
+
     return (
       <div style={{
-        maxWidth: 620,
+        maxWidth: 760,
         margin: '0 auto',
         background: T.cardBg,
         border: `2px solid ${T.successBorder}`,
@@ -490,26 +501,121 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
           <p style={{ fontSize: 14, color: T.textMuted, margin: '0 0 2px' }}>{data.merchant.name}</p>
           <p style={{ fontSize: 16, fontWeight: 600, fontFamily: 'monospace', color: T.textPrimary, margin: 0 }}>{confirmation.orderNumber}</p>
         </div>
-        <div style={{ display: 'grid', gap: 8, fontSize: 14, color: T.textPrimary, marginBottom: 24 }}>
-          <p style={{ margin: 0 }}><span style={{ fontSize: 12, color: T.textMuted }}>Status</span><br /><strong>{confirmationMode === 'deposit_pending' ? 'Awaiting review' : 'Submitted'}</strong></p>
-          <p style={{ margin: 0 }}><span style={{ fontSize: 12, color: T.textMuted }}>Event Date</span><br /><strong>{new Date(confirmation.scheduledAt).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong></p>
-          <p style={{ margin: 0 }}><span style={{ fontSize: 12, color: T.textMuted }}>Guests</span><br /><strong>{confirmation.headCount}</strong></p>
-          <p style={{ margin: 0 }}><span style={{ fontSize: 12, color: T.textMuted }}>Customer</span><br /><strong>{confirmation.customer.firstName} {confirmation.customer.lastName}</strong> ({confirmation.customer.email})</p>
-          {confirmation.depositRequired !== undefined && (
-            <p style={{ margin: 0 }}><span style={{ fontSize: 12, color: T.textMuted }}>Deposit Required</span><br /><strong>{confirmation.depositRequired ? 'Yes' : 'No'}</strong></p>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0, 1fr))', gap: 14, marginBottom: 24 }}>
+          <div style={{ background: '#FAFAF9', border: `1px solid ${T.cardBorder}`, borderRadius: 10, padding: '16px 18px' }}>
+            <span style={labelStyle}>Event</span>
+            <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: T.textPrimary }}>
+              {confirmationEventDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </p>
+            <p style={{ margin: '6px 0 0', fontSize: 13, color: T.textMuted }}>
+              {confirmation.headCount} guests · {confirmationServiceLabel}
+            </p>
+            <p style={{ margin: '6px 0 0', fontSize: 13, color: T.textMuted }}>
+              Status: {confirmationMode === 'deposit_pending' ? 'Awaiting review' : 'Submitted'}
+            </p>
+            {confirmation.depositRequired !== undefined ? (
+              <p style={{ margin: '6px 0 0', fontSize: 13, color: T.textMuted }}>
+                Deposit: {confirmation.depositRequired ? 'Required' : 'Not required'}
+              </p>
+            ) : null}
+          </div>
+
+          <div style={{ background: '#FAFAF9', border: `1px solid ${T.cardBorder}`, borderRadius: 10, padding: '16px 18px' }}>
+            <span style={labelStyle}>Customer</span>
+            <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: T.textPrimary }}>
+              {confirmation.customer.firstName} {confirmation.customer.lastName}
+            </p>
+            <p style={{ margin: '6px 0 0', fontSize: 13, color: T.textMuted }}>{confirmation.customer.email}</p>
+            {confirmation.customer.phone ? (
+              <p style={{ margin: '4px 0 0', fontSize: 13, color: T.textMuted }}>{confirmation.customer.phone}</p>
+            ) : null}
+            {confirmation.customer.company ? (
+              <p style={{ margin: '4px 0 0', fontSize: 13, color: T.textMuted }}>{confirmation.customer.company}</p>
+            ) : null}
+          </div>
+
+          {confirmation.location ? (
+            <div style={{ background: '#FAFAF9', border: `1px solid ${T.cardBorder}`, borderRadius: 10, padding: '16px 18px' }}>
+              <span style={labelStyle}>Service Location</span>
+              <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: T.textPrimary }}>{confirmation.location.name}</p>
+              <p style={{ margin: '6px 0 0', fontSize: 13, color: T.textMuted }}>
+                {confirmation.location.address}
+              </p>
+              <p style={{ margin: '4px 0 0', fontSize: 13, color: T.textMuted }}>
+                {confirmation.location.city}, {confirmation.location.state} {confirmation.location.zipCode}
+              </p>
+              {confirmation.location.phone ? (
+                <p style={{ margin: '4px 0 0', fontSize: 13, color: T.textMuted }}>{confirmation.location.phone}</p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {confirmation.deliveryAddress ? (
+            <div style={{ background: '#FAFAF9', border: `1px solid ${T.cardBorder}`, borderRadius: 10, padding: '16px 18px' }}>
+              <span style={labelStyle}>Delivery Address</span>
+              <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: T.textPrimary }}>{confirmation.deliveryAddress.address}</p>
+              <p style={{ margin: '6px 0 0', fontSize: 13, color: T.textMuted }}>
+                {confirmation.deliveryAddress.city}, {confirmation.deliveryAddress.state} {confirmation.deliveryAddress.zipCode}
+              </p>
+            </div>
+          ) : null}
+        </div>
+
+        {confirmation.notes ? (
+          <div style={{ marginBottom: 24, background: '#FAFAF9', borderRadius: 10, padding: '16px 18px', border: `1px solid ${T.cardBorder}` }}>
+            <span style={labelStyle}>Special Instructions</span>
+            <p style={{ margin: 0, fontSize: 14, color: T.textPrimary, lineHeight: 1.7 }}>{confirmation.notes}</p>
+          </div>
+        ) : null}
+
+        <h3 style={{ fontSize: 16, fontWeight: 700, color: T.textPrimary, margin: '0 0 12px' }}>Itemized Order</h3>
+        <div style={{ border: `1px solid ${T.cardBorder}`, borderRadius: 10, overflow: 'hidden', marginBottom: 20 }}>
+          {confirmationSections.map(({ label, items }) =>
+            items.length > 0 ? (
+              <div key={label}>
+                <div style={{ padding: '12px 16px', background: '#FAFAF9', borderBottom: `1px solid ${T.cardBorder}`, fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  {label}
+                </div>
+                {items.map((item, i) => (
+                  <div key={`${label}-${i}`} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, padding: '14px 16px', borderBottom: i === items.length - 1 ? 'none' : `1px solid ${T.cardBorder}` }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: T.textPrimary }}>
+                        {item.name} x{item.quantity}
+                      </div>
+                      {item.description ? (
+                        <div style={{ fontSize: 12, color: T.textMuted, marginTop: 4, lineHeight: 1.5 }}>{item.description}</div>
+                      ) : null}
+                      <div style={{ fontSize: 12, color: T.textMuted, marginTop: 4 }}>
+                        {formatCurrencyAmount(item.unitPrice)} each
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: T.textPrimary, whiteSpace: 'nowrap' }}>
+                      {formatCurrencyAmount(item.totalPrice)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null,
           )}
         </div>
-        <h3 style={{ fontSize: 16, fontWeight: 700, color: T.textPrimary, margin: '0 0 12px' }}>Items</h3>
-        {confirmation.items.map((item, i) => (
-          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', fontSize: 14, borderBottom: `1px solid ${T.cardBorder}` }}>
-            <span>{item.name} x{item.quantity}</span>
-            <span style={{ fontWeight: 600 }}>${(item.totalPrice / 100).toFixed(2)}</span>
+
+        <div style={{ background: '#FAFAF9', borderRadius: 10, padding: '18px 20px', border: `1px solid ${T.cardBorder}` }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: T.textMuted, marginBottom: 8 }}>
+            <span>Packages</span>
+            <span>{formatCurrencyAmount(confirmation.pricing.packageSubtotal)}</span>
           </div>
-        ))}
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16, paddingTop: 16, borderTop: `2px solid ${T.cardBorder}`, fontWeight: 700, fontSize: 18 }}>
-          <span>Total</span>
-          <span>${(confirmation.pricing.total / 100).toFixed(2)}</span>
+          {confirmation.pricing.addOnSubtotal > 0 ? (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: T.textMuted, marginBottom: 8 }}>
+              <span>Add-ons</span>
+              <span>{formatCurrencyAmount(confirmation.pricing.addOnSubtotal)}</span>
+            </div>
+          ) : null}
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, paddingTop: 12, borderTop: `2px solid ${T.cardBorder}`, fontWeight: 700, fontSize: 18, color: T.textPrimary }}>
+            <span>Total</span>
+            <span>{formatCurrencyAmount(confirmation.pricing.total)}</span>
+          </div>
         </div>
+
         <div style={{ marginTop: 28, background: '#FAFAF9', borderRadius: 10, padding: '20px 24px' }}>
           <h4 style={{ fontSize: 14, fontWeight: 700, color: T.textPrimary, margin: '0 0 12px' }}>What happens next?</h4>
           <ol style={{ margin: 0, paddingLeft: 20, listStyleType: 'decimal', fontSize: 13, color: T.textMuted, lineHeight: 2 }}>
@@ -517,6 +623,11 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
               <li key={step}>{step}</li>
             ))}
           </ol>
+          {merchantContact ? (
+            <p style={{ margin: '16px 0 0', fontSize: 13, color: T.textMuted, lineHeight: 1.6 }}>
+              Need to update this order? Contact {data.merchant.name} at {data.merchant.phone ?? data.merchant.website}.
+            </p>
+          ) : null}
         </div>
       </div>
     );

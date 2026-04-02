@@ -15,9 +15,9 @@ interface OrderDetail {
   headCount: number;
   notes: string | null;
   pricing: { packageSubtotal: number; addOnSubtotal: number; total: number; currency: string };
-  location: { name: string; address: string; city: string; state: string; zipCode: string } | null;
+  location: { name: string; address: string; city: string; state: string; zipCode: string; country: string; phone: string | null; email: string | null } | null;
   customer: { id: string; name: string; email: string; phone: string | null; company: string | null };
-  deliveryAddress: { address: string; city: string; state: string; zipCode: string } | null;
+  deliveryAddress: { address: string; city: string; state: string; zipCode: string; country?: string } | null;
   deposit: {
     id: string; amount: number; currency: string; status: string;
     paidAt: string | null; hasStripeSession: boolean; stripePaymentIntentId: string | null;
@@ -77,6 +77,7 @@ export default function OrderDetailPage() {
   async function handleReorder() { setActionLoading(true); setError(''); setReorderWarnings([]); setReorderSuccess(null); const d = prompt('Event date (YYYY-MM-DD):'); if (!d) { setActionLoading(false); return; } const dt = new Date(d+'T12:00:00.000Z'); if (isNaN(dt.getTime())) { setError('Invalid date'); setActionLoading(false); return; } try { const res = await apiFetch(`/api/orders/${id}/reorder`, { method: 'POST', body: JSON.stringify({ eventDate: dt.toISOString() }) }); setReorderSuccess({ orderNumber: res.data.orderNumber, id: res.data.id }); if (res.data.warnings?.length) setReorderWarnings(res.data.warnings); } catch (err) { setError(err instanceof Error ? err.message : 'Reorder failed'); } finally { setActionLoading(false); } }
 
   async function handleRefundDeposit() { if (!confirm('Refund this deposit? This will cancel the order.')) return; setActionLoading(true); setError(''); try { await apiFetch(`/api/orders/${id}/refund-deposit`, { method: 'POST' }); await fetchOrder(); } catch (err) { setError(err instanceof Error ? err.message : 'Refund failed'); } finally { setActionLoading(false); } }
+  function handlePrint() { window.print(); }
 
   if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#9CA3AF' }}>Loading order...</div>;
   if (error && !order) return <div style={{ padding: 40, textAlign: 'center', color: '#DC2626' }}>{error}</div>;
@@ -122,6 +123,7 @@ export default function OrderDetailPage() {
             {t === 'confirmed' ? 'Confirm Order' : t === 'completed' ? 'Mark Complete' : t.replace('_', ' ')}
           </ActionBtn>
         ))}
+        <ActionBtn onClick={handlePrint} disabled={false} variant="outline">Print Ticket</ActionBtn>
         <ActionBtn onClick={handleReorder} disabled={actionLoading} variant="outline">Reorder</ActionBtn>
         {order.deposit?.status === 'paid' && order.status !== 'cancelled' && (
           <ActionBtn onClick={handleRefundDeposit} disabled={actionLoading} variant="danger">Refund Deposit</ActionBtn>
@@ -129,6 +131,57 @@ export default function OrderDetailPage() {
         {order.allowedTransitions.includes('cancelled') && (
           <ActionBtn onClick={() => handleStatusChange('cancelled')} disabled={actionLoading} variant="danger">Cancel</ActionBtn>
         )}
+      </div>
+
+      <div style={{ ...card, marginBottom: 18 }}>
+        <span style={sectionLabel}>Service Ticket</span>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 14 }}>
+          <div>
+            <p style={{ fontSize: 12, color: '#78716C', margin: '0 0 6px' }}>Customer</p>
+            <p style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>{order.customer.name}</p>
+            <p style={{ fontSize: 13, color: '#57534E', margin: '4px 0 0' }}>
+              <a href={`mailto:${order.customer.email}`} style={{ color: '#2563EB', textDecoration: 'none' }}>{order.customer.email}</a>
+            </p>
+            {order.customer.phone ? (
+              <p style={{ fontSize: 13, color: '#57534E', margin: '4px 0 0' }}>
+                <a href={`tel:${order.customer.phone}`} style={{ color: '#2563EB', textDecoration: 'none' }}>{order.customer.phone}</a>
+              </p>
+            ) : null}
+            {order.customer.company ? <p style={{ fontSize: 13, color: '#78716C', margin: '4px 0 0' }}>{order.customer.company}</p> : null}
+          </div>
+          <div>
+            <p style={{ fontSize: 12, color: '#78716C', margin: '0 0 6px' }}>Event</p>
+            <p style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>{new Date(order.eventDate).toLocaleString()}</p>
+            <p style={{ fontSize: 13, color: '#78716C', margin: '4px 0 0' }}>{order.headCount} guests · {formatServiceType(order.serviceType)}</p>
+            <p style={{ fontSize: 13, color: '#78716C', margin: '4px 0 0' }}>Created {new Date(order.timestamps.created).toLocaleString()}</p>
+          </div>
+          {order.location ? (
+            <div>
+              <p style={{ fontSize: 12, color: '#78716C', margin: '0 0 6px' }}>Merchant Location</p>
+              <p style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>{order.location.name}</p>
+              <p style={{ fontSize: 13, color: '#78716C', margin: '4px 0 0' }}>{order.location.address}</p>
+              <p style={{ fontSize: 13, color: '#78716C', margin: '4px 0 0' }}>{order.location.city}, {order.location.state} {order.location.zipCode}</p>
+              {order.location.phone ? <p style={{ fontSize: 13, color: '#78716C', margin: '4px 0 0' }}>{order.location.phone}</p> : null}
+            </div>
+          ) : null}
+          <div>
+            <p style={{ fontSize: 12, color: '#78716C', margin: '0 0 6px' }}>{order.deliveryAddress ? 'Delivery Address' : 'Internal Notes'}</p>
+            {order.deliveryAddress ? (
+              <>
+                <p style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>{order.deliveryAddress.address}</p>
+                <p style={{ fontSize: 13, color: '#78716C', margin: '4px 0 0' }}>{order.deliveryAddress.city}, {order.deliveryAddress.state} {order.deliveryAddress.zipCode}</p>
+              </>
+            ) : (
+              <p style={{ fontSize: 13, color: '#78716C', margin: 0 }}>{order.notes ?? 'No additional notes provided.'}</p>
+            )}
+          </div>
+        </div>
+        {order.notes && order.deliveryAddress ? (
+          <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid #E7E5E4' }}>
+            <p style={{ fontSize: 12, color: '#78716C', margin: '0 0 6px' }}>Internal Notes</p>
+            <p style={{ fontSize: 13, color: '#57534E', margin: 0 }}>{order.notes}</p>
+          </div>
+        ) : null}
       </div>
 
       {/* Detail grid */}

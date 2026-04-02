@@ -131,12 +131,44 @@ export interface OrderConfirmation {
   id: string;
   orderNumber: string;
   status: string;
+  serviceType: string;
   customerId: string;
   headCount: number;
   scheduledAt: string;
-  customer: { firstName: string; lastName: string; email: string };
+  notes: string | null;
+  customer: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string | null;
+    company: string | null;
+  };
+  location: {
+    name: string;
+    address: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+    phone: string | null;
+    email: string | null;
+  } | null;
+  deliveryAddress: {
+    address: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country?: string;
+  } | null;
   pricing: { packageSubtotal: number; addOnSubtotal: number; total: number; currency: string };
-  items: Array<{ type: string; name: string; quantity: number; unitPrice: number; totalPrice: number }>;
+  items: Array<{
+    type: string;
+    name: string;
+    description: string | null;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+  }>;
   depositRequired?: boolean;
   createdAt: string;
 }

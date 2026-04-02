@@ -520,6 +520,9 @@ export async function getById(id: string, orgId: string) {
             city: locations.city,
             state: locations.state,
             zipCode: locations.zipCode,
+            country: locations.country,
+            phone: locations.phone,
+            email: locations.email,
           })
           .from(locations)
           .where(eq(locations.id, order.locationId))
@@ -591,6 +594,9 @@ export async function getById(id: string, orgId: string) {
           city: locationRow.city,
           state: locationRow.state,
           zipCode: locationRow.zipCode,
+          country: locationRow.country,
+          phone: locationRow.phone,
+          email: locationRow.email,
         }
       : null,
     customer: {
@@ -912,7 +918,18 @@ export async function markPaid(orderId: string, orgId: string, eventBus: EventBu
 
 async function validateLocation(orgId: string, locationId: string) {
   const [location] = await db
-    .select({ id: locations.id, name: locations.name, isActive: locations.isActive })
+    .select({
+      id: locations.id,
+      name: locations.name,
+      address: locations.address,
+      city: locations.city,
+      state: locations.state,
+      zipCode: locations.zipCode,
+      country: locations.country,
+      phone: locations.phone,
+      email: locations.email,
+      isActive: locations.isActive,
+    })
     .from(locations)
     .where(and(eq(locations.id, locationId), eq(locations.organizationId, orgId)))
     .limit(1);
@@ -975,7 +992,7 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
   const eventDate = new Date(input.eventDate);
 
   // 1. Validate location ownership, active status, and fetch settings
-  const { settings } = await validateLocation(orgId, input.locationId);
+  const { location, settings } = await validateLocation(orgId, input.locationId);
 
   // 2. Validate service type against location capabilities
   validateServiceType(input.serviceType, settings);
@@ -1130,11 +1147,25 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
     customerId: result.customerId,
     headCount: result.order.headCount,
     scheduledAt: result.order.scheduledAt,
+    notes: input.notes ?? null,
     customer: {
       firstName: input.customer.firstName,
       lastName: input.customer.lastName,
       email: input.customer.email,
+      phone: input.customer.phone ?? null,
+      company: input.customer.companyName ?? null,
     },
+    location: {
+      name: location.name,
+      address: location.address,
+      city: location.city,
+      state: location.state,
+      zipCode: location.zipCode,
+      country: location.country,
+      phone: location.phone,
+      email: location.email,
+    },
+    deliveryAddress: input.deliveryAddress ?? null,
     pricing: {
       packageSubtotal: pricing.packageSubtotal,
       addOnSubtotal: pricing.addOnSubtotal,
@@ -1144,10 +1175,12 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
     items: lineItems.map((item) => ({
       type: item.type,
       name: item.name,
+      description: item.description,
       quantity: item.quantity,
       unitPrice: item.unitPrice,
       totalPrice: item.totalPrice,
     })),
+    depositRequired: settings?.depositRequired ?? true,
     recurringOrderId: result.recurringOrderId,
     createdAt: result.order.createdAt,
   };
