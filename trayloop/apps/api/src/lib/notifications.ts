@@ -12,13 +12,92 @@ export interface NotificationPayload {
   actionUrl?: string;
 }
 
-/**
- * Send a notification. Currently logs and persists to the notifications table.
- * When email infrastructure is added, this function will dispatch to the
- * email provider as well.
- */
+export interface DirectEmailNotificationPayload {
+  to: string;
+  subject: string;
+  body: string;
+  actionUrl?: string;
+}
+
+function renderNotificationHtml(body: string, actionUrl?: string) {
+  const htmlBody = body
+    .split('\n')
+    .map((line) => line.trim() === '' ? '<br>' : `<p style="margin:0 0 4px">${line}</p>`)
+    .join('\n');
+
+  return `<div style="font-family:Inter,-apple-system,sans-serif;max-width:560px;margin:0 auto;color:#1C1917">
+  <div style="background:#1C1917;padding:20px 24px;border-radius:8px 8px 0 0">
+    <span style="color:#FFFFFF;font-size:16px;font-weight:700">TrayLoop</span>
+  </div>
+  <div style="padding:32px 24px;background:#FFFFFF;border:1px solid #E7E5E4;border-top:none;border-radius:0 0 8px 8px">
+    ${htmlBody}
+    ${actionUrl ? `<a href="${actionUrl}" style="display:inline-block;margin-top:20px;padding:10px 24px;background:#1C1917;color:#FFFFFF;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px">Open TrayLoop</a>` : ''}
+  </div>
+  <p style="text-align:center;font-size:12px;color:#9CA3AF;margin-top:16px">Powered by TrayLoop</p>
+</div>`;
+}
+
+async function deliverEmail(payload: DirectEmailNotificationPayload): Promise<void> {
+  if (!isEmailEnabled()) {
+    logger.info('Email skipped (not configured)', { to: payload.to, subject: payload.subject });
+    return;
+  }
+
+  await sendEmail({
+    to: payload.to,
+    subject: payload.subject,
+    text: payload.body,
+    html: renderNotificationHtml(payload.body, payload.actionUrl),
+  });
+}
+
+export async function sendDirectEmailNotification(payload: DirectEmailNotificationPayload): Promise<void> {
+  try {
+    await deliverEmail(payload);
+  } catch (err) {
+    logger.error('Direct email send failed', {
+      to: payload.to,
+      subject: payload.subject,
+      error: (err as Error).message,
+    });
+  }
+}
+
+export async function notifyCustomerEmail(input: {
+  customerUserId?: string | null;
+  customerEmail: string;
+  subject: string;
+  body: string;
+  actionUrl?: string;
+}) {
+  if (input.customerUserId) {
+    await sendNotification({
+      userId: input.customerUserId,
+      type: 'email',
+      subject: input.subject,
+      body: input.body,
+      actionUrl: input.actionUrl,
+    });
+    return;
+  }
+
+  await sendDirectEmailNotification({
+    to: input.customerEmail,
+    subject: input.subject,
+    body: input.body,
+    actionUrl: input.actionUrl,
+  });
+}
+
+export function getMerchantDashboardUrl(path: string) {
+  return `${process.env.MERCHANT_URL || 'http://localhost:3003'}${path}`;
+}
+
+export function getStorefrontAccountUrl() {
+  return `${process.env.STOREFRONT_URL || 'http://localhost:3001'}/account`;
+}
+
 export async function sendNotification(payload: NotificationPayload): Promise<void> {
-  // Persist to notifications table
   try {
     await db.insert(notifications).values({
       userId: payload.userId,
@@ -30,45 +109,33 @@ export async function sendNotification(payload: NotificationPayload): Promise<vo
       sentAt: new Date(),
     });
   } catch (err) {
-    logger.error('Failed to persist notification', { error: (err as Error).message, subject: payload.subject });
+    logger.error('Failed to persist notification', {
+      error: (err as Error).message,
+      subject: payload.subject,
+    });
   }
 
-  // Send email for email-type notifications
   if (payload.type === 'email' && isEmailEnabled()) {
     try {
       const [user] = await db
-        .select({ email: users.email, name: users.name })
+        .select({ email: users.email })
         .from(users)
         .where(eq(users.id, payload.userId))
         .limit(1);
 
       if (user?.email) {
-        const textBody = payload.body;
-        const htmlBody = payload.body
-          .split('\n')
-          .map((line) => line.trim() === '' ? '<br>' : `<p style="margin:0 0 4px">${line}</p>`)
-          .join('\n');
-
-        const actionUrl = payload.actionUrl;
-
-        await sendEmail({
+        await deliverEmail({
           to: user.email,
           subject: payload.subject,
-          text: textBody,
-          html: `<div style="font-family:Inter,-apple-system,sans-serif;max-width:560px;margin:0 auto;color:#1C1917">
-  <div style="background:#1C1917;padding:20px 24px;border-radius:8px 8px 0 0">
-    <span style="color:#FFFFFF;font-size:16px;font-weight:700">TrayLoop</span>
-  </div>
-  <div style="padding:32px 24px;background:#FFFFFF;border:1px solid #E7E5E4;border-top:none;border-radius:0 0 8px 8px">
-    ${htmlBody}
-    ${actionUrl ? `<a href="${actionUrl}" style="display:inline-block;margin-top:20px;padding:10px 24px;background:#1C1917;color:#FFFFFF;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px">View your order</a>` : ''}
-  </div>
-  <p style="text-align:center;font-size:12px;color:#9CA3AF;margin-top:16px">Powered by TrayLoop</p>
-</div>`,
+          body: payload.body,
+          actionUrl: payload.actionUrl,
         });
       }
     } catch (err) {
-      logger.error('Email send failed (notification still saved)', { error: (err as Error).message, subject: payload.subject });
+      logger.error('Email send failed (notification still saved)', {
+        error: (err as Error).message,
+        subject: payload.subject,
+      });
     }
   }
 
@@ -79,8 +146,6 @@ export async function sendNotification(payload: NotificationPayload): Promise<vo
     emailSent: payload.type === 'email' && isEmailEnabled(),
   });
 }
-
-// --- Convenience helpers for common notifications ---
 
 export interface DepositPaidContext {
   orderId: string;
@@ -97,46 +162,53 @@ export interface DepositPaidContext {
 
 export async function notifyDepositPaid(ctx: DepositPaidContext): Promise<void> {
   const amountStr = `$${(ctx.depositAmount / 100).toFixed(2)}`;
-  const dateStr = ctx.eventDate ? ctx.eventDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'TBD';
+  const dateStr = ctx.eventDate
+    ? ctx.eventDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    : 'TBD';
+  const merchantActionUrl = getMerchantDashboardUrl(`/orders/${ctx.orderId}`);
 
-  // Customer notification
-  if (ctx.customerUserId) {
-    await sendNotification({
-      userId: ctx.customerUserId,
-      type: 'email',
-      subject: `Your payment is confirmed — ${ctx.orderNumber}`,
-      body: [
-        `Hi ${ctx.customerName},`,
-        '',
-        `Your deposit of ${amountStr} for order ${ctx.orderNumber} with ${ctx.merchantName} has been received.`,
-        '',
-        `Order: ${ctx.orderNumber}`,
-        `Amount: ${amountStr}`,
-        `Event date: ${dateStr}`,
-        `Status: Confirmed`,
-        '',
-        `You will receive updates as your order progresses.`,
-      ].join('\n'),
-      actionUrl: `/orders/${ctx.orderId}`,
-    });
-  }
+  await notifyCustomerEmail({
+    customerUserId: ctx.customerUserId,
+    customerEmail: ctx.customerEmail,
+    subject: `Your payment is confirmed - ${ctx.orderNumber}`,
+    body: [
+      `Hi ${ctx.customerName},`,
+      '',
+      `Your deposit of ${amountStr} for order ${ctx.orderNumber} with ${ctx.merchantName} has been received.`,
+      '',
+      `Order: ${ctx.orderNumber}`,
+      `Amount: ${amountStr}`,
+      `Event date: ${dateStr}`,
+      'Status: Confirmed',
+      '',
+      'You will receive updates as your order progresses.',
+    ].join('\n'),
+    actionUrl: getStorefrontAccountUrl(),
+  });
 
-  // Merchant notification
+  const merchantBody = [
+    `${ctx.customerName} (${ctx.customerEmail}) paid a deposit of ${amountStr} for order ${ctx.orderNumber}.`,
+    '',
+    `Event date: ${dateStr}`,
+    'The order has been confirmed.',
+  ].join('\n');
+
   await sendNotification({
     userId: ctx.merchantOwnerUserId,
     type: 'in_app',
-    subject: `Deposit received — ${ctx.orderNumber}`,
-    body: [
-      `${ctx.customerName} (${ctx.customerEmail}) paid a deposit of ${amountStr} for order ${ctx.orderNumber}.`,
-      '',
-      `Event date: ${dateStr}`,
-      `The order has been confirmed.`,
-    ].join('\n'),
+    subject: `Deposit received - ${ctx.orderNumber}`,
+    body: merchantBody,
     actionUrl: `/orders/${ctx.orderId}`,
   });
-}
 
-// --- Refund notification ---
+  await sendNotification({
+    userId: ctx.merchantOwnerUserId,
+    type: 'email',
+    subject: `Deposit received - ${ctx.orderNumber}`,
+    body: merchantBody,
+    actionUrl: merchantActionUrl,
+  });
+}
 
 export interface DepositRefundedContext {
   orderId: string;
@@ -152,35 +224,42 @@ export interface DepositRefundedContext {
 
 export async function notifyDepositRefunded(ctx: DepositRefundedContext): Promise<void> {
   const amountStr = `$${(ctx.depositAmount / 100).toFixed(2)}`;
+  const merchantActionUrl = getMerchantDashboardUrl(`/orders/${ctx.orderId}`);
 
-  // Customer notification
-  if (ctx.customerUserId) {
-    await sendNotification({
-      userId: ctx.customerUserId,
-      type: 'email',
-      subject: `Your refund has been processed — ${ctx.orderNumber}`,
-      body: [
-        `Hi ${ctx.customerName},`,
-        '',
-        `Your deposit of ${amountStr} for order ${ctx.orderNumber} with ${ctx.merchantName} has been refunded.`,
-        '',
-        `Refund amount: ${amountStr}`,
-        `Order: ${ctx.orderNumber}`,
-        '',
-        `The refund will appear in your account within 5-10 business days.`,
-        '',
-        `If you have questions, please contact ${ctx.merchantName} directly.`,
-      ].join('\n'),
-      actionUrl: `/orders/${ctx.orderId}`,
-    });
-  }
+  await notifyCustomerEmail({
+    customerUserId: ctx.customerUserId,
+    customerEmail: ctx.customerEmail,
+    subject: `Your refund has been processed - ${ctx.orderNumber}`,
+    body: [
+      `Hi ${ctx.customerName},`,
+      '',
+      `Your deposit of ${amountStr} for order ${ctx.orderNumber} with ${ctx.merchantName} has been refunded.`,
+      '',
+      `Refund amount: ${amountStr}`,
+      `Order: ${ctx.orderNumber}`,
+      '',
+      'The refund will appear in your account within 5-10 business days.',
+      '',
+      `If you have questions, please contact ${ctx.merchantName} directly.`,
+    ].join('\n'),
+    actionUrl: getStorefrontAccountUrl(),
+  });
 
-  // Merchant notification
+  const merchantBody = `Deposit of ${amountStr} for ${ctx.customerName} (${ctx.customerEmail}) on order ${ctx.orderNumber} has been refunded.`;
+
   await sendNotification({
     userId: ctx.merchantOwnerUserId,
     type: 'in_app',
-    subject: `Deposit refunded — ${ctx.orderNumber}`,
-    body: `Deposit of ${amountStr} for ${ctx.customerName} (${ctx.customerEmail}) on order ${ctx.orderNumber} has been refunded.`,
+    subject: `Deposit refunded - ${ctx.orderNumber}`,
+    body: merchantBody,
     actionUrl: `/orders/${ctx.orderId}`,
+  });
+
+  await sendNotification({
+    userId: ctx.merchantOwnerUserId,
+    type: 'email',
+    subject: `Deposit refunded - ${ctx.orderNumber}`,
+    body: merchantBody,
+    actionUrl: merchantActionUrl,
   });
 }

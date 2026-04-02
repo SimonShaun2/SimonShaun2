@@ -773,7 +773,7 @@ export async function sendDepositLink(orderId: string, orgId: string, input: Sen
   }
 
   const [[customer], [org]] = await Promise.all([
-    db.select({ email: customers.email, firstName: customers.firstName })
+    db.select({ email: customers.email, firstName: customers.firstName, userId: customers.userId })
       .from(customers).where(eq(customers.id, order.customerId)).limit(1),
     db.select({ stripeAccountId: organizations.stripeAccountId, name: organizations.name })
       .from(organizations).where(eq(organizations.id, orgId)).limit(1),
@@ -844,6 +844,29 @@ export async function sendDepositLink(orderId: string, orgId: string, input: Sen
   });
 
   try { await recordOrderEvent(order.id, 'deposit_link_sent', `Deposit link sent to ${customer.email} for $${(depositAmount / 100).toFixed(2)}`); } catch {}
+  try {
+    const { notifyCustomerEmail } = await import('../../lib/notifications.js');
+    await notifyCustomerEmail({
+      customerUserId: customer.userId,
+      customerEmail: customer.email,
+      subject: `Deposit requested - ${order.orderNumber}`,
+      body: [
+        `Hi ${customer.firstName},`,
+        '',
+        `${org?.name || 'Your merchant'} requested a deposit for order ${order.orderNumber}.`,
+        '',
+        `Deposit amount: $${(depositAmount / 100).toFixed(2)}`,
+        '',
+        'Use the secure payment link below to complete your deposit.',
+      ].join('\n'),
+      actionUrl: paymentLink,
+    });
+  } catch (err) {
+    logger.error('Failed to send deposit request email', {
+      orderId: order.id,
+      error: (err as Error).message,
+    });
+  }
   try { await eventBus.emit('order.status_updated', { orderId: order.id, oldStatus: order.status, newStatus: 'awaiting_deposit' }); } catch {}
 
   return {
@@ -906,6 +929,49 @@ export async function markPaid(orderId: string, orgId: string, eventBus: EventBu
   try { await recordOrderEvent(order.id, 'status_changed', 'Status changed to confirmed'); } catch {}
   try { await eventBus.emit('payment.completed', { paymentId: result.deposit.id, orderId: order.id, amount: result.deposit.amount }); } catch {}
   try { await eventBus.emit('order.status_updated', { orderId: order.id, oldStatus: 'awaiting_deposit', newStatus: 'confirmed' }); } catch {}
+  try {
+    const { notifyDepositPaid } = await import('../../lib/notifications.js');
+    const [[customer], [org], [fullOrder]] = await Promise.all([
+      db.select({
+        userId: customers.userId,
+        email: customers.email,
+        firstName: customers.firstName,
+        lastName: customers.lastName,
+      })
+        .from(customers)
+        .innerJoin(orders, eq(orders.customerId, customers.id))
+        .where(eq(orders.id, order.id))
+        .limit(1),
+      db.select({ name: organizations.name, ownerId: organizations.ownerId })
+        .from(organizations)
+        .where(eq(organizations.id, orgId))
+        .limit(1),
+      db.select({ orderNumber: orders.orderNumber, scheduledAt: orders.scheduledAt })
+        .from(orders)
+        .where(eq(orders.id, order.id))
+        .limit(1),
+    ]);
+
+    if (customer && org && fullOrder) {
+      await notifyDepositPaid({
+        orderId: order.id,
+        orderNumber: fullOrder.orderNumber,
+        merchantName: org.name,
+        depositAmount: result.deposit.amount,
+        currency: result.deposit.currency,
+        eventDate: fullOrder.scheduledAt,
+        customerUserId: customer.userId,
+        customerEmail: customer.email,
+        customerName: `${customer.firstName} ${customer.lastName}`.trim(),
+        merchantOwnerUserId: org.ownerId,
+      });
+    }
+  } catch (err) {
+    logger.error('Failed to send mark-paid notifications', {
+      orderId: order.id,
+      error: (err as Error).message,
+    });
+  }
 
   return {
     orderId: result.order.id, status: result.order.status, previousStatus: 'awaiting_deposit',
