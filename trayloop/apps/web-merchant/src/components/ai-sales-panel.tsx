@@ -5,22 +5,30 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   createAiSalesCampaign,
   fetchAiSalesCampaigns,
+  fetchAiSalesReorderOpportunities,
   fetchAiSalesSummary,
   fetchAiSalesTargets,
   generateAiSalesMessage,
   type AiSalesCampaign,
   type AiSalesGenerateResult,
+  type AiSalesReorderOpportunity,
   type AiSalesReactivationSummary,
   type AiSalesTarget,
 } from '../lib/api';
 import { useMobile } from '../lib/use-mobile';
 
-type ActionableSegment = 'at_risk' | 'dormant';
+type BuilderSegment = 'frequent' | 'at_risk' | 'dormant';
+type CampaignKind = 'reactivation' | 'reorder_reminder';
 
 const SEGMENT_COPY: Record<
-  ActionableSegment,
+  BuilderSegment,
   { title: string; description: string; empty: string }
 > = {
+  frequent: {
+    title: 'Likely reorder customers',
+    description: 'These regulars are close to their usual reorder window. A timely reminder can pull the next order forward.',
+    empty: 'No likely reorder customers right now.',
+  },
   at_risk: {
     title: 'At-risk repeat customers',
     description: 'These customers are still warm. Reach back out before the reorder window slips.',
@@ -50,7 +58,7 @@ function formatDate(value: string | null) {
   });
 }
 
-function segmentLabel(segment: ActionableSegment | 'frequent') {
+function segmentLabel(segment: BuilderSegment) {
   if (segment === 'at_risk') return 'At-risk';
   if (segment === 'dormant') return 'Dormant';
   return 'Frequent';
@@ -74,8 +82,10 @@ export default function AiSalesPanel() {
   const isMobile = useMobile();
   const [summary, setSummary] = useState<AiSalesReactivationSummary | null>(null);
   const [campaigns, setCampaigns] = useState<AiSalesCampaign[]>([]);
+  const [reorderOpportunities, setReorderOpportunities] = useState<AiSalesReorderOpportunity[]>([]);
   const [targets, setTargets] = useState<AiSalesTarget[]>([]);
-  const [selectedSegment, setSelectedSegment] = useState<ActionableSegment>('at_risk');
+  const [selectedSegment, setSelectedSegment] = useState<BuilderSegment>('at_risk');
+  const [campaignKind, setCampaignKind] = useState<CampaignKind>('reactivation');
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
   const [generated, setGenerated] = useState<AiSalesGenerateResult | null>(null);
   const [goalNotes, setGoalNotes] = useState('');
@@ -87,6 +97,7 @@ export default function AiSalesPanel() {
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [pendingSeedCustomerIds, setPendingSeedCustomerIds] = useState<string[] | null>(null);
 
   useEffect(() => {
     void loadPanel();
@@ -94,8 +105,8 @@ export default function AiSalesPanel() {
 
   useEffect(() => {
     if (!isBuilderOpen) return;
-    void loadTargets(selectedSegment);
-  }, [isBuilderOpen, selectedSegment]);
+    void loadTargets(selectedSegment, pendingSeedCustomerIds);
+  }, [isBuilderOpen, selectedSegment, pendingSeedCustomerIds]);
 
   const selectedTargets = useMemo(
     () => targets.filter((target) => selectedCustomerIds.includes(target.id)),
@@ -121,17 +132,24 @@ export default function AiSalesPanel() {
     };
   }, [summary]);
 
+  const builderSegments = useMemo<BuilderSegment[]>(
+    () => (selectedSegment === 'frequent' ? ['frequent', 'at_risk', 'dormant'] : ['at_risk', 'dormant']),
+    [selectedSegment],
+  );
+
   async function loadPanel() {
     setLoading(true);
     setError('');
 
     try {
-      const [summaryData, campaignData] = await Promise.all([
+      const [summaryData, campaignData, reorderData] = await Promise.all([
         fetchAiSalesSummary(),
         fetchAiSalesCampaigns(5),
+        fetchAiSalesReorderOpportunities(5),
       ]);
       setSummary(summaryData);
       setCampaigns(campaignData);
+      setReorderOpportunities(reorderData.data);
 
       if (summaryData.segments.at_risk.count === 0 && summaryData.segments.dormant.count > 0) {
         setSelectedSegment('dormant');
@@ -143,7 +161,7 @@ export default function AiSalesPanel() {
     }
   }
 
-  async function loadTargets(segment: ActionableSegment) {
+  async function loadTargets(segment: BuilderSegment, seedCustomerIds: string[] | null = null) {
     setTargetsLoading(true);
     setError('');
     setGenerated(null);
@@ -152,7 +170,12 @@ export default function AiSalesPanel() {
     try {
       const response = await fetchAiSalesTargets({ segment, page: 1, pageSize: 100 });
       setTargets(response.data);
-      setSelectedCustomerIds(response.data.map((target) => target.id));
+      const defaultSelection = response.data.map((target) => target.id);
+      const filteredSeedSelection = seedCustomerIds
+        ? defaultSelection.filter((id) => seedCustomerIds.includes(id))
+        : defaultSelection;
+      setSelectedCustomerIds(filteredSeedSelection);
+      setPendingSeedCustomerIds(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load repeat customers.');
     } finally {
@@ -161,6 +184,7 @@ export default function AiSalesPanel() {
   }
 
   function openBuilder() {
+    setCampaignKind('reactivation');
     setIsBuilderOpen(true);
     setSuccess('');
     setError('');
@@ -168,12 +192,28 @@ export default function AiSalesPanel() {
 
   function closeBuilder() {
     setIsBuilderOpen(false);
+    setCampaignKind('reactivation');
     setGenerated(null);
     setGoalNotes('');
     setToneNotes('');
     setTargets([]);
     setSelectedCustomerIds([]);
+    setPendingSeedCustomerIds(null);
     setError('');
+  }
+
+  function openReorderReminder(opportunity: AiSalesReorderOpportunity) {
+    setCampaignKind('reorder_reminder');
+    setSelectedSegment(opportunity.segment);
+    setPendingSeedCustomerIds([opportunity.customerId]);
+    setGoalNotes(
+      `Invite ${opportunity.name} to book their next catering order around their normal ${opportunity.cadenceDays}-day cadence.`,
+    );
+    setToneNotes('Warm, confident, concise, and timely.');
+    setGenerated(null);
+    setSuccess('');
+    setError('');
+    setIsBuilderOpen(true);
   }
 
   function toggleCustomer(customerId: string) {
@@ -210,6 +250,7 @@ export default function AiSalesPanel() {
         segment: selectedSegment,
         selectedCustomerIds,
         channelIntent: 'email',
+        campaignKind,
         goalNotes: goalNotes.trim() || undefined,
         toneNotes: toneNotes.trim() || undefined,
       });
@@ -342,6 +383,69 @@ export default function AiSalesPanel() {
         </div>
       ) : null}
 
+      {reorderOpportunities.length > 0 ? (
+        <div
+          style={{
+            border: '1px solid #E7E5E4',
+            borderRadius: 12,
+            padding: isMobile ? 16 : 18,
+            marginBottom: 20,
+            background: '#FFFBEB',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+            <div>
+              <div style={eyebrowStyle}>Smart alerts</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: '#1C1917' }}>
+                Customers likely to reorder soon
+              </div>
+            </div>
+            <div style={{ fontSize: 12, color: '#78716C' }}>
+              {reorderOpportunities.length} likely reorder opportunities
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {reorderOpportunities.map((opportunity) => (
+              <div
+                key={opportunity.customerId}
+                style={{
+                  border: '1px solid #FDE68A',
+                  borderRadius: 10,
+                  background: '#FFFFFF',
+                  padding: '12px 14px',
+                  display: 'grid',
+                  gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1.5fr) auto',
+                  gap: 12,
+                  alignItems: 'center',
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 4 }}>
+                    <span style={pillStyle}>{opportunity.confidence === 'high' ? 'Likely this week' : 'Due soon'}</span>
+                    <span style={subtlePillStyle}>{segmentLabel(opportunity.segment)}</span>
+                  </div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#1C1917' }}>
+                    {opportunity.name}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#57534E', marginTop: 4, lineHeight: 1.5 }}>
+                    Orders about every {opportunity.cadenceDays} days. Last order was {opportunity.daysSinceLastOrder} days ago.
+                    {` `}
+                    Last average order value: {formatCurrency(opportunity.averageOrderValueCents)}.
+                  </div>
+                </div>
+                <button
+                  onClick={() => openReorderReminder(opportunity)}
+                  style={primaryButtonStyle}
+                >
+                  Send reorder reminder
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       {isBuilderOpen ? (
         <div
           style={{
@@ -356,10 +460,14 @@ export default function AiSalesPanel() {
             <div>
               <div style={eyebrowStyle}>Campaign builder</div>
               <h3 style={{ fontSize: 18, fontWeight: 700, color: '#1C1917', margin: '4px 0 4px' }}>
-                Build a repeat-order reactivation campaign
+                {campaignKind === 'reorder_reminder'
+                  ? 'Build a reorder reminder'
+                  : 'Build a repeat-order reactivation campaign'}
               </h3>
               <p style={{ fontSize: 13, color: '#78716C', margin: 0 }}>
-                Choose the segment, review the target list, then generate outreach before you save or send.
+                {campaignKind === 'reorder_reminder'
+                  ? 'Start from a likely reorder account, review the target list, then generate a timely reminder before you send.'
+                  : 'Choose the segment, review the target list, then generate outreach before you save or send.'}
               </p>
             </div>
             <button onClick={closeBuilder} style={secondaryButtonStyle}>
@@ -368,9 +476,11 @@ export default function AiSalesPanel() {
           </div>
 
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
-            {(['at_risk', 'dormant'] as ActionableSegment[]).map((segment) => {
+            {builderSegments.map((segment) => {
               const isActive = selectedSegment === segment;
-              const count = summary?.segments[segment].count ?? 0;
+              const count = segment === 'frequent'
+                ? reorderOpportunities.filter((opportunity) => opportunity.segment === 'frequent').length
+                : (summary?.segments[segment].count ?? 0);
               return (
                 <button
                   key={segment}
@@ -528,7 +638,11 @@ export default function AiSalesPanel() {
                   cursor: generating || selectedCustomerIds.length === 0 ? 'not-allowed' : 'pointer',
                 }}
               >
-                {generating ? 'Generating...' : 'Generate message'}
+                {generating
+                  ? 'Generating...'
+                  : campaignKind === 'reorder_reminder'
+                    ? 'Generate reorder reminder'
+                    : 'Generate message'}
               </button>
             </div>
           </div>
@@ -549,6 +663,15 @@ export default function AiSalesPanel() {
 
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#57534E', margin: '14px 0 6px' }}>Body</div>
                 <pre style={preStyle}>{generated.generated.emailBody}</pre>
+
+                <div style={{ marginTop: 14, padding: '12px 14px', borderRadius: 10, background: '#F5F5F4' }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#57534E', marginBottom: 6 }}>AI timing suggestion</div>
+                  <div style={{ fontSize: 13, color: '#1C1917', lineHeight: 1.6 }}>
+                    <div><strong>Best window:</strong> {generated.generated.timingGuidance.recommendedSendWindow}</div>
+                    <div><strong>Tone:</strong> {generated.generated.timingGuidance.tone}</div>
+                    <div style={{ marginTop: 6 }}>{generated.generated.timingGuidance.rationale}</div>
+                  </div>
+                </div>
 
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 14 }}>
                   <button

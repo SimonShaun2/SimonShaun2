@@ -132,6 +132,24 @@ export interface AiSalesTarget {
   segment?: 'frequent' | 'at_risk' | 'dormant';
 }
 
+export interface AiSalesReorderOpportunity {
+  customerId: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  company: string | null;
+  orderCount: number;
+  averageOrderValueCents: number;
+  lastOrderAt: string;
+  daysSinceLastOrder: number;
+  cadenceDays: number;
+  expectedNextOrderAt: string;
+  daysUntilExpectedOrder: number;
+  overdueDays: number;
+  confidence: 'high' | 'medium';
+  segment: 'frequent' | 'at_risk' | 'dormant';
+}
+
 export interface AiSalesCampaign {
   id: string;
   segment: 'frequent' | 'at_risk' | 'dormant';
@@ -153,7 +171,8 @@ export interface AiSalesCampaign {
 }
 
 export interface AiSalesGenerateResult {
-  segment: 'at_risk' | 'dormant';
+  campaignKind: 'reactivation' | 'reorder_reminder';
+  segment: 'frequent' | 'at_risk' | 'dormant';
   channelIntent: 'email' | 'sms_copy';
   targetCount: number;
   estimatedRevenueCents: number;
@@ -161,6 +180,11 @@ export interface AiSalesGenerateResult {
     subject: string;
     emailBody: string;
     smsBody: string;
+    timingGuidance: {
+      recommendedSendWindow: string;
+      tone: string;
+      rationale: string;
+    };
   };
   targets: AiSalesTarget[];
 }
@@ -248,7 +272,7 @@ export async function fetchAiSalesSummary(): Promise<AiSalesReactivationSummary>
 }
 
 export async function fetchAiSalesTargets(input: {
-  segment: 'at_risk' | 'dormant';
+  segment: 'frequent' | 'at_risk' | 'dormant';
   page?: number;
   pageSize?: number;
 }): Promise<{ data: AiSalesTarget[]; meta: PaginationMeta }> {
@@ -262,9 +286,10 @@ export async function fetchAiSalesTargets(input: {
 }
 
 export async function generateAiSalesMessage(input: {
-  segment: 'at_risk' | 'dormant';
+  segment: 'frequent' | 'at_risk' | 'dormant';
   selectedCustomerIds: string[];
   channelIntent?: 'email' | 'sms_copy';
+  campaignKind?: 'reactivation' | 'reorder_reminder';
   goalNotes?: string;
   toneNotes?: string;
 }): Promise<AiSalesGenerateResult> {
@@ -276,7 +301,7 @@ export async function generateAiSalesMessage(input: {
 }
 
 export async function createAiSalesCampaign(input: {
-  segment: 'at_risk' | 'dormant';
+  segment: 'frequent' | 'at_risk' | 'dormant';
   channel: 'email' | 'sms_copy';
   status: 'draft' | 'sent' | 'copied';
   selectedCustomerIds: string[];
@@ -295,6 +320,19 @@ export async function fetchAiSalesCampaigns(limit = 5): Promise<AiSalesCampaign[
   const params = new URLSearchParams({ limit: String(limit) });
   const response = await apiFetch(`/api/ai-sales/campaigns?${params.toString()}`);
   return response.data;
+}
+
+export async function fetchAiSalesReorderOpportunities(limit = 5): Promise<{
+  data: AiSalesReorderOpportunity[];
+  meta: {
+    total: number;
+    limit: number;
+    totalPotentialRevenueCents: number;
+  };
+}> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  const response = await apiFetch(`/api/ai-sales/reorder-opportunities?${params.toString()}`);
+  return { data: response.data, meta: response.meta };
 }
 
 interface PaginationMeta {

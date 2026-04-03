@@ -4,11 +4,17 @@ export interface GeneratedCampaignMessage {
   subject: string;
   emailBody: string;
   smsBody: string;
+  timingGuidance: {
+    recommendedSendWindow: string;
+    tone: string;
+    rationale: string;
+  };
 }
 
 interface GenerateCampaignMessageInput {
   merchantName: string;
-  segment: 'at_risk' | 'dormant';
+  segment: 'frequent' | 'at_risk' | 'dormant';
+  campaignKind: 'reactivation' | 'reorder_reminder';
   targetCount: number;
   estimatedRevenueCents: number;
   customerSummaries: Array<{
@@ -17,6 +23,8 @@ interface GenerateCampaignMessageInput {
     daysSinceLastOrder: number;
     avgOrderValueCents: number;
     orderCount: number;
+    cadenceDays?: number | null;
+    daysUntilExpectedOrder?: number | null;
   }>;
   goalNotes?: string;
   toneNotes?: string;
@@ -70,15 +78,25 @@ export async function generateCampaignMessage(
     }));
 
   const segmentDescription =
+    input.segment === 'frequent'
+      ? 'repeat customers who order regularly and may be approaching their next reorder window'
+      :
     input.segment === 'at_risk'
       ? 'repeat customers who have not ordered in 14 to 29 days'
       : 'repeat customers who have not ordered in 30 or more days';
+
+  const campaignKindDescription =
+    input.campaignKind === 'reorder_reminder'
+      ? 'This is a reorder reminder timed around the customer’s expected next catering purchase.'
+      : 'This is a reactivation message intended to restart repeat catering demand.';
 
   const prompt = {
     brand: 'TrayLoop',
     positioning:
       'TrayLoop is the system that helps restaurants generate predictable catering revenue. Avoid buzzwords and generic AI language.',
     merchantName: input.merchantName,
+    campaignKind: input.campaignKind,
+    campaignKindDescription,
     segment: input.segment,
     segmentDescription,
     targetCount: input.targetCount,
@@ -88,7 +106,7 @@ export async function generateCampaignMessage(
     customers: customerSnapshot,
     requirements: {
       outputFormat:
-        'Return strict JSON with keys subject, emailBody, smsBody. emailBody and smsBody should be plain text.',
+        'Return strict JSON with keys subject, emailBody, smsBody, recommendedSendWindow, recommendedTone, timingReason. emailBody and smsBody should be plain text.',
       writingStyle:
         'Write concise, warm, operator-friendly outreach that sounds like a real merchant, not a robot. Focus on catering needs, repeat business, and helpful service.',
       constraints: [
@@ -98,6 +116,7 @@ export async function generateCampaignMessage(
         'Do not promise discounts unless explicitly told to do so.',
         'Email should be 90-160 words.',
         'SMS should be under 320 characters.',
+        'Recommended send guidance should be practical and specific.',
       ],
     },
   };
@@ -142,14 +161,25 @@ export async function generateCampaignMessage(
     throw new Error('OpenAI returned an invalid response.');
   }
 
-  let parsed: Partial<GeneratedCampaignMessage>;
+  let parsed: Partial<GeneratedCampaignMessage> & {
+    recommendedSendWindow?: string;
+    recommendedTone?: string;
+    timingReason?: string;
+  };
   try {
     parsed = JSON.parse(content);
   } catch {
     throw new Error('OpenAI returned malformed campaign content.');
   }
 
-  if (!parsed.subject || !parsed.emailBody || !parsed.smsBody) {
+  if (
+    !parsed.subject ||
+    !parsed.emailBody ||
+    !parsed.smsBody ||
+    !parsed.recommendedSendWindow ||
+    !parsed.recommendedTone ||
+    !parsed.timingReason
+  ) {
     throw new Error('OpenAI returned incomplete campaign content.');
   }
 
@@ -157,5 +187,10 @@ export async function generateCampaignMessage(
     subject: parsed.subject.trim(),
     emailBody: parsed.emailBody.trim(),
     smsBody: parsed.smsBody.trim(),
+    timingGuidance: {
+      recommendedSendWindow: parsed.recommendedSendWindow.trim(),
+      tone: parsed.recommendedTone.trim(),
+      rationale: parsed.timingReason.trim(),
+    },
   };
 }

@@ -6,6 +6,7 @@ import {
   createCampaignSchema,
   generateCampaignMessageSchema,
   listCampaignsQuerySchema,
+  reorderOpportunitiesQuerySchema,
   reactivationTargetsQuerySchema,
 } from './ai-sales.schema.js';
 import * as service from './ai-sales.service.js';
@@ -23,6 +24,12 @@ export function registerRoutes(app: FastifyInstance) {
     const query = reactivationTargetsQuerySchema.parse(request.query);
     const result = await service.getReactivationTargets(request.ctx.tenant!.organizationId, query);
     return { data: result.targets, meta: result.pagination };
+  });
+
+  app.get('/reorder-opportunities', async (request) => {
+    const query = reorderOpportunitiesQuerySchema.parse(request.query);
+    const result = await service.getReorderOpportunities(request.ctx.tenant!.organizationId, query);
+    return { data: result.data, meta: result.meta };
   });
 
   app.post('/generate-message', { preHandler: [validateBody(generateCampaignMessageSchema)] }, async (request) => {

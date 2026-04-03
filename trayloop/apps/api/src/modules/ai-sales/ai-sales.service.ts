@@ -6,7 +6,7 @@ import {
   organizations,
 } from '@trayloop/database';
 import { db } from '@trayloop/database';
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import { sendEmail, isEmailEnabled } from '../../lib/email.js';
 import { generateCampaignMessage, isOpenAIEnabled } from '../../lib/openai.js';
 import { ValidationError } from '../../lib/errors.js';
@@ -14,6 +14,7 @@ import type {
   CreateCampaignInput,
   GenerateCampaignMessageInput,
   ListCampaignsQuery,
+  ReorderOpportunitiesQuery,
   ReactivationTargetsQuery,
 } from './ai-sales.schema.js';
 
@@ -41,6 +42,24 @@ interface SelectedTarget {
   targets: RepeatCustomerProfile[];
 }
 
+interface ReorderOpportunity {
+  customerId: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  company: string | null;
+  orderCount: number;
+  averageOrderValueCents: number;
+  lastOrderAt: string;
+  daysSinceLastOrder: number;
+  cadenceDays: number;
+  expectedNextOrderAt: string;
+  daysUntilExpectedOrder: number;
+  overdueDays: number;
+  confidence: 'high' | 'medium';
+  segment: Segment;
+}
+
 function nowUtc() {
   return new Date();
 }
@@ -48,6 +67,15 @@ function nowUtc() {
 function getDaysSince(dateString: string) {
   const diff = nowUtc().getTime() - new Date(dateString).getTime();
   return Math.max(0, Math.floor(diff / 86400000));
+}
+
+function getDaysUntil(dateString: string) {
+  const diff = new Date(dateString).getTime() - nowUtc().getTime();
+  return Math.ceil(diff / 86400000);
+}
+
+function addDays(dateString: string, days: number) {
+  return new Date(new Date(dateString).getTime() + days * 86400000).toISOString();
 }
 
 function resolveSegment(daysSinceLastOrder: number): Segment {
@@ -145,6 +173,112 @@ async function getRepeatCustomerProfiles(orgId: string): Promise<RepeatCustomerP
   });
 }
 
+async function getReorderOpportunitiesForOrganization(orgId: string): Promise<ReorderOpportunity[]> {
+  const profiles = await getRepeatCustomerProfiles(orgId);
+
+  if (profiles.length === 0) {
+    return [];
+  }
+
+  const profileByCustomerId = new Map(profiles.map((profile) => [profile.id, profile]));
+
+  const orderRows = await db
+    .select({
+      customerId: orders.customerId,
+      occurredAt: sql<string>`coalesce(${orders.completedAt}, ${orders.createdAt})`,
+    })
+    .from(orders)
+    .innerJoin(
+      customers,
+      and(eq(customers.id, orders.customerId), eq(customers.organizationId, orgId)),
+    )
+    .where(
+      and(
+        eq(orders.organizationId, orgId),
+        eq(customers.isActive, true),
+        inArray(orders.status, [...FINAL_ORDER_STATUSES]),
+        inArray(orders.customerId, profiles.map((profile) => profile.id)),
+      ),
+    )
+    .orderBy(asc(orders.customerId), asc(sql`coalesce(${orders.completedAt}, ${orders.createdAt})`));
+
+  const ordersByCustomerId = new Map<string, string[]>();
+
+  for (const row of orderRows) {
+    const current = ordersByCustomerId.get(row.customerId) ?? [];
+    current.push(row.occurredAt);
+    ordersByCustomerId.set(row.customerId, current);
+  }
+
+  const opportunities: ReorderOpportunity[] = [];
+
+  for (const profile of profiles) {
+    if (profile.segment === 'dormant') {
+      continue;
+    }
+
+    const customerOrderDates = ordersByCustomerId.get(profile.id) ?? [];
+    if (customerOrderDates.length < 2) {
+      continue;
+    }
+
+    const intervals: number[] = [];
+    for (let index = 1; index < customerOrderDates.length; index += 1) {
+      const currentTime = new Date(customerOrderDates[index]!).getTime();
+      const previousTime = new Date(customerOrderDates[index - 1]!).getTime();
+      intervals.push(Math.max(1, Math.round((currentTime - previousTime) / 86400000)));
+    }
+
+    const cadenceDays = Math.max(
+      1,
+      Math.round(intervals.reduce((total, value) => total + value, 0) / intervals.length),
+    );
+    const expectedNextOrderAt = addDays(profile.lastOrderAt, cadenceDays);
+    const daysUntilExpectedOrder = getDaysUntil(expectedNextOrderAt);
+    const overdueDays = profile.daysSinceLastOrder - cadenceDays;
+
+    const isDueSoon = daysUntilExpectedOrder <= 7;
+    const isNotTooLate = overdueDays <= Math.max(7, cadenceDays);
+
+    if (!isDueSoon || !isNotTooLate) {
+      continue;
+    }
+
+    opportunities.push({
+      customerId: profile.id,
+      name: profile.name,
+      email: profile.email,
+      phone: profile.phone,
+      company: profile.company,
+      orderCount: profile.orderCount,
+      averageOrderValueCents: profile.averageOrderValueCents,
+      lastOrderAt: profile.lastOrderAt,
+      daysSinceLastOrder: profile.daysSinceLastOrder,
+      cadenceDays,
+      expectedNextOrderAt,
+      daysUntilExpectedOrder,
+      overdueDays,
+      confidence:
+        overdueDays >= 0 && overdueDays <= Math.max(3, Math.round(cadenceDays * 0.35))
+          ? 'high'
+          : 'medium',
+      segment: profile.segment,
+    });
+  }
+
+  return opportunities.sort((left, right) => {
+    if (left.confidence !== right.confidence) {
+      return left.confidence === 'high' ? -1 : 1;
+    }
+
+    if (left.daysUntilExpectedOrder !== right.daysUntilExpectedOrder) {
+      return left.daysUntilExpectedOrder - right.daysUntilExpectedOrder;
+    }
+
+    return right.averageOrderValueCents - left.averageOrderValueCents;
+  });
+}
+
 function toSummary(profiles: RepeatCustomerProfile[]) {
   const grouped = {
     frequent: profiles.filter((profile) => profile.segment === 'frequent'),
@@ -183,7 +317,7 @@ function paginate<T>(items: T[], page: number, pageSize: number) {
 
 async function loadSelectedTargets(
   orgId: string,
-  segment: 'at_risk' | 'dormant',
+  segment: Segment,
   selectedCustomerIds: string[],
 ): Promise<SelectedTarget> {
   const uniqueIds = [...new Set(selectedCustomerIds)];
@@ -258,6 +392,22 @@ export async function getReactivationTargets(orgId: string, query: ReactivationT
   };
 }
 
+export async function getReorderOpportunities(orgId: string, query: ReorderOpportunitiesQuery) {
+  const opportunities = await getReorderOpportunitiesForOrganization(orgId);
+
+  return {
+    data: opportunities.slice(0, query.limit),
+    meta: {
+      total: opportunities.length,
+      limit: query.limit,
+      totalPotentialRevenueCents: opportunities.reduce(
+        (total, opportunity) => total + opportunity.averageOrderValueCents,
+        0,
+      ),
+    },
+  };
+}
+
 export async function generateMessageForTargets(
   orgId: string,
   input: GenerateCampaignMessageInput,
@@ -271,6 +421,13 @@ export async function generateMessageForTargets(
     loadSelectedTargets(orgId, input.segment, input.selectedCustomerIds),
   ]);
 
+  const reorderOpportunities = input.campaignKind === 'reorder_reminder'
+    ? await getReorderOpportunitiesForOrganization(orgId)
+    : [];
+  const reorderOpportunityByCustomerId = new Map(
+    reorderOpportunities.map((opportunity) => [opportunity.customerId, opportunity]),
+  );
+
   const estimatedRevenueCents = targets.targets.reduce(
     (total, target) => total + target.averageOrderValueCents,
     0,
@@ -279,6 +436,7 @@ export async function generateMessageForTargets(
   const generated = await generateCampaignMessage({
     merchantName: organization.name,
     segment: input.segment,
+    campaignKind: input.campaignKind,
     targetCount: targets.targets.length,
     estimatedRevenueCents,
     goalNotes: input.goalNotes,
@@ -289,10 +447,14 @@ export async function generateMessageForTargets(
       daysSinceLastOrder: target.daysSinceLastOrder,
       avgOrderValueCents: target.averageOrderValueCents,
       orderCount: target.orderCount,
+      cadenceDays: reorderOpportunityByCustomerId.get(target.id)?.cadenceDays ?? null,
+      daysUntilExpectedOrder:
+        reorderOpportunityByCustomerId.get(target.id)?.daysUntilExpectedOrder ?? null,
     })),
   });
 
   return {
+    campaignKind: input.campaignKind,
     segment: input.segment,
     channelIntent: input.channelIntent,
     targetCount: targets.targets.length,
@@ -307,6 +469,7 @@ export async function generateMessageForTargets(
       daysSinceLastOrder: target.daysSinceLastOrder,
       averageOrderValueCents: target.averageOrderValueCents,
       orderCount: target.orderCount,
+      segment: target.segment,
     })),
   };
 }
