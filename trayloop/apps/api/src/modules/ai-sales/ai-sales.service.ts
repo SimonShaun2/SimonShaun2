@@ -22,7 +22,7 @@ const FINAL_ORDER_STATUSES = ['confirmed', 'completed'] as const;
 const FREQUENT_DAYS = 14;
 const DORMANT_DAYS = 30;
 
-type Segment = 'frequent' | 'at_risk' | 'dormant';
+type Segment = 'all' | 'frequent' | 'at_risk' | 'dormant';
 
 interface RepeatCustomerProfile {
   id: string;
@@ -173,6 +173,73 @@ async function getRepeatCustomerProfiles(orgId: string): Promise<RepeatCustomerP
   });
 }
 
+/**
+ * Get ALL customers with at least 1 completed/confirmed order.
+ * Used for the "all" segment so merchants can target any customer.
+ */
+async function getAllCustomerProfiles(orgId: string): Promise<RepeatCustomerProfile[]> {
+  const rows = await db
+    .select({
+      id: customers.id,
+      email: customers.email,
+      firstName: customers.firstName,
+      lastName: customers.lastName,
+      phone: customers.phone,
+      company: customers.companyName,
+      orderCount: sql<number>`count(${orders.id})::int`,
+      averageOrderValueCents: sql<number>`coalesce(avg(${orders.totalAmount}), 0)::int`,
+      totalRevenueCents: sql<number>`coalesce(sum(${orders.totalAmount}), 0)::int`,
+      lastOrderAt: sql<string>`max(coalesce(${orders.completedAt}, ${orders.createdAt}))`,
+    })
+    .from(customers)
+    .innerJoin(
+      orders,
+      and(eq(orders.customerId, customers.id), eq(orders.organizationId, orgId)),
+    )
+    .where(
+      and(
+        eq(customers.organizationId, orgId),
+        eq(customers.isActive, true),
+        inArray(orders.status, [...FINAL_ORDER_STATUSES]),
+      ),
+    )
+    .groupBy(
+      customers.id,
+      customers.email,
+      customers.firstName,
+      customers.lastName,
+      customers.phone,
+      customers.companyName,
+    )
+    .having(sql`count(${orders.id}) >= 1`)
+    .orderBy(desc(sql`max(coalesce(${orders.completedAt}, ${orders.createdAt}))`));
+
+  return rows.map((row) => {
+    const daysSinceLastOrder = getDaysSince(row.lastOrderAt);
+    return {
+      id: row.id,
+      name: `${row.firstName} ${row.lastName}`.trim(),
+      email: row.email,
+      phone: row.phone,
+      company: row.company,
+      orderCount: row.orderCount,
+      averageOrderValueCents: row.averageOrderValueCents,
+      totalRevenueCents: row.totalRevenueCents,
+      lastOrderAt: row.lastOrderAt,
+      daysSinceLastOrder,
+      segment: resolveSegment(daysSinceLastOrder),
+    };
+  });
+}
+
+async function getCustomerProfilesForSegment(orgId: string, segment: Segment): Promise<RepeatCustomerProfile[]> {
+  if (segment === 'all') {
+    return getAllCustomerProfiles(orgId);
+  }
+  const profiles = await getRepeatCustomerProfiles(orgId);
+  return profiles.filter((p) => p.segment === segment);
+}
+
 async function getReorderOpportunitiesForOrganization(orgId: string): Promise<ReorderOpportunity[]> {
   const profiles = await getRepeatCustomerProfiles(orgId);
 
@@ -321,9 +388,11 @@ async function loadSelectedTargets(
   selectedCustomerIds: string[],
 ): Promise<SelectedTarget> {
   const uniqueIds = [...new Set(selectedCustomerIds)];
-  const profiles = await getRepeatCustomerProfiles(orgId);
+  const profiles = segment === 'all'
+    ? await getAllCustomerProfiles(orgId)
+    : await getRepeatCustomerProfiles(orgId);
   const targets = profiles.filter(
-    (profile) => profile.segment === segment && uniqueIds.includes(profile.id),
+    (profile) => (segment === 'all' || profile.segment === segment) && uniqueIds.includes(profile.id),
   );
 
   if (targets.length === 0) {
@@ -372,22 +441,29 @@ async function sendCampaignEmails(
 }
 
 export async function getReactivationSummary(orgId: string) {
-  const profiles = await getRepeatCustomerProfiles(orgId);
-  return toSummary(profiles);
+  const [repeatProfiles, allProfiles] = await Promise.all([
+    getRepeatCustomerProfiles(orgId),
+    getAllCustomerProfiles(orgId),
+  ]);
+  const summary = toSummary(repeatProfiles);
+  return {
+    ...summary,
+    allCustomers: allProfiles.length,
+    allRevenueCents: allProfiles.reduce((s, p) => s + p.averageOrderValueCents, 0),
+  };
 }
 
 export async function getReactivationTargets(orgId: string, query: ReactivationTargetsQuery) {
-  const profiles = await getRepeatCustomerProfiles(orgId);
-  const filtered = profiles.filter((profile) => profile.segment === query.segment);
-  const pageItems = paginate(filtered, query.page, query.pageSize);
+  const profiles = await getCustomerProfilesForSegment(orgId, query.segment as Segment);
+  const pageItems = paginate(profiles, query.page, query.pageSize);
 
   return {
     targets: pageItems,
     pagination: {
       page: query.page,
       pageSize: query.pageSize,
-      total: filtered.length,
-      totalPages: Math.max(1, Math.ceil(filtered.length / query.pageSize)),
+      total: profiles.length,
+      totalPages: Math.max(1, Math.ceil(profiles.length / query.pageSize)),
     },
   };
 }
@@ -433,9 +509,11 @@ export async function generateMessageForTargets(
     0,
   );
 
+  // Map 'all' to 'at_risk' for OpenAI prompt context — 'all' is a targeting concept, not a tone
+  const promptSegment = input.segment === 'all' ? 'at_risk' : input.segment;
   const generated = await generateCampaignMessage({
     merchantName: organization.name,
-    segment: input.segment,
+    segment: promptSegment,
     campaignKind: input.campaignKind,
     targetCount: targets.targets.length,
     estimatedRevenueCents,
@@ -495,7 +573,8 @@ export async function createCampaign(
     .values({
       organizationId: orgId,
       createdByUserId: userId,
-      segment: input.segment,
+      // 'all' is a query-time targeting concept; store as 'frequent' in the campaign record
+      segment: input.segment === 'all' ? 'frequent' : input.segment,
       channel: input.channel,
       status: input.status,
       generatedSubject: input.generatedSubject,

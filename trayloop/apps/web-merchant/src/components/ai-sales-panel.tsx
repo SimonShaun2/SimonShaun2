@@ -17,13 +17,18 @@ import {
 } from '../lib/api';
 import { useMobile } from '../lib/use-mobile';
 
-type BuilderSegment = 'frequent' | 'at_risk' | 'dormant';
+type BuilderSegment = 'all' | 'frequent' | 'at_risk' | 'dormant';
 type CampaignKind = 'reactivation' | 'reorder_reminder';
 
 const SEGMENT_COPY: Record<
   BuilderSegment,
   { title: string; description: string; empty: string }
 > = {
+  all: {
+    title: 'All customers',
+    description: 'Every customer who has placed at least one order. Use this when you want to reach your full customer base.',
+    empty: 'No customers with completed orders yet.',
+  },
   frequent: {
     title: 'Likely reorder customers',
     description: 'These regulars are close to their usual reorder window. A timely reminder can pull the next order forward.',
@@ -59,6 +64,7 @@ function formatDate(value: string | null) {
 }
 
 function segmentLabel(segment: BuilderSegment) {
+  if (segment === 'all') return 'All';
   if (segment === 'at_risk') return 'At-risk';
   if (segment === 'dormant') return 'Dormant';
   return 'Frequent';
@@ -133,7 +139,7 @@ export default function AiSalesPanel() {
   }, [summary]);
 
   const builderSegments = useMemo<BuilderSegment[]>(
-    () => (selectedSegment === 'frequent' ? ['frequent', 'at_risk', 'dormant'] : ['at_risk', 'dormant']),
+    () => (selectedSegment === 'frequent' ? ['all', 'frequent', 'at_risk', 'dormant'] : ['all', 'at_risk', 'dormant']),
     [selectedSegment],
   );
 
@@ -378,7 +384,7 @@ export default function AiSalesPanel() {
           <MetricCard
             label="Potential revenue"
             value={formatCurrency(actionableSummary.potentialRevenueCents)}
-            sub={`${summary!.repeatCustomerCount} repeat customers total`}
+            sub={`${summary!.allCustomers} total customers · ${summary!.repeatCustomerCount} repeat`}
           />
         </div>
       ) : null}
@@ -478,9 +484,11 @@ export default function AiSalesPanel() {
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
             {builderSegments.map((segment) => {
               const isActive = selectedSegment === segment;
-              const count = segment === 'frequent'
+              const count = segment === 'all'
+                ? (summary?.allCustomers ?? 0)
+                : segment === 'frequent'
                 ? reorderOpportunities.filter((opportunity) => opportunity.segment === 'frequent').length
-                : (summary?.segments[segment].count ?? 0);
+                : (summary?.segments[segment as 'at_risk' | 'dormant']?.count ?? 0);
               return (
                 <button
                   key={segment}

@@ -109,6 +109,8 @@ export interface MerchantOnboardingStatus {
 
 export interface AiSalesReactivationSummary {
   repeatCustomerCount: number;
+  allCustomers: number;
+  allRevenueCents: number;
   segments: {
     frequent: { count: number; potentialRevenueCents: number };
     at_risk: { count: number; potentialRevenueCents: number };
@@ -272,7 +274,7 @@ export async function fetchAiSalesSummary(): Promise<AiSalesReactivationSummary>
 }
 
 export async function fetchAiSalesTargets(input: {
-  segment: 'frequent' | 'at_risk' | 'dormant';
+  segment: 'all' | 'frequent' | 'at_risk' | 'dormant';
   page?: number;
   pageSize?: number;
 }): Promise<{ data: AiSalesTarget[]; meta: PaginationMeta }> {
@@ -286,7 +288,7 @@ export async function fetchAiSalesTargets(input: {
 }
 
 export async function generateAiSalesMessage(input: {
-  segment: 'frequent' | 'at_risk' | 'dormant';
+  segment: 'all' | 'frequent' | 'at_risk' | 'dormant';
   selectedCustomerIds: string[];
   channelIntent?: 'email' | 'sms_copy';
   campaignKind?: 'reactivation' | 'reorder_reminder';
@@ -301,7 +303,7 @@ export async function generateAiSalesMessage(input: {
 }
 
 export async function createAiSalesCampaign(input: {
-  segment: 'frequent' | 'at_risk' | 'dormant';
+  segment: 'all' | 'frequent' | 'at_risk' | 'dormant';
   channel: 'email' | 'sms_copy';
   status: 'draft' | 'sent' | 'copied';
   selectedCustomerIds: string[];

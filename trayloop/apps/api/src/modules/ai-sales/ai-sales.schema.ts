@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const aiCampaignSegmentSchema = z.enum(['frequent', 'at_risk', 'dormant']);
+export const aiCampaignSegmentSchema = z.enum(['all', 'frequent', 'at_risk', 'dormant']);
 export const aiCampaignChannelSchema = z.enum(['email', 'sms_copy']);
 export const aiCampaignStatusSchema = z.enum(['draft', 'sent', 'copied']);
 export const aiCampaignKindSchema = z.enum(['reactivation', 'reorder_reminder']);
