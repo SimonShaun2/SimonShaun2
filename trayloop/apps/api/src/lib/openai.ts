@@ -43,7 +43,7 @@ function getApiKey() {
 }
 
 function getModel() {
-  return process.env.OPENAI_MODEL || 'gpt-4.1-mini';
+  return process.env.OPENAI_MODEL || 'gpt-4o-mini';
 }
 
 export function isOpenAIEnabled() {
@@ -149,9 +149,10 @@ export async function generateCampaignMessage(
     const body = await response.text();
     logger.error('OpenAI campaign generation failed', {
       status: response.status,
-      body,
+      model: getModel(),
+      body: body.slice(0, 500),
     });
-    throw new Error('OpenAI could not generate a message right now. Please try again.');
+    throw new Error(`OpenAI error (${response.status}): ${body.slice(0, 200)}`);
   }
 
   const data = (await response.json()) as OpenAIChatCompletionResponse;
