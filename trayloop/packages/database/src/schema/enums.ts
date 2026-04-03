@@ -16,3 +16,7 @@ export const packagePricingEnum = pgEnum('package_pricing', ['per_head', 'flat']
 export const recurrenceIntervalEnum = pgEnum('recurrence_interval', ['weekly', 'biweekly', 'monthly', 'quarterly']);
 export const followUpStatusEnum = pgEnum('follow_up_status', ['pending', 'completed']);
 export const auditActionEnum = pgEnum('audit_action', ['create', 'update', 'delete', 'login', 'logout', 'status_change']);
+export const aiCampaignSegmentEnum = pgEnum('ai_campaign_segment', ['frequent', 'at_risk', 'dormant']);
+export const aiCampaignChannelEnum = pgEnum('ai_campaign_channel', ['email', 'sms_copy']);
+export const aiCampaignStatusEnum = pgEnum('ai_campaign_status', ['draft', 'sent', 'copied']);
+export const aiCampaignRecipientStatusEnum = pgEnum('ai_campaign_recipient_status', ['pending', 'sent', 'copied', 'failed']);

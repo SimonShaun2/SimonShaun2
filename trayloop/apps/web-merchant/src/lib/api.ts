@@ -107,6 +107,64 @@ export interface MerchantOnboardingStatus {
   };
 }
 
+export interface AiSalesReactivationSummary {
+  repeatCustomerCount: number;
+  segments: {
+    frequent: { count: number; potentialRevenueCents: number };
+    at_risk: { count: number; potentialRevenueCents: number };
+    dormant: { count: number; potentialRevenueCents: number };
+  };
+  actionableTargets: number;
+  actionablePotentialRevenueCents: number;
+}
+
+export interface AiSalesTarget {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  company: string | null;
+  orderCount: number;
+  averageOrderValueCents: number;
+  totalRevenueCents?: number;
+  lastOrderAt?: string;
+  daysSinceLastOrder: number;
+  segment?: 'frequent' | 'at_risk' | 'dormant';
+}
+
+export interface AiSalesCampaign {
+  id: string;
+  segment: 'frequent' | 'at_risk' | 'dormant';
+  channel: 'email' | 'sms_copy';
+  status: 'draft' | 'sent' | 'copied';
+  generatedSubject: string | null;
+  generatedEmailBody?: string | null;
+  generatedSmsBody?: string | null;
+  selectedTargetCount: number;
+  estimatedRevenueCents: number;
+  sentAt: string | null;
+  createdAt: string;
+  recipientSummary: {
+    pending: number;
+    sent: number;
+    copied: number;
+    failed: number;
+  };
+}
+
+export interface AiSalesGenerateResult {
+  segment: 'at_risk' | 'dormant';
+  channelIntent: 'email' | 'sms_copy';
+  targetCount: number;
+  estimatedRevenueCents: number;
+  generated: {
+    subject: string;
+    emailBody: string;
+    smsBody: string;
+  };
+  targets: AiSalesTarget[];
+}
+
 export async function apiFetch(path: string, options: RequestInit = {}) {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   const headers: Record<string, string> = {
@@ -182,4 +240,66 @@ export async function createBillingPortal(input: { returnUrl?: string } = {}) {
     body: JSON.stringify(input),
   });
   return response.data as { url: string };
+}
+
+export async function fetchAiSalesSummary(): Promise<AiSalesReactivationSummary> {
+  const response = await apiFetch('/api/ai-sales/reactivation-summary');
+  return response.data;
+}
+
+export async function fetchAiSalesTargets(input: {
+  segment: 'at_risk' | 'dormant';
+  page?: number;
+  pageSize?: number;
+}): Promise<{ data: AiSalesTarget[]; meta: PaginationMeta }> {
+  const params = new URLSearchParams({
+    segment: input.segment,
+    page: String(input.page ?? 1),
+    pageSize: String(input.pageSize ?? 100),
+  });
+  const response = await apiFetch(`/api/ai-sales/reactivation-targets?${params.toString()}`);
+  return { data: response.data, meta: response.meta };
+}
+
+export async function generateAiSalesMessage(input: {
+  segment: 'at_risk' | 'dormant';
+  selectedCustomerIds: string[];
+  channelIntent?: 'email' | 'sms_copy';
+  goalNotes?: string;
+  toneNotes?: string;
+}): Promise<AiSalesGenerateResult> {
+  const response = await apiFetch('/api/ai-sales/generate-message', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return response.data;
+}
+
+export async function createAiSalesCampaign(input: {
+  segment: 'at_risk' | 'dormant';
+  channel: 'email' | 'sms_copy';
+  status: 'draft' | 'sent' | 'copied';
+  selectedCustomerIds: string[];
+  generatedSubject: string;
+  generatedEmailBody: string;
+  generatedSmsBody: string;
+}): Promise<AiSalesCampaign> {
+  const response = await apiFetch('/api/ai-sales/campaigns', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return response.data;
+}
+
+export async function fetchAiSalesCampaigns(limit = 5): Promise<AiSalesCampaign[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  const response = await apiFetch(`/api/ai-sales/campaigns?${params.toString()}`);
+  return response.data;
+}
+
+interface PaginationMeta {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
 }

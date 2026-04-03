@@ -10,6 +10,7 @@ export * from './orders.js';
 export * from './payments.js';
 export * from './notifications.js';
 export * from './follow-ups.js';
+export * from './ai-campaigns.js';
 export * from './order-events.js';
 export * from './idempotency.js';
 export * from './audit-logs.js';

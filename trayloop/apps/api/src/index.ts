@@ -20,6 +20,7 @@ import { paymentsModule } from './modules/payments/index.js';
 import { billingModule } from './modules/billing/index.js';
 import { followUpsModule } from './modules/follow-ups/index.js';
 import { notificationsModule } from './modules/notifications/index.js';
+import { aiSalesModule } from './modules/ai-sales/index.js';
 import { adminModule } from './modules/admin/index.js';
 import { storefrontModule } from './modules/storefront/index.js';
 import { webhookModule } from './modules/webhooks/index.js';
@@ -54,6 +55,7 @@ export async function buildApp() {
     const { isStripeEnabled } = await import('./lib/stripe.js');
     const { isEmailEnabled } = await import('./lib/email.js');
     const { isSmsEnabled } = await import('./lib/sms.js');
+    const { isOpenAIEnabled } = await import('./lib/openai.js');
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),
@@ -61,6 +63,7 @@ export async function buildApp() {
         stripe: isStripeEnabled() ? 'connected' : 'not configured',
         email: isEmailEnabled() ? 'connected' : 'not configured',
         sms: isSmsEnabled() ? 'connected' : 'not configured',
+        openai: isOpenAIEnabled() ? 'connected' : 'not configured',
       },
     };
   });
@@ -92,6 +95,7 @@ export async function buildApp() {
   // Follow-ups & notifications
   await app.register(followUpsModule, { prefix: '/api/follow-ups' });
   await app.register(notificationsModule, { prefix: '/api/notifications' });
+  await app.register(aiSalesModule, { prefix: '/api/ai-sales' });
 
   // Webhooks (raw body parsing — must be in own scope)
   await app.register(webhookModule, { prefix: '/api/webhooks' });
