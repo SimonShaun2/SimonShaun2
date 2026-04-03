@@ -138,7 +138,7 @@ function buildStatusUpdateCopy(
         '',
         ...buildOrderSummaryLines(ctx),
         '',
-        'Next step: if you need another event, you can reorder from your TrayLoop account or contact the merchant directly.',
+        `Next step: if you need another event, you can reorder from your account or contact ${ctx.merchantName} directly.`,
       ].join('\n'),
     };
   }
@@ -258,6 +258,7 @@ export function registerEventHandlers(eventBus: EventBus) {
       subject: `We received your order - ${ctx.orderNumber}`,
       body: customerBody,
       actionUrl: getStorefrontAccountUrl(),
+      merchantName: ctx.merchantName,
     });
 
     await notifyCustomerSms({
@@ -320,13 +321,14 @@ export function registerEventHandlers(eventBus: EventBus) {
       subject: statusCopy.subject,
       body: statusCopy.body,
       actionUrl: getStorefrontAccountUrl(),
+      merchantName: ctx.merchantName,
     });
 
     let smsBody: string;
     if (event.payload.newStatus === 'confirmed') {
       smsBody = `${ctx.merchantName} confirmed ${ctx.orderNumber} for ${formatEventDate(ctx.scheduledAt)}.`;
     } else if (event.payload.newStatus === 'completed') {
-      smsBody = `${ctx.merchantName} marked ${ctx.orderNumber} as complete. Thanks for ordering with TrayLoop.`;
+      smsBody = `${ctx.merchantName} marked ${ctx.orderNumber} as complete. Thanks for your order!`;
     } else {
       smsBody = `${ctx.merchantName} cancelled ${ctx.orderNumber}.${event.payload.reason ? ` Reason: ${event.payload.reason}` : ''}`;
     }

@@ -11,6 +11,7 @@ export interface NotificationPayload {
   subject: string;
   body: string;
   actionUrl?: string;
+  merchantName?: string;
 }
 
 export interface DirectEmailNotificationPayload {
@@ -18,6 +19,7 @@ export interface DirectEmailNotificationPayload {
   subject: string;
   body: string;
   actionUrl?: string;
+  merchantName?: string;
 }
 
 export interface DirectSmsNotificationPayload {
@@ -25,7 +27,8 @@ export interface DirectSmsNotificationPayload {
   body: string;
 }
 
-function renderNotificationHtml(body: string, actionUrl?: string) {
+function renderNotificationHtml(body: string, actionUrl?: string, merchantName?: string) {
+  const brandName = merchantName || 'TrayLoop';
   const htmlBody = body
     .split('\n')
     .map((line) => line.trim() === '' ? '<br>' : `<p style="margin:0 0 4px">${line}</p>`)
@@ -33,11 +36,11 @@ function renderNotificationHtml(body: string, actionUrl?: string) {
 
   return `<div style="font-family:Inter,-apple-system,sans-serif;max-width:560px;margin:0 auto;color:#1C1917">
   <div style="background:#1C1917;padding:20px 24px;border-radius:8px 8px 0 0">
-    <span style="color:#FFFFFF;font-size:16px;font-weight:700">TrayLoop</span>
+    <span style="color:#FFFFFF;font-size:16px;font-weight:700">${brandName}</span>
   </div>
   <div style="padding:32px 24px;background:#FFFFFF;border:1px solid #E7E5E4;border-top:none;border-radius:0 0 8px 8px">
     ${htmlBody}
-    ${actionUrl ? `<a href="${actionUrl}" style="display:inline-block;margin-top:20px;padding:10px 24px;background:#1C1917;color:#FFFFFF;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px">Open TrayLoop</a>` : ''}
+    ${actionUrl ? `<a href="${actionUrl}" style="display:inline-block;margin-top:20px;padding:10px 24px;background:#1C1917;color:#FFFFFF;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px">View Order</a>` : ''}
   </div>
   <p style="text-align:center;font-size:12px;color:#9CA3AF;margin-top:16px">Powered by TrayLoop</p>
 </div>`;
@@ -53,7 +56,7 @@ async function deliverEmail(payload: DirectEmailNotificationPayload): Promise<vo
     to: payload.to,
     subject: payload.subject,
     text: payload.body,
-    html: renderNotificationHtml(payload.body, payload.actionUrl),
+    html: renderNotificationHtml(payload.body, payload.actionUrl, payload.merchantName),
   });
 }
 
@@ -124,6 +127,7 @@ export async function notifyCustomerEmail(input: {
   subject: string;
   body: string;
   actionUrl?: string;
+  merchantName?: string;
 }) {
   if (input.customerUserId) {
     await sendNotification({
@@ -132,6 +136,7 @@ export async function notifyCustomerEmail(input: {
       subject: input.subject,
       body: input.body,
       actionUrl: input.actionUrl,
+      merchantName: input.merchantName,
     });
     return;
   }
@@ -141,6 +146,7 @@ export async function notifyCustomerEmail(input: {
     subject: input.subject,
     body: input.body,
     actionUrl: input.actionUrl,
+    merchantName: input.merchantName,
   });
 }
 
@@ -197,6 +203,7 @@ export async function sendNotification(payload: NotificationPayload): Promise<vo
           subject: payload.subject,
           body: payload.body,
           actionUrl: payload.actionUrl,
+          merchantName: payload.merchantName,
         });
       }
     } catch (err) {
@@ -253,6 +260,7 @@ export async function notifyDepositPaid(ctx: DepositPaidContext): Promise<void> 
       'You will receive updates as your order progresses.',
     ].join('\n'),
     actionUrl: getStorefrontAccountUrl(),
+    merchantName: ctx.merchantName,
   });
 
   await notifyCustomerSms({
@@ -321,6 +329,7 @@ export async function notifyDepositRefunded(ctx: DepositRefundedContext): Promis
       `If you have questions, please contact ${ctx.merchantName} directly.`,
     ].join('\n'),
     actionUrl: getStorefrontAccountUrl(),
+    merchantName: ctx.merchantName,
   });
 
   await notifyCustomerSms({
