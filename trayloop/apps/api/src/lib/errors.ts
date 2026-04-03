@@ -32,3 +32,15 @@ export class ForbiddenError extends AppError {
     super(403, message, 'FORBIDDEN');
   }
 }
+
+export class TooManyRequestsError extends AppError {
+  constructor(message = 'Too many requests') {
+    super(429, message, 'RATE_LIMITED');
+  }
+}
+
+export class NotImplementedError extends AppError {
+  constructor(message = 'Not implemented') {
+    super(501, message, 'NOT_IMPLEMENTED');
+  }
+}

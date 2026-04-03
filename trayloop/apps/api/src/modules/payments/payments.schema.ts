@@ -1,10 +1,9 @@
 import { z } from 'zod';
 
-export const paymentStatus = z.enum(['pending', 'processing', 'succeeded', 'failed', 'refunded']);
-
-export const createCheckoutSchema = z.object({
-  orderId: z.string(),
-  paymentMethodId: z.string().optional(),
+export const paymentCheckoutSchema = z.object({
+  orderId: z.string().uuid(),
 });
 
-export type CreateCheckoutInput = z.infer<typeof createCheckoutSchema>;
+export const paymentOrderParamsSchema = z.object({
+  orderId: z.string().uuid(),
+});

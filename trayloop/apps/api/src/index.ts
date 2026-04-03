@@ -4,6 +4,7 @@ import { EventBus } from './lib/event-bus/index.js';
 import { errorHandler } from './lib/middleware/error-handler.js';
 import { registerRequestLogger } from './lib/middleware/request-logger.js';
 import { registerIdempotencyHook } from './lib/middleware/idempotency.js';
+import { applySecurityHeaders, enforceRateLimit, getAllowedOrigins } from './lib/security.js';
 import './lib/context.js';
 import { authModule } from './modules/auth/index.js';
 import { organizationsModule } from './modules/organizations/index.js';
@@ -24,11 +25,24 @@ import { storefrontModule } from './modules/storefront/index.js';
 import { webhookModule } from './modules/webhooks/index.js';
 
 export async function buildApp() {
-  const app = Fastify({ logger: false }); // We use our own logger
+  const app = Fastify({
+    logger: false,
+    trustProxy: true,
+    bodyLimit: 1024 * 1024,
+  });
   const eventBus = new EventBus();
+  const allowedOrigins = getAllowedOrigins();
 
   // Global middleware
-  await app.register(cors, { origin: true });
+  await app.register(cors, {
+    origin: allowedOrigins.length > 0 ? allowedOrigins : true,
+    credentials: true,
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Authorization', 'Content-Type', 'Idempotency-Key', 'x-organization-id'],
+    maxAge: 86400,
+  });
+  app.addHook('onRequest', applySecurityHeaders);
+  app.addHook('onRequest', enforceRateLimit);
   registerRequestLogger(app);
   registerIdempotencyHook(app);
 

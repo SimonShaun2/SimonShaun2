@@ -1,8 +1,21 @@
 import { SignJWT, jwtVerify } from 'jose';
 
-const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'dev-secret');
-if (!process.env.JWT_SECRET && typeof globalThis !== 'undefined') {
-  console.warn('[auth] JWT_SECRET not set — using insecure default. Set JWT_SECRET in production.');
+function getJwtSecret() {
+  const configuredSecret = process.env.JWT_SECRET;
+
+  if (configuredSecret) {
+    return new TextEncoder().encode(configuredSecret);
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET must be configured in production');
+  }
+
+  if (typeof globalThis !== 'undefined') {
+    console.warn('[auth] JWT_SECRET not set - using insecure default for development.');
+  }
+
+  return new TextEncoder().encode('dev-secret');
 }
 
 export interface TokenPayload {
@@ -16,10 +29,10 @@ export async function createToken(payload: TokenPayload): Promise<string> {
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(process.env.JWT_EXPIRES_IN || '7d')
-    .sign(secret);
+    .sign(getJwtSecret());
 }
 
 export async function verifyToken(token: string): Promise<TokenPayload> {
-  const { payload } = await jwtVerify(token, secret);
+  const { payload } = await jwtVerify(token, getJwtSecret());
   return payload as unknown as TokenPayload;
 }

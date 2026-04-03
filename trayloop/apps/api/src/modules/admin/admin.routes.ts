@@ -1,6 +1,8 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { requireAuth } from '../../lib/middleware/auth.js';
 import { ForbiddenError } from '../../lib/errors.js';
+import { validateBody } from '../../lib/middleware/validate.js';
+import { adminStatusBodySchema, adminStatusParamsSchema } from './admin.schema.js';
 import * as service from './admin.service.js';
 
 async function requirePlatformAdmin(request: FastifyRequest, _reply: FastifyReply) {
@@ -55,16 +57,16 @@ export function registerRoutes(app: FastifyInstance) {
   app.get('/revenue-forecast', async () => { return { data: await service.getRevenueForecast() }; });
   app.get('/churn-risk', async () => { return { data: await service.getChurnRisk() }; });
 
-  app.patch('/organizations/:id/status', async (request, reply) => {
-    const { id } = request.params as { id: string };
-    const { status } = request.body as { status: string };
+  app.patch('/organizations/:id/status', { preHandler: [validateBody(adminStatusBodySchema)] }, async (request, reply) => {
+    const { id } = adminStatusParamsSchema.parse(request.params);
+    const { status } = (request as any).validatedBody as { status: string };
     const result = await service.updateOrgStatus(id, status);
     return reply.send({ data: result });
   });
 
-  app.patch('/users/:id/status', async (request, reply) => {
-    const { id } = request.params as { id: string };
-    const { status } = request.body as { status: string };
+  app.patch('/users/:id/status', { preHandler: [validateBody(adminStatusBodySchema)] }, async (request, reply) => {
+    const { id } = adminStatusParamsSchema.parse(request.params);
+    const { status } = (request as any).validatedBody as { status: string };
     const result = await service.updateUserStatus(id, status);
     return reply.send({ data: result });
   });
