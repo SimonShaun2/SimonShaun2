@@ -30,6 +30,16 @@ export const selectedAddOnSchema = z.object({
   quantity: z.number().int().positive().default(1),
 });
 
+export const upsellAttributionSchema = z.object({
+  addOnId: z.string().uuid('Invalid add-on ID'),
+  sessionKey: z.string().min(8).max(64),
+  recommendationType: z.string().min(1).max(50),
+  suggestedQuantity: z.number().int().positive().default(1),
+  revenueCents: z.number().int().nonnegative().default(0),
+  headline: z.string().max(140).optional(),
+  reason: z.string().max(280).optional(),
+});
+
 export const recurringSettingsSchema = z.object({
   interval: z.enum(['weekly', 'biweekly', 'monthly', 'quarterly']),
   endDate: z.string().datetime().optional(),
@@ -44,6 +54,7 @@ export const createOrderSchema = z.object({
   headcount: z.number().int().positive('Headcount must be at least 1').max(10000, 'Headcount exceeds maximum'),
   packages: z.array(selectedPackageSchema).min(1, 'At least one package is required'),
   addOns: z.array(selectedAddOnSchema).optional().default([]),
+  upsellAttributions: z.array(upsellAttributionSchema).optional().default([]),
   customer: customerInfoSchema,
   deliveryAddress: deliveryAddressSchema.optional(),
   recurring: recurringSettingsSchema.optional(),
@@ -67,6 +78,13 @@ export const createOrderSchema = z.object({
     return new Set(ids).size === ids.length;
   },
   { message: 'Duplicate add-on selections are not allowed', path: ['addOns'] },
+).refine(
+  (data) => {
+    if (!data.upsellAttributions || data.upsellAttributions.length === 0) return true;
+    const ids = data.upsellAttributions.map((entry) => entry.addOnId);
+    return new Set(ids).size === ids.length;
+  },
+  { message: 'Duplicate upsell attributions are not allowed', path: ['upsellAttributions'] },
 );
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;

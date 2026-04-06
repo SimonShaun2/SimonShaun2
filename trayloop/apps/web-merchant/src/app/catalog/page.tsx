@@ -16,6 +16,9 @@ interface Package {
   minHeadCount: number | null;
   maxHeadCount: number | null;
   imageUrl: string | null;
+  upsellEligible: boolean;
+  upsellFeatured: boolean;
+  upsellPriority: number;
   isActive: boolean;
 }
 
@@ -26,6 +29,9 @@ interface AddOn {
   description: string | null;
   price: number;
   currency: string;
+  upsellEligible: boolean;
+  upsellFeatured: boolean;
+  upsellPriority: number;
   sortOrder: number;
   isActive: boolean;
 }
@@ -76,6 +82,9 @@ interface PackageFormState {
   minimumHeadcount: string;
   maximumHeadcount: string;
   imageUrl: string;
+  upsellEligible: boolean;
+  upsellFeatured: boolean;
+  upsellPriority: string;
   isActive: boolean;
 }
 
@@ -86,6 +95,9 @@ interface AddOnFormState {
   description: string;
   price: string;
   sortOrder: string;
+  upsellEligible: boolean;
+  upsellFeatured: boolean;
+  upsellPriority: string;
   isActive: boolean;
 }
 
@@ -119,6 +131,9 @@ const EMPTY_PACKAGE_FORM: PackageFormState = {
   minimumHeadcount: '10',
   maximumHeadcount: '',
   imageUrl: '',
+  upsellEligible: false,
+  upsellFeatured: false,
+  upsellPriority: '0',
   isActive: true,
 };
 
@@ -128,6 +143,9 @@ const EMPTY_ADDON_FORM: AddOnFormState = {
   description: '',
   price: '',
   sortOrder: '0',
+  upsellEligible: true,
+  upsellFeatured: false,
+  upsellPriority: '0',
   isActive: true,
 };
 
@@ -254,6 +272,9 @@ export default function CatalogPage() {
       minimumHeadcount: pkg.minHeadCount ? String(pkg.minHeadCount) : '',
       maximumHeadcount: pkg.maxHeadCount ? String(pkg.maxHeadCount) : '',
       imageUrl: pkg.imageUrl ?? '',
+      upsellEligible: pkg.upsellEligible,
+      upsellFeatured: pkg.upsellFeatured,
+      upsellPriority: String(pkg.upsellPriority ?? 0),
       isActive: pkg.isActive,
     });
     setNotice('');
@@ -279,6 +300,9 @@ export default function CatalogPage() {
       description: addOn.description ?? '',
       price: centsToDollars(addOn.price),
       sortOrder: String(addOn.sortOrder),
+      upsellEligible: addOn.upsellEligible,
+      upsellFeatured: addOn.upsellFeatured,
+      upsellPriority: String(addOn.upsellPriority ?? 0),
       isActive: addOn.isActive,
     });
     setNotice('');
@@ -377,6 +401,9 @@ export default function CatalogPage() {
           ? parseNumberField(packageForm.maximumHeadcount, 'Maximum headcount')
           : undefined,
         imageUrl: optionalValue(packageForm.imageUrl),
+        upsellEligible: packageForm.upsellEligible,
+        upsellFeatured: packageForm.upsellFeatured,
+        upsellPriority: parseNumberField(packageForm.upsellPriority, 'Upsell priority', false),
         isActive: packageForm.isActive,
       };
 
@@ -415,6 +442,9 @@ export default function CatalogPage() {
         description: optionalValue(addOnForm.description),
         price: dollarsToCents(addOnForm.price, 'Add-on price'),
         sortOrder: parseNumberField(addOnForm.sortOrder, 'Sort order', false),
+        upsellEligible: addOnForm.upsellEligible,
+        upsellFeatured: addOnForm.upsellFeatured,
+        upsellPriority: parseNumberField(addOnForm.upsellPriority, 'Upsell priority', false),
         isActive: addOnForm.isActive,
       };
 
@@ -828,6 +858,25 @@ export default function CatalogPage() {
                         placeholder="Describe what is included, how it is served, and what makes it stand out."
                       />
                     </Field>
+                    <Field label="Upsell Priority">
+                      <input
+                        value={packageForm.upsellPriority}
+                        onChange={(event) => setPackageForm((current) => ({ ...current, upsellPriority: event.target.value }))}
+                        style={inputStyle}
+                        inputMode="numeric"
+                        placeholder="0"
+                      />
+                    </Field>
+                    <ToggleRow
+                      title="Eligible for upsells"
+                      checked={packageForm.upsellEligible}
+                      onChange={(checked) => setPackageForm((current) => ({ ...current, upsellEligible: checked }))}
+                    />
+                    <ToggleRow
+                      title="Featured upsell item"
+                      checked={packageForm.upsellFeatured}
+                      onChange={(checked) => setPackageForm((current) => ({ ...current, upsellFeatured: checked }))}
+                    />
                     <ToggleRow
                       title="Package active"
                       checked={packageForm.isActive}
@@ -891,6 +940,25 @@ export default function CatalogPage() {
                         placeholder="Optional upsell details for merchants and customers."
                       />
                     </Field>
+                    <Field label="Upsell Priority">
+                      <input
+                        value={addOnForm.upsellPriority}
+                        onChange={(event) => setAddOnForm((current) => ({ ...current, upsellPriority: event.target.value }))}
+                        style={inputStyle}
+                        inputMode="numeric"
+                        placeholder="0"
+                      />
+                    </Field>
+                    <ToggleRow
+                      title="Eligible for upsells"
+                      checked={addOnForm.upsellEligible}
+                      onChange={(checked) => setAddOnForm((current) => ({ ...current, upsellEligible: checked }))}
+                    />
+                    <ToggleRow
+                      title="Featured upsell item"
+                      checked={addOnForm.upsellFeatured}
+                      onChange={(checked) => setAddOnForm((current) => ({ ...current, upsellFeatured: checked }))}
+                    />
                     <ToggleRow
                       title="Add-on active"
                       checked={addOnForm.isActive}
@@ -952,12 +1020,15 @@ function PackageRow({ pkg, onEdit }: { pkg: Package; onEdit: () => void }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 14, fontWeight: 600 }}>{pkg.name}</span>
           <StatusBadge active={pkg.isActive} activeLabel="Active" inactiveLabel="Inactive" />
+          {pkg.upsellEligible ? <FeatureBadge label="Upsell" tone="gold" /> : null}
+          {pkg.upsellFeatured ? <FeatureBadge label="Featured" tone="dark" /> : null}
         </div>
         {pkg.description ? <p style={{ fontSize: 12, color: '#78716C', margin: '4px 0' }}>{pkg.description}</p> : null}
         <div style={{ fontSize: 12, color: '#A8A29E' }}>
           {pkg.minHeadCount ? `Min ${pkg.minHeadCount}` : 'No minimum'}
           {pkg.maxHeadCount ? ` / Max ${pkg.maxHeadCount}` : ''}
           {' guests'}
+          {pkg.upsellPriority > 0 ? ` • Priority ${pkg.upsellPriority}` : ''}
         </div>
       </div>
       <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -980,8 +1051,13 @@ function AddOnCard({ addOn, onEdit }: { addOn: AddOn; onEdit: () => void }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 14, fontWeight: 600 }}>{addOn.name}</span>
           <StatusBadge active={addOn.isActive} activeLabel="Active" inactiveLabel="Inactive" />
+          {addOn.upsellEligible ? <FeatureBadge label="Upsell" tone="gold" /> : null}
+          {addOn.upsellFeatured ? <FeatureBadge label="Featured" tone="dark" /> : null}
         </div>
         {addOn.description ? <p style={{ fontSize: 12, color: '#78716C', margin: '6px 0 0' }}>{addOn.description}</p> : null}
+        {addOn.upsellPriority > 0 ? (
+          <p style={{ fontSize: 11, color: '#A8A29E', margin: '6px 0 0' }}>Priority {addOn.upsellPriority}</p>
+        ) : null}
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, gap: 12 }}>
         <span style={{ fontSize: 16, fontWeight: 700, color: '#D4A853' }}>${(addOn.price / 100).toFixed(2)}</span>
@@ -990,6 +1066,23 @@ function AddOnCard({ addOn, onEdit }: { addOn: AddOn; onEdit: () => void }) {
         </button>
       </div>
     </div>
+  );
+}
+
+function FeatureBadge({ label, tone }: { label: string; tone: 'gold' | 'dark' }) {
+  return (
+    <span
+      style={{
+        fontSize: 11,
+        fontWeight: 700,
+        padding: '2px 8px',
+        borderRadius: 999,
+        background: tone === 'gold' ? '#FEF3C7' : '#E7E5E4',
+        color: tone === 'gold' ? '#92400E' : '#1C1917',
+      }}
+    >
+      {label}
+    </span>
   );
 }
 

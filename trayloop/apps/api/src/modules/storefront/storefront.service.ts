@@ -10,9 +10,11 @@ import {
   addOns,
   deposits,
   orders,
+  upsellEvents,
 } from '@trayloop/database';
 import { eq, and, desc } from 'drizzle-orm';
 import { NotFoundError } from '../../lib/errors.js';
+import { buildUpsellRecommendations } from '../../lib/upsells.js';
 import { create as createOrder, createDepositCheckoutForOrder } from '../orders/orders.service.js';
 import type { CreateOrderInput } from '../orders/orders.schema.js';
 import type { EventBus } from '../../lib/event-bus/index.js';
@@ -161,6 +163,9 @@ export async function getStorefront(slug: string) {
         minHeadCount: packages.minHeadCount,
         maxHeadCount: packages.maxHeadCount,
         imageUrl: packages.imageUrl,
+        upsellEligible: packages.upsellEligible,
+        upsellFeatured: packages.upsellFeatured,
+        upsellPriority: packages.upsellPriority,
         sortOrder: packages.sortOrder,
       })
       .from(packages)
@@ -184,6 +189,9 @@ export async function getStorefront(slug: string) {
         description: addOns.description,
         price: addOns.price,
         currency: addOns.currency,
+        upsellEligible: addOns.upsellEligible,
+        upsellFeatured: addOns.upsellFeatured,
+        upsellPriority: addOns.upsellPriority,
         sortOrder: addOns.sortOrder,
       })
       .from(addOns)
@@ -221,6 +229,9 @@ export async function getStorefront(slug: string) {
         minimumHeadcount: pkg.minHeadCount,
         maximumHeadcount: pkg.maxHeadCount,
         imageUrl: pkg.imageUrl,
+        upsellEligible: pkg.upsellEligible,
+        upsellFeatured: pkg.upsellFeatured,
+        upsellPriority: pkg.upsellPriority,
         includes: items,
       };
     });
@@ -246,6 +257,9 @@ export async function getStorefront(slug: string) {
       description: a.description,
       price: a.price,
       currency: a.currency,
+      upsellEligible: a.upsellEligible,
+      upsellFeatured: a.upsellFeatured,
+      upsellPriority: a.upsellPriority,
     }));
 
   // 9. Assemble menu per catalog
@@ -374,6 +388,125 @@ export async function submitPublicOrder(slug: string, input: CreateOrderInput, e
       stripeCheckoutSessionId: checkout.stripeCheckoutSessionId,
     },
   };
+}
+
+interface StorefrontUpsellRequestInput {
+  locationId: string;
+  serviceType: 'delivery' | 'pickup' | 'full_service' | 'on_site' | 'food_truck';
+  headcount: number;
+  packages: Array<{ packageId: string; quantity: number }>;
+  addOns?: Array<{ addOnId: string; quantity: number }>;
+}
+
+interface StorefrontUpsellTrackInput {
+  sessionKey: string;
+  locationId?: string;
+  addOnId: string;
+  eventType: 'shown' | 'clicked';
+  recommendationType: string;
+  suggestedQuantity: number;
+  revenueCents: number;
+  headline?: string;
+  reason?: string;
+}
+
+export async function getStorefrontUpsellRecommendations(
+  slug: string,
+  input: StorefrontUpsellRequestInput,
+) {
+  const storefront = await getStorefront(slug);
+  const locationExists = storefront.locations.some((location) => location.slug === input.locationId);
+
+  if (!locationExists) {
+    throw new NotFoundError('Location');
+  }
+
+  const allPackages = storefront.menu.flatMap((section) => [
+    ...section.categories.flatMap((category) => category.packages),
+    ...section.uncategorizedPackages,
+  ]);
+  const allAddOns = storefront.menu.flatMap((section) => section.addOns);
+  const packageMap = new Map(allPackages.map((pkg) => [pkg.id, pkg]));
+  const addOnMap = new Map(allAddOns.map((addOn) => [addOn.id, addOn]));
+
+  const subtotalCents =
+    input.packages.reduce((sum, selection) => {
+      const pkg = packageMap.get(selection.packageId);
+      return sum + (pkg ? pkg.pricePerHead * input.headcount * selection.quantity : 0);
+    }, 0) +
+    (input.addOns ?? []).reduce((sum, selection) => {
+      const addOn = addOnMap.get(selection.addOnId);
+      return sum + (addOn ? addOn.price * selection.quantity : 0);
+    }, 0);
+
+  return buildUpsellRecommendations({
+    merchantName: storefront.merchant.name,
+    serviceType: input.serviceType,
+    headcount: input.headcount,
+    subtotalCents,
+    selectedPackages: input.packages
+      .map((selection) => {
+        const pkg = packageMap.get(selection.packageId);
+        return pkg ? { id: pkg.id, name: pkg.name } : null;
+      })
+      .filter((pkg): pkg is { id: string; name: string } => Boolean(pkg)),
+    selectedAddOnIds: (input.addOns ?? []).map((selection) => selection.addOnId),
+    candidateAddOns: allAddOns,
+  });
+}
+
+export async function trackStorefrontUpsellEvent(
+  slug: string,
+  input: StorefrontUpsellTrackInput,
+) {
+  const [org] = await db
+    .select({ id: organizations.id })
+    .from(organizations)
+    .where(and(eq(organizations.slug, slug), eq(organizations.isActive, true)))
+    .limit(1);
+
+  if (!org) {
+    throw new NotFoundError('Storefront');
+  }
+
+  const [validAddOn] = await db
+    .select({ id: addOns.id })
+    .from(addOns)
+    .innerJoin(catalogs, eq(catalogs.id, addOns.catalogId))
+    .where(and(eq(addOns.id, input.addOnId), eq(catalogs.organizationId, org.id)))
+    .limit(1);
+
+  if (!validAddOn) {
+    throw new NotFoundError('Add-on');
+  }
+
+  if (input.locationId) {
+    const [validLocation] = await db
+      .select({ id: locations.id })
+      .from(locations)
+      .where(and(eq(locations.id, input.locationId), eq(locations.organizationId, org.id)))
+      .limit(1);
+
+    if (!validLocation) {
+      throw new NotFoundError('Location');
+    }
+  }
+
+  await db.insert(upsellEvents).values({
+    organizationId: org.id,
+    locationId: input.locationId ?? null,
+    orderId: null,
+    addOnId: input.addOnId,
+    sessionKey: input.sessionKey,
+    eventType: input.eventType,
+    recommendationType: input.recommendationType,
+    suggestedQuantity: input.suggestedQuantity,
+    revenueCents: input.revenueCents,
+    headline: input.headline ?? null,
+    reason: input.reason ?? null,
+  });
+
+  return { ok: true };
 }
 
 function getStorefrontBaseUrl() {

@@ -9,6 +9,7 @@ import {
   locationSettings,
   deposits,
   organizations,
+  upsellEvents,
 } from '@trayloop/database';
 import { eq, and, gte, lte, desc, sql } from 'drizzle-orm';
 import { ValidationError, NotFoundError } from '../../lib/errors.js';
@@ -247,6 +248,19 @@ export async function getOrderStats(orgId: string) {
     .from(orders)
     .where(and(eq(orders.organizationId, orgId), gte(orders.createdAt, sevenDaysAgo)));
 
+  const [upsellMetrics] = await db
+    .select({
+      shown: sql<number>`count(case when event_type = 'shown' then 1 end)::int`,
+      accepted: sql<number>`count(case when event_type = 'accepted' then 1 end)::int`,
+      revenue: sql<number>`coalesce(sum(case when event_type = 'accepted' then revenue_cents else 0 end), 0)::int`,
+    })
+    .from(upsellEvents)
+    .where(eq(upsellEvents.organizationId, orgId));
+
+  const upsellAttachRate = upsellMetrics.shown > 0
+    ? Math.round((upsellMetrics.accepted / upsellMetrics.shown) * 100)
+    : 0;
+
   return {
     totalOrders: totals.totalOrders,
     totalRevenue: totals.totalRevenue,
@@ -260,6 +274,10 @@ export async function getOrderStats(orgId: string) {
     repeatCustomers: customerStats.repeatCustomers,
     dailyRevenue,
     locationBreakdown,
+    upsellShown: upsellMetrics.shown,
+    upsellAccepted: upsellMetrics.accepted,
+    upsellRevenue: upsellMetrics.revenue,
+    upsellAttachRate,
   };
 }
 
@@ -1185,6 +1203,36 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
         totalPrice: item.totalPrice,
       })),
     );
+
+    const acceptedUpsellIds = new Set((input.addOns ?? []).map((addOn) => addOn.addOnId));
+    const acceptedUpsellAttributions = (input.upsellAttributions ?? [])
+      .filter((entry) => acceptedUpsellIds.has(entry.addOnId));
+
+    if (acceptedUpsellAttributions.length > 0) {
+      const addOnRevenueById = new Map(
+        lineItems
+          .filter((item) => item.type === 'add_on' && item.referenceId)
+          .map((item) => [item.referenceId as string, item.totalPrice]),
+      );
+
+      await tx.insert(upsellEvents).values(
+        acceptedUpsellAttributions.map((entry) => ({
+          organizationId: orgId,
+          locationId: input.locationId,
+          orderId: order.id,
+          addOnId: entry.addOnId,
+          sessionKey: entry.sessionKey,
+          eventType: 'accepted',
+          recommendationType: entry.recommendationType,
+          suggestedQuantity: entry.suggestedQuantity,
+          revenueCents: entry.revenueCents > 0
+            ? entry.revenueCents
+            : addOnRevenueById.get(entry.addOnId) ?? 0,
+          headline: entry.headline ?? null,
+          reason: entry.reason ?? null,
+        })),
+      );
+    }
 
     // 5e. Create recurring order if requested
     let recurringOrderId: string | null = null;

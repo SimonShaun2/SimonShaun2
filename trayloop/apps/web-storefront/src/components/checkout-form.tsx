@@ -1,9 +1,23 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import type { StorefrontData, OrderSubmission, OrderConfirmation, PublicOrderPaymentStatus } from '../lib/api';
-import { fetchCustomerAccount, fetchOrderPaymentStatus, restartDepositCheckout, submitOrder, OrderError } from '../lib/api';
+import type {
+  StorefrontData,
+  OrderSubmission,
+  OrderConfirmation,
+  PublicOrderPaymentStatus,
+  StorefrontUpsellRecommendation,
+} from '../lib/api';
+import {
+  fetchCustomerAccount,
+  fetchOrderPaymentStatus,
+  restartDepositCheckout,
+  submitOrder,
+  fetchStorefrontUpsells,
+  trackStorefrontUpsell,
+  OrderError,
+} from '../lib/api';
 import { useMobile } from '../lib/use-mobile';
 
 interface Props {
@@ -217,6 +231,11 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
   const [headcount, setHeadcount] = useState(10);
   const [selectedPkgs, setSelectedPkgs] = useState<Record<string, number>>({});
   const [selectedAddOnIds, setSelectedAddOnIds] = useState<Record<string, number>>({});
+  const [upsellRecommendations, setUpsellRecommendations] = useState<StorefrontUpsellRecommendation[]>([]);
+  const [upsellLoading, setUpsellLoading] = useState(false);
+  const [acceptedUpsellMap, setAcceptedUpsellMap] = useState<
+    Record<string, NonNullable<OrderSubmission['upsellAttributions']>[number]>
+  >({});
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -240,6 +259,12 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
   const [returnedPaymentStatus, setReturnedPaymentStatus] = useState<PublicOrderPaymentStatus | null>(null);
   const [paymentStatusError, setPaymentStatusError] = useState('');
   const [retryingCheckout, setRetryingCheckout] = useState(false);
+  const upsellSessionKey = useMemo(
+    () => globalThis.crypto?.randomUUID?.() ?? `upsell-${Math.random().toString(36).slice(2, 12)}`,
+    [],
+  );
+  const shownUpsellKeysRef = useRef<Set<string>>(new Set());
+  const clickedUpsellKeysRef = useRef<Set<string>>(new Set());
   const searchParams = useSearchParams();
 
   const selectedLocation = locations.find((l) => l.slug === selectedLocationSlug) ?? locations[0] ?? null;
@@ -368,13 +393,153 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
     });
   };
 
+  const removeAcceptedUpsell = useCallback((addOnId: string) => {
+    setAcceptedUpsellMap((current) => {
+      if (!current[addOnId]) {
+        return current;
+      }
+
+      const next = { ...current };
+      delete next[addOnId];
+      return next;
+    });
+  }, []);
+
   const toggleAddOn = (id: string) => {
     setSelectedAddOnIds((prev) => {
       const next = { ...prev };
-      if (next[id]) { delete next[id]; } else { next[id] = 1; }
+      if (next[id]) {
+        delete next[id];
+        removeAcceptedUpsell(id);
+      } else {
+        next[id] = 1;
+      }
       return next;
     });
   };
+
+  const pkgSelections = useMemo(
+    () => Object.entries(selectedPkgs).map(([packageId, quantity]) => ({ packageId, quantity })),
+    [selectedPkgs],
+  );
+  const addOnSelections = useMemo(
+    () => Object.entries(selectedAddOnIds).map(([addOnId, quantity]) => ({ addOnId, quantity })),
+    [selectedAddOnIds],
+  );
+
+  const hasPackages = pkgSelections.length > 0;
+
+  useEffect(() => {
+    if (!selectedLocationSlug || pkgSelections.length === 0) {
+      setUpsellRecommendations([]);
+      setUpsellLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setUpsellLoading(true);
+
+    void fetchStorefrontUpsells(data.merchant.slug, {
+      locationId: selectedLocationSlug,
+      serviceType,
+      headcount,
+      packages: pkgSelections,
+      addOns: addOnSelections.length > 0 ? addOnSelections : undefined,
+    })
+      .then(async (recommendations) => {
+        if (cancelled) {
+          return;
+        }
+
+        setUpsellRecommendations(recommendations);
+
+        await Promise.all(
+          recommendations.map(async (recommendation) => {
+            const key = `${recommendation.addOnId}:${recommendation.recommendationType}`;
+
+            if (shownUpsellKeysRef.current.has(key)) {
+              return;
+            }
+
+            shownUpsellKeysRef.current.add(key);
+
+            try {
+              await trackStorefrontUpsell(data.merchant.slug, {
+                sessionKey: upsellSessionKey,
+                locationId: selectedLocationSlug,
+                addOnId: recommendation.addOnId,
+                eventType: 'shown',
+                recommendationType: recommendation.recommendationType,
+                suggestedQuantity: recommendation.suggestedQuantity,
+                revenueCents: recommendation.totalPrice,
+                headline: recommendation.headline,
+                reason: recommendation.reason,
+              });
+            } catch {
+              // Safe to ignore analytics tracking failures in checkout.
+            }
+          }),
+        );
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setUpsellRecommendations([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setUpsellLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    selectedLocationSlug,
+    pkgSelections,
+    addOnSelections,
+    serviceType,
+    headcount,
+    data.merchant.slug,
+    upsellSessionKey,
+  ]);
+
+  const applyUpsellRecommendation = useCallback((recommendation: StorefrontUpsellRecommendation) => {
+    setSelectedAddOnIds((current) => ({
+      ...current,
+      [recommendation.addOnId]: Math.max(current[recommendation.addOnId] ?? 0, recommendation.suggestedQuantity),
+    }));
+
+    setAcceptedUpsellMap((current) => ({
+      ...current,
+      [recommendation.addOnId]: {
+        addOnId: recommendation.addOnId,
+        sessionKey: upsellSessionKey,
+        recommendationType: recommendation.recommendationType,
+        suggestedQuantity: recommendation.suggestedQuantity,
+        revenueCents: recommendation.totalPrice,
+        headline: recommendation.headline,
+        reason: recommendation.reason,
+      },
+    }));
+
+    const key = `${recommendation.addOnId}:${recommendation.recommendationType}`;
+    if (!clickedUpsellKeysRef.current.has(key)) {
+      clickedUpsellKeysRef.current.add(key);
+      void trackStorefrontUpsell(data.merchant.slug, {
+        sessionKey: upsellSessionKey,
+        locationId: selectedLocationSlug || undefined,
+        addOnId: recommendation.addOnId,
+        eventType: 'clicked',
+        recommendationType: recommendation.recommendationType,
+        suggestedQuantity: recommendation.suggestedQuantity,
+        revenueCents: recommendation.totalPrice,
+        headline: recommendation.headline,
+        reason: recommendation.reason,
+      }).catch(() => {});
+    }
+  }, [data.merchant.slug, selectedLocationSlug, upsellSessionKey]);
 
   // Estimate (client-side for display only — server recalculates)
   const PLATFORM_FEE_PERCENT = 5;
@@ -396,9 +561,6 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
     setFieldErrors([]);
     setSubmitting(true);
 
-    const pkgSelections = Object.entries(selectedPkgs).map(([packageId, quantity]) => ({ packageId, quantity }));
-    const addOnSelections = Object.entries(selectedAddOnIds).map(([addOnId, quantity]) => ({ addOnId, quantity }));
-
     // Combine date + time into a single datetime string for the API
     const combinedDateTime = eventTime ? `${eventDate}T${eventTime}` : eventDate;
 
@@ -409,6 +571,8 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
       headcount,
       packages: pkgSelections,
       addOns: addOnSelections.length > 0 ? addOnSelections : undefined,
+      upsellAttributions: Object.values(acceptedUpsellMap)
+        .filter((entry) => addOnSelections.some((selection) => selection.addOnId === entry.addOnId)),
       customer: {
         firstName,
         lastName,
@@ -446,7 +610,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
     } finally {
       setSubmitting(false);
     }
-  }, [submitting, selectedLocationSlug, serviceType, eventDate, eventTime, headcount, selectedPkgs, selectedAddOnIds, firstName, lastName, email, phone, companyName, address, city, state, zipCode, notes, recurringEnabled, recurringInterval, recurringDays, locations, data.merchant.slug]);
+  }, [submitting, selectedLocationSlug, serviceType, eventDate, eventTime, headcount, pkgSelections, addOnSelections, acceptedUpsellMap, firstName, lastName, email, phone, companyName, address, city, state, zipCode, notes, recurringEnabled, recurringInterval, recurringDays, locations, data.merchant.slug]);
 
   /* ── Confirmation state ── */
   async function handleRetryCheckout() {
@@ -637,7 +801,6 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
   }
 
   /* ── Helpers ── */
-  const hasPackages = Object.keys(selectedPkgs).length > 0;
   const canSubmit = !submitting && hasPackages && eventDate && !!selectedLocationSlug;
   const minOrder = selectedLocation?.minimumOrderAmount ? formatCurrencyAmount(selectedLocation.minimumOrderAmount) : null;
   const leadTime = selectedLocation?.leadTimeHours ?? null;
@@ -1238,6 +1401,87 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {(upsellLoading || upsellRecommendations.length > 0) && (
+          <div style={cardStyle}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
+              <div>
+                <h2 style={sectionTitleStyle}>Recommended Add-Ons</h2>
+                <p style={sectionSubtitleStyle}>Relevant extras based on this order and guest count</p>
+              </div>
+              {upsellLoading ? (
+                <span style={{ fontSize: 12, color: T.textMuted }}>Loading...</span>
+              ) : null}
+            </div>
+
+            {upsellRecommendations.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
+                {upsellRecommendations.map((recommendation) => {
+                  const alreadySelected = Boolean(selectedAddOnIds[recommendation.addOnId]);
+                  return (
+                    <div
+                      key={`${recommendation.addOnId}:${recommendation.recommendationType}`}
+                      style={{
+                        border: `1px solid ${alreadySelected ? T.gold : T.cardBorder}`,
+                        borderRadius: 12,
+                        padding: '16px 18px',
+                        background: alreadySelected ? 'rgba(212,168,83,0.05)' : '#FFFCF5',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        gap: 16,
+                        alignItems: 'flex-start',
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <div style={{ flex: '1 1 280px' }}>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: T.textPrimary }}>
+                          {recommendation.headline}
+                        </div>
+                        <div style={{ fontSize: 13, color: T.textMuted, marginTop: 4, lineHeight: 1.55 }}>
+                          {recommendation.reason}
+                        </div>
+                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
+                          <span style={locationMetaChipStyle}>
+                            Qty {recommendation.suggestedQuantity}
+                          </span>
+                          <span style={locationMetaChipStyle}>
+                            {formatCurrencyAmount(recommendation.totalPrice)}
+                          </span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
+                        <button
+                          type="button"
+                          onClick={() => applyUpsellRecommendation(recommendation)}
+                          disabled={alreadySelected}
+                          style={{
+                            border: 'none',
+                            borderRadius: 10,
+                            background: alreadySelected ? '#D6D3D1' : T.textPrimary,
+                            color: '#FFFFFF',
+                            padding: '11px 16px',
+                            fontSize: 13,
+                            fontWeight: 700,
+                            cursor: alreadySelected ? 'default' : 'pointer',
+                          }}
+                        >
+                          {alreadySelected ? 'Added' : 'Add to Order'}
+                        </button>
+                        <span style={{ fontSize: 12, color: T.textMuted }}>
+                          {recommendation.name}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : !upsellLoading ? (
+              <p style={{ margin: '16px 0 0', fontSize: 13, color: T.textMuted, lineHeight: 1.6 }}>
+                Add a package first and TrayLoop will look for strong add-on opportunities for this order.
+              </p>
+            ) : null}
           </div>
         )}
 

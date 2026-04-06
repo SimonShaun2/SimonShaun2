@@ -28,6 +28,41 @@ const pricingPreviewSchema = z.object({
   locationId: z.string().uuid().optional(),
 });
 
+const upsellRequestSchema = z.object({
+  locationId: z.string().uuid(),
+  serviceType: z.enum(['delivery', 'pickup', 'full_service', 'on_site', 'food_truck']),
+  headcount: z.number().int().positive(),
+  packages: z
+    .array(
+      z.object({
+        packageId: z.string().uuid(),
+        quantity: z.number().int().positive().default(1),
+      }),
+    )
+    .min(1),
+  addOns: z
+    .array(
+      z.object({
+        addOnId: z.string().uuid(),
+        quantity: z.number().int().positive().default(1),
+      }),
+    )
+    .optional()
+    .default([]),
+});
+
+const upsellTrackSchema = z.object({
+  sessionKey: z.string().min(8).max(64),
+  locationId: z.string().uuid().optional(),
+  addOnId: z.string().uuid(),
+  eventType: z.enum(['shown', 'clicked']),
+  recommendationType: z.string().min(1).max(50),
+  suggestedQuantity: z.number().int().positive().default(1),
+  revenueCents: z.number().int().nonnegative().default(0),
+  headline: z.string().max(140).optional(),
+  reason: z.string().max(280).optional(),
+});
+
 export function registerRoutes(app: FastifyInstance) {
   app.get('/:slug', async (request) => {
     const { slug } = request.params as { slug: string };
@@ -79,6 +114,20 @@ export function registerRoutes(app: FastifyInstance) {
     const body = createOrderSchema.parse(request.body);
     const customerUserId = request.ctx?.user?.role === 'customer' ? request.ctx.user.id : undefined;
     const result = await service.submitPublicOrder(slug, body, (app as any).eventBus, customerUserId);
+    return reply.status(201).send({ data: result });
+  });
+
+  app.post('/:slug/upsells', async (request) => {
+    const { slug } = request.params as { slug: string };
+    const body = upsellRequestSchema.parse(request.body);
+    const result = await service.getStorefrontUpsellRecommendations(slug, body);
+    return { data: result };
+  });
+
+  app.post('/:slug/upsells/track', async (request, reply) => {
+    const { slug } = request.params as { slug: string };
+    const body = upsellTrackSchema.parse(request.body);
+    const result = await service.trackStorefrontUpsellEvent(slug, body);
     return reply.status(201).send({ data: result });
   });
 

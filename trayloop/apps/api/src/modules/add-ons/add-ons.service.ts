@@ -11,6 +11,9 @@ interface AddOnDto {
   description: string | null;
   price: number;
   currency: string;
+  upsellEligible: boolean;
+  upsellFeatured: boolean;
+  upsellPriority: number;
   isActive: boolean;
   sortOrder: number;
   createdAt: Date;
@@ -25,6 +28,9 @@ function toDto(a: typeof addOns.$inferSelect): AddOnDto {
     description: a.description,
     price: a.price,
     currency: a.currency,
+    upsellEligible: a.upsellEligible,
+    upsellFeatured: a.upsellFeatured,
+    upsellPriority: a.upsellPriority,
     isActive: a.isActive,
     sortOrder: a.sortOrder,
     createdAt: a.createdAt,

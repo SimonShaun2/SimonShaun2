@@ -40,6 +40,9 @@ export interface StorefrontPackage {
   minimumHeadcount: number | null;
   maximumHeadcount: number | null;
   imageUrl: string | null;
+  upsellEligible?: boolean;
+  upsellFeatured?: boolean;
+  upsellPriority?: number;
   includes: StorefrontPackageItem[];
 }
 
@@ -56,6 +59,21 @@ export interface StorefrontAddOn {
   description: string | null;
   price: number;
   currency: string;
+  upsellEligible?: boolean;
+  upsellFeatured?: boolean;
+  upsellPriority?: number;
+}
+
+export interface StorefrontUpsellRecommendation {
+  addOnId: string;
+  name: string;
+  headline: string;
+  reason: string;
+  recommendationType: string;
+  suggestedQuantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  score: number;
 }
 
 export interface StorefrontMenu {
@@ -104,6 +122,15 @@ export interface OrderSubmission {
   headcount: number;
   packages: Array<{ packageId: string; quantity: number }>;
   addOns?: Array<{ addOnId: string; quantity: number }>;
+  upsellAttributions?: Array<{
+    addOnId: string;
+    sessionKey: string;
+    recommendationType: string;
+    suggestedQuantity: number;
+    revenueCents: number;
+    headline?: string;
+    reason?: string;
+  }>;
   customer: {
     firstName: string;
     lastName: string;
@@ -312,6 +339,51 @@ export async function loginCustomer(email: string, password: string): Promise<Cu
   }
 
   return json.data;
+}
+
+export async function fetchStorefrontUpsells(
+  slug: string,
+  payload: {
+    locationId: string;
+    serviceType: OrderSubmission['serviceType'];
+    headcount: number;
+    packages: Array<{ packageId: string; quantity: number }>;
+    addOns?: Array<{ addOnId: string; quantity: number }>;
+  },
+): Promise<StorefrontUpsellRecommendation[]> {
+  const res = await fetch(`${API_URL}/api/storefront/${slug}/upsells`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to load upsells: ${res.status}`);
+  }
+
+  const json = await res.json();
+  return json.data;
+}
+
+export async function trackStorefrontUpsell(
+  slug: string,
+  payload: {
+    sessionKey: string;
+    locationId?: string;
+    addOnId: string;
+    eventType: 'shown' | 'clicked';
+    recommendationType: string;
+    suggestedQuantity: number;
+    revenueCents: number;
+    headline?: string;
+    reason?: string;
+  },
+) {
+  await fetch(`${API_URL}/api/storefront/${slug}/upsells/track`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function fetchOrderPaymentStatus(slug: string, orderId: string): Promise<PublicOrderPaymentStatus> {

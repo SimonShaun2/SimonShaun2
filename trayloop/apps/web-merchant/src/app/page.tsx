@@ -50,6 +50,10 @@ interface Stats {
   avgOrderValue: number;
   totalCustomers: number;
   repeatCustomers: number;
+  upsellShown: number;
+  upsellAccepted: number;
+  upsellRevenue: number;
+  upsellAttachRate: number;
   dailyRevenue: DailyRevenue[];
   locationBreakdown: LocationBreakdown[];
 }
@@ -223,6 +227,18 @@ export default function DashboardPage() {
           label="Total Customers"
           value={stats?.totalCustomers ?? '...'}
           sub={stats ? `${stats.repeatCustomers} returning` : ''}
+          accent="#E7E5E4"
+        />
+        <KpiCard
+          label="Upsell Revenue"
+          value={stats ? `$${(stats.upsellRevenue / 100).toFixed(0)}` : '...'}
+          sub={stats ? `${stats.upsellAccepted} accepted` : 'Add-on lift'}
+          accent="#E7E5E4"
+        />
+        <KpiCard
+          label="Upsell Attach Rate"
+          value={stats ? `${stats.upsellAttachRate}%` : '...'}
+          sub={stats ? `${stats.upsellShown} shown` : 'Checkout attach rate'}
           accent="#E7E5E4"
         />
       </div>

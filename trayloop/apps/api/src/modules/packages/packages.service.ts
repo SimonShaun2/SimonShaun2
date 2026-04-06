@@ -16,6 +16,9 @@ interface PackageDto {
   minimumHeadcount: number | null;
   maximumHeadcount: number | null;
   imageUrl: string | null;
+  upsellEligible: boolean;
+  upsellFeatured: boolean;
+  upsellPriority: number;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -37,6 +40,9 @@ function toDto(
     minimumHeadcount: pkg.minHeadCount,
     maximumHeadcount: pkg.maxHeadCount,
     imageUrl: pkg.imageUrl,
+    upsellEligible: pkg.upsellEligible,
+    upsellFeatured: pkg.upsellFeatured,
+    upsellPriority: pkg.upsellPriority,
     isActive: pkg.isActive,
     createdAt: pkg.createdAt,
     updatedAt: pkg.updatedAt,
@@ -87,7 +93,15 @@ export async function create(orgId: string, input: CreatePackageInput) {
     throw new NotFoundError('Catalog');
   }
 
-  const { pricePerHead, minimumHeadcount, maximumHeadcount, ...rest } = input;
+  const {
+    pricePerHead,
+    minimumHeadcount,
+    maximumHeadcount,
+    upsellEligible,
+    upsellFeatured,
+    upsellPriority,
+    ...rest
+  } = input;
 
   const [pkg] = await db
     .insert(packages)
@@ -97,6 +111,9 @@ export async function create(orgId: string, input: CreatePackageInput) {
       price: pricePerHead,
       minHeadCount: minimumHeadcount ?? 1,
       maxHeadCount: maximumHeadcount ?? null,
+      upsellEligible,
+      upsellFeatured,
+      upsellPriority,
     })
     .returning();
 
@@ -114,6 +131,9 @@ export async function update(id: string, input: UpdatePackageInput) {
   if (input.categoryId !== undefined) updateData.categoryId = input.categoryId;
   if (input.currency !== undefined) updateData.currency = input.currency;
   if (input.imageUrl !== undefined) updateData.imageUrl = input.imageUrl;
+  if (input.upsellEligible !== undefined) updateData.upsellEligible = input.upsellEligible;
+  if (input.upsellFeatured !== undefined) updateData.upsellFeatured = input.upsellFeatured;
+  if (input.upsellPriority !== undefined) updateData.upsellPriority = input.upsellPriority;
   if (input.isActive !== undefined) updateData.isActive = input.isActive;
 
   const [updated] = await db

@@ -11,6 +11,11 @@ export interface GeneratedCampaignMessage {
   };
 }
 
+export interface GeneratedUpsellCopy {
+  headline: string;
+  reason: string;
+}
+
 interface GenerateCampaignMessageInput {
   merchantName: string;
   segment: 'frequent' | 'at_risk' | 'dormant';
@@ -28,6 +33,19 @@ interface GenerateCampaignMessageInput {
   }>;
   goalNotes?: string;
   toneNotes?: string;
+}
+
+interface GenerateUpsellCopyInput {
+  merchantName: string;
+  addOnName: string;
+  addOnDescription?: string | null;
+  recommendationType: string;
+  headcount: number;
+  serviceType: 'delivery' | 'pickup' | 'full_service' | 'on_site' | 'food_truck';
+  suggestedQuantity: number;
+  unitPriceCents: number;
+  orderSubtotalCents: number;
+  selectedPackageNames: string[];
 }
 
 interface OpenAIErrorResponse {
@@ -87,11 +105,33 @@ interface CampaignPromptPayload {
   };
 }
 
+interface UpsellPromptPayload {
+  brand: string;
+  positioning: string;
+  merchantName: string;
+  addOnName: string;
+  addOnDescription: string | null;
+  recommendationType: string;
+  serviceType: string;
+  headcount: number;
+  suggestedQuantity: number;
+  price: string;
+  orderSubtotal: string;
+  selectedPackages: string[];
+  requirements: {
+    outputFormat: string;
+    writingStyle: string;
+    constraints: string[];
+  };
+}
+
 type ParsedCampaignPayload = Partial<GeneratedCampaignMessage> & {
   recommendedSendWindow?: string;
   recommendedTone?: string;
   timingReason?: string;
 };
+
+type ParsedUpsellPayload = Partial<GeneratedUpsellCopy>;
 
 const CAMPAIGN_RESPONSE_SCHEMA = {
   name: 'campaign_message',
@@ -115,6 +155,20 @@ const CAMPAIGN_RESPONSE_SCHEMA = {
       'recommendedTone',
       'timingReason',
     ],
+  },
+} as const;
+
+const UPSELL_RESPONSE_SCHEMA = {
+  name: 'upsell_copy',
+  strict: true,
+  schema: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      headline: { type: 'string' },
+      reason: { type: 'string' },
+    },
+    required: ['headline', 'reason'],
   },
 } as const;
 
@@ -205,6 +259,43 @@ function buildCampaignPrompt(input: GenerateCampaignMessageInput): CampaignPromp
   };
 }
 
+function formatServiceType(serviceType: GenerateUpsellCopyInput['serviceType']) {
+  if (serviceType === 'full_service') return 'full service';
+  if (serviceType === 'on_site') return 'on-site';
+  if (serviceType === 'food_truck') return 'food truck';
+  return serviceType;
+}
+
+function buildUpsellPrompt(input: GenerateUpsellCopyInput): UpsellPromptPayload {
+  return {
+    brand: 'TrayLoop',
+    positioning:
+      'TrayLoop helps restaurants generate predictable catering revenue. The copy should feel helpful, direct, and grounded in a real catering order.',
+    merchantName: input.merchantName,
+    addOnName: input.addOnName,
+    addOnDescription: input.addOnDescription?.trim() || null,
+    recommendationType: input.recommendationType,
+    serviceType: formatServiceType(input.serviceType),
+    headcount: input.headcount,
+    suggestedQuantity: input.suggestedQuantity,
+    price: formatCurrency(input.unitPriceCents * input.suggestedQuantity),
+    orderSubtotal: formatCurrency(input.orderSubtotalCents),
+    selectedPackages: input.selectedPackageNames.slice(0, 5),
+    requirements: {
+      outputFormat: 'Return strict JSON with keys headline and reason.',
+      writingStyle:
+        'Write short storefront upsell copy that feels like a useful recommendation during checkout, not an ad.',
+      constraints: [
+        'Do not mention AI.',
+        'Do not use emojis.',
+        'Headline must be under 60 characters.',
+        'Reason must be under 120 characters.',
+        'Do not be cheesy, generic, or spammy.',
+      ],
+    },
+  };
+}
+
 function parseOpenAIError(text: string): OpenAIErrorResponse['error'] {
   try {
     const parsed = JSON.parse(text) as OpenAIErrorResponse;
@@ -276,6 +367,24 @@ function parseGeneratedContent(content: string): GeneratedCampaignMessage {
       tone: parsed.recommendedTone.trim(),
       rationale: parsed.timingReason.trim(),
     },
+  };
+}
+
+function parseGeneratedUpsellContent(content: string): GeneratedUpsellCopy {
+  let parsed: ParsedUpsellPayload;
+  try {
+    parsed = JSON.parse(content) as ParsedUpsellPayload;
+  } catch {
+    throw new Error('OpenAI returned malformed upsell content.');
+  }
+
+  if (!parsed.headline || !parsed.reason) {
+    throw new Error('OpenAI returned incomplete upsell content.');
+  }
+
+  return {
+    headline: parsed.headline.trim(),
+    reason: parsed.reason.trim(),
   };
 }
 
@@ -362,6 +471,89 @@ async function requestChatCompletionsApi(
   return parseGeneratedContent(content);
 }
 
+async function requestUpsellResponsesApi(
+  apiKey: string,
+  prompt: UpsellPromptPayload,
+): Promise<GeneratedUpsellCopy> {
+  const response = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: getModel(),
+      temperature: 0.5,
+      instructions:
+        'You write concise storefront upsell copy for restaurant catering checkout. Return only valid JSON.',
+      input: JSON.stringify(prompt),
+      text: {
+        format: {
+          type: 'json_schema',
+          name: UPSELL_RESPONSE_SCHEMA.name,
+          strict: UPSELL_RESPONSE_SCHEMA.strict,
+          schema: UPSELL_RESPONSE_SCHEMA.schema,
+        },
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    await throwOpenAIResponseError(response);
+  }
+
+  const data = (await response.json()) as OpenAIResponsesApiResponse;
+  const content = extractResponsesText(data);
+
+  if (!content) {
+    throw new Error('OpenAI returned an empty upsell response.');
+  }
+
+  return parseGeneratedUpsellContent(content);
+}
+
+async function requestUpsellChatCompletionsApi(
+  apiKey: string,
+  prompt: UpsellPromptPayload,
+): Promise<GeneratedUpsellCopy> {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: getModel(),
+      temperature: 0.5,
+      response_format: { type: 'json_object' },
+      messages: [
+        {
+          role: 'system',
+          content:
+            'You write concise storefront upsell copy for restaurant catering checkout. Return only valid JSON.',
+        },
+        {
+          role: 'user',
+          content: JSON.stringify(prompt),
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    await throwOpenAIResponseError(response);
+  }
+
+  const data = (await response.json()) as OpenAIChatCompletionResponse;
+  const content = data.choices?.[0]?.message?.content;
+
+  if (typeof content !== 'string' || !content.trim()) {
+    throw new Error('OpenAI returned an invalid upsell response.');
+  }
+
+  return parseGeneratedUpsellContent(content);
+}
+
 function shouldFallbackToChat(error: unknown) {
   if (!(error instanceof OpenAIRequestError)) {
     return false;
@@ -410,5 +602,32 @@ export async function generateCampaignMessage(
     });
 
     return requestChatCompletionsApi(apiKey, prompt);
+  }
+}
+
+export async function generateUpsellCopy(
+  input: GenerateUpsellCopyInput,
+): Promise<GeneratedUpsellCopy> {
+  const apiKey = getApiKey();
+
+  if (!apiKey) {
+    throw new Error('OpenAI is not configured. Set OPENAI_API_KEY to enable AI upsell copy.');
+  }
+
+  const prompt = buildUpsellPrompt(input);
+
+  try {
+    return await requestUpsellResponsesApi(apiKey, prompt);
+  } catch (error) {
+    if (!shouldFallbackToChat(error)) {
+      throw error;
+    }
+
+    logger.warn('Responses API upsell generation failed, falling back to chat completions', {
+      model: getModel(),
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+
+    return requestUpsellChatCompletionsApi(apiKey, prompt);
   }
 }

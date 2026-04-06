@@ -10,6 +10,9 @@ export const createPackageSchema = z.object({
   minimumHeadcount: z.number().int().positive().default(1),
   maximumHeadcount: z.number().int().positive().optional(),
   imageUrl: z.string().url().optional(),
+  upsellEligible: z.boolean().default(false),
+  upsellFeatured: z.boolean().default(false),
+  upsellPriority: z.number().int().min(0).max(100).default(0),
   isActive: z.boolean().default(true),
 });
 
