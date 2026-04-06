@@ -21,6 +21,7 @@ import { billingModule } from './modules/billing/index.js';
 import { followUpsModule } from './modules/follow-ups/index.js';
 import { notificationsModule } from './modules/notifications/index.js';
 import { aiSalesModule } from './modules/ai-sales/index.js';
+import { automationsModule } from './modules/automations/index.js';
 import { revenueIntelligenceModule } from './modules/revenue-intelligence/index.js';
 import { adminModule } from './modules/admin/index.js';
 import { storefrontModule } from './modules/storefront/index.js';
@@ -97,6 +98,7 @@ export async function buildApp() {
   await app.register(followUpsModule, { prefix: '/api/follow-ups' });
   await app.register(notificationsModule, { prefix: '/api/notifications' });
   await app.register(aiSalesModule, { prefix: '/api/ai-sales' });
+  await app.register(automationsModule, { prefix: '/api/automations' });
   await app.register(revenueIntelligenceModule, { prefix: '/api/revenue-intelligence' });
 
   // Webhooks (raw body parsing — must be in own scope)

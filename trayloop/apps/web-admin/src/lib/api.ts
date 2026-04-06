@@ -84,6 +84,33 @@ export interface AdminRevenueIntelligence {
   }>;
 }
 
+export interface AdminAutomationOrganization {
+  id: string;
+  name: string;
+  slug: string;
+  isActive: boolean;
+  activeRules: number;
+  autopilotRules: number;
+  pendingApprovalRuns: number;
+  sentRuns: number;
+  failedRuns: number;
+  revenueInfluencedCents: number;
+  lastRunAt: string | null;
+}
+
+export interface AdminAutomationIntelligence {
+  summary: {
+    merchantsUsingAutomation: number;
+    autopilotMerchants: number;
+    activeRules: number;
+    pendingApprovalRuns: number;
+    sentRuns: number;
+    failedRuns: number;
+    revenueInfluencedCents: number;
+  };
+  organizations: AdminAutomationOrganization[];
+}
+
 export async function apiFetch(path: string, options: RequestInit = {}) {
   const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null;
   const headers: Record<string, string> = {
@@ -112,5 +139,10 @@ export async function fetchAdminRevenueIntelligence(
 ): Promise<AdminRevenueIntelligence> {
   const params = new URLSearchParams({ range });
   const response = await apiFetch(`/api/admin/revenue-intelligence?${params.toString()}`);
+  return response.data;
+}
+
+export async function fetchAdminAutomationIntelligence(): Promise<AdminAutomationIntelligence> {
+  const response = await apiFetch('/api/admin/automation-intelligence');
   return response.data;
 }

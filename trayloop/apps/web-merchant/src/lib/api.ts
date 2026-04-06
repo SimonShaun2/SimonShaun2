@@ -286,6 +286,83 @@ export interface MerchantRevenueIntelligenceReport extends MerchantRevenueIntell
   opportunities: RevenueOpportunity[];
 }
 
+export interface AutomationRule {
+  id: string;
+  name: string;
+  ruleType: 'reactivation' | 'reorder_reminder';
+  segment: 'at_risk' | 'dormant' | 'frequent';
+  status: 'draft' | 'active' | 'paused' | 'disabled';
+  approvalMode: 'approval_required' | 'autopilot';
+  emailEnabled: boolean;
+  smsMode: 'disabled' | 'copy_only';
+  timingWindowDays: number;
+  throttleDays: number;
+  maxTargets: number;
+  goalNotes: string | null;
+  toneNotes: string | null;
+  lastEvaluatedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AutomationRecipientSummary {
+  pending: number;
+  sent: number;
+  copied: number;
+  skipped: number;
+  failed: number;
+}
+
+export interface AutomationRunRecipient {
+  customerId: string;
+  name: string;
+  email: string;
+  company: string | null;
+  deliveryStatus: string;
+  channel: string;
+}
+
+export interface AutomationRun {
+  id: string;
+  ruleId: string;
+  ruleName: string;
+  ruleType: 'reactivation' | 'reorder_reminder';
+  segment: 'at_risk' | 'dormant' | 'frequent';
+  executionMode: 'scheduled' | 'autopilot';
+  status: 'pending_approval' | 'approved' | 'queued' | 'sent' | 'copied' | 'skipped' | 'failed' | 'canceled';
+  reasonSummary: string;
+  generatedSubject: string | null;
+  generatedEmailBody: string | null;
+  generatedSmsBody: string | null;
+  selectedTargetCount: number;
+  estimatedRevenueCents: number;
+  scheduledFor: string;
+  reviewedAt: string | null;
+  sentAt: string | null;
+  errorMessage: string | null;
+  createdAt: string;
+  updatedAt: string;
+  recipientSummary: AutomationRecipientSummary;
+  recipients: AutomationRunRecipient[];
+}
+
+export interface AutomationOverview {
+  summary: {
+    activeRules: number;
+    autopilotRules: number;
+    pendingApprovalRuns: number;
+    scheduledRuns: number;
+    sentRuns: number;
+    failedRuns: number;
+    skippedRuns: number;
+    revenueInfluencedCents: number;
+    approvalRatePercent: number;
+  };
+  rules: AutomationRule[];
+  queue: AutomationRun[];
+  recentRuns: AutomationRun[];
+}
+
 export async function apiFetch(path: string, options: RequestInit = {}) {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   const headers: Record<string, string> = {
@@ -459,6 +536,83 @@ export async function trackRevenueInsightEvent(input: {
     method: 'POST',
     body: JSON.stringify(input),
   });
+}
+
+export async function fetchAutomationOverview(): Promise<AutomationOverview> {
+  const response = await apiFetch('/api/automations/overview');
+  return response.data;
+}
+
+export async function fetchAutomationRules(): Promise<AutomationRule[]> {
+  const response = await apiFetch('/api/automations/rules');
+  return response.data;
+}
+
+export async function updateAutomationRule(
+  ruleId: string,
+  input: Partial<Pick<AutomationRule, 'status' | 'approvalMode' | 'emailEnabled' | 'smsMode' | 'timingWindowDays' | 'throttleDays' | 'maxTargets' | 'goalNotes' | 'toneNotes'>>,
+): Promise<AutomationRule> {
+  const response = await apiFetch(`/api/automations/rules/${ruleId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+  return response.data;
+}
+
+export async function evaluateAutomationRules(input: { ruleIds?: string[] } = {}): Promise<{
+  createdCount: number;
+  skippedRules: Array<{ ruleId: string; name: string; reason: string }>;
+  errors: Array<{ ruleId: string; name: string; error: string }>;
+  runs: AutomationRun[];
+}> {
+  const response = await apiFetch('/api/automations/evaluate', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return response.data;
+}
+
+export async function fetchAutomationRuns(input: {
+  status?: AutomationRun['status'];
+  limit?: number;
+  ruleId?: string;
+} = {}): Promise<AutomationRun[]> {
+  const params = new URLSearchParams();
+  if (input.status) params.set('status', input.status);
+  if (input.ruleId) params.set('ruleId', input.ruleId);
+  params.set('limit', String(input.limit ?? 20));
+  const response = await apiFetch(`/api/automations/runs?${params.toString()}`);
+  return response.data;
+}
+
+export async function updateAutomationRun(
+  runId: string,
+  input: {
+    action: 'approve' | 'skip' | 'cancel' | 'save';
+    generatedSubject?: string;
+    generatedEmailBody?: string;
+    generatedSmsBody?: string;
+    scheduledFor?: string;
+    errorMessage?: string;
+  },
+): Promise<AutomationRun> {
+  const response = await apiFetch(`/api/automations/runs/${runId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+  return response.data;
+}
+
+export async function processAutomationRuns(input: { runIds?: string[] } = {}) {
+  const response = await apiFetch('/api/automations/process', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return response.data as {
+    processed: string[];
+    skipped: string[];
+    failed: Array<{ runId: string; error: string }>;
+  };
 }
 
 interface PaginationMeta {

@@ -61,6 +61,9 @@ export function registerRoutes(app: FastifyInstance) {
     const query = revenueSummaryQuerySchema.parse(request.query);
     return { data: await service.getRevenueIntelligence(query.range) };
   });
+  app.get('/automation-intelligence', async () => {
+    return { data: await service.getAutomationIntelligence() };
+  });
 
   app.patch('/organizations/:id/status', { preHandler: [validateBody(adminStatusBodySchema)] }, async (request, reply) => {
     const { id } = adminStatusParamsSchema.parse(request.params);

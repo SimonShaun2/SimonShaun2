@@ -1,6 +1,7 @@
 import { db } from '@trayloop/database';
 import { customers, deposits, orders, organizationMemberships, organizations, payments, recurringOrders, subscriptions, users } from '@trayloop/database';
 import { and, asc, desc, eq, gte, inArray, sql } from 'drizzle-orm';
+import { getPlatformAutomationIntelligence } from '../automations/automations.service.js';
 import { getPlatformRevenueIntelligence } from '../revenue-intelligence/revenue-intelligence.service.js';
 import type { RevenueRange } from '../revenue-intelligence/revenue-intelligence.schema.js';
 
@@ -975,6 +976,10 @@ export async function getChurnRisk() {
 
 export async function getRevenueIntelligence(range: RevenueRange = '30d') {
   return getPlatformRevenueIntelligence(range);
+}
+
+export async function getAutomationIntelligence() {
+  return getPlatformAutomationIntelligence();
 }
 
 export async function updateOrgStatus(orgId: string, status: string) {

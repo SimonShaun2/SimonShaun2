@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: '/trial-conversions', label: 'Trial Conversions', icon: 'T', section: 'intelligence' },
   { href: '/mrr-movement', label: 'MRR Movement', icon: 'M', section: 'intelligence' },
   { href: '/revenue-intelligence', label: 'Revenue Intelligence', icon: 'I', section: 'intelligence' },
+  { href: '/automation-intelligence', label: 'Automation', icon: 'A', section: 'intelligence' },
   { href: '/platform-health', label: 'Platform Health', icon: 'H', section: 'intelligence' },
   { href: '/revenue-forecast', label: 'Revenue Forecast', icon: 'F', section: 'intelligence' },
   { href: '/churn-risk', label: 'Churn Risk', icon: 'C', section: 'intelligence' },
