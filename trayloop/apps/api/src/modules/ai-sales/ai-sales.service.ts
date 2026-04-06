@@ -8,7 +8,11 @@ import {
 import { db } from '@trayloop/database';
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import { sendEmail, isEmailEnabled } from '../../lib/email.js';
-import { generateCampaignMessage, isOpenAIEnabled } from '../../lib/openai.js';
+import {
+  OpenAIRequestError,
+  generateCampaignMessage,
+  isOpenAIEnabled,
+} from '../../lib/openai.js';
 import { ValidationError } from '../../lib/errors.js';
 import type {
   CreateCampaignInput,
@@ -511,25 +515,40 @@ export async function generateMessageForTargets(
 
   // Map 'all' to 'at_risk' for OpenAI prompt context — 'all' is a targeting concept, not a tone
   const promptSegment = input.segment === 'all' ? 'at_risk' : input.segment;
-  const generated = await generateCampaignMessage({
-    merchantName: organization.name,
-    segment: promptSegment,
-    campaignKind: input.campaignKind,
-    targetCount: targets.targets.length,
-    estimatedRevenueCents,
-    goalNotes: input.goalNotes,
-    toneNotes: input.toneNotes,
-    customerSummaries: targets.targets.map((target) => ({
-      name: target.name,
-      company: target.company,
-      daysSinceLastOrder: target.daysSinceLastOrder,
-      avgOrderValueCents: target.averageOrderValueCents,
-      orderCount: target.orderCount,
-      cadenceDays: reorderOpportunityByCustomerId.get(target.id)?.cadenceDays ?? null,
-      daysUntilExpectedOrder:
-        reorderOpportunityByCustomerId.get(target.id)?.daysUntilExpectedOrder ?? null,
-    })),
-  });
+  let generated;
+  try {
+    generated = await generateCampaignMessage({
+      merchantName: organization.name,
+      segment: promptSegment,
+      campaignKind: input.campaignKind,
+      targetCount: targets.targets.length,
+      estimatedRevenueCents,
+      goalNotes: input.goalNotes,
+      toneNotes: input.toneNotes,
+      customerSummaries: targets.targets.map((target) => ({
+        name: target.name,
+        company: target.company,
+        daysSinceLastOrder: target.daysSinceLastOrder,
+        avgOrderValueCents: target.averageOrderValueCents,
+        orderCount: target.orderCount,
+        cadenceDays: reorderOpportunityByCustomerId.get(target.id)?.cadenceDays ?? null,
+        daysUntilExpectedOrder:
+          reorderOpportunityByCustomerId.get(target.id)?.daysUntilExpectedOrder ?? null,
+      })),
+    });
+  } catch (error) {
+    if (error instanceof OpenAIRequestError) {
+      throw new ValidationError(
+        `AI message generation is unavailable right now: ${error.message}`,
+      );
+    }
+
+    if (error instanceof Error) {
+      throw new ValidationError(error.message);
+    }
+
+    throw new ValidationError('AI message generation failed. Please try again.');
+  }
 
   return {
     campaignKind: input.campaignKind,
