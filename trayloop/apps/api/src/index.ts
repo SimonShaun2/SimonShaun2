@@ -73,33 +73,11 @@ export async function buildApp() {
   // Auth
   await app.register(authModule, { prefix: '/api/auth' });
 
-  // Organization management
+  // Public + route-scoped auth modules
   await app.register(organizationsModule, { prefix: '/api/organizations' });
-  await app.register(membershipsModule, { prefix: '/api/memberships' });
-  await app.register(locationsModule, { prefix: '/api/locations' });
 
-  // Catalog & packages
-  await app.register(catalogsModule, { prefix: '/api/catalogs' });
-  await app.register(packagesModule, { prefix: '/api/packages' });
-  await app.register(addOnsModule, { prefix: '/api/add-ons' });
-
-  // Customers
-  await app.register(customersModule, { prefix: '/api/customers' });
-
-  // Orders
-  await app.register(ordersModule, { prefix: '/api/orders' });
-  await app.register(recurringOrdersModule, { prefix: '/api/recurring-orders' });
-
-  // Payments & billing
   await app.register(paymentsModule, { prefix: '/api/payments' });
   await app.register(billingModule, { prefix: '/api/billing' });
-
-  // Follow-ups & notifications
-  await app.register(followUpsModule, { prefix: '/api/follow-ups' });
-  await app.register(notificationsModule, { prefix: '/api/notifications' });
-  await app.register(aiSalesModule, { prefix: '/api/ai-sales' });
-  await app.register(automationsModule, { prefix: '/api/automations' });
-  await app.register(revenueIntelligenceModule, { prefix: '/api/revenue-intelligence' });
 
   // Webhooks (raw body parsing — must be in own scope)
   await app.register(webhookModule, { prefix: '/api/webhooks' });
@@ -107,8 +85,23 @@ export async function buildApp() {
   // Public storefront
   await app.register(storefrontModule, { prefix: '/api/storefront' });
 
-  // Platform admin
-  await app.register(adminModule, { prefix: '/api/admin' });
+  // Protected modules live in an isolated scope so auth hooks cannot bleed onto public routes.
+  await app.register(async (protectedApp) => {
+    await protectedApp.register(membershipsModule, { prefix: '/api/memberships' });
+    await protectedApp.register(locationsModule, { prefix: '/api/locations' });
+    await protectedApp.register(catalogsModule, { prefix: '/api/catalogs' });
+    await protectedApp.register(packagesModule, { prefix: '/api/packages' });
+    await protectedApp.register(addOnsModule, { prefix: '/api/add-ons' });
+    await protectedApp.register(customersModule, { prefix: '/api/customers' });
+    await protectedApp.register(ordersModule, { prefix: '/api/orders' });
+    await protectedApp.register(recurringOrdersModule, { prefix: '/api/recurring-orders' });
+    await protectedApp.register(followUpsModule, { prefix: '/api/follow-ups' });
+    await protectedApp.register(notificationsModule, { prefix: '/api/notifications' });
+    await protectedApp.register(aiSalesModule, { prefix: '/api/ai-sales' });
+    await protectedApp.register(automationsModule, { prefix: '/api/automations' });
+    await protectedApp.register(revenueIntelligenceModule, { prefix: '/api/revenue-intelligence' });
+    await protectedApp.register(adminModule, { prefix: '/api/admin' });
+  });
 
   // Initialize event handlers after all modules are registered
   eventBus.initialize();
