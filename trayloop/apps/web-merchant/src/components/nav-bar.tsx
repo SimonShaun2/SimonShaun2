@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: '/billing', label: 'Billing', section: 'workspace' },
   { href: '/onboarding', label: 'Launch Setup', section: 'workspace' },
   { href: '/follow-ups', label: 'Follow-Ups', section: 'workspace' },
+  { href: '/revenue-intelligence', label: 'Revenue', section: 'workspace' },
   { href: '/customers', label: 'Customers', section: 'workspace' },
   { href: '/catalog', label: 'Offerings', section: 'workspace' },
   { href: '/settings', label: 'Settings', section: 'configure' },

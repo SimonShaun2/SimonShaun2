@@ -1,6 +1,8 @@
 import { db } from '@trayloop/database';
 import { customers, deposits, orders, organizationMemberships, organizations, payments, recurringOrders, subscriptions, users } from '@trayloop/database';
 import { and, asc, desc, eq, gte, inArray, sql } from 'drizzle-orm';
+import { getPlatformRevenueIntelligence } from '../revenue-intelligence/revenue-intelligence.service.js';
+import type { RevenueRange } from '../revenue-intelligence/revenue-intelligence.schema.js';
 
 const FINAL_ORDER_STATUSES = ['confirmed', 'completed'] as const;
 const PLAN_PRICE_CENTS = 4900;
@@ -969,6 +971,10 @@ export async function getChurnRisk() {
     restaurants: atRiskRestaurants,
     customers: atRiskCustomers,
   };
+}
+
+export async function getRevenueIntelligence(range: RevenueRange = '30d') {
+  return getPlatformRevenueIntelligence(range);
 }
 
 export async function updateOrgStatus(orgId: string, status: string) {

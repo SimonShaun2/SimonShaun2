@@ -5,14 +5,15 @@ import { usePathname } from 'next/navigation';
 import { useMobile } from '../lib/use-mobile';
 
 const NAV_ITEMS = [
-  { href: '/', label: 'Overview', icon: '◉', section: 'views' },
-  { href: '/organizations', label: 'Restaurants', icon: '▦', section: 'views' },
-  { href: '/users', label: 'Users', icon: '◎', section: 'views' },
-  { href: '/trial-conversions', label: 'Trial Conversions', icon: '◈', section: 'intelligence' },
-  { href: '/mrr-movement', label: 'MRR Movement', icon: '◆', section: 'intelligence' },
-  { href: '/platform-health', label: 'Platform Health', icon: '●', section: 'intelligence' },
-  { href: '/revenue-forecast', label: 'Revenue Forecast', icon: '◇', section: 'intelligence' },
-  { href: '/churn-risk', label: 'Churn Risk', icon: '▲', section: 'intelligence' },
+  { href: '/', label: 'Overview', icon: 'O', section: 'views' },
+  { href: '/organizations', label: 'Restaurants', icon: 'R', section: 'views' },
+  { href: '/users', label: 'Users', icon: 'U', section: 'views' },
+  { href: '/trial-conversions', label: 'Trial Conversions', icon: 'T', section: 'intelligence' },
+  { href: '/mrr-movement', label: 'MRR Movement', icon: 'M', section: 'intelligence' },
+  { href: '/revenue-intelligence', label: 'Revenue Intelligence', icon: 'I', section: 'intelligence' },
+  { href: '/platform-health', label: 'Platform Health', icon: 'H', section: 'intelligence' },
+  { href: '/revenue-forecast', label: 'Revenue Forecast', icon: 'F', section: 'intelligence' },
+  { href: '/churn-risk', label: 'Churn Risk', icon: 'C', section: 'intelligence' },
 ];
 
 function useAdminAuth() {
@@ -64,26 +65,37 @@ function AuthenticatedShell({ children, pathname }: { children: React.ReactNode;
 
   return (
     <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', minHeight: '100vh' }}>
-      {/* Sidebar */}
-      <aside style={{
-        width: isMobile ? '100%' : 220,
-        background: '#1C1917',
-        color: '#FAFAF9',
-        display: 'flex',
-        flexDirection: 'column',
-        flexShrink: 0,
-        borderBottom: isMobile ? '1px solid #292524' : 'none',
-      }}>
-        {/* Brand */}
+      <aside
+        style={{
+          width: isMobile ? '100%' : 220,
+          background: '#1C1917',
+          color: '#FAFAF9',
+          display: 'flex',
+          flexDirection: 'column',
+          flexShrink: 0,
+          borderBottom: isMobile ? '1px solid #292524' : 'none',
+        }}
+      >
         <div style={{ padding: '20px 20px 16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'space-between' : 'flex-start', gap: 10, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{
-              width: 32, height: 32, borderRadius: 8,
-              background: '#D4A853', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 14, fontWeight: 700, color: '#1C1917',
-            }}>TL</div>
-            <span style={{ fontWeight: 700, fontSize: 15 }}>TrayLoop</span>
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 8,
+                  background: '#D4A853',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: '#1C1917',
+                }}
+              >
+                TL
+              </div>
+              <span style={{ fontWeight: 700, fontSize: 15 }}>TrayLoop</span>
             </div>
             {isMobile ? (
               <button
@@ -105,23 +117,44 @@ function AuthenticatedShell({ children, pathname }: { children: React.ReactNode;
           </div>
         </div>
 
-        {/* Nav sections */}
-        <nav style={{ flex: 1, padding: isMobile ? '0 16px 16px' : '0 12px', display: isMobile ? 'flex' : 'block', gap: isMobile ? 12 : undefined, overflowX: isMobile ? 'auto' : undefined }}>
+        <nav
+          style={{
+            flex: 1,
+            padding: isMobile ? '0 16px 16px' : '0 12px',
+            display: isMobile ? 'flex' : 'block',
+            gap: isMobile ? 12 : undefined,
+            overflowX: isMobile ? 'auto' : undefined,
+          }}
+        >
           {(['views', 'intelligence'] as const).map((section) => (
             <div key={section} style={{ minWidth: isMobile ? 'max-content' : undefined }}>
-              <div style={{ fontSize: 10, fontWeight: 600, color: '#78716C', textTransform: 'uppercase', letterSpacing: '0.05em', padding: isMobile ? '0 8px 6px' : '16px 8px 6px' }}>
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 600,
+                  color: '#78716C',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  padding: isMobile ? '0 8px 6px' : '16px 8px 6px',
+                }}
+              >
                 {section === 'views' ? 'Views' : 'Intelligence'}
               </div>
-              {NAV_ITEMS.filter((i) => i.section === section).map((item) => {
+              {NAV_ITEMS.filter((item) => item.section === section).map((item) => {
                 const isActive = pathname === item.href;
                 return (
                   <a
                     key={item.href}
                     href={item.href}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: 10,
-                      padding: '8px 10px', borderRadius: 999, marginBottom: 2,
-                      fontSize: 13, fontWeight: isActive ? 600 : 400,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      padding: '8px 10px',
+                      borderRadius: 999,
+                      marginBottom: 2,
+                      fontSize: 13,
+                      fontWeight: isActive ? 600 : 400,
                       color: isActive ? '#D4A853' : '#A8A29E',
                       background: isActive ? 'rgba(212, 168, 83, 0.1)' : 'transparent',
                       textDecoration: 'none',
@@ -129,7 +162,7 @@ function AuthenticatedShell({ children, pathname }: { children: React.ReactNode;
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    <span style={{ fontSize: 14, width: 18, textAlign: 'center' }}>{item.icon}</span>
+                    <span style={{ fontSize: 12, width: 18, textAlign: 'center', fontWeight: 700 }}>{item.icon}</span>
                     {item.label}
                   </a>
                 );
@@ -138,25 +171,27 @@ function AuthenticatedShell({ children, pathname }: { children: React.ReactNode;
           ))}
         </nav>
 
-        {/* Footer */}
         {!isMobile ? (
-        <div style={{ padding: '16px 20px', borderTop: '1px solid #292524', fontSize: 12 }}>
-          <div style={{ color: '#D6D3D1', fontWeight: 500, marginBottom: 2 }}>You / TrayLoop</div>
-          <div style={{ color: '#78716C', marginBottom: 8 }}>Operator</div>
-          <button
-            onClick={handleLogout}
-            style={{
-              background: 'none', border: 'none', color: '#78716C',
-              fontSize: 12, cursor: 'pointer', padding: 0,
-            }}
-          >
-            Sign out
-          </button>
-        </div>
+          <div style={{ padding: '16px 20px', borderTop: '1px solid #292524', fontSize: 12 }}>
+            <div style={{ color: '#D6D3D1', fontWeight: 500, marginBottom: 2 }}>You / TrayLoop</div>
+            <div style={{ color: '#78716C', marginBottom: 8 }}>Operator</div>
+            <button
+              onClick={handleLogout}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#78716C',
+                fontSize: 12,
+                cursor: 'pointer',
+                padding: 0,
+              }}
+            >
+              Sign out
+            </button>
+          </div>
         ) : null}
       </aside>
 
-      {/* Main content */}
       <main style={{ flex: 1, background: '#FAF9F7', overflow: 'auto' }}>
         <div style={{ padding: isMobile ? '20px 16px 28px' : '32px 40px', maxWidth: 1200 }}>
           {children}

@@ -3,6 +3,7 @@ import { requireAuth } from '../../lib/middleware/auth.js';
 import { ForbiddenError } from '../../lib/errors.js';
 import { validateBody } from '../../lib/middleware/validate.js';
 import { adminStatusBodySchema, adminStatusParamsSchema } from './admin.schema.js';
+import { revenueSummaryQuerySchema } from '../revenue-intelligence/revenue-intelligence.schema.js';
 import * as service from './admin.service.js';
 
 async function requirePlatformAdmin(request: FastifyRequest, _reply: FastifyReply) {
@@ -56,6 +57,10 @@ export function registerRoutes(app: FastifyInstance) {
   app.get('/platform-health', async () => { return { data: await service.getPlatformHealth() }; });
   app.get('/revenue-forecast', async () => { return { data: await service.getRevenueForecast() }; });
   app.get('/churn-risk', async () => { return { data: await service.getChurnRisk() }; });
+  app.get('/revenue-intelligence', async (request) => {
+    const query = revenueSummaryQuerySchema.parse(request.query);
+    return { data: await service.getRevenueIntelligence(query.range) };
+  });
 
   app.patch('/organizations/:id/status', { preHandler: [validateBody(adminStatusBodySchema)] }, async (request, reply) => {
     const { id } = adminStatusParamsSchema.parse(request.params);

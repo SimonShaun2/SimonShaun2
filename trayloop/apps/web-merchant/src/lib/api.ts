@@ -191,6 +191,101 @@ export interface AiSalesGenerateResult {
   targets: AiSalesTarget[];
 }
 
+export interface RevenueSummaryBlock {
+  totalRevenueCents: number;
+  platformFeeRevenueCents: number;
+  customerPaidCents: number;
+  repeatRevenueCents: number;
+  newRevenueCents: number;
+  repeatRevenueSharePercent: number;
+  repeatOrderRatePercent: number;
+  avgOrderValueCents: number;
+  orderCount: number;
+  repeatCustomerCount: number;
+  totalCustomerCount: number;
+  depositConversionRatePercent: number;
+  dormantRevenueCents: number;
+  topCustomerConcentration: {
+    top1Percent: number;
+    top3Percent: number;
+    top5Percent: number;
+  };
+  upsellRevenueCents: number;
+  upsellAttachRatePercent: number;
+}
+
+export interface RevenueInsightItem {
+  id: string;
+  text: string;
+}
+
+export interface RevenueRecommendation {
+  id: string;
+  title: string;
+  description: string;
+  href: string;
+  cta: string;
+}
+
+export interface RevenueOpportunity {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  estimatedRevenueCents: number;
+  action: {
+    label: string;
+    href: string;
+  };
+}
+
+export interface RevenueCustomerHealth {
+  customerId: string;
+  name: string;
+  email: string;
+  company: string | null;
+  orderCount: number;
+  totalRevenueCents: number;
+  revenueInRangeCents: number;
+  avgOrderValueCents: number;
+  lastOrderAt: string;
+  daysSinceLastOrder: number;
+  segment: 'healthy' | 'at_risk' | 'dormant' | 'growth_opportunity';
+  score: number;
+}
+
+export interface RevenueTrendPoint {
+  date: string;
+  totalRevenueCents: number;
+  repeatRevenueCents: number;
+  newRevenueCents: number;
+  orderCount: number;
+  avgOrderValueCents: number;
+}
+
+export interface RevenueUsageSummary {
+  shown: number;
+  clicked: number;
+  actioned: number;
+}
+
+export interface MerchantRevenueIntelligenceSummary {
+  range: '7d' | '30d' | 'mtd' | 'prev_month';
+  rangeLabel: string;
+  summary: RevenueSummaryBlock;
+  insights: RevenueInsightItem[];
+  recommendations: RevenueRecommendation[];
+  opportunities: RevenueOpportunity[];
+  topCustomers: RevenueCustomerHealth[];
+  customerHealth: RevenueCustomerHealth[];
+  trends: RevenueTrendPoint[];
+  usage: RevenueUsageSummary;
+}
+
+export interface MerchantRevenueIntelligenceReport extends MerchantRevenueIntelligenceSummary {
+  opportunities: RevenueOpportunity[];
+}
+
 export async function apiFetch(path: string, options: RequestInit = {}) {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   const headers: Record<string, string> = {
@@ -335,6 +430,35 @@ export async function fetchAiSalesReorderOpportunities(limit = 5): Promise<{
   const params = new URLSearchParams({ limit: String(limit) });
   const response = await apiFetch(`/api/ai-sales/reorder-opportunities?${params.toString()}`);
   return { data: response.data, meta: response.meta };
+}
+
+export async function fetchRevenueIntelligenceSummary(
+  range: '7d' | '30d' | 'mtd' | 'prev_month' = '30d',
+): Promise<MerchantRevenueIntelligenceSummary> {
+  const params = new URLSearchParams({ range });
+  const response = await apiFetch(`/api/revenue-intelligence/summary?${params.toString()}`);
+  return response.data;
+}
+
+export async function fetchRevenueIntelligenceReport(
+  range: '7d' | '30d' | 'mtd' | 'prev_month' = '30d',
+): Promise<MerchantRevenueIntelligenceReport> {
+  const params = new URLSearchParams({ range });
+  const response = await apiFetch(`/api/revenue-intelligence/report?${params.toString()}`);
+  return response.data;
+}
+
+export async function trackRevenueInsightEvent(input: {
+  eventType: 'shown' | 'clicked' | 'actioned';
+  itemType: 'insight' | 'recommendation' | 'opportunity' | 'report';
+  itemKey: string;
+  page?: 'dashboard' | 'report';
+  metadata?: Record<string, string | number | boolean | null>;
+}) {
+  await apiFetch('/api/revenue-intelligence/events', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }
 
 interface PaginationMeta {

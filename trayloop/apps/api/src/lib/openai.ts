@@ -16,6 +16,24 @@ export interface GeneratedUpsellCopy {
   reason: string;
 }
 
+export interface RevenueInsightInput {
+  rangeLabel: string;
+  totalRevenueCents: number;
+  repeatRevenueSharePercent: number;
+  avgOrderValueCents: number;
+  repeatCustomerCount: number;
+  totalCustomerCount: number;
+  dormantRevenueCents: number;
+  topCustomerConcentrationPercent: number;
+  upsellRevenueCents: number;
+  upsellAttachRatePercent: number;
+  opportunities: Array<{
+    title: string;
+    description: string;
+    estimatedRevenueCents: number;
+  }>;
+}
+
 interface GenerateCampaignMessageInput {
   merchantName: string;
   segment: 'frequent' | 'at_risk' | 'dormant';
@@ -125,6 +143,33 @@ interface UpsellPromptPayload {
   };
 }
 
+interface RevenueInsightPromptPayload {
+  brand: string;
+  positioning: string;
+  rangeLabel: string;
+  metrics: {
+    totalRevenue: string;
+    repeatRevenueSharePercent: number;
+    avgOrderValue: string;
+    repeatCustomerCount: number;
+    totalCustomerCount: number;
+    dormantRevenue: string;
+    topCustomerConcentrationPercent: number;
+    upsellRevenue: string;
+    upsellAttachRatePercent: number;
+  };
+  opportunities: Array<{
+    title: string;
+    description: string;
+    estimatedRevenue: string;
+  }>;
+  requirements: {
+    outputFormat: string;
+    writingStyle: string;
+    constraints: string[];
+  };
+}
+
 type ParsedCampaignPayload = Partial<GeneratedCampaignMessage> & {
   recommendedSendWindow?: string;
   recommendedTone?: string;
@@ -132,6 +177,9 @@ type ParsedCampaignPayload = Partial<GeneratedCampaignMessage> & {
 };
 
 type ParsedUpsellPayload = Partial<GeneratedUpsellCopy>;
+type ParsedRevenueInsightPayload = {
+  insights?: string[];
+};
 
 const CAMPAIGN_RESPONSE_SCHEMA = {
   name: 'campaign_message',
@@ -169,6 +217,22 @@ const UPSELL_RESPONSE_SCHEMA = {
       reason: { type: 'string' },
     },
     required: ['headline', 'reason'],
+  },
+} as const;
+
+const REVENUE_INSIGHTS_RESPONSE_SCHEMA = {
+  name: 'revenue_insights',
+  strict: true,
+  schema: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      insights: {
+        type: 'array',
+        items: { type: 'string' },
+      },
+    },
+    required: ['insights'],
   },
 } as const;
 
@@ -296,6 +360,44 @@ function buildUpsellPrompt(input: GenerateUpsellCopyInput): UpsellPromptPayload 
   };
 }
 
+function buildRevenueInsightPrompt(input: RevenueInsightInput): RevenueInsightPromptPayload {
+  return {
+    brand: 'TrayLoop',
+    positioning:
+      'TrayLoop is the system that helps restaurants generate predictable catering revenue. Summaries should sound like a sharp operator, not a generic analytics dashboard.',
+    rangeLabel: input.rangeLabel,
+    metrics: {
+      totalRevenue: formatCurrency(input.totalRevenueCents),
+      repeatRevenueSharePercent: input.repeatRevenueSharePercent,
+      avgOrderValue: formatCurrency(input.avgOrderValueCents),
+      repeatCustomerCount: input.repeatCustomerCount,
+      totalCustomerCount: input.totalCustomerCount,
+      dormantRevenue: formatCurrency(input.dormantRevenueCents),
+      topCustomerConcentrationPercent: input.topCustomerConcentrationPercent,
+      upsellRevenue: formatCurrency(input.upsellRevenueCents),
+      upsellAttachRatePercent: input.upsellAttachRatePercent,
+    },
+    opportunities: input.opportunities.slice(0, 4).map((opportunity) => ({
+      title: opportunity.title,
+      description: opportunity.description,
+      estimatedRevenue: formatCurrency(opportunity.estimatedRevenueCents),
+    })),
+    requirements: {
+      outputFormat: 'Return strict JSON with one key: insights, an array of 3 to 5 strings.',
+      writingStyle:
+        'Write short, plainspoken operator insights that explain what happened and what to do next.',
+      constraints: [
+        'Do not mention AI.',
+        'Do not use emojis.',
+        'Each insight must be one sentence.',
+        'Keep each insight under 150 characters.',
+        'Avoid generic analytics filler.',
+        'Focus on revenue, repeat business, concentration risk, and checkout lift.',
+      ],
+    },
+  };
+}
+
 function parseOpenAIError(text: string): OpenAIErrorResponse['error'] {
   try {
     const parsed = JSON.parse(text) as OpenAIErrorResponse;
@@ -386,6 +488,21 @@ function parseGeneratedUpsellContent(content: string): GeneratedUpsellCopy {
     headline: parsed.headline.trim(),
     reason: parsed.reason.trim(),
   };
+}
+
+function parseGeneratedRevenueInsightsContent(content: string): string[] {
+  const parsed = JSON.parse(content) as ParsedRevenueInsightPayload;
+  const insights = Array.isArray(parsed.insights)
+    ? parsed.insights
+        .map((value) => (typeof value === 'string' ? value.trim() : ''))
+        .filter(Boolean)
+    : [];
+
+  if (insights.length === 0) {
+    throw new Error('OpenAI returned an invalid revenue insight response.');
+  }
+
+  return insights.slice(0, 5);
 }
 
 async function requestResponsesApi(
@@ -554,6 +671,96 @@ async function requestUpsellChatCompletionsApi(
   return parseGeneratedUpsellContent(content);
 }
 
+async function requestRevenueInsightResponsesApi(
+  apiKey: string,
+  prompt: RevenueInsightPromptPayload,
+): Promise<string[]> {
+  const response = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: getModel(),
+      input: [
+        {
+          role: 'system',
+          content:
+            'You summarize catering revenue intelligence for restaurant operators. Return only valid JSON that matches the schema.',
+        },
+        {
+          role: 'user',
+          content: JSON.stringify(prompt),
+        },
+      ],
+      text: {
+        format: {
+          type: 'json_schema',
+          name: REVENUE_INSIGHTS_RESPONSE_SCHEMA.name,
+          strict: REVENUE_INSIGHTS_RESPONSE_SCHEMA.strict,
+          schema: REVENUE_INSIGHTS_RESPONSE_SCHEMA.schema,
+        },
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    await throwOpenAIResponseError(response);
+  }
+
+  const data = (await response.json()) as OpenAIResponsesApiResponse;
+  const content = extractResponsesText(data);
+
+  if (!content) {
+    throw new Error('OpenAI returned an empty revenue insight response.');
+  }
+
+  return parseGeneratedRevenueInsightsContent(content);
+}
+
+async function requestRevenueInsightChatCompletionsApi(
+  apiKey: string,
+  prompt: RevenueInsightPromptPayload,
+): Promise<string[]> {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: getModel(),
+      temperature: 0.4,
+      response_format: { type: 'json_object' },
+      messages: [
+        {
+          role: 'system',
+          content:
+            'You summarize revenue intelligence for restaurant operators. Return only valid JSON.',
+        },
+        {
+          role: 'user',
+          content: JSON.stringify(prompt),
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    await throwOpenAIResponseError(response);
+  }
+
+  const data = (await response.json()) as OpenAIChatCompletionResponse;
+  const content = data.choices?.[0]?.message?.content;
+
+  if (typeof content !== 'string' || !content.trim()) {
+    throw new Error('OpenAI returned an invalid revenue insight response.');
+  }
+
+  return parseGeneratedRevenueInsightsContent(content);
+}
+
 function shouldFallbackToChat(error: unknown) {
   if (!(error instanceof OpenAIRequestError)) {
     return false;
@@ -629,5 +836,32 @@ export async function generateUpsellCopy(
     });
 
     return requestUpsellChatCompletionsApi(apiKey, prompt);
+  }
+}
+
+export async function generateRevenueInsights(
+  input: RevenueInsightInput,
+): Promise<string[]> {
+  const apiKey = getApiKey();
+
+  if (!apiKey) {
+    throw new Error('OpenAI is not configured. Set OPENAI_API_KEY to enable revenue insights.');
+  }
+
+  const prompt = buildRevenueInsightPrompt(input);
+
+  try {
+    return await requestRevenueInsightResponsesApi(apiKey, prompt);
+  } catch (error) {
+    if (!shouldFallbackToChat(error)) {
+      throw error;
+    }
+
+    logger.warn('Responses API revenue insight generation failed, falling back to chat completions', {
+      model: getModel(),
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+
+    return requestRevenueInsightChatCompletionsApi(apiKey, prompt);
   }
 }

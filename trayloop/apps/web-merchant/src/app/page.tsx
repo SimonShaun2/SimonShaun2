@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { apiFetch } from '../lib/api';
 import SetupChecklist from '../components/setup-checklist';
 import AiSalesPanel from '../components/ai-sales-panel';
+import RevenueIntelligencePanel from '../components/revenue-intelligence-panel';
 
 interface Order {
   id: string;
@@ -177,6 +178,7 @@ export default function DashboardPage() {
       <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 20px', color: '#1C1917' }}>Dashboard</h1>
 
       <AiSalesPanel />
+      <RevenueIntelligencePanel />
 
       {/* KPI cards - Row 1: Primary (larger) */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 12 }}>

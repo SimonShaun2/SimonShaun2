@@ -6,6 +6,7 @@ export * from './subscriptions.js';
 export * from './locations.js';
 export * from './catalogs.js';
 export * from './upsells.js';
+export * from './revenue-intelligence.js';
 export * from './customers.js';
 export * from './orders.js';
 export * from './payments.js';
