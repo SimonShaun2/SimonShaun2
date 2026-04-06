@@ -178,8 +178,8 @@ function RegisterContent() {
           <SideItem icon="3" title="Go live" body="Share your storefront link and start taking catering orders." />
         </div>
         <div style={{ marginTop: 20, padding: '14px 16px', borderRadius: 12, background: '#231F1C', border: '1px solid #2C2724' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#D4A853', marginBottom: 4 }}>Free to start</div>
-          <div style={{ fontSize: 13, color: '#D6D3D1', lineHeight: 1.6 }}>Try TrayLoop free for 30 days. No credit card required. Start billing when you're ready.</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#D4A853', marginBottom: 4 }}>Get started now</div>
+          <div style={{ fontSize: 13, color: '#D6D3D1', lineHeight: 1.6 }}>Create your account, build your menu, and start accepting catering orders today.</div>
         </div>
       </aside>
     </div>
