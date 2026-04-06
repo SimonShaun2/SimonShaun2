@@ -487,7 +487,7 @@ function SettingsContent() {
   const billingState = billingSubscription?.state ?? 'not_started';
   const billingHeadline =
     billingState === 'trialing'
-      ? `${billingSubscription?.planName ?? 'TrayLoop Pro'} trial`
+      ? `${billingSubscription?.planName ?? 'TrayLoop Pro'} intro period`
       : billingState === 'active'
         ? `${billingSubscription?.planName ?? 'TrayLoop Pro'} active`
         : billingState === 'past_due'
@@ -500,19 +500,19 @@ function SettingsContent() {
   const billingDetail =
     billingState === 'trialing'
       ? billingSubscription?.trialDaysRemaining != null
-        ? `${billingSubscription.trialDaysRemaining} day${billingSubscription.trialDaysRemaining === 1 ? '' : 's'} remaining in your free trial`
-        : 'Your free trial is active.'
+        ? `${billingSubscription.trialDaysRemaining} day${billingSubscription.trialDaysRemaining === 1 ? '' : 's'} remaining in your legacy intro period`
+        : 'A legacy intro period is active.'
       : billingState === 'active'
         ? billingSubscription?.subscription?.currentPeriodEnd
           ? `Next billing ${new Date(billingSubscription.subscription.currentPeriodEnd).toLocaleDateString()}`
-          : '$99/mo subscription is active'
+          : '$49/mo subscription is active'
         : billingState === 'past_due'
           ? 'Update your payment method to keep your storefront live.'
-          : billingState === 'unpaid'
-            ? 'Stripe marked this subscription unpaid. Open billing to resolve it.'
-            : billingState === 'canceled'
-              ? 'Resubscribe to reactivate TrayLoop Pro.'
-              : 'Subscribe to TrayLoop Pro to start your billing trial and keep your storefront live.';
+        : billingState === 'unpaid'
+          ? 'Stripe marked this subscription unpaid. Open billing to resolve it.'
+        : billingState === 'canceled'
+          ? 'Resubscribe to reactivate TrayLoop Pro.'
+          : 'Subscribe to TrayLoop Pro to keep your storefront live.';
 
   if (loading && !organization) {
     return <p style={{ color: '#6b7280' }}>Loading settings...</p>;
@@ -1029,7 +1029,7 @@ function SettingsContent() {
                   </p>
                   <KeyValueGrid
                     items={[
-                      ['Plan', `${billingSubscription?.planName ?? 'TrayLoop Pro'} - $${((billingSubscription?.priceCents ?? 9900) / 100).toFixed(0)}/${billingSubscription?.interval ?? 'month'}`],
+                      ['Plan', `${billingSubscription?.planName ?? 'TrayLoop Pro'} - $${((billingSubscription?.priceCents ?? 4900) / 100).toFixed(0)}/${billingSubscription?.interval ?? 'month'}`],
                       ['Subscription status', billingState.replace('_', ' ')],
                       ['Storefront readiness', setupStatus?.isComplete ? 'Live' : 'Incomplete'],
                       ['Security basics', 'Password reset and sign-out are live'],

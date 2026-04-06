@@ -29,7 +29,13 @@ function MerchantBillingPageContent() {
       case 'active':
         return { tone: 'success' as const, title: 'TrayLoop Pro is active', body: data?.billing.subscription?.currentPeriodEnd ? `Next billing date: ${new Date(data.billing.subscription.currentPeriodEnd).toLocaleDateString()}.` : 'Your merchant workspace is covered and ready for ongoing billing.' };
       case 'trialing':
-        return { tone: 'warning' as const, title: 'Your free trial is running', body: data?.billing.trialDaysRemaining != null ? `${data.billing.trialDaysRemaining} day${data.billing.trialDaysRemaining === 1 ? '' : 's'} remaining before your first paid cycle.` : 'Your free trial is active.' };
+        return {
+          tone: 'warning' as const,
+          title: 'Legacy intro period active',
+          body: data?.billing.subscription?.currentPeriodEnd
+            ? `Your first paid billing date is ${new Date(data.billing.subscription.currentPeriodEnd).toLocaleDateString()}.`
+            : 'Your billing record is active and will roll into the paid plan automatically.',
+        };
       case 'past_due':
       case 'unpaid':
         return { tone: 'error' as const, title: 'Billing needs attention', body: 'Update your payment method to keep TrayLoop Pro healthy and avoid storefront disruption.' };
@@ -124,7 +130,7 @@ function MerchantBillingPageContent() {
         <Banner
           tone="success"
           title="Merchant workspace created"
-          body="Start your 30-day TrayLoop Pro trial first. After billing is in place, finish payouts and launch setup."
+          body="Start your TrayLoop Pro subscription first. After billing is in place, finish payouts and launch setup."
         />
       ) : null}
       {billingParam === 'success' ? (
@@ -139,7 +145,7 @@ function MerchantBillingPageContent() {
 
       <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(${isMobile ? 160 : 220}px, 1fr))`, gap: 14, marginBottom: 24 }}>
         <SummaryCard label="Plan" value={data.billing.planName} sub={`$${(data.billing.priceCents / 100).toFixed(0)}/${data.billing.interval}`} />
-        <SummaryCard label="Status" value={data.billing.state.replace('_', ' ')} sub={data.billing.trialDaysRemaining != null ? `${data.billing.trialDaysRemaining} days of trial left` : data.billing.subscription?.currentPeriodEnd ? `Period ends ${new Date(data.billing.subscription.currentPeriodEnd).toLocaleDateString()}` : 'No subscription yet'} />
+        <SummaryCard label="Status" value={data.billing.state.replace('_', ' ')} sub={data.billing.subscription?.currentPeriodEnd ? `Period ends ${new Date(data.billing.subscription.currentPeriodEnd).toLocaleDateString()}` : 'No subscription yet'} />
         <SummaryCard label="Merchant payouts" value={data.paymentStatus.status === 'ready' ? 'Connected' : 'Needs setup'} sub={data.paymentStatus.chargesEnabled ? 'Customer transactions enabled' : 'Finish Connect onboarding'} />
         <SummaryCard label="Storefront readiness" value={data.readiness.canLaunchStorefront ? 'Launch ready' : 'Blocked'} sub={data.launch.blockers.length === 0 ? 'Billing and payouts aligned' : data.launch.blockers[0]} />
       </div>
@@ -172,7 +178,7 @@ function MerchantBillingPageContent() {
                   : data.billing.state === 'canceled'
                     ? 'Resubscribe'
                     : data.billing.state === 'not_started'
-                      ? 'Start 30-Day Trial'
+                      ? 'Start Subscription'
                       : 'Start Subscription'}
               </button>
             ) : null}

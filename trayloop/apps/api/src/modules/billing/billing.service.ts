@@ -7,7 +7,7 @@ import type { BillingCheckoutInput, BillingPortalInput } from './billing.schema.
 
 const PLAN_NAME = 'TrayLoop Pro';
 const PLAN_INTERVAL = 'month';
-const PLAN_AMOUNT_CENTS = 9900;
+const PLAN_AMOUNT_CENTS = 4900;
 
 type BillingState = 'not_started' | 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid';
 type LocalSubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid';
@@ -182,7 +182,8 @@ export async function createCheckoutSession(orgId: string, input: BillingCheckou
   const stripe = getStripe();
   const stripeCustomerId = record.stripeCustomerId ?? await createStripeCustomer(record);
   const { successUrl, cancelUrl } = buildCheckoutUrls(input);
-  const eligibleForTrial = !record.stripeSubscriptionId;
+  const trialDays = getSubscriptionTrialDays();
+  const includeTrialPeriod = !record.stripeSubscriptionId && trialDays > 0;
 
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
@@ -205,7 +206,7 @@ export async function createCheckoutSession(orgId: string, input: BillingCheckou
         trayloop_org_id: record.organizationId,
         trayloop_org_slug: record.organizationSlug,
       },
-      ...(eligibleForTrial ? { trial_period_days: getSubscriptionTrialDays() } : {}),
+      ...(includeTrialPeriod ? { trial_period_days: trialDays } : {}),
     },
   });
 
@@ -213,7 +214,7 @@ export async function createCheckoutSession(orgId: string, input: BillingCheckou
     organizationId: record.organizationId,
     stripeCustomerId,
     checkoutSessionId: session.id,
-    eligibleForTrial,
+    eligibleForTrial: includeTrialPeriod,
   });
 
   return {

@@ -3,7 +3,7 @@ import { customers, deposits, orders, organizationMemberships, organizations, pa
 import { and, asc, desc, eq, gte, inArray, sql } from 'drizzle-orm';
 
 const FINAL_ORDER_STATUSES = ['confirmed', 'completed'] as const;
-const PLAN_PRICE_CENTS = 9900;
+const PLAN_PRICE_CENTS = 4900;
 const SERVICE_MODE_ORDER = ['delivery', 'pickup', 'full_service', 'on_site', 'food_truck'] as const;
 
 type CustomerOrderActivityRow = {
@@ -45,15 +45,15 @@ function isPaidSubscription(status: string | null | undefined) {
 }
 
 function countsTowardProjectedMrr(status: string | null | undefined) {
-  return status === 'active' || status === 'trialing';
+  return status === 'active';
 }
 
 function formatSubscriptionLabel(status: string | null | undefined, trialEnd: Date | string | null | undefined) {
   switch (status) {
     case 'active':
-      return '$99/mo';
+      return '$49/mo';
     case 'trialing':
-      return trialEnd ? `Trial until ${new Date(trialEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : 'Trialing';
+      return trialEnd ? `Legacy intro period until ${new Date(trialEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : 'Legacy intro period';
     case 'past_due':
       return 'Past due';
     case 'unpaid':
@@ -497,13 +497,13 @@ export async function getTrialConversions() {
  * ADM-005 Part B: MRR movement.
  *
  * Since no subscription/billing table exists, MRR is modeled as:
- *   - Paid: active orgs with stripeChargesEnabled = true → $99/mo each
+ *   - Paid: active orgs with stripeChargesEnabled = true → $49/mo each
  *   - Trial: active orgs with stripeChargesEnabled = false → $0 (pending)
- *   - Inactive: orgs with isActive = false → churned (lost $99/mo)
+ *   - Inactive: orgs with isActive = false → churned (lost $49/mo)
  *
  * Movement is approximated from org creation date and isActive/updatedAt status:
- *   - "New MRR" = paid orgs created this month × $99
- *   - "Churned MRR" = inactive orgs updated this month that were previously paid × $99
+ *   - "New MRR" = paid orgs created this month × $49
+ *   - "Churned MRR" = inactive orgs updated this month that were previously paid × $49
  *     (approximated as inactive orgs with stripeChargesEnabled still true and
  *      updatedAt in the current month, indicating a recent deactivation)
  *
@@ -564,9 +564,9 @@ export async function getMrrMovement() {
       isPaid: r.subscriptionStatus === 'active',
       status,
       mrr: status === 'paid' ? PLAN_PRICE_CENTS : 0,
-      label: status === 'paid' ? '$99/mo'
-        : status === 'trial' ? '$0 → $99'
-        : status === 'churned' ? '-$99/mo'
+      label: status === 'paid' ? '$49/mo'
+        : status === 'trial' ? '$0 → $49'
+        : status === 'churned' ? '-$49/mo'
         : 'Inactive',
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,
@@ -933,7 +933,7 @@ export async function getRevenueForecast() {
  * Customer churn risk:
  *   - Customers with 2+ historical orders whose last order is 14+ days ago
  *
- * MRR at risk = count of at-risk paid restaurants × $99/mo
+ * MRR at risk = count of at-risk paid restaurants × $49/mo
  */
 export async function getChurnRisk() {
   const now = new Date();

@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useMobile } from '../../lib/use-mobile';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-const TRIAL_PLAN = 'trayloop_pro_trial' as const;
+const TRAYLOOP_PRO_PLAN = 'trayloop_pro' as const;
 
 type Step = 'plan' | 'details';
 
@@ -22,7 +22,7 @@ function RegisterContent() {
   const isMobile = useMobile(900);
   const existingMerchant = searchParams.get('step') === 'org';
   const [step, setStep] = useState<Step>(existingMerchant ? 'details' : 'plan');
-  const [selectedPlan, setSelectedPlan] = useState<string>(existingMerchant ? TRIAL_PLAN : '');
+  const [selectedPlan, setSelectedPlan] = useState<string>(existingMerchant ? TRAYLOOP_PRO_PLAN : '');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -135,14 +135,14 @@ function RegisterContent() {
             {existingMerchant
               ? 'You are signed in. Finish the business workspace that powers billing, payouts, and your storefront.'
               : step === 'plan'
-                ? 'Start with TrayLoop Pro and its 30-day trial. After that, create the owner account and business profile.'
+                ? 'Start with TrayLoop Pro at $49/month. After that, create the owner account and business profile.'
                 : 'Create the owner account and business profile for the merchant workspace you just selected.'}
           </p>
         </div>
 
         {!existingMerchant ? (
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0, 1fr))', gap: 10, marginBottom: 20 }}>
-            <StepCard active={step === 'plan'} done={step === 'details'} number="1" title="Plan" subtitle="TrayLoop Pro trial" />
+            <StepCard active={step === 'plan'} done={step === 'details'} number="1" title="Plan" subtitle="TrayLoop Pro" />
             <StepCard active={step === 'details'} done={false} number="2" title="Merchant account" subtitle="Owner + business setup" />
           </div>
         ) : null}
@@ -158,15 +158,15 @@ function RegisterContent() {
             <button
               type="button"
               onClick={() => {
-                setSelectedPlan(TRIAL_PLAN);
+                setSelectedPlan(TRAYLOOP_PRO_PLAN);
                 setError('');
               }}
               style={{
                 width: '100%',
                 textAlign: 'left',
                 borderRadius: 16,
-                border: selectedPlan === TRIAL_PLAN ? '1px solid #1C1917' : '1px solid #E7E5E4',
-                background: selectedPlan === TRIAL_PLAN ? '#FAFAF9' : '#FFFFFF',
+                border: selectedPlan === TRAYLOOP_PRO_PLAN ? '1px solid #1C1917' : '1px solid #E7E5E4',
+                background: selectedPlan === TRAYLOOP_PRO_PLAN ? '#FAFAF9' : '#FFFFFF',
                 padding: isMobile ? '18px 16px 16px' : '20px 20px 18px',
                 cursor: 'pointer',
               }}
@@ -175,16 +175,16 @@ function RegisterContent() {
                 <div>
                   <div style={{ fontSize: isMobile ? 20 : 22, fontWeight: 700, color: '#1C1917' }}>TrayLoop Pro</div>
                   <div style={{ fontSize: 14, color: '#57534E', marginTop: 6 }}>
-                    $99/month after a 30-day free trial
+                    $49/month
                   </div>
                 </div>
-                <div style={{ display: 'inline-flex', alignItems: 'center', alignSelf: isMobile ? 'flex-start' : 'auto', borderRadius: 999, background: '#FEF3C7', color: '#92400E', fontSize: 12, fontWeight: 700, padding: '6px 10px' }}>
-                  30-day trial
+                <div style={{ display: 'inline-flex', alignItems: 'center', alignSelf: isMobile ? 'flex-start' : 'auto', borderRadius: 999, background: '#F5F5F4', color: '#57534E', fontSize: 12, fontWeight: 700, padding: '6px 10px' }}>
+                  Merchant plan
                 </div>
               </div>
 
               <div style={{ display: 'grid', gap: 10 }}>
-                <PlanBullet text="Create the merchant workspace under the TrayLoop Pro trial flow." />
+                <PlanBullet text="Create the merchant workspace under the live TrayLoop Pro plan." />
                 <PlanBullet text="Start billing first, then finish payouts, operations, offerings, and launch setup." />
                 <PlanBullet text="Future pricing tiers can be added here without changing the core signup flow." />
               </div>
@@ -265,13 +265,13 @@ function RegisterContent() {
         </div>
         <h2 style={{ fontSize: isMobile ? 20 : 22, fontWeight: 700, margin: '0 0 10px', lineHeight: 1.2 }}>Sales-ready and self-serve</h2>
         <p style={{ fontSize: 14, color: '#E7E5E4', lineHeight: 1.7, margin: 0 }}>
-          Start with the TrayLoop Pro trial, create the merchant workspace, then finish billing and launch setup from inside TrayLoop.
+          Start with TrayLoop Pro, create the merchant workspace, then finish billing and launch setup from inside TrayLoop.
         </p>
 
         <div style={{ display: 'grid', gap: 12, marginTop: 20 }}>
-          <SideCard title="1. Select TrayLoop Pro" body="Choose the 30-day trial plan first so every new merchant workspace starts in the correct billing flow." />
+          <SideCard title="1. Select TrayLoop Pro" body="Choose the live $49/month plan first so every new merchant workspace starts in the correct billing flow." />
           <SideCard title="2. Create the merchant workspace" body="Capture the owner login and business profile in one step so the workspace is ready immediately." />
-          <SideCard title="3. Finish setup in Billing" body="Start the trial-backed billing flow first, then move into payouts, operations, offerings, and launch review." />
+          <SideCard title="3. Finish setup in Billing" body="Start the subscription-backed billing flow first, then move into payouts, operations, offerings, and launch review." />
         </div>
 
         <div style={{ marginTop: 22, padding: '14px 16px', borderRadius: 12, background: '#231F1C', border: '1px solid #2C2724' }}>

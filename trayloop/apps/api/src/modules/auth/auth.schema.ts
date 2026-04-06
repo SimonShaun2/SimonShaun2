@@ -16,7 +16,7 @@ export const customerRegisterSchema = z.object({
 });
 
 export const merchantWorkspaceRegisterSchema = z.object({
-  selectedPlan: z.enum(['trayloop_pro_trial']),
+  selectedPlan: z.enum(['trayloop_pro']),
   email: z.string().email(),
   name: z.string().min(1).max(255),
   password: z.string().min(8),

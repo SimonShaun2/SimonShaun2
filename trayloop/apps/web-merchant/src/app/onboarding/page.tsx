@@ -210,7 +210,7 @@ function MerchantOnboardingPageContent() {
             <p style={bodyStyle}>{billingDetail(data)}</p>
             {data.billing.subscription?.trialEnd ? (
               <div style={noteStyle}>
-                Trial ends on {new Date(data.billing.subscription.trialEnd).toLocaleDateString()}.
+                Legacy intro period ends on {new Date(data.billing.subscription.trialEnd).toLocaleDateString()}.
               </div>
             ) : null}
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : undefined, gap: 10, marginTop: 16 }}>
@@ -219,9 +219,9 @@ function MerchantOnboardingPageContent() {
                   {billingAction === 'checkout'
                     ? 'Redirecting...'
                     : data.billing.state === 'canceled'
-                      ? 'Resubscribe'
-                      : data.billing.state === 'not_started'
-                        ? 'Start 30-Day Trial'
+                    ? 'Resubscribe'
+                    : data.billing.state === 'not_started'
+                        ? 'Start TrayLoop Pro'
                         : 'Start TrayLoop Pro'}
                 </button>
               ) : null}
@@ -359,7 +359,7 @@ function billingConfig(status: MerchantOnboardingStatus['billing']['state']) {
     case 'active':
       return { label: 'Active', bg: '#DCFCE7', color: '#166534' };
     case 'trialing':
-      return { label: 'Trialing', bg: '#FEF3C7', color: '#92400E' };
+      return { label: 'Intro Period', bg: '#FEF3C7', color: '#92400E' };
     case 'past_due':
       return { label: 'Past Due', bg: '#FEE2E2', color: '#B91C1C' };
     case 'unpaid':
@@ -375,8 +375,8 @@ function billingDetail(data: MerchantOnboardingStatus) {
   switch (data.billing.state) {
     case 'trialing':
       return data.billing.trialDaysRemaining != null
-        ? `${data.billing.trialDaysRemaining} day${data.billing.trialDaysRemaining === 1 ? '' : 's'} left in your TrayLoop Pro trial.`
-        : 'Your TrayLoop Pro trial is active.';
+        ? `${data.billing.trialDaysRemaining} day${data.billing.trialDaysRemaining === 1 ? '' : 's'} left in your legacy intro period.`
+        : 'A legacy intro period is still active for this workspace.';
     case 'active':
       return data.billing.subscription?.currentPeriodEnd
         ? `Next billing on ${new Date(data.billing.subscription.currentPeriodEnd).toLocaleDateString()}.`
