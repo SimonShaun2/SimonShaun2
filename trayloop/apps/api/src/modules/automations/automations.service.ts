@@ -588,18 +588,27 @@ export async function evaluateAutomationRules(orgId: string, userId: string, inp
     }
   }
 
-  const autopilotRuns = await db
-    .select()
-    .from(automationRuns)
-    .where(and(eq(automationRuns.organizationId, orgId), inArray(automationRuns.id, createdRuns), eq(automationRuns.status, 'queued')));
+  if (createdRuns.length > 0) {
+    const autopilotRuns = await db
+      .select()
+      .from(automationRuns)
+      .where(
+        and(
+          eq(automationRuns.organizationId, orgId),
+          inArray(automationRuns.id, createdRuns),
+          eq(automationRuns.status, 'queued'),
+        ),
+      );
 
-  for (const run of autopilotRuns) {
-    await sendRun(orgId, userId, run);
+    for (const run of autopilotRuns) {
+      await sendRun(orgId, userId, run);
+    }
   }
 
-  const runs = createdRuns.length > 0
-    ? await listAutomationRuns(orgId, { limit: 50, ruleId: undefined, status: undefined })
-    : [];
+  const runs =
+    createdRuns.length > 0
+      ? await listAutomationRuns(orgId, { limit: 50, ruleId: undefined, status: undefined })
+      : [];
 
   return {
     createdCount: createdRuns.length,
