@@ -137,9 +137,15 @@ export function registerRoutes(app: FastifyInstance) {
     return { data: result };
   });
 
+  app.post('/:slug/orders/:orderId/checkout', async (request, reply) => {
+    const { slug, orderId } = request.params as { slug: string; orderId: string };
+    const result = await service.restartPublicOrderCheckout(slug, orderId, (app as any).eventBus);
+    return reply.status(201).send({ data: result });
+  });
+
   app.post('/:slug/orders/:orderId/deposit-checkout', async (request, reply) => {
     const { slug, orderId } = request.params as { slug: string; orderId: string };
-    const result = await service.restartPublicOrderDepositCheckout(slug, orderId, (app as any).eventBus);
+    const result = await service.restartPublicOrderCheckout(slug, orderId, (app as any).eventBus);
     return reply.status(201).send({ data: result });
   });
 }

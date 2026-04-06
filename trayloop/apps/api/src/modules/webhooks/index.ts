@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import Stripe from 'stripe';
 import { db } from '@trayloop/database';
-import { customers, deposits, orders, organizations, subscriptions } from '@trayloop/database';
+import { customers, deposits, orders, organizations, payments, subscriptions } from '@trayloop/database';
 import { and, eq, inArray } from 'drizzle-orm';
 import { getStripe, getWebhookSecret, isStripeEnabled } from '../../lib/stripe.js';
 import { recordOrderEvent } from '../../lib/order-events.js';
@@ -9,6 +9,16 @@ import { notifyDepositPaid } from '../../lib/notifications.js';
 import { logger } from '@trayloop/utils';
 
 type DepositSession = {
+  id: string;
+  status: string;
+  orderId: string;
+  amount: number;
+  currency: string;
+  stripeCheckoutSessionId: string | null;
+  stripePaymentIntentId: string | null;
+};
+
+type PaymentSession = {
   id: string;
   status: string;
   orderId: string;
@@ -40,6 +50,18 @@ function logSubscriptionWebhook(
   logger[level](message, {
     source: 'stripe-webhook',
     area: 'subscription',
+    ...context,
+  });
+}
+
+function logOrderPaymentWebhook(
+  level: 'info' | 'warn' | 'error',
+  message: string,
+  context: Record<string, unknown>,
+) {
+  logger[level](message, {
+    source: 'stripe-webhook',
+    area: 'order-payment',
     ...context,
   });
 }
@@ -81,6 +103,24 @@ async function getDepositBySession(checkoutSessionId: string): Promise<DepositSe
     .limit(1);
 
   return deposit ?? null;
+}
+
+async function getPaymentBySession(checkoutSessionId: string): Promise<PaymentSession | null> {
+  const [payment] = await db
+    .select({
+      id: payments.id,
+      status: payments.status,
+      orderId: payments.orderId,
+      amount: payments.amount,
+      currency: payments.currency,
+      stripeCheckoutSessionId: payments.stripeCheckoutSessionId,
+      stripePaymentIntentId: payments.stripePaymentIntentId,
+    })
+    .from(payments)
+    .where(eq(payments.stripeCheckoutSessionId, checkoutSessionId))
+    .limit(1);
+
+  return payment ?? null;
 }
 
 async function resolveSubscriptionOrganizationId(subscription: Stripe.Subscription) {
@@ -330,15 +370,24 @@ async function handleInvoicePaymentFailed(eventId: string, invoice: Stripe.Invoi
 }
 
 async function handleCheckoutSessionCompleted(eventId: string, session: Stripe.Checkout.Session) {
-  if (session.metadata?.trayloop_deposit !== 'true') {
-    logDepositWebhook('info', 'Ignoring non-deposit checkout session', {
-      eventId,
-      checkoutSessionId: session.id,
-      action: 'skipped',
-    });
+  if (session.metadata?.trayloop_deposit === 'true') {
+    await handleDepositCheckoutCompleted(eventId, session);
     return;
   }
 
+  if (session.metadata?.trayloop_full_payment === 'true') {
+    await handleFullPaymentCheckoutCompleted(eventId, session);
+    return;
+  }
+
+  logDepositWebhook('info', 'Ignoring checkout session with no TrayLoop order metadata', {
+    eventId,
+    checkoutSessionId: session.id,
+    action: 'skipped',
+  });
+}
+
+async function handleDepositCheckoutCompleted(eventId: string, session: Stripe.Checkout.Session) {
   const orderId = session.metadata?.trayloop_order_id;
   const checkoutSessionId = session.id;
   const paymentIntentId = typeof session.payment_intent === 'string' ? session.payment_intent : null;
@@ -363,7 +412,7 @@ async function handleCheckoutSessionCompleted(eventId: string, session: Stripe.C
   }
 
   if (deposit.status === 'paid') {
-    logDepositWebhook('info', 'Completed event skipped for already-paid deposit', {
+    logDepositWebhook('info', 'Ignoring non-deposit checkout session', {
       eventId,
       checkoutSessionId,
       orderId,
@@ -524,16 +573,131 @@ async function handleCheckoutSessionCompleted(eventId: string, session: Stripe.C
   });
 }
 
-async function handleCheckoutSessionExpired(eventId: string, session: Stripe.Checkout.Session) {
-  if (session.metadata?.trayloop_deposit !== 'true') {
-    logDepositWebhook('info', 'Ignoring non-deposit expired checkout session', {
+async function handleFullPaymentCheckoutCompleted(eventId: string, session: Stripe.Checkout.Session) {
+  const orderId = session.metadata?.trayloop_order_id;
+  const paymentId = session.metadata?.trayloop_payment_id;
+  const checkoutSessionId = session.id;
+  const paymentIntentId = typeof session.payment_intent === 'string' ? session.payment_intent : null;
+  const amount = session.amount_total ?? 0;
+
+  if (!orderId || !paymentId) {
+    logOrderPaymentWebhook('error', 'Checkout session missing full payment metadata', {
       eventId,
-      checkoutSessionId: session.id,
+      checkoutSessionId,
+      orderId,
+      paymentId,
+    });
+    return;
+  }
+
+  const payment = await getPaymentBySession(checkoutSessionId);
+  if (!payment || payment.id !== paymentId) {
+    logOrderPaymentWebhook('error', 'No matching payment found for checkout session', {
+      eventId,
+      checkoutSessionId,
+      orderId,
+      paymentId,
+    });
+    return;
+  }
+
+  if (payment.status === 'succeeded') {
+    logOrderPaymentWebhook('info', 'Completed event skipped for already-succeeded order payment', {
+      eventId,
+      checkoutSessionId,
+      orderId,
+      paymentId,
+      paymentStatus: payment.status,
       action: 'skipped',
     });
     return;
   }
 
+  if (payment.status === 'refunded' || payment.status === 'partially_refunded') {
+    logOrderPaymentWebhook('warn', 'Completed event skipped for refunded order payment', {
+      eventId,
+      checkoutSessionId,
+      orderId,
+      paymentId,
+      paymentStatus: payment.status,
+      action: 'skipped',
+    });
+    return;
+  }
+
+  const now = new Date();
+  const result = await db.transaction(async (tx) => {
+    const [updatedPayment] = await tx
+      .update(payments)
+      .set({
+        status: 'succeeded',
+        stripePaymentIntentId: paymentIntentId,
+        paidAt: now,
+        updatedAt: now,
+      })
+      .where(eq(payments.id, payment.id))
+      .returning({
+        id: payments.id,
+        status: payments.status,
+        orderId: payments.orderId,
+      });
+
+    const [updatedOrder] = await tx
+      .update(orders)
+      .set({
+        status: 'confirmed',
+        updatedAt: now,
+      })
+      .where(and(eq(orders.id, orderId), eq(orders.status, 'submitted')))
+      .returning({
+        id: orders.id,
+        status: orders.status,
+      });
+
+    return {
+      payment: updatedPayment ?? null,
+      order: updatedOrder ?? null,
+    };
+  });
+
+  try {
+    await recordOrderEvent(orderId, 'payment_paid', `Payment of $${(amount / 100).toFixed(2)} paid via Stripe`);
+    if (result.order?.status === 'confirmed') {
+      await recordOrderEvent(orderId, 'status_changed', 'Status changed to confirmed (payment received)');
+    }
+  } catch {}
+
+  logOrderPaymentWebhook('info', 'Full order payment completed via webhook', {
+    eventId,
+    checkoutSessionId,
+    orderId,
+    paymentId,
+    paymentIntentId,
+    amount,
+    orderStatus: result.order?.status ?? null,
+    action: 'applied',
+  });
+}
+
+async function handleCheckoutSessionExpired(eventId: string, session: Stripe.Checkout.Session) {
+  if (session.metadata?.trayloop_deposit === 'true') {
+    await handleDepositCheckoutExpired(eventId, session);
+    return;
+  }
+
+  if (session.metadata?.trayloop_full_payment === 'true') {
+    await handleFullPaymentCheckoutExpired(eventId, session);
+    return;
+  }
+
+  logDepositWebhook('info', 'Ignoring expired checkout session with no TrayLoop order metadata', {
+    eventId,
+    checkoutSessionId: session.id,
+    action: 'skipped',
+  });
+}
+
+async function handleDepositCheckoutExpired(eventId: string, session: Stripe.Checkout.Session) {
   const checkoutSessionId = session.id;
   const orderId = session.metadata?.trayloop_order_id;
 
@@ -550,7 +714,7 @@ async function handleCheckoutSessionExpired(eventId: string, session: Stripe.Che
   }
 
   if (deposit.status === 'paid') {
-    logDepositWebhook('info', 'Expired event skipped for already-paid deposit', {
+    logDepositWebhook('info', 'Ignoring non-deposit expired checkout session', {
       eventId,
       checkoutSessionId,
       orderId,
@@ -594,9 +758,11 @@ async function handleCheckoutSessionExpired(eventId: string, session: Stripe.Che
     return;
   }
 
-  try {
-    await recordOrderEvent(orderId, 'deposit_expired', 'Deposit payment link expired');
-  } catch {}
+  if (orderId) {
+    try {
+      await recordOrderEvent(orderId, 'deposit_expired', 'Deposit payment link expired');
+    } catch {}
+  }
 
   logDepositWebhook('info', 'Checkout session expired', {
     eventId,
@@ -604,6 +770,63 @@ async function handleCheckoutSessionExpired(eventId: string, session: Stripe.Che
     depositId: expiredDeposit.id,
     orderId,
     depositStatus: expiredDeposit.status,
+    action: 'applied',
+  });
+}
+
+async function handleFullPaymentCheckoutExpired(eventId: string, session: Stripe.Checkout.Session) {
+  const checkoutSessionId = session.id;
+  const orderId = session.metadata?.trayloop_order_id;
+  const paymentId = session.metadata?.trayloop_payment_id;
+
+  if (!paymentId) {
+    logOrderPaymentWebhook('warn', 'Expired event skipped because payment metadata was missing', {
+      eventId,
+      checkoutSessionId,
+      orderId,
+      action: 'skipped',
+    });
+    return;
+  }
+
+  const payment = await getPaymentBySession(checkoutSessionId);
+  if (!payment || payment.id !== paymentId) {
+    logOrderPaymentWebhook('warn', 'Expired event skipped because no payment was found', {
+      eventId,
+      checkoutSessionId,
+      orderId,
+      paymentId,
+      action: 'skipped',
+    });
+    return;
+  }
+
+  if (payment.status === 'succeeded') {
+    logOrderPaymentWebhook('info', 'Expired event skipped for already-succeeded order payment', {
+      eventId,
+      checkoutSessionId,
+      orderId,
+      paymentId,
+      paymentStatus: payment.status,
+      action: 'skipped',
+    });
+    return;
+  }
+
+  await db
+    .update(payments)
+    .set({
+      status: 'failed',
+      failureReason: 'Checkout session expired',
+      updatedAt: new Date(),
+    })
+    .where(eq(payments.id, payment.id));
+
+  logOrderPaymentWebhook('info', 'Full order checkout expired', {
+    eventId,
+    checkoutSessionId,
+    orderId,
+    paymentId,
     action: 'applied',
   });
 }

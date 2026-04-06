@@ -8,12 +8,15 @@ import {
   packages,
   packageItems,
   addOns,
+  customers,
   deposits,
+  payments,
   orders,
   upsellEvents,
 } from '@trayloop/database';
 import { eq, and, desc } from 'drizzle-orm';
-import { NotFoundError } from '../../lib/errors.js';
+import { NotFoundError, ValidationError } from '../../lib/errors.js';
+import { getStripe, isStripeEnabled } from '../../lib/stripe.js';
 import { buildUpsellRecommendations } from '../../lib/upsells.js';
 import { create as createOrder, createDepositCheckoutForOrder } from '../orders/orders.service.js';
 import type { CreateOrderInput } from '../orders/orders.schema.js';
@@ -39,6 +42,141 @@ function normalizeLocationServiceTypes(
   }
 
   return next.size > 0 ? Array.from(next) : ['delivery'];
+}
+
+interface FullOrderCheckoutContext {
+  id: string;
+  orderNumber: string;
+  status: string;
+  totalAmount: number;
+  merchantAmount: number;
+  customerId: string;
+}
+
+async function createFullOrderCheckoutForOrder(
+  order: FullOrderCheckoutContext,
+  org: {
+    id: string;
+    stripeAccountId: string | null;
+    stripeOnboardingComplete: boolean | null;
+  },
+  customerEmail: string,
+  options: {
+    successUrl: string;
+    cancelUrl: string;
+  },
+) {
+  if (!isStripeEnabled() || !org.stripeAccountId || !org.stripeOnboardingComplete) {
+    throw new NotFoundError('Stripe checkout');
+  }
+
+  const platformFeeAmount = Math.max(order.totalAmount - order.merchantAmount, 0);
+  const stripe = getStripe();
+  const previousPendingPayments = await db
+    .select({
+      id: payments.id,
+      stripeCheckoutSessionId: payments.stripeCheckoutSessionId,
+    })
+    .from(payments)
+    .where(and(eq(payments.orderId, order.id), eq(payments.status, 'pending')));
+
+  for (const previousPayment of previousPendingPayments) {
+    if (!previousPayment.stripeCheckoutSessionId) {
+      continue;
+    }
+
+    try {
+      await stripe.checkout.sessions.expire(previousPayment.stripeCheckoutSessionId);
+    } catch {
+      // Best effort: the session may already be expired or completed.
+    }
+  }
+
+  const now = new Date();
+  const [payment] = await db.transaction(async (tx) => {
+    await tx
+      .update(payments)
+      .set({
+        status: 'failed',
+        failureReason: 'Superseded by a newer checkout session',
+        updatedAt: now,
+      })
+      .where(and(eq(payments.orderId, order.id), eq(payments.status, 'pending')));
+
+    return tx
+      .insert(payments)
+      .values({
+        orderId: order.id,
+        amount: order.totalAmount,
+        currency: 'USD',
+        status: 'pending',
+        method: 'card',
+      })
+      .returning();
+  });
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      line_items: [{
+        price_data: {
+          currency: 'usd',
+          unit_amount: order.totalAmount,
+          product_data: {
+            name: `Order ${order.orderNumber}`,
+            description: 'TrayLoop catering order',
+          },
+        },
+        quantity: 1,
+      }],
+      payment_intent_data: {
+        application_fee_amount: platformFeeAmount,
+        transfer_data: {
+          destination: org.stripeAccountId,
+        },
+      },
+      customer_email: customerEmail,
+      metadata: {
+        trayloop_order_id: order.id,
+        trayloop_order_number: order.orderNumber,
+        trayloop_org_id: org.id,
+        trayloop_payment_id: payment.id,
+        trayloop_full_payment: 'true',
+        trayloop_merchant_amount: String(order.merchantAmount),
+        trayloop_platform_fee_amount: String(platformFeeAmount),
+        trayloop_customer_charge_amount: String(order.totalAmount),
+      },
+      success_url: options.successUrl,
+      cancel_url: options.cancelUrl,
+    });
+
+    await db
+      .update(payments)
+      .set({
+        stripeCheckoutSessionId: session.id,
+        updatedAt: new Date(),
+      })
+      .where(eq(payments.id, payment.id));
+
+    return {
+      paymentId: payment.id,
+      amount: payment.amount,
+      currency: payment.currency,
+      paymentLink: session.url!,
+      stripeCheckoutSessionId: session.id,
+    };
+  } catch (error) {
+    await db
+      .update(payments)
+      .set({
+        status: 'failed',
+        failureReason: error instanceof Error ? error.message : 'Failed to create Stripe checkout session',
+        updatedAt: new Date(),
+      })
+      .where(eq(payments.id, payment.id));
+
+    throw error;
+  }
 }
 
 export async function getStorefront(slug: string) {
@@ -325,14 +463,58 @@ export async function submitPublicOrder(slug: string, input: CreateOrderInput, e
     : null;
 
   const depositRequired = selectedLocation?.depositRequired ?? true;
-  const stripeReady = Boolean(org.stripeAccountId && org.stripeOnboardingComplete);
+  const stripeReady = Boolean(isStripeEnabled() && org.stripeAccountId && org.stripeOnboardingComplete);
 
-  if (!depositRequired) {
+  if (!depositRequired && !stripeReady) {
     return {
       mode: 'order_received' as const,
       order: {
         ...order,
         depositRequired: false,
+      },
+    };
+  }
+
+  if (!depositRequired) {
+    const storefrontBaseUrl =
+      process.env.STOREFRONT_URL ||
+      (process.env.NODE_ENV === 'production'
+        ? 'https://order.trayloophq.com'
+        : 'http://localhost:3002');
+
+    const checkout = await createFullOrderCheckoutForOrder(
+      {
+        id: order.id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        totalAmount: order.pricing.total,
+        merchantAmount: order.pricing.packageSubtotal + order.pricing.addOnSubtotal,
+        customerId: order.customerId,
+      },
+      org,
+      order.customer.email,
+      {
+        successUrl:
+          `${storefrontBaseUrl}/${slug}?checkout=success&orderId=${encodeURIComponent(order.id)}` +
+          `&orderNumber=${encodeURIComponent(order.orderNumber)}`,
+        cancelUrl:
+          `${storefrontBaseUrl}/${slug}?checkout=cancelled&orderId=${encodeURIComponent(order.id)}` +
+          `&orderNumber=${encodeURIComponent(order.orderNumber)}`,
+      },
+    );
+
+    return {
+      mode: 'full_checkout' as const,
+      order: {
+        ...order,
+        depositRequired: false,
+      },
+      checkout: {
+        kind: 'order' as const,
+        url: checkout.paymentLink,
+        amount: checkout.amount,
+        currency: checkout.currency,
+        stripeCheckoutSessionId: checkout.stripeCheckoutSessionId,
       },
     };
   }
@@ -381,9 +563,9 @@ export async function submitPublicOrder(slug: string, input: CreateOrderInput, e
       depositRequired: true,
     },
     checkout: {
+      kind: 'deposit' as const,
       url: checkout.paymentLink,
-      depositId: checkout.depositId,
-      depositAmount: checkout.depositAmount,
+      amount: checkout.depositAmount,
       currency: checkout.currency,
       stripeCheckoutSessionId: checkout.stripeCheckoutSessionId,
     },
@@ -530,10 +712,14 @@ async function getPublicOrderPaymentContext(slug: string, orderId: string) {
       organizationId: orders.organizationId,
       organizationName: organizations.name,
       organizationSlug: organizations.slug,
+      stripeAccountId: organizations.stripeAccountId,
+      stripeOnboardingComplete: organizations.stripeOnboardingComplete,
+      customerEmail: customers.email,
       scheduledAt: orders.scheduledAt,
     })
     .from(orders)
     .innerJoin(organizations, eq(organizations.id, orders.organizationId))
+    .innerJoin(customers, eq(customers.id, orders.customerId))
     .where(and(eq(orders.id, orderId), eq(organizations.slug, slug), eq(organizations.isActive, true)))
     .limit(1);
 
@@ -556,6 +742,20 @@ async function getPublicOrderPaymentContext(slug: string, orderId: string) {
     .orderBy(desc(deposits.createdAt))
     .limit(1);
 
+  const [latestPayment] = await db
+    .select({
+      id: payments.id,
+      amount: payments.amount,
+      currency: payments.currency,
+      status: payments.status,
+      paidAt: payments.paidAt,
+      createdAt: payments.createdAt,
+    })
+    .from(payments)
+    .where(eq(payments.orderId, order.id))
+    .orderBy(desc(payments.createdAt))
+    .limit(1);
+
   const [settings] = order.locationId
     ? await db
         .select({ depositRequired: locationSettings.depositRequired })
@@ -567,12 +767,25 @@ async function getPublicOrderPaymentContext(slug: string, orderId: string) {
   return {
     order,
     deposit: latestDeposit ?? null,
+    payment: latestPayment ?? null,
     depositRequired: settings?.depositRequired ?? true,
   };
 }
 
 export async function getPublicOrderPaymentStatus(slug: string, orderId: string) {
-  const { order, deposit, depositRequired } = await getPublicOrderPaymentContext(slug, orderId);
+  const { order, deposit, payment, depositRequired } = await getPublicOrderPaymentContext(slug, orderId);
+
+  const paymentState = depositRequired
+    ? (deposit?.status ?? 'pending')
+    : payment
+      ? (payment.status === 'succeeded'
+          ? 'paid'
+          : payment.status === 'refunded' || payment.status === 'partially_refunded'
+            ? 'refunded'
+            : payment.status === 'failed'
+              ? 'failed'
+              : 'pending')
+      : 'pending';
 
   return {
     orderId: order.id,
@@ -583,7 +796,8 @@ export async function getPublicOrderPaymentStatus(slug: string, orderId: string)
     currency: order.currency,
     scheduledAt: order.scheduledAt,
     depositRequired,
-    paymentState: deposit?.status ?? (depositRequired ? 'pending' : 'not_required'),
+    checkoutType: depositRequired ? 'deposit' : 'order',
+    paymentState,
     deposit: deposit
       ? {
           id: deposit.id,
@@ -594,34 +808,82 @@ export async function getPublicOrderPaymentStatus(slug: string, orderId: string)
           createdAt: deposit.createdAt,
         }
       : null,
+    payment: payment
+      ? {
+          id: payment.id,
+          amount: payment.amount,
+          currency: payment.currency,
+          status: payment.status,
+          paidAt: payment.paidAt,
+          createdAt: payment.createdAt,
+        }
+      : null,
     canRetryCheckout: Boolean(
-      depositRequired &&
-      deposit &&
-      order.status === 'awaiting_deposit' &&
-      deposit.status !== 'paid',
+      depositRequired
+        ? deposit &&
+          order.status === 'awaiting_deposit' &&
+          deposit.status !== 'paid'
+        : payment &&
+          order.status === 'submitted' &&
+          payment.status !== 'succeeded',
     ),
   };
 }
 
-export async function restartPublicOrderDepositCheckout(slug: string, orderId: string, eventBus: EventBus) {
+export async function restartPublicOrderCheckout(slug: string, orderId: string, eventBus: EventBus) {
   const { order, depositRequired } = await getPublicOrderPaymentContext(slug, orderId);
 
-  if (!depositRequired) {
-    throw new NotFoundError('Deposit checkout');
+  const storefrontBaseUrl = getStorefrontBaseUrl();
+  if (depositRequired) {
+    const checkout = await createDepositCheckoutForOrder(
+      {
+        id: order.id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        totalAmount: order.totalAmount,
+        customerId: order.customerId,
+        locationId: order.locationId,
+      },
+      order.organizationId,
+      eventBus,
+      {
+        successUrl:
+          `${storefrontBaseUrl}/${slug}?checkout=success&orderId=${encodeURIComponent(order.id)}` +
+          `&orderNumber=${encodeURIComponent(order.orderNumber)}`,
+        cancelUrl:
+          `${storefrontBaseUrl}/${slug}?checkout=cancelled&orderId=${encodeURIComponent(order.id)}` +
+          `&orderNumber=${encodeURIComponent(order.orderNumber)}`,
+      },
+    );
+
+    return {
+      kind: 'deposit' as const,
+      url: checkout.paymentLink,
+      amount: checkout.depositAmount,
+      currency: checkout.currency,
+      stripeCheckoutSessionId: checkout.stripeCheckoutSessionId,
+    };
   }
 
-  const storefrontBaseUrl = getStorefrontBaseUrl();
-  const checkout = await createDepositCheckoutForOrder(
+  if (order.status !== 'submitted') {
+    throw new ValidationError('This order is no longer awaiting customer payment.');
+  }
+
+  const checkout = await createFullOrderCheckoutForOrder(
     {
       id: order.id,
       orderNumber: order.orderNumber,
       status: order.status,
       totalAmount: order.totalAmount,
+      merchantAmount: Math.round(order.totalAmount / 1.05),
       customerId: order.customerId,
-      locationId: order.locationId,
     },
-    order.organizationId,
-    eventBus,
+    {
+      id: order.organizationId,
+      stripeAccountId: order.stripeAccountId,
+      stripeOnboardingComplete: order.stripeOnboardingComplete,
+    },
+    order.customerEmail,
     {
       successUrl:
         `${storefrontBaseUrl}/${slug}?checkout=success&orderId=${encodeURIComponent(order.id)}` +
@@ -633,9 +895,9 @@ export async function restartPublicOrderDepositCheckout(slug: string, orderId: s
   );
 
   return {
+    kind: 'order' as const,
     url: checkout.paymentLink,
-    depositId: checkout.depositId,
-    depositAmount: checkout.depositAmount,
+    amount: checkout.amount,
     currency: checkout.currency,
     stripeCheckoutSessionId: checkout.stripeCheckoutSessionId,
   };

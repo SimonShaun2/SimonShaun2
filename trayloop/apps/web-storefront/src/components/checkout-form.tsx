@@ -12,7 +12,7 @@ import type {
 import {
   fetchCustomerAccount,
   fetchOrderPaymentStatus,
-  restartDepositCheckout,
+  restartOrderCheckout,
   submitOrder,
   fetchStorefrontUpsells,
   trackStorefrontUpsell,
@@ -44,24 +44,30 @@ function ReturnedCheckoutBanner({
   const palette = isSuccess
     ? { bg: '#ECFDF5', border: '#A7F3D0', title: '#047857', body: '#065F46' }
     : { bg: '#FFFBEB', border: '#FCD34D', title: '#92400E', body: '#B45309' };
+  const isDepositCheckout = paymentStatus?.checkoutType !== 'order';
+  const paymentAmount = isDepositCheckout ? paymentStatus?.deposit?.amount : paymentStatus?.payment?.amount;
 
   const paymentLabel = paymentStatus?.paymentState === 'paid'
-    ? 'Deposit paid'
+    ? isDepositCheckout ? 'Deposit paid' : 'Payment paid'
+    : paymentStatus?.paymentState === 'failed'
+      ? 'Checkout expired'
     : paymentStatus?.paymentState === 'refunded'
       ? 'Checkout link expired'
       : paymentStatus?.paymentState === 'not_required'
-        ? 'No deposit required'
-        : 'Deposit still pending';
+        ? isDepositCheckout ? 'No deposit required' : 'No payment required'
+        : isDepositCheckout ? 'Deposit still pending' : 'Payment still pending';
 
   return (
     <div style={{ background: palette.bg, border: `1px solid ${palette.border}`, borderRadius: 12, padding: '16px 20px' }}>
       <p style={{ color: palette.title, fontWeight: 700, fontSize: 14, margin: 0 }}>
-        {isSuccess ? 'Deposit checkout completed' : 'Checkout was cancelled'}
+        {isSuccess
+          ? isDepositCheckout ? 'Deposit checkout completed' : 'Payment checkout completed'
+          : 'Checkout was cancelled'}
         {returnedOrderNumber ? ` for ${returnedOrderNumber}` : ''}.
       </p>
       <p style={{ color: palette.body, fontSize: 13, margin: '6px 0 0', lineHeight: 1.6 }}>
         {paymentStatus
-          ? `${paymentLabel}. ${paymentStatus.deposit?.amount ? `Deposit amount: $${(paymentStatus.deposit.amount / 100).toFixed(2)}.` : ''} Order status: ${paymentStatus.orderStatus.replace('_', ' ')}.`
+          ? `${paymentLabel}. ${paymentAmount ? `${isDepositCheckout ? 'Deposit' : 'Payment'} amount: $${(paymentAmount / 100).toFixed(2)}.` : ''} Order status: ${paymentStatus.orderStatus.replace('_', ' ')}.`
           : isSuccess
             ? 'We are finalizing your payment status and confirmation.'
             : 'Your order was saved. You can continue payment now or wait for merchant follow-up.'}
@@ -559,6 +565,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
 
     setError('');
     setFieldErrors([]);
+
     setSubmitting(true);
 
     // Combine date + time into a single datetime string for the API
@@ -593,7 +600,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
 
     try {
       const result = await submitOrder(data.merchant.slug, payload);
-      if (result.mode === 'deposit_checkout' && result.checkout?.url) {
+      if ((result.mode === 'deposit_checkout' || result.mode === 'full_checkout') && result.checkout?.url) {
         window.location.assign(result.checkout.url);
         return;
       }
@@ -621,7 +628,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
     setRetryingCheckout(true);
     setPaymentStatusError('');
     try {
-      const checkout = await restartDepositCheckout(data.merchant.slug, returnedOrderId);
+      const checkout = await restartOrderCheckout(data.merchant.slug, returnedOrderId);
       window.location.assign(checkout.url);
     } catch (err) {
       setPaymentStatusError(err instanceof Error ? err.message : 'Failed to reopen checkout');

@@ -200,18 +200,18 @@ export interface OrderConfirmation {
   createdAt: string;
 }
 
-export interface DepositCheckoutPayload {
+export interface OrderCheckoutPayload {
+  kind: 'deposit' | 'order';
   url: string;
-  depositId: string;
-  depositAmount: number;
+  amount: number;
   currency: string;
   stripeCheckoutSessionId: string | null;
 }
 
 export interface StorefrontOrderResponse {
-  mode: 'order_received' | 'deposit_pending' | 'deposit_checkout';
+  mode: 'order_received' | 'deposit_pending' | 'deposit_checkout' | 'full_checkout';
   order: OrderConfirmation;
-  checkout?: DepositCheckoutPayload;
+  checkout?: OrderCheckoutPayload;
 }
 
 export interface PublicOrderPaymentStatus {
@@ -223,8 +223,17 @@ export interface PublicOrderPaymentStatus {
   currency: string;
   scheduledAt: string;
   depositRequired: boolean;
-  paymentState: 'pending' | 'paid' | 'refunded' | 'not_required';
+  checkoutType: 'deposit' | 'order';
+  paymentState: 'pending' | 'paid' | 'failed' | 'refunded' | 'not_required';
   deposit: null | {
+    id: string;
+    amount: number;
+    currency: string;
+    status: string;
+    paidAt: string | null;
+    createdAt: string;
+  };
+  payment: null | {
     id: string;
     amount: number;
     currency: string;
@@ -399,8 +408,8 @@ export async function fetchOrderPaymentStatus(slug: string, orderId: string): Pr
   return json.data;
 }
 
-export async function restartDepositCheckout(slug: string, orderId: string): Promise<DepositCheckoutPayload> {
-  const res = await fetch(`${API_URL}/api/storefront/${slug}/orders/${orderId}/deposit-checkout`, {
+export async function restartOrderCheckout(slug: string, orderId: string): Promise<OrderCheckoutPayload> {
+  const res = await fetch(`${API_URL}/api/storefront/${slug}/orders/${orderId}/checkout`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -413,6 +422,10 @@ export async function restartDepositCheckout(slug: string, orderId: string): Pro
   }
 
   return json.data;
+}
+
+export async function restartDepositCheckout(slug: string, orderId: string): Promise<OrderCheckoutPayload> {
+  return restartOrderCheckout(slug, orderId);
 }
 
 export async function registerCustomer(input: {

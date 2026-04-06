@@ -5,6 +5,7 @@ import { paymentStatusEnum, paymentMethodEnum, depositStatusEnum } from './enums
 export const payments = pgTable('payments', {
   id: uuid('id').primaryKey().defaultRandom(),
   orderId: uuid('order_id').notNull().references(() => orders.id),
+  stripeCheckoutSessionId: text('stripe_checkout_session_id').unique(),
   stripePaymentIntentId: text('stripe_payment_intent_id').unique(),
   amount: integer('amount').notNull(),
   currency: varchar('currency', { length: 3 }).notNull().default('USD'),
