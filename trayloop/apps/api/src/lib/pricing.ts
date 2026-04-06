@@ -36,6 +36,9 @@ export interface PricingResult {
   lineItems: LineItem[];
   packageSubtotal: number;
   addOnSubtotal: number;
+  subtotal: number;
+  platformFee: number;
+  platformFeePercent: number;
   total: number;
   currency: string;
   headcount: number;
@@ -124,10 +127,13 @@ export async function calculatePricing(input: PricingInput): Promise<PricingResu
     });
   }
 
-  // 5. Compute subtotals
+  // 5. Compute subtotals + 5% platform coordination fee
+  const PLATFORM_FEE_PERCENT = 5;
   const packageSubtotal = packageLineItems.reduce((sum, item) => sum + item.totalPrice, 0);
   const addOnSubtotal = addOnLineItems.reduce((sum, item) => sum + item.totalPrice, 0);
-  const total = packageSubtotal + addOnSubtotal;
+  const subtotal = packageSubtotal + addOnSubtotal;
+  const platformFee = Math.round(subtotal * (PLATFORM_FEE_PERCENT / 100));
+  const total = subtotal + platformFee;
 
   // 6. Enforce minimum order amount if location provided
   if (input.locationId) {
@@ -148,6 +154,9 @@ export async function calculatePricing(input: PricingInput): Promise<PricingResu
     lineItems: [...packageLineItems, ...addOnLineItems],
     packageSubtotal,
     addOnSubtotal,
+    subtotal,
+    platformFee,
+    platformFeePercent: PLATFORM_FEE_PERCENT,
     total,
     currency: 'USD',
     headcount: input.headcount,

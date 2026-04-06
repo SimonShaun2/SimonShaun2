@@ -377,13 +377,16 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
   };
 
   // Estimate (client-side for display only — server recalculates)
-  const estimatedTotal = Object.entries(selectedPkgs).reduce((sum, [id, qty]) => {
+  const PLATFORM_FEE_PERCENT = 5;
+  const estimatedSubtotal = Object.entries(selectedPkgs).reduce((sum, [id, qty]) => {
     const pkg = allPackages.find((p) => p.id === id);
     return sum + (pkg ? pkg.pricePerHead * headcount * qty : 0);
   }, 0) + Object.entries(selectedAddOnIds).reduce((sum, [id, qty]) => {
     const addOn = allAddOns.find((a) => a.id === id);
     return sum + (addOn ? addOn.price * qty : 0);
   }, 0);
+  const estimatedPlatformFee = Math.round(estimatedSubtotal * (PLATFORM_FEE_PERCENT / 100));
+  const estimatedTotal = estimatedSubtotal + estimatedPlatformFee;
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1619,7 +1622,19 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                   )}
                 </div>
 
-                {/* Total */}
+                {/* Platform fee + Total */}
+                {estimatedSubtotal > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginTop: 8 }}>
+                    <span style={{ color: T.textMuted }}>Subtotal</span>
+                    <span style={{ color: T.textMuted }}>${(estimatedSubtotal / 100).toFixed(2)}</span>
+                  </div>
+                )}
+                {estimatedPlatformFee > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginTop: 4 }}>
+                    <span style={{ color: T.textMuted }}>Coordination &amp; processing fee ({PLATFORM_FEE_PERCENT}%)</span>
+                    <span style={{ color: T.textMuted }}>${(estimatedPlatformFee / 100).toFixed(2)}</span>
+                  </div>
+                )}
                 <div style={{
                   borderTop: `2px solid ${T.selectedBorder}`,
                   marginTop: 14, paddingTop: 14,
