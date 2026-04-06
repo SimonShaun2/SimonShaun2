@@ -42,7 +42,7 @@ function MerchantBillingPageContent() {
       case 'canceled':
         return { tone: 'error' as const, title: 'Subscription canceled', body: 'Resubscribe to reactivate the paid TrayLoop workspace for this merchant.' };
       default:
-        return { tone: 'warning' as const, title: 'Start your TrayLoop Pro subscription', body: 'Launch billing from inside TrayLoop and keep the merchant experience branded end to end.' };
+        return { tone: 'warning' as const, title: 'Complete signup billing', body: 'The first TrayLoop Pro checkout belongs in signup. Finish secure checkout before using this workspace as a live merchant account.' };
     }
   }, [data]);
 
@@ -112,6 +112,51 @@ function MerchantBillingPageContent() {
   const billingParam = searchParams.get('billing');
   const welcomeParam = searchParams.get('welcome');
 
+  if (data.billing.state === 'not_started') {
+    return (
+      <div>
+        <div style={{ marginBottom: 24 }}>
+          <h1 style={{ ...headingStyle, fontSize: isMobile ? 24 : headingStyle.fontSize }}>Complete signup billing</h1>
+          <p style={{ margin: '6px 0 0', color: '#78716C', fontSize: 14, maxWidth: 720 }}>
+            This workspace should have completed TrayLoop Pro checkout during signup. Billing management belongs here after activation, not before.
+          </p>
+        </div>
+
+        {welcomeParam === '1' ? (
+          <Banner
+            tone="warning"
+            title="Signup still needs billing"
+            body="Your merchant workspace was created, but secure checkout still needs to be completed before launch setup can continue."
+          />
+        ) : null}
+        {billingParam === 'cancel' ? (
+          <Banner tone="warning" title="Checkout canceled" body="Signup is still waiting on secure checkout. Finish billing to activate this merchant workspace." />
+        ) : null}
+        {error ? <Banner tone="error" title="Billing action failed" body={error} /> : null}
+
+        <section style={{ ...sectionStyle, maxWidth: 760 }}>
+          <header style={{ marginBottom: 18 }}>
+            <h2 style={sectionTitleStyle}>TrayLoop Pro</h2>
+            <p style={sectionSubtitleStyle}>Finish the initial subscription checkout, then come back here later to manage billing changes, pausing, or cancellation.</p>
+          </header>
+
+          <div style={{ display: 'grid', gap: 12, marginBottom: 18 }}>
+            <InfoTile title="Plan" body={`${data.billing.planName} at $${(data.billing.priceCents / 100).toFixed(0)}/${data.billing.interval}.`} />
+            <InfoTile title="Current state" body="Signup is incomplete until secure checkout is confirmed." />
+            <InfoTile title="After activation" body="The billing page becomes the place to manage your subscription, not start it for the first time." />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : undefined, gap: 10 }}>
+            <button type="button" onClick={handleCheckout} disabled={action !== null} style={{ ...primaryButtonStyle, width: isMobile ? '100%' : undefined }}>
+              {action === 'checkout' ? 'Redirecting...' : 'Continue Secure Checkout'}
+            </button>
+            <a href="/onboarding" style={{ ...secondaryButtonStyle, width: isMobile ? '100%' : undefined }}>Open Signup Checklist</a>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
@@ -130,7 +175,7 @@ function MerchantBillingPageContent() {
         <Banner
           tone="success"
           title="Merchant workspace created"
-          body="Start your TrayLoop Pro subscription first. After billing is in place, finish payouts and launch setup."
+          body="Your subscription is active. Use this page later to manage TrayLoop Pro, payouts, and storefront billing health."
         />
       ) : null}
       {billingParam === 'success' ? (
@@ -177,9 +222,7 @@ function MerchantBillingPageContent() {
                   ? 'Redirecting...'
                   : data.billing.state === 'canceled'
                     ? 'Resubscribe'
-                    : data.billing.state === 'not_started'
-                      ? 'Start Subscription'
-                      : 'Start Subscription'}
+                    : 'Resume Subscription'}
               </button>
             ) : null}
             {data.billing.canManage ? (
@@ -201,7 +244,7 @@ function MerchantBillingPageContent() {
             <StatusRow
               label="Subscription"
               value={data.billing.state.replace('_', ' ')}
-              detail={data.billing.canManage ? 'Manage payment method, invoices, and cancellation.' : 'Start billing to activate TrayLoop Pro.'}
+              detail={data.billing.canManage ? 'Manage payment method, invoices, and cancellation.' : 'Billing setup must be completed during signup.'}
               href="/billing"
             />
             <StatusRow

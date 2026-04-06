@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { createBillingCheckout } from '../../lib/api';
 import { useMobile } from '../../lib/use-mobile';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -103,7 +104,16 @@ function RegisterContent() {
       localStorage.setItem('orgId', organization.id);
       localStorage.setItem('orgSlug', organization.slug ?? orgSlug.trim());
       localStorage.setItem('orgName', organization.name ?? orgName.trim());
-      window.location.href = '/billing?welcome=1';
+
+      try {
+        const result = await createBillingCheckout({
+          successUrl: `${window.location.origin}/onboarding?welcome=1&billing=success`,
+          cancelUrl: `${window.location.origin}/onboarding?welcome=1&billing=cancel`,
+        });
+        window.location.href = result.url;
+      } catch {
+        window.location.href = '/onboarding?welcome=1&billing=required';
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create merchant workspace');
     } finally {
@@ -133,10 +143,10 @@ function RegisterContent() {
           </h1>
           <p style={{ color: '#78716C', margin: '8px 0 0', fontSize: 14, lineHeight: 1.6 }}>
             {existingMerchant
-              ? 'You are signed in. Finish the business workspace that powers billing, payouts, and your storefront.'
+              ? 'You are signed in. Finish the business workspace that powers payouts, launch setup, and your storefront.'
               : step === 'plan'
-                ? 'Start with TrayLoop Pro at $49/month. After that, create the owner account and business profile.'
-                : 'Create the owner account and business profile for the merchant workspace you just selected.'}
+                ? 'Start with TrayLoop Pro at $49/month. Secure checkout is part of signup, then you will create the owner account and business profile.'
+                : 'Create the owner account and business profile, then we will immediately open secure checkout to activate this merchant workspace.'}
           </p>
         </div>
 
@@ -185,7 +195,7 @@ function RegisterContent() {
 
               <div style={{ display: 'grid', gap: 10 }}>
                 <PlanBullet text="Create the merchant workspace under the live TrayLoop Pro plan." />
-                <PlanBullet text="Start billing first, then finish payouts, operations, offerings, and launch setup." />
+                <PlanBullet text="Secure subscription checkout happens during signup before the merchant workspace can launch." />
                 <PlanBullet text="Future pricing tiers can be added here without changing the core signup flow." />
               </div>
             </button>
@@ -248,7 +258,7 @@ function RegisterContent() {
                 </button>
               ) : null}
               <button type="submit" disabled={loading} style={{ ...primaryButtonStyle, width: isMobile ? '100%' : undefined }}>
-                {loading ? 'Creating merchant workspace...' : existingMerchant ? 'Finish workspace setup' : 'Create merchant workspace'}
+                {loading ? 'Creating workspace and opening checkout...' : existingMerchant ? 'Finish workspace setup' : 'Create merchant workspace'}
               </button>
             </div>
           </form>

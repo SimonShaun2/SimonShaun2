@@ -492,11 +492,11 @@ function SettingsContent() {
         ? `${billingSubscription?.planName ?? 'TrayLoop Pro'} active`
         : billingState === 'past_due'
           ? 'Billing attention required'
-          : billingState === 'unpaid'
+        : billingState === 'unpaid'
             ? 'Subscription unpaid'
             : billingState === 'canceled'
               ? 'Subscription canceled'
-              : 'Start your subscription';
+              : 'Complete signup billing';
   const billingDetail =
     billingState === 'trialing'
       ? billingSubscription?.trialDaysRemaining != null
@@ -510,9 +510,9 @@ function SettingsContent() {
           ? 'Update your payment method to keep your storefront live.'
         : billingState === 'unpaid'
           ? 'Stripe marked this subscription unpaid. Open billing to resolve it.'
-        : billingState === 'canceled'
+      : billingState === 'canceled'
           ? 'Resubscribe to reactivate TrayLoop Pro.'
-          : 'Subscribe to TrayLoop Pro to keep your storefront live.';
+          : 'Billing setup must be completed during signup before this workspace can launch.';
 
   if (loading && !organization) {
     return <p style={{ color: '#6b7280' }}>Loading settings...</p>;
@@ -1037,7 +1037,7 @@ function SettingsContent() {
                   />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {billingSubscription?.canCheckout ? (
+                  {billingSubscription?.canCheckout && billingState !== 'not_started' ? (
                     <button type="button" onClick={handleStartSubscription} disabled={billingActionLoading !== null} style={primaryButtonStyle}>
                       {billingActionLoading === 'checkout'
                         ? 'Redirecting...'
