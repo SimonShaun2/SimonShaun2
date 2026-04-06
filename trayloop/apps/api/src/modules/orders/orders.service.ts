@@ -105,7 +105,10 @@ export async function createDepositCheckoutForOrder(
         quantity: 1,
       }],
       payment_intent_data: {
-        application_fee_amount: Math.round(depositAmount * 0.05),
+        // Platform fee: 5% of the order subtotal (before fee).
+        // depositAmount includes the fee, so: subtotal = total / 1.05, fee = total - subtotal
+        // This ensures the merchant receives their full menu price with zero commission.
+        application_fee_amount: Math.round(depositAmount - (depositAmount / 1.05)),
         transfer_data: {
           destination: org.stripeAccountId,
         },
@@ -802,7 +805,8 @@ export async function sendDepositLink(orderId: string, orgId: string, input: Sen
         quantity: 1,
       }],
       payment_intent_data: {
-        application_fee_amount: Math.round(depositAmount * 0.05), // 5% platform fee
+        // Platform fee: merchant gets full menu price, TrayLoop keeps the 5% fee
+        application_fee_amount: Math.round(depositAmount - (depositAmount / 1.05)),
         transfer_data: {
           destination: org.stripeAccountId,
         },
