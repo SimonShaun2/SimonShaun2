@@ -51,6 +51,33 @@ interface DepositCheckoutContext {
   locationId: string | null;
 }
 
+interface DepositChargeBreakdown {
+  merchantAmount: number;
+  platformFeeAmount: number;
+  customerChargeAmount: number;
+}
+
+function buildDepositChargeBreakdown(
+  amount: number,
+  amountIncludesPlatformFee: boolean,
+): DepositChargeBreakdown {
+  if (amountIncludesPlatformFee) {
+    const merchantAmount = Math.round(amount / 1.05);
+    return {
+      merchantAmount,
+      platformFeeAmount: Math.max(amount - merchantAmount, 0),
+      customerChargeAmount: amount,
+    };
+  }
+
+  const platformFeeAmount = Math.round(amount * 0.05);
+  return {
+    merchantAmount: amount,
+    platformFeeAmount,
+    customerChargeAmount: amount + platformFeeAmount,
+  };
+}
+
 export async function createDepositCheckoutForOrder(
   order: DepositCheckoutContext,
   orgId: string,
@@ -85,7 +112,10 @@ export async function createDepositCheckoutForOrder(
     throw new NotFoundError('Order payment context');
   }
 
-  const depositAmount = options.depositAmount ?? order.totalAmount;
+  const depositBreakdown = buildDepositChargeBreakdown(
+    options.depositAmount ?? order.totalAmount,
+    options.depositAmount === undefined,
+  );
 
   let paymentLink: string;
   let checkoutSessionId: string | null = null;
@@ -97,7 +127,7 @@ export async function createDepositCheckoutForOrder(
       line_items: [{
         price_data: {
           currency: 'usd',
-          unit_amount: depositAmount,
+          unit_amount: depositBreakdown.customerChargeAmount,
           product_data: {
             name: `Deposit for ${order.orderNumber}`,
             description: `Order deposit - ${org.name}`,
@@ -106,10 +136,7 @@ export async function createDepositCheckoutForOrder(
         quantity: 1,
       }],
       payment_intent_data: {
-        // Platform fee: 5% of the order subtotal (before fee).
-        // depositAmount includes the fee, so: subtotal = total / 1.05, fee = total - subtotal
-        // This ensures the merchant receives their full menu price with zero commission.
-        application_fee_amount: Math.round(depositAmount - (depositAmount / 1.05)),
+        application_fee_amount: depositBreakdown.platformFeeAmount,
         transfer_data: {
           destination: org.stripeAccountId,
         },
@@ -120,6 +147,9 @@ export async function createDepositCheckoutForOrder(
         trayloop_order_number: order.orderNumber,
         trayloop_org_id: orgId,
         trayloop_deposit: 'true',
+        trayloop_deposit_merchant_amount: String(depositBreakdown.merchantAmount),
+        trayloop_platform_fee_amount: String(depositBreakdown.platformFeeAmount),
+        trayloop_customer_charge_amount: String(depositBreakdown.customerChargeAmount),
       },
       success_url: options.successUrl,
       cancel_url: options.cancelUrl,
@@ -139,7 +169,7 @@ export async function createDepositCheckoutForOrder(
 
     const [deposit] = await tx.insert(deposits).values({
       orderId: order.id,
-      amount: depositAmount,
+      amount: depositBreakdown.customerChargeAmount,
       currency: 'USD',
       status: 'pending',
       stripeCheckoutSessionId: checkoutSessionId,
@@ -157,7 +187,7 @@ export async function createDepositCheckoutForOrder(
     await recordOrderEvent(
       order.id,
       'deposit_link_sent',
-      `Deposit link sent to ${customer.email} for $${(depositAmount / 100).toFixed(2)}`,
+      `Deposit link sent to ${customer.email} for $${(depositBreakdown.customerChargeAmount / 100).toFixed(2)}`,
     );
   } catch {}
   try {
@@ -801,7 +831,10 @@ export async function sendDepositLink(orderId: string, orgId: string, input: Sen
       .from(organizations).where(eq(organizations.id, orgId)).limit(1),
   ]);
 
-  const depositAmount = input.depositAmount ?? order.totalAmount;
+  const depositBreakdown = buildDepositChargeBreakdown(
+    input.depositAmount ?? order.totalAmount,
+    input.depositAmount === undefined,
+  );
 
   // --- Stripe Checkout or fallback ---
   let paymentLink: string;
@@ -814,7 +847,7 @@ export async function sendDepositLink(orderId: string, orgId: string, input: Sen
       line_items: [{
         price_data: {
           currency: 'usd',
-          unit_amount: depositAmount,
+          unit_amount: depositBreakdown.customerChargeAmount,
           product_data: {
             name: `Deposit for ${order.orderNumber}`,
             description: `Order deposit — ${org.name}`,
@@ -823,8 +856,7 @@ export async function sendDepositLink(orderId: string, orgId: string, input: Sen
         quantity: 1,
       }],
       payment_intent_data: {
-        // Platform fee: merchant gets full menu price, TrayLoop keeps the 5% fee
-        application_fee_amount: Math.round(depositAmount - (depositAmount / 1.05)),
+        application_fee_amount: depositBreakdown.platformFeeAmount,
         transfer_data: {
           destination: org.stripeAccountId,
         },
@@ -835,6 +867,9 @@ export async function sendDepositLink(orderId: string, orgId: string, input: Sen
         trayloop_order_number: order.orderNumber,
         trayloop_org_id: orgId,
         trayloop_deposit: 'true',
+        trayloop_deposit_merchant_amount: String(depositBreakdown.merchantAmount),
+        trayloop_platform_fee_amount: String(depositBreakdown.platformFeeAmount),
+        trayloop_customer_charge_amount: String(depositBreakdown.customerChargeAmount),
       },
       success_url: `${process.env.MERCHANT_URL || 'http://localhost:3003'}/orders/${order.id}?deposit=success`,
       cancel_url: `${process.env.MERCHANT_URL || 'http://localhost:3003'}/orders/${order.id}?deposit=cancelled`,
@@ -854,7 +889,7 @@ export async function sendDepositLink(orderId: string, orgId: string, input: Sen
 
     const [deposit] = await tx.insert(deposits).values({
       orderId: order.id,
-      amount: depositAmount,
+      amount: depositBreakdown.customerChargeAmount,
       currency: 'USD',
       status: 'pending',
       stripeCheckoutSessionId: checkoutSessionId,
@@ -866,7 +901,7 @@ export async function sendDepositLink(orderId: string, orgId: string, input: Sen
     return { deposit, order: updated };
   });
 
-  try { await recordOrderEvent(order.id, 'deposit_link_sent', `Deposit link sent to ${customer.email} for $${(depositAmount / 100).toFixed(2)}`); } catch {}
+  try { await recordOrderEvent(order.id, 'deposit_link_sent', `Deposit link sent to ${customer.email} for $${(depositBreakdown.customerChargeAmount / 100).toFixed(2)}`); } catch {}
   try {
     const { notifyCustomerEmail, notifyCustomerSms } = await import('../../lib/notifications.js');
     await notifyCustomerEmail({
@@ -878,7 +913,7 @@ export async function sendDepositLink(orderId: string, orgId: string, input: Sen
         '',
         `${org?.name || 'Your merchant'} requested a deposit for order ${order.orderNumber}.`,
         '',
-        `Deposit amount: $${(depositAmount / 100).toFixed(2)}`,
+        `Deposit amount: $${(depositBreakdown.customerChargeAmount / 100).toFixed(2)}`,
         '',
         'Use the secure payment link below to complete your deposit.',
       ].join('\n'),
@@ -888,7 +923,7 @@ export async function sendDepositLink(orderId: string, orgId: string, input: Sen
       customerUserId: customer.userId,
       customerPhone: customer.phone,
       subject: `Deposit requested - ${order.orderNumber}`,
-      body: `${org?.name || 'Your merchant'} requested a deposit of $${(depositAmount / 100).toFixed(2)} for ${order.orderNumber}.`,
+      body: `${org?.name || 'Your merchant'} requested a deposit of $${(depositBreakdown.customerChargeAmount / 100).toFixed(2)} for ${order.orderNumber}.`,
       actionUrl: paymentLink,
     });
   } catch (err) {
