@@ -378,8 +378,15 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
 
   if (res.status === 401) {
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+      // Only redirect once — avoid cascade where concurrent requests all
+      // nuke the token and trigger multiple redirects.
+      const alreadyRedirecting = (window as any).__trayloop_auth_redirect;
+      if (!alreadyRedirecting) {
+        (window as any).__trayloop_auth_redirect = true;
+        localStorage.removeItem('token');
+        localStorage.removeItem('orgId');
+        window.location.href = '/login';
+      }
     }
     throw new Error('Unauthorized');
   }

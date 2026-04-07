@@ -482,41 +482,57 @@ export async function submitPublicOrder(slug: string, input: CreateOrderInput, e
         ? 'https://order.trayloophq.com'
         : 'http://localhost:3002');
 
-    const checkout = await createFullOrderCheckoutForOrder(
-      {
-        id: order.id,
-        orderNumber: order.orderNumber,
-        status: order.status,
-        totalAmount: order.pricing.total,
-        merchantAmount: order.pricing.packageSubtotal + order.pricing.addOnSubtotal,
-        customerId: order.customerId,
-      },
-      org,
-      order.customer.email,
-      {
-        successUrl:
-          `${storefrontBaseUrl}/${slug}?checkout=success&orderId=${encodeURIComponent(order.id)}` +
-          `&orderNumber=${encodeURIComponent(order.orderNumber)}`,
-        cancelUrl:
-          `${storefrontBaseUrl}/${slug}?checkout=cancelled&orderId=${encodeURIComponent(order.id)}` +
-          `&orderNumber=${encodeURIComponent(order.orderNumber)}`,
-      },
-    );
+    try {
+      const checkout = await createFullOrderCheckoutForOrder(
+        {
+          id: order.id,
+          orderNumber: order.orderNumber,
+          status: order.status,
+          totalAmount: order.pricing.total,
+          merchantAmount: order.pricing.packageSubtotal + order.pricing.addOnSubtotal,
+          customerId: order.customerId,
+        },
+        org,
+        order.customer.email,
+        {
+          successUrl:
+            `${storefrontBaseUrl}/${slug}?checkout=success&orderId=${encodeURIComponent(order.id)}` +
+            `&orderNumber=${encodeURIComponent(order.orderNumber)}`,
+          cancelUrl:
+            `${storefrontBaseUrl}/${slug}?checkout=cancelled&orderId=${encodeURIComponent(order.id)}` +
+            `&orderNumber=${encodeURIComponent(order.orderNumber)}`,
+        },
+      );
 
-    return {
-      mode: 'full_checkout' as const,
-      order: {
-        ...order,
-        depositRequired: false,
-      },
-      checkout: {
-        kind: 'order' as const,
-        url: checkout.paymentLink,
-        amount: checkout.amount,
-        currency: checkout.currency,
-        stripeCheckoutSessionId: checkout.stripeCheckoutSessionId,
-      },
-    };
+      return {
+        mode: 'full_checkout' as const,
+        order: {
+          ...order,
+          depositRequired: false,
+        },
+        checkout: {
+          kind: 'order' as const,
+          url: checkout.paymentLink,
+          amount: checkout.amount,
+          currency: checkout.currency,
+          stripeCheckoutSessionId: checkout.stripeCheckoutSessionId,
+        },
+      };
+    } catch (err) {
+      console.error('[storefront] Stripe full-order checkout failed, returning order without payment link', {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        error: err instanceof Error ? err.message : String(err),
+      });
+
+      return {
+        mode: 'order_received' as const,
+        order: {
+          ...order,
+          depositRequired: false,
+        },
+      };
+    }
   }
 
   if (!stripeReady) {
@@ -534,42 +550,59 @@ export async function submitPublicOrder(slug: string, input: CreateOrderInput, e
     (process.env.NODE_ENV === 'production'
       ? 'https://order.trayloophq.com'
       : 'http://localhost:3002');
-  const checkout = await createDepositCheckoutForOrder(
-    {
-      id: order.id,
-      orderNumber: order.orderNumber,
-      status: order.status,
-      totalAmount: order.pricing.total,
-      customerId: order.customerId,
-      locationId: input.locationId,
-    },
-    org.id,
-    eventBus,
-    {
-      successUrl:
-        `${storefrontBaseUrl}/${slug}?checkout=success&orderId=${encodeURIComponent(order.id)}` +
-        `&orderNumber=${encodeURIComponent(order.orderNumber)}`,
-      cancelUrl:
-        `${storefrontBaseUrl}/${slug}?checkout=cancelled&orderId=${encodeURIComponent(order.id)}` +
-        `&orderNumber=${encodeURIComponent(order.orderNumber)}`,
-    },
-  );
 
-  return {
-    mode: 'deposit_checkout' as const,
-    order: {
-      ...order,
-      status: checkout.status,
-      depositRequired: true,
-    },
-    checkout: {
-      kind: 'deposit' as const,
-      url: checkout.paymentLink,
-      amount: checkout.depositAmount,
-      currency: checkout.currency,
-      stripeCheckoutSessionId: checkout.stripeCheckoutSessionId,
-    },
-  };
+  try {
+    const checkout = await createDepositCheckoutForOrder(
+      {
+        id: order.id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        totalAmount: order.pricing.total,
+        customerId: order.customerId,
+        locationId: input.locationId,
+      },
+      org.id,
+      eventBus,
+      {
+        successUrl:
+          `${storefrontBaseUrl}/${slug}?checkout=success&orderId=${encodeURIComponent(order.id)}` +
+          `&orderNumber=${encodeURIComponent(order.orderNumber)}`,
+        cancelUrl:
+          `${storefrontBaseUrl}/${slug}?checkout=cancelled&orderId=${encodeURIComponent(order.id)}` +
+          `&orderNumber=${encodeURIComponent(order.orderNumber)}`,
+      },
+    );
+
+    return {
+      mode: 'deposit_checkout' as const,
+      order: {
+        ...order,
+        status: checkout.status,
+        depositRequired: true,
+      },
+      checkout: {
+        kind: 'deposit' as const,
+        url: checkout.paymentLink,
+        amount: checkout.depositAmount,
+        currency: checkout.currency,
+        stripeCheckoutSessionId: checkout.stripeCheckoutSessionId,
+      },
+    };
+  } catch (err) {
+    console.error('[storefront] Stripe deposit checkout failed, returning order as deposit-pending', {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      error: err instanceof Error ? err.message : String(err),
+    });
+
+    return {
+      mode: 'deposit_pending' as const,
+      order: {
+        ...order,
+        depositRequired: true,
+      },
+    };
+  }
 }
 
 interface StorefrontUpsellRequestInput {
