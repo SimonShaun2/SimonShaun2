@@ -114,7 +114,7 @@ export default function PricingPage() {
 
   const monthlyVolume = orders * avgSize;
   const marketplaceLoss = monthlyVolume * (feePercent / 100);
-  const trayloopCost = 49 + monthlyVolume * 0.05;
+  const trayloopCost = 49;
   const annualSavings = Math.max(0, (marketplaceLoss - trayloopCost) * 12);
 
   const fmt = (n: number) =>
@@ -619,8 +619,8 @@ export default function PricingPage() {
                   <div style={{ fontSize: 16, fontWeight: 700, color: '#FF6243' }}>{fmt(marketplaceLoss)}/mo</div>
                 </div>
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 12, color: C.muted }}>TrayLoop cost</div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: C.ink }}>{fmt(trayloopCost)}/mo</div>
+                  <div style={{ fontSize: 12, color: C.muted }}>TrayLoop (flat fee)</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: C.ink }}>$49/mo</div>
                 </div>
               </div>
             </div>

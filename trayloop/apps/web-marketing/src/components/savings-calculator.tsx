@@ -20,8 +20,9 @@ export default function SavingsCalculator() {
 
   const numericRevenue = parseFloat(revenue.replace(/[^0-9.]/g, '')) || 0;
   const marketplaceLoss = numericRevenue * 0.2;
-  const trayloopCost = 49 + numericRevenue * 0.05;
-  const annualSavings = (marketplaceLoss - trayloopCost) * 12;
+  const trayloopCost = 49;
+  const monthlySavings = marketplaceLoss - trayloopCost;
+  const annualSavings = monthlySavings * 12;
 
   const handleCalculate = () => {
     if (numericRevenue > 0) {
@@ -49,7 +50,8 @@ export default function SavingsCalculator() {
         borderRadius: 16,
         padding: 28,
         border: `1px solid ${C.creamDark}`,
-        maxWidth: 420,
+        maxWidth: 520,
+      margin: '0 auto',
       }}
     >
       <div style={{ fontSize: 14, fontWeight: 600, color: C.muted, marginBottom: 12 }}>
@@ -125,9 +127,9 @@ export default function SavingsCalculator() {
             </span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-            <span style={{ fontSize: 13, color: C.muted }}>TrayLoop cost ($49 + 5%)</span>
+            <span style={{ fontSize: 13, color: C.muted }}>TrayLoop (flat fee)</span>
             <span style={{ fontSize: 13, fontWeight: 600, color: C.ink }}>
-              {fmt(trayloopCost)}/mo
+              $49/mo
             </span>
           </div>
           <div
