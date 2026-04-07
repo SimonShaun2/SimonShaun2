@@ -17,15 +17,12 @@ export default function SavingsCalculator() {
   const [revenue, setRevenue] = useState('5000');
   const [feePercent, setFeePercent] = useState(20);
 
-  const numericRevenue = parseFloat(revenue.replace(/[^0-9.]/g, '')) || 0;
-  const marketplaceLoss = numericRevenue * (feePercent / 100);
-  const trayloopCost = 49;
-  const monthlySavings = marketplaceLoss - trayloopCost;
-  const annualSavings = monthlySavings * 12;
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setRevenue(e.target.value.replace(/[^0-9]/g, ''));
-  };
+  const vol = parseFloat(revenue.replace(/[^0-9.]/g, '')) || 0;
+  const theyTake = Math.round(vol * (feePercent / 100));
+  const youKeepMarketplace = vol - theyTake;
+  const youKeepTrayloop = vol - 49;
+  const extraPerMonth = youKeepTrayloop - youKeepMarketplace;
+  const extraPerYear = extraPerMonth * 12;
 
   const fmt = (n: number) =>
     n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
@@ -36,134 +33,156 @@ export default function SavingsCalculator() {
       style={{
         backgroundColor: C.white,
         borderRadius: 20,
-        padding: 36,
+        padding: '40px 36px',
         border: `1px solid ${C.creamDark}`,
-        maxWidth: 580,
+        maxWidth: 600,
         margin: '0 auto',
         boxShadow: '0 4px 24px rgba(0,0,0,0.04)',
       }}
     >
+      <h3 style={{ fontSize: 22, fontWeight: 700, color: C.ink, marginBottom: 4, textAlign: 'center' }}>
+        What are marketplaces costing you?
+      </h3>
+      <p style={{ fontSize: 14, color: C.muted, marginBottom: 28, textAlign: 'center' }}>
+        Enter your numbers. See what you keep.
+      </p>
+
       {/* Revenue input */}
-      <label style={{ fontSize: 14, fontWeight: 600, color: C.ink, display: 'block', marginBottom: 8 }}>
-        Monthly catering revenue
-      </label>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          backgroundColor: C.cream,
-          borderRadius: 12,
-          padding: '14px 20px',
-          marginBottom: 20,
-          border: `1px solid ${C.creamDark}`,
-        }}
-      >
-        <span style={{ fontSize: 24, fontWeight: 700, color: C.ink, marginRight: 4 }}>$</span>
-        <input
-          type="text"
-          inputMode="numeric"
-          placeholder="5,000"
-          value={revenue ? Number(revenue).toLocaleString() : ''}
-          onChange={handleChange}
+      <div style={{ marginBottom: 24 }}>
+        <label style={{ fontSize: 13, fontWeight: 600, color: C.ink, display: 'block', marginBottom: 8 }}>
+          Your monthly catering revenue
+        </label>
+        <div
           style={{
-            fontWeight: 700,
-            color: C.ink,
-            fontSize: 24,
-            border: 'none',
-            background: 'transparent',
-            outline: 'none',
-            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            backgroundColor: C.cream,
+            borderRadius: 12,
+            padding: '16px 20px',
+            border: `2px solid ${C.creamDark}`,
           }}
-        />
-        <span style={{ fontSize: 14, color: C.muted, whiteSpace: 'nowrap' }}>/month</span>
+        >
+          <span style={{ fontSize: 28, fontWeight: 700, color: C.ink, marginRight: 2 }}>$</span>
+          <input
+            type="text"
+            inputMode="numeric"
+            placeholder="5,000"
+            value={revenue ? Number(revenue).toLocaleString() : ''}
+            onChange={(e) => setRevenue(e.target.value.replace(/[^0-9]/g, ''))}
+            style={{
+              fontWeight: 700,
+              color: C.ink,
+              fontSize: 28,
+              border: 'none',
+              background: 'transparent',
+              outline: 'none',
+              width: '100%',
+            }}
+          />
+        </div>
       </div>
 
       {/* Fee slider */}
-      <label style={{ fontSize: 14, fontWeight: 600, color: C.ink, display: 'block', marginBottom: 8 }}>
-        Current marketplace commission
-      </label>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 28 }}>
+      <div style={{ marginBottom: 32 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <label style={{ fontSize: 13, fontWeight: 600, color: C.ink }}>
+            Marketplace commission rate
+          </label>
+          <span style={{ fontSize: 20, fontWeight: 700, color: C.orange }}>{feePercent}%</span>
+        </div>
         <input
           type="range"
-          min={5}
+          min={10}
           max={30}
           value={feePercent}
           onChange={(e) => setFeePercent(Number(e.target.value))}
-          style={{
-            flex: 1,
-            accentColor: C.orange,
-            height: 6,
-          }}
+          style={{ width: '100%', accentColor: C.orange, height: 6 }}
         />
-        <span style={{ fontSize: 18, fontWeight: 700, color: C.orange, minWidth: 48, textAlign: 'right' }}>
-          {feePercent}%
-        </span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: C.muted, marginTop: 4 }}>
+          <span>10%</span>
+          <span>30%</span>
+        </div>
       </div>
 
-      {/* Results — always visible when revenue > 0 */}
-      {numericRevenue > 0 && (
+      {vol > 0 && (
         <>
-          {/* Comparison row */}
+          {/* Side-by-side: Marketplace vs TrayLoop */}
           <div style={{ display: 'flex', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
-            {/* Marketplace */}
+            {/* With marketplace */}
             <div style={{
-              flex: '1 1 200px',
+              flex: '1 1 220px',
+              borderRadius: 14,
+              padding: '20px',
               backgroundColor: '#FEF2F0',
-              borderRadius: 12,
-              padding: '16px 20px',
               border: '1px solid #FCDDD8',
             }}>
-              <div style={{ fontSize: 12, color: C.muted, marginBottom: 4 }}>Marketplace takes</div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: '#FF6243' }}>
-                -{fmt(marketplaceLoss)}
+              <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                With marketplace
               </div>
-              <div style={{ fontSize: 12, color: C.muted }}>/month at {feePercent}%</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ fontSize: 13, color: C.muted }}>Revenue</span>
+                <span style={{ fontSize: 13, color: C.ink }}>{fmt(vol)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                <span style={{ fontSize: 13, color: C.muted }}>Commission ({feePercent}%)</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#FF6243' }}>-{fmt(theyTake)}</span>
+              </div>
+              <div style={{ borderTop: '1px solid #F5CCC5', paddingTop: 10, display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: C.ink }}>You keep</span>
+                <span style={{ fontSize: 20, fontWeight: 800, color: C.ink }}>{fmt(youKeepMarketplace)}</span>
+              </div>
             </div>
 
-            {/* TrayLoop */}
+            {/* With TrayLoop */}
             <div style={{
-              flex: '1 1 200px',
+              flex: '1 1 220px',
+              borderRadius: 14,
+              padding: '20px',
               backgroundColor: '#EAFAF3',
-              borderRadius: 12,
-              padding: '16px 20px',
-              border: '1px solid #C8F0DD',
+              border: '2px solid #42D9A0',
             }}>
-              <div style={{ fontSize: 12, color: C.muted, marginBottom: 4 }}>TrayLoop costs</div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: '#1D7A55' }}>
-                $49
+              <div style={{ fontSize: 12, fontWeight: 600, color: C.muted, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                With TrayLoop
               </div>
-              <div style={{ fontSize: 12, color: C.muted }}>/month flat — no commissions</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ fontSize: 13, color: C.muted }}>Revenue</span>
+                <span style={{ fontSize: 13, color: C.ink }}>{fmt(vol)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                <span style={{ fontSize: 13, color: C.muted }}>TrayLoop</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#1D7A55' }}>-$49</span>
+              </div>
+              <div style={{ borderTop: '1px solid #B8E8D4', paddingTop: 10, display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: '#1D7A55' }}>You keep</span>
+                <span style={{ fontSize: 20, fontWeight: 800, color: '#1D7A55' }}>{fmt(youKeepTrayloop)}</span>
+              </div>
             </div>
           </div>
 
-          {/* Annual savings */}
-          <div style={{
-            backgroundColor: '#EAFAF3',
-            borderRadius: 14,
-            padding: '20px 24px',
-            textAlign: 'center',
-            marginBottom: 20,
-            border: '1px solid #C8F0DD',
-          }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#1D7A55', marginBottom: 4 }}>
-              You&apos;d save
-            </div>
-            <div style={{ fontSize: 36, fontWeight: 800, color: '#1D7A55', lineHeight: 1.1 }}>
-              {annualSavings > 0 ? fmt(annualSavings) : '$0'}
-            </div>
-            <div style={{ fontSize: 14, color: '#1D7A55', marginTop: 4 }}>
-              per year with TrayLoop
-            </div>
-            {monthlySavings > 0 && (
-              <div style={{ fontSize: 13, color: C.muted, marginTop: 8 }}>
-                That&apos;s {fmt(monthlySavings)} back in your pocket every month
+          {/* The punchline — how much more you keep */}
+          {extraPerMonth > 0 && (
+            <div style={{
+              backgroundColor: '#1D7A55',
+              borderRadius: 16,
+              padding: '24px 28px',
+              textAlign: 'center',
+              marginBottom: 24,
+            }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#A8E6CE', marginBottom: 6 }}>
+                Switch to TrayLoop and keep
               </div>
-            )}
-          </div>
+              <div style={{ fontSize: 42, fontWeight: 800, color: '#FFFFFF', lineHeight: 1.1 }}>
+                {fmt(extraPerMonth)} more
+              </div>
+              <div style={{ fontSize: 16, color: '#A8E6CE', marginTop: 4 }}>
+                every month — {fmt(extraPerYear)} per year
+              </div>
+            </div>
+          )}
 
           {/* CTA */}
           <div style={{ textAlign: 'center' }}>
-            <PillButton text="Sign Up and Start Saving →" href="https://dashboard.trayloophq.com/register" variant="primary" />
+            <PillButton text="Sign Up →" href="https://dashboard.trayloophq.com/register" variant="primary" />
           </div>
         </>
       )}
