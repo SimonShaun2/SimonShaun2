@@ -1,0 +1,11 @@
+{
+  "installCommand": "echo TrayLoop API proxy",
+  "buildCommand": "echo TrayLoop API proxy",
+  "outputDirectory": "public",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "https://simonshaun2-production.up.railway.app/$1"
+    }
+  ]
+}
