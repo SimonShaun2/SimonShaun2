@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { automationsEnabled } from '../../lib/features';
 import {
   evaluateAutomationRules,
   fetchAutomationOverview,
@@ -58,6 +59,22 @@ function toRunDraft(run: AutomationRun): RunDraft {
 }
 
 export default function AutomationsPage() {
+  if (!automationsEnabled) {
+    return (
+      <div style={{ border: '1px solid #E7E5E4', borderRadius: 16, background: '#FFFFFF', padding: 24 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#D4A853', marginBottom: 8 }}>
+          Staging only
+        </div>
+        <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 8px', color: '#1C1917' }}>Automation is disabled in live production</h1>
+        <p style={{ fontSize: 14, color: '#57534E', margin: 0, maxWidth: 680 }}>
+          Automation is reserved for staging while the live launch focuses on checkout, payouts, AI sales, upsells, and revenue intelligence. Enable
+          <code style={{ marginLeft: 6, marginRight: 6 }}>NEXT_PUBLIC_AUTOMATIONS_ENABLED=true</code>
+          in staging to use this workspace.
+        </p>
+      </div>
+    );
+  }
+
   const [overview, setOverview] = useState<AutomationOverview | null>(null);
   const [runs, setRuns] = useState<AutomationRun[]>([]);
   const [loading, setLoading] = useState(true);

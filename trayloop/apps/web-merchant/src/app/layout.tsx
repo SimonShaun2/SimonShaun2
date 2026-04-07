@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import NavBar from '../components/nav-bar';
+import { showStagingBanner } from '../lib/features';
 
 export const metadata: Metadata = {
   title: 'TrayLoop Merchant',
@@ -37,6 +38,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             }
           }
         `}</style>
+        {showStagingBanner ? (
+          <div style={{
+            background: '#1D4ED8',
+            color: '#EFF6FF',
+            padding: '8px 16px',
+            fontSize: 12,
+            fontWeight: 700,
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+            textAlign: 'center',
+          }}>
+            Staging Environment
+          </div>
+        ) : null}
         <div className="merchant-shell" style={{ display: 'flex', minHeight: '100vh' }}>
           <NavBar />
           <main className="merchant-main" style={{ flex: 1, minWidth: 0, padding: '28px 32px', maxWidth: 'calc(100vw - 236px)' }}>

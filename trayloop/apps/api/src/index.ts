@@ -5,6 +5,7 @@ import { errorHandler } from './lib/middleware/error-handler.js';
 import { registerRequestLogger } from './lib/middleware/request-logger.js';
 import { registerIdempotencyHook } from './lib/middleware/idempotency.js';
 import { applySecurityHeaders, enforceRateLimit, getAllowedOrigins } from './lib/security.js';
+import { isAutomationsEnabled } from './lib/features.js';
 import './lib/context.js';
 import { authModule } from './modules/auth/index.js';
 import { organizationsModule } from './modules/organizations/index.js';
@@ -35,6 +36,7 @@ export async function buildApp() {
   });
   const eventBus = new EventBus();
   const allowedOrigins = getAllowedOrigins();
+  const automationsEnabled = isAutomationsEnabled();
 
   // Global middleware
   await app.register(cors, {
@@ -67,6 +69,9 @@ export async function buildApp() {
         sms: isSmsEnabled() ? 'connected' : 'not configured',
         openai: isOpenAIEnabled() ? 'connected' : 'not configured',
       },
+      features: {
+        automations: automationsEnabled ? 'enabled' : 'disabled',
+      },
     };
   });
 
@@ -98,7 +103,9 @@ export async function buildApp() {
     await protectedApp.register(followUpsModule, { prefix: '/api/follow-ups' });
     await protectedApp.register(notificationsModule, { prefix: '/api/notifications' });
     await protectedApp.register(aiSalesModule, { prefix: '/api/ai-sales' });
-    await protectedApp.register(automationsModule, { prefix: '/api/automations' });
+    if (automationsEnabled) {
+      await protectedApp.register(automationsModule, { prefix: '/api/automations' });
+    }
     await protectedApp.register(revenueIntelligenceModule, { prefix: '/api/revenue-intelligence' });
     await protectedApp.register(adminModule, { prefix: '/api/admin' });
   });

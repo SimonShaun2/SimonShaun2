@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { showStagingBanner } from '../lib/features';
 
 export const metadata: Metadata = {
   title: 'Order Online',
@@ -20,6 +21,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         lineHeight: 1.5,
         backgroundColor: '#FAF9F7',
       }}>
+        {showStagingBanner ? (
+          <div style={{
+            background: '#1D4ED8',
+            color: '#EFF6FF',
+            padding: '8px 16px',
+            fontSize: 12,
+            fontWeight: 700,
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+            textAlign: 'center',
+          }}>
+            Staging Environment
+          </div>
+        ) : null}
         {children}
       </body>
     </html>

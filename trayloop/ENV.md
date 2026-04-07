@@ -32,15 +32,40 @@
 | `MERCHANT_URL` | Merchant dashboard URL for redirects |
 | `PORT` | Server port (default 3001) |
 | `NODE_ENV` | `development`, `staging`, or `production` |
+| `AUTOMATIONS_ENABLED` | Enable approval-first automation routes (`true` in staging, `false` in live) |
 
 ## Storefront (apps/web-storefront)
 
 | Variable | Description |
 |----------|-------------|
 | `NEXT_PUBLIC_API_URL` | API base URL |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Google Maps JavaScript API key with Places enabled for delivery address autocomplete |
+| `NEXT_PUBLIC_APP_ENV` | `development`, `staging`, or `production` for environment labeling |
 
 ## Merchant (apps/web-merchant)
 
 | Variable | Description |
 |----------|-------------|
 | `NEXT_PUBLIC_API_URL` | API base URL |
+| `NEXT_PUBLIC_APP_ENV` | `development`, `staging`, or `production` for environment labeling |
+| `NEXT_PUBLIC_AUTOMATIONS_ENABLED` | Show automation surfaces (`true` in staging, `false` in live) |
+
+## Admin (apps/web-admin)
+
+| Variable | Description |
+|----------|-------------|
+| `NEXT_PUBLIC_API_URL` | API base URL |
+| `NEXT_PUBLIC_APP_ENV` | `development`, `staging`, or `production` for environment labeling |
+| `NEXT_PUBLIC_AUTOMATIONS_ENABLED` | Show automation intelligence (`true` in staging, `false` in live) |
+
+## Suggested live vs staging split
+
+### Production
+- `AUTOMATIONS_ENABLED=false`
+- `NEXT_PUBLIC_AUTOMATIONS_ENABLED=false`
+- `NEXT_PUBLIC_APP_ENV=production`
+
+### Staging
+- `AUTOMATIONS_ENABLED=true`
+- `NEXT_PUBLIC_AUTOMATIONS_ENABLED=true`
+- `NEXT_PUBLIC_APP_ENV=staging`

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { automationsEnabled } from '../../lib/features';
 import { fetchAdminAutomationIntelligence, type AdminAutomationIntelligence } from '../../lib/api';
 
 function money(cents: number) {
@@ -8,6 +9,16 @@ function money(cents: number) {
 }
 
 export default function AdminAutomationIntelligencePage() {
+  if (!automationsEnabled) {
+    return (
+      <div style={{ padding: 18, borderRadius: 12, border: '1px solid #DBEAFE', background: '#EFF6FF', color: '#1D4ED8', fontSize: 13 }}>
+        Automation intelligence is disabled in live production. Turn on
+        <code style={{ marginLeft: 6, marginRight: 6 }}>NEXT_PUBLIC_AUTOMATIONS_ENABLED=true</code>
+        in staging to review this surface.
+      </div>
+    );
+  }
+
   const [data, setData] = useState<AdminAutomationIntelligence | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { automationsEnabled } from '../lib/features';
 import { useMobile } from '../lib/use-mobile';
 
 const NAV_ITEMS = [
@@ -16,6 +17,10 @@ const NAV_ITEMS = [
   { href: '/revenue-forecast', label: 'Revenue Forecast', icon: 'F', section: 'intelligence' },
   { href: '/churn-risk', label: 'Churn Risk', icon: 'C', section: 'intelligence' },
 ];
+
+const VISIBLE_NAV_ITEMS = automationsEnabled
+  ? NAV_ITEMS
+  : NAV_ITEMS.filter((item) => item.href !== '/automation-intelligence');
 
 function useAdminAuth() {
   const [checked, setChecked] = useState(false);
@@ -141,7 +146,7 @@ function AuthenticatedShell({ children, pathname }: { children: React.ReactNode;
               >
                 {section === 'views' ? 'Views' : 'Intelligence'}
               </div>
-              {NAV_ITEMS.filter((item) => item.section === section).map((item) => {
+              {VISIBLE_NAV_ITEMS.filter((item) => item.section === section).map((item) => {
                 const isActive = pathname === item.href;
                 return (
                   <a
