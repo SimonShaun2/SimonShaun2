@@ -448,7 +448,7 @@ export default function HomePage() {
           }}
         >
           {[
-            { name: "Maria's Cocina", activity: 'Switched from EzCater — saved $2,100/mo in commissions', time: '3 days ago' },
+            { name: "Maria's Cocina", activity: 'Switched from marketplace to direct — saved $2,100/mo in commissions', time: '3 days ago' },
             { name: 'Greenleaf Catering Co.', activity: 'First automated reorder generated — $890 order, zero effort', time: '1 week ago' },
             { name: 'Brooklyn Bites', activity: 'Set up direct ordering portal — 12 accounts migrated in 48 hrs', time: '2 weeks ago' },
           ].map((r) => (
@@ -1040,7 +1040,7 @@ export default function HomePage() {
               marginBottom: 24,
             }}
           >
-            We were paying EzCater $3,200 a month in commissions and had no idea who our customers
+            We were paying marketplaces $3,200 a month in commissions and had no idea who our customers
             even were. TrayLoop gave us our accounts back. Now 72% of them reorder automatically,
             and our catering revenue is up 40% in three months.
           </blockquote>
@@ -1079,7 +1079,7 @@ export default function HomePage() {
             {
               title: 'The Marketplace Hostage',
               description:
-                "You're doing $10K+/month in catering through EzCater or another marketplace. You're profitable — but 30% of every dollar goes to someone else. You want to own your customers and keep your revenue.",
+                "You're doing $10K+/month in catering through marketplace platforms. You're profitable — but 30% of every dollar goes to someone else. You want to own your customers and keep your revenue.",
               img: 'https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=400&h=200&fit=crop',
               alt: 'Office workers eating catered lunch',
             },

@@ -67,7 +67,7 @@ const tealDot: CSSProperties = {
 /* ── FAQ data ── */
 const faqs = [
   {
-    q: 'Can I still use EzCater alongside TrayLoop?',
+    q: 'Can I still use marketplaces alongside TrayLoop?',
     a: 'Absolutely. TrayLoop is additive, not a replacement. Keep your existing marketplace presence while building a direct channel that you own and control.',
   },
   {

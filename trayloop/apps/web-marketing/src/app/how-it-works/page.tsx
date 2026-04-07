@@ -140,7 +140,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 /* ── FAQ data ── */
 const faqs = [
   {
-    q: 'How does TrayLoop differ from EzCater or other marketplaces?',
+    q: 'How does TrayLoop differ from catering marketplaces?',
     a: 'Marketplaces own the customer relationship and charge 20-30% commissions on every order. TrayLoop gives you a branded direct ordering channel where you keep 100% of your revenue minus only a flat $49/month and 5% processing fee. You own the data, the relationship, and the revenue.',
   },
   {
@@ -160,7 +160,7 @@ const faqs = [
     a: 'We charge a flat $49/month subscription plus 5% payment processing. That is the entire cost. We make money when you succeed, not by taking a cut of every order.',
   },
   {
-    q: 'Can I still use EzCater alongside TrayLoop?',
+    q: 'Can I still use marketplaces alongside TrayLoop?',
     a: 'Absolutely. TrayLoop is additive, not a replacement. Keep your existing marketplace presence while building a direct channel that you own and control. Over time, most restaurants naturally shift their best accounts to direct ordering because the economics are dramatically better.',
   },
   {
