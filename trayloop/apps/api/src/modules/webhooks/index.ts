@@ -8,6 +8,12 @@ import { recordOrderEvent } from '../../lib/order-events.js';
 import { notifyDepositPaid } from '../../lib/notifications.js';
 import { logger } from '@trayloop/utils';
 
+/** Safely convert a Stripe unix timestamp to a Date, returning null for invalid/missing values. */
+function safeDate(value: unknown): Date | null {
+  if (typeof value === 'number' && value > 0) return new Date(value * 1000);
+  return null;
+}
+
 type DepositSession = {
   id: string;
   status: string;
@@ -182,12 +188,13 @@ async function upsertSubscriptionSnapshot(
 
   const primaryItem = subscription.items.data[0];
   const status = overrideStatus ?? normalizeSubscriptionStatus(subscription.status);
-  const currentPeriodStart = subscription.items.data.length > 0
-    ? new Date(subscription.current_period_start * 1000)
-    : null;
-  const currentPeriodEnd = subscription.items.data.length > 0
-    ? new Date(subscription.current_period_end * 1000)
-    : null;
+
+  // Stripe API versions may place period dates on the subscription or on individual items.
+  // Safely extract from either location to avoid "Invalid time value" on NaN.
+  const rawPeriodStart = (subscription as any).current_period_start ?? (primaryItem as any)?.current_period_start ?? null;
+  const rawPeriodEnd = (subscription as any).current_period_end ?? (primaryItem as any)?.current_period_end ?? null;
+  const currentPeriodStart = typeof rawPeriodStart === 'number' ? new Date(rawPeriodStart * 1000) : null;
+  const currentPeriodEnd = typeof rawPeriodEnd === 'number' ? new Date(rawPeriodEnd * 1000) : null;
 
   const [record] = await db
     .insert(subscriptions)
@@ -200,11 +207,11 @@ async function upsertSubscriptionSnapshot(
           ? primaryItem.price
           : primaryItem?.price?.id ?? null,
       status,
-      trialStart: subscription.trial_start ? new Date(subscription.trial_start * 1000) : null,
-      trialEnd: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null,
+      trialStart: safeDate(subscription.trial_start),
+      trialEnd: safeDate(subscription.trial_end),
       currentPeriodStart,
       currentPeriodEnd,
-      canceledAt: subscription.canceled_at ? new Date(subscription.canceled_at * 1000) : null,
+      canceledAt: safeDate(subscription.canceled_at),
       updatedAt: new Date(),
     })
     .onConflictDoUpdate({
@@ -217,11 +224,11 @@ async function upsertSubscriptionSnapshot(
             ? primaryItem.price
             : primaryItem?.price?.id ?? null,
         status,
-        trialStart: subscription.trial_start ? new Date(subscription.trial_start * 1000) : null,
-        trialEnd: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null,
+        trialStart: safeDate(subscription.trial_start),
+        trialEnd: safeDate(subscription.trial_end),
         currentPeriodStart,
         currentPeriodEnd,
-        canceledAt: subscription.canceled_at ? new Date(subscription.canceled_at * 1000) : null,
+        canceledAt: safeDate(subscription.canceled_at),
         updatedAt: new Date(),
       },
     })
