@@ -10,16 +10,19 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "next": "^15.0.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "@sanity/client": "7.20.0",
+    "@sanity/image-url": "2.1.1",
+    "@trayloop/config": "*",
     "@trayloop/ui": "*",
-    "@trayloop/config": "*"
+    "next": "^15.0.0",
+    "next-sanity": "9.12.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "typescript": "^5.5.0",
     "@types/node": "^20.0.0",
     "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0"
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.5.0"
   }
 }

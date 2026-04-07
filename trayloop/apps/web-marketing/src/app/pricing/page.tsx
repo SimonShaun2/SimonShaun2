@@ -331,7 +331,7 @@ export default function PricingPage() {
               ))}
             </div>
 
-            <PillButton text="Get started →" href="/signup" />
+            <PillButton text="Get started →" href="https://dashboard.trayloophq.com/register" />
           </div>
 
           {/* Social proof card */}
@@ -679,8 +679,8 @@ export default function PricingPage() {
             saved thousands every month.
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <PillButton text="Get started →" href="/signup" />
-            <PillButton text="Book a demo" href="/demo" variant="ghost" />
+            <PillButton text="Book a free Demo →" href="/demo" variant="primary" />
+            <PillButton text="See how it works →" href="/how-it-works" variant="ghost" />
           </div>
         </div>
       </section>

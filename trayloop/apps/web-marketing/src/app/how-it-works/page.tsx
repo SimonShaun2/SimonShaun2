@@ -963,8 +963,8 @@ export default function HowItWorksPage() {
             $49/month + 5% platform fee. No contracts. No commissions. We handle the full setup.
           </p>
           <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <PillButton text="Book a free Demo &rarr;" href="/demo" variant="primary" />
-            <PillButton text="See pricing &rarr;" href="/pricing" variant="ghost" />
+            <PillButton text="Sign Up →" href="https://dashboard.trayloophq.com/register" variant="primary" />
+            <PillButton text="See pricing →" href="/pricing" variant="ghost" />
           </div>
         </div>
       </Section>

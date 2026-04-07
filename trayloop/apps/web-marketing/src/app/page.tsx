@@ -215,7 +215,7 @@ export default function HomePage() {
 
           <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 24 }}>
             <PillButton text="See how much you're losing →" href="#calculator" variant="primary" />
-            <PillButton text="Sign Up →" href="https://dashboard.trayloophq.com/register" variant="ghost" />
+            <PillButton text="Book a free Demo →" href="/demo" variant="ghost" />
           </div>
 
           <ul style={{ display: 'flex', gap: 24, justifyContent: 'center', flexWrap: 'wrap', padding: 0, margin: 0 }}>
@@ -1158,7 +1158,7 @@ export default function HomePage() {
             We handle the full setup — your portal is live within 48 hours.
           </p>
           <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <PillButton text="See how much you're losing →" href="/pricing" variant="primary" />
+            <PillButton text="Book a free Demo →" href="/demo" variant="primary" />
             <PillButton text="See how it works →" href="/product" variant="ghost" />
           </div>
         </div>

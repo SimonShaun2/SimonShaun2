@@ -270,7 +270,7 @@ export default function ProductPage() {
       {/* ── MID CTA ── */}
       <Section bg={color.white} style={{ padding: '0 24px 80px' }}>
         <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <PillButton text="See how much you're losing →" href="/pricing" variant="primary" />
+          <PillButton text="Book a free Demo →" href="/demo" variant="primary" />
           <PillButton text="Back to overview" href="/" variant="ghost" />
         </div>
       </Section>
@@ -568,7 +568,7 @@ export default function ProductPage() {
       {/* ── MID CTA ── */}
       <Section bg={color.cream} style={{ padding: '0 24px 80px' }}>
         <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <PillButton text="See how much you're losing →" href="/pricing" variant="primary" />
+          <PillButton text="Book a free Demo →" href="/demo" variant="primary" />
           <PillButton text="Back to overview" href="/" variant="ghost" />
         </div>
       </Section>
@@ -702,8 +702,8 @@ export default function ProductPage() {
             We handle the full setup — your portal is live within 48 hours.
           </p>
           <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <PillButton text="See how much you're losing →" href="/pricing" variant="primary" />
-            <PillButton text="Back to overview" href="/" variant="ghost" />
+            <PillButton text="Sign Up →" href="https://dashboard.trayloophq.com/register" variant="primary" />
+            <PillButton text="See how it works →" href="/how-it-works" variant="ghost" />
           </div>
         </div>
       </Section>
