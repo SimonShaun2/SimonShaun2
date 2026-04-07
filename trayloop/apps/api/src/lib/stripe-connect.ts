@@ -4,6 +4,8 @@ import { eq } from 'drizzle-orm';
 import { getStripe, isStripeEnabled } from './stripe.js';
 import { ValidationError } from './errors.js';
 import { logger } from '@trayloop/utils';
+import { users } from '@trayloop/database';
+import { and } from 'drizzle-orm';
 
 export interface ConnectAccountStatus {
   stripeAccountId: string | null;
@@ -67,6 +69,15 @@ function emptyStatus(): ConnectAccountStatus {
     payoutsEnabled: false,
     detailsSubmitted: false,
   });
+}
+
+function isMissingConnectedAccountError(error: unknown) {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const stripeError = error as { code?: string; message?: string };
+  return stripeError.code === 'resource_missing' || stripeError.message?.includes('No such account') === true;
 }
 
 function statusFromStripeAccount(account: Stripe.Account): ConnectAccountStatus {
@@ -146,8 +157,10 @@ export async function createConnectAccount(orgId: string): Promise<ConnectAccoun
       name: organizations.name,
       slug: organizations.slug,
       stripeAccountId: organizations.stripeAccountId,
+      ownerEmail: users.email,
     })
     .from(organizations)
+    .innerJoin(users, eq(users.id, organizations.ownerId))
     .where(eq(organizations.id, orgId))
     .limit(1);
 
@@ -156,20 +169,43 @@ export async function createConnectAccount(orgId: string): Promise<ConnectAccoun
   }
 
   if (org.stripeAccountId) {
-    return syncConnectStatus(orgId, org.stripeAccountId);
+    try {
+      return await syncConnectStatus(orgId, org.stripeAccountId);
+    } catch (error) {
+      if (!isMissingConnectedAccountError(error)) {
+        throw error;
+      }
+
+      logger.warn('Stored Stripe Connect account was missing; recreating fresh account', {
+        orgId,
+        stripeAccountId: org.stripeAccountId,
+      });
+
+      await persistConnectStatus(orgId, emptyStatus());
+    }
   }
 
   const stripe = getStripe();
-  const account = await stripe.accounts.create({
-    type: 'express',
-    metadata: {
-      trayloop_org_id: orgId,
-      trayloop_org_slug: org.slug,
-    },
-    business_profile: {
-      name: org.name,
-    },
-  });
+  let account: Stripe.Account;
+  try {
+    account = await stripe.accounts.create({
+      type: 'express',
+      email: org.ownerEmail,
+      metadata: {
+        trayloop_org_id: orgId,
+        trayloop_org_slug: org.slug,
+      },
+      business_profile: {
+        name: org.name,
+      },
+    });
+  } catch (error) {
+    logger.error('Stripe Connect account creation failed', {
+      orgId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    throw new ValidationError('Stripe could not start merchant payouts onboarding. Please try again or contact support.');
+  }
 
   const status = statusFromStripeAccount(account);
   await persistConnectStatus(orgId, status);
@@ -231,12 +267,22 @@ export async function createOnboardingLink(
   }
 
   const stripe = getStripe();
-  const accountLink = await stripe.accountLinks.create({
-    account: status.stripeAccountId,
-    return_url: returnUrl,
-    refresh_url: refreshUrl,
-    type: 'account_onboarding',
-  });
+  let accountLink: Stripe.AccountLink;
+  try {
+    accountLink = await stripe.accountLinks.create({
+      account: status.stripeAccountId,
+      return_url: returnUrl,
+      refresh_url: refreshUrl,
+      type: 'account_onboarding',
+    });
+  } catch (error) {
+    logger.error('Stripe onboarding link creation failed', {
+      orgId,
+      stripeAccountId: status.stripeAccountId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    throw new ValidationError('Stripe could not open merchant payouts onboarding. Please try again or contact support.');
+  }
 
   logger.info('Stripe onboarding link created', {
     orgId,

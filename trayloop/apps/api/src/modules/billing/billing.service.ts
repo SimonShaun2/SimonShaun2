@@ -4,6 +4,7 @@ import { ValidationError } from '../../lib/errors.js';
 import { getStripe, getSubscriptionPriceId, getSubscriptionTrialDays, isStripeEnabled } from '../../lib/stripe.js';
 import { logger } from '@trayloop/utils';
 import type { BillingCheckoutInput, BillingPortalInput } from './billing.schema.js';
+import Stripe from 'stripe';
 
 const PLAN_NAME = 'TrayLoop Pro';
 const PLAN_INTERVAL = 'month';
@@ -11,6 +12,32 @@ const PLAN_AMOUNT_CENTS = 4900;
 
 type BillingState = 'not_started' | 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid';
 type LocalSubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid';
+
+function normalizeSubscriptionStatus(status: Stripe.Subscription.Status | string): LocalSubscriptionStatus {
+  switch (status) {
+    case 'trialing':
+      return 'trialing';
+    case 'active':
+      return 'active';
+    case 'past_due':
+      return 'past_due';
+    case 'unpaid':
+      return 'unpaid';
+    case 'canceled':
+    case 'incomplete_expired':
+      return 'canceled';
+    case 'incomplete':
+    case 'paused':
+      return 'past_due';
+    default:
+      return 'unpaid';
+  }
+}
+
+function safeDate(value: unknown): Date | null {
+  if (typeof value === 'number' && value > 0) return new Date(value * 1000);
+  return null;
+}
 
 function normalizeBaseUrl(raw: string) {
   try {
@@ -110,6 +137,98 @@ async function getBillingRecord(orgId: string) {
   }
 
   return record;
+}
+
+async function syncSubscriptionSnapshot(
+  orgId: string,
+  stripeCustomerId: string,
+  subscription: Stripe.Subscription,
+) {
+  const primaryItem = subscription.items.data[0];
+  const rawPeriodStart = (subscription as any).current_period_start ?? (primaryItem as any)?.current_period_start ?? null;
+  const rawPeriodEnd = (subscription as any).current_period_end ?? (primaryItem as any)?.current_period_end ?? null;
+  const currentPeriodStart = typeof rawPeriodStart === 'number' ? new Date(rawPeriodStart * 1000) : null;
+  const currentPeriodEnd = typeof rawPeriodEnd === 'number' ? new Date(rawPeriodEnd * 1000) : null;
+
+  await db
+    .insert(subscriptions)
+    .values({
+      organizationId: orgId,
+      stripeCustomerId,
+      stripeSubscriptionId: subscription.id,
+      stripePriceId:
+        typeof primaryItem?.price === 'string'
+          ? primaryItem.price
+          : primaryItem?.price?.id ?? null,
+      status: normalizeSubscriptionStatus(subscription.status),
+      trialStart: safeDate(subscription.trial_start),
+      trialEnd: safeDate(subscription.trial_end),
+      currentPeriodStart,
+      currentPeriodEnd,
+      canceledAt: safeDate(subscription.canceled_at),
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: subscriptions.organizationId,
+      set: {
+        stripeCustomerId,
+        stripeSubscriptionId: subscription.id,
+        stripePriceId:
+          typeof primaryItem?.price === 'string'
+            ? primaryItem.price
+            : primaryItem?.price?.id ?? null,
+        status: normalizeSubscriptionStatus(subscription.status),
+        trialStart: safeDate(subscription.trial_start),
+        trialEnd: safeDate(subscription.trial_end),
+        currentPeriodStart,
+        currentPeriodEnd,
+        canceledAt: safeDate(subscription.canceled_at),
+        updatedAt: new Date(),
+      },
+    });
+}
+
+async function syncSubscriptionFromStripe(record: Awaited<ReturnType<typeof getBillingRecord>>) {
+  if (!isStripeEnabled() || !record.stripeCustomerId) {
+    return record;
+  }
+
+  try {
+    const stripe = getStripe();
+
+    const subscription =
+      record.stripeSubscriptionId
+        ? await stripe.subscriptions.retrieve(record.stripeSubscriptionId)
+        : (await stripe.subscriptions.list({
+            customer: record.stripeCustomerId,
+            status: 'all',
+            limit: 1,
+          })).data[0] ?? null;
+
+    if (!subscription) {
+      return record;
+    }
+
+    await syncSubscriptionSnapshot(record.organizationId, record.stripeCustomerId, subscription);
+
+    logger.info('Subscription snapshot refreshed from Stripe on read', {
+      organizationId: record.organizationId,
+      stripeCustomerId: record.stripeCustomerId,
+      stripeSubscriptionId: subscription.id,
+      status: subscription.status,
+    });
+
+    return getBillingRecord(record.organizationId);
+  } catch (error) {
+    logger.warn('Subscription refresh from Stripe failed; using persisted snapshot', {
+      organizationId: record.organizationId,
+      stripeCustomerId: record.stripeCustomerId,
+      stripeSubscriptionId: record.stripeSubscriptionId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+
+    return record;
+  }
 }
 
 function buildSubscriptionResponse(record: Awaited<ReturnType<typeof getBillingRecord>>) {
@@ -217,6 +336,26 @@ export async function createCheckoutSession(orgId: string, input: BillingCheckou
     eligibleForTrial: includeTrialPeriod,
   });
 
+  // Persist a placeholder snapshot so billing can self-heal from Stripe even
+  // if webhook delivery is delayed or temporarily fails.
+  await db
+    .insert(subscriptions)
+    .values({
+      organizationId: record.organizationId,
+      stripeCustomerId,
+      stripePriceId: priceId,
+      status: 'unpaid',
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: subscriptions.organizationId,
+      set: {
+        stripeCustomerId,
+        stripePriceId: priceId,
+        updatedAt: new Date(),
+      },
+    });
+
   return {
     url: session.url,
     sessionId: session.id,
@@ -224,7 +363,19 @@ export async function createCheckoutSession(orgId: string, input: BillingCheckou
 }
 
 export async function getSubscription(orgId: string) {
-  const record = await getBillingRecord(orgId);
+  const persisted = await getBillingRecord(orgId);
+  const shouldRefreshFromStripe = Boolean(
+    persisted.stripeCustomerId &&
+      (
+        !persisted.stripeSubscriptionId ||
+        persisted.status === 'past_due' ||
+        persisted.status === 'unpaid' ||
+        persisted.status === 'canceled'
+      ),
+  );
+  const record = shouldRefreshFromStripe
+    ? await syncSubscriptionFromStripe(persisted)
+    : persisted;
   return buildSubscriptionResponse(record);
 }
 
