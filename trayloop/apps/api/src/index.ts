@@ -4,7 +4,7 @@ import { EventBus } from './lib/event-bus/index.js';
 import { errorHandler } from './lib/middleware/error-handler.js';
 import { registerRequestLogger } from './lib/middleware/request-logger.js';
 import { registerIdempotencyHook } from './lib/middleware/idempotency.js';
-import { applySecurityHeaders, enforceRateLimit, getAllowedOrigins } from './lib/security.js';
+import { applySecurityHeaders, assertProductionOrigins, enforceRateLimit, getAllowedOrigins } from './lib/security.js';
 import { isAutomationsEnabled } from './lib/features.js';
 import './lib/context.js';
 import { authModule } from './modules/auth/index.js';
@@ -36,14 +36,15 @@ export async function buildApp() {
   });
   const eventBus = new EventBus();
   const allowedOrigins = getAllowedOrigins();
+  assertProductionOrigins(allowedOrigins);
   const automationsEnabled = isAutomationsEnabled();
 
   // Global middleware
   await app.register(cors, {
-    origin: allowedOrigins.length > 0 ? allowedOrigins : true,
+    origin: allowedOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Authorization', 'Content-Type', 'Idempotency-Key', 'x-organization-id'],
+    allowedHeaders: ['Authorization', 'Content-Type', 'Idempotency-Key', 'x-organization-id', 'x-trayloop-session-scope'],
     maxAge: 86400,
   });
   app.addHook('onRequest', applySecurityHeaders);

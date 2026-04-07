@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../../lib/api';
+import { hasMerchantSession } from '../../lib/session';
 import { useMobile } from '../../lib/use-mobile';
 
 interface Customer {
@@ -44,8 +45,7 @@ export default function CustomersPage() {
   const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) { window.location.href = '/login'; return; }
+    if (!hasMerchantSession()) { window.location.href = '/login'; return; }
     fetchCustomers();
   }, []);
 

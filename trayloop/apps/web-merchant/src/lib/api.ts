@@ -1,3 +1,5 @@
+import { clearMerchantSession, ensureMerchantSession } from './session';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export interface MerchantStorefrontContext {
@@ -364,17 +366,17 @@ export interface AutomationOverview {
 }
 
 export async function apiFetch(path: string, options: RequestInit = {}) {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  await ensureMerchantSession();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    'x-trayloop-session-scope': 'merchant',
     ...(options.headers as Record<string, string> ?? {}),
   };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
 
   const orgId = typeof window !== 'undefined' ? localStorage.getItem('orgId') : null;
   if (orgId) headers['x-organization-id'] = orgId;
 
-  const res = await fetch(`${API_URL}${path}`, { ...options, headers });
+  const res = await fetch(`${API_URL}${path}`, { ...options, headers, credentials: 'include' });
 
   if (res.status === 401) {
     if (typeof window !== 'undefined') {
@@ -383,8 +385,7 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
       const alreadyRedirecting = (window as any).__trayloop_auth_redirect;
       if (!alreadyRedirecting) {
         (window as any).__trayloop_auth_redirect = true;
-        localStorage.removeItem('token');
-        localStorage.removeItem('orgId');
+        clearMerchantSession();
         window.location.href = '/login';
       }
     }

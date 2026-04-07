@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { CustomerAccount } from '../../lib/api';
 import { fetchCustomerAccount, logoutCustomer } from '../../lib/api';
-import { clearCustomerSession, getCustomerToken } from '../../lib/session';
+import { clearCustomerSession, ensureCustomerSession, hasCustomerSession } from '../../lib/session';
 
 export default function CustomerAccountPage() {
   const router = useRouter();
@@ -17,12 +17,13 @@ export default function CustomerAccountPage() {
     let cancelled = false;
 
     async function load() {
-      if (!getCustomerToken()) {
+      if (!hasCustomerSession()) {
         router.replace('/login?next=/account');
         return;
       }
 
       try {
+        await ensureCustomerSession();
         const result = await fetchCustomerAccount();
         if (!cancelled) {
           setAccount(result);

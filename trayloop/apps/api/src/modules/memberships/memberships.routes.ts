@@ -1,7 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import { requireAuth } from '../../lib/middleware/auth.js';
 import { requireTenant } from '../../lib/middleware/tenant.js';
-import { validateBody } from '../../lib/middleware/validate.js';
+import { validateBody, validateParams } from '../../lib/middleware/validate.js';
+import { idParamsSchema } from '../../lib/params.js';
 import { inviteMemberSchema, updateMemberRoleSchema } from './memberships.schema.js';
 import * as service from './memberships.service.js';
 
@@ -20,14 +21,14 @@ export function registerRoutes(app: FastifyInstance) {
     return reply.status(201).send({ data: result });
   });
 
-  app.patch('/:id/role', { preHandler: [validateBody(updateMemberRoleSchema)] }, async (request, reply) => {
-    const { id } = request.params as { id: string };
+  app.patch('/:id/role', { preHandler: [validateParams(idParamsSchema), validateBody(updateMemberRoleSchema)] }, async (request, reply) => {
+    const { id } = (request as any).validatedParams as { id: string };
     const result = await service.updateRole(id, (request as any).validatedBody);
     return reply.send({ data: result });
   });
 
-  app.delete('/:id', async (request, reply) => {
-    const { id } = request.params as { id: string };
+  app.delete('/:id', { preHandler: [validateParams(idParamsSchema)] }, async (request, reply) => {
+    const { id } = (request as any).validatedParams as { id: string };
     await service.remove(id);
     return reply.status(204).send();
   });

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { automationsEnabled } from '../lib/features';
+import { clearAdminSession, hasAdminSession } from '../lib/session';
 import { useMobile } from '../lib/use-mobile';
 
 const NAV_ITEMS = [
@@ -27,8 +28,7 @@ function useAdminAuth() {
   const [authenticated, setAuthenticated] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('admin_token');
-    if (!token) {
+    if (!hasAdminSession()) {
       window.location.href = '/login';
     } else {
       setAuthenticated(true);
@@ -65,7 +65,7 @@ function AuthenticatedShell({ children, pathname }: { children: React.ReactNode;
   if (!authenticated) return null;
 
   function handleLogout() {
-    localStorage.removeItem('admin_token');
+    clearAdminSession();
     window.location.href = '/login';
   }
 

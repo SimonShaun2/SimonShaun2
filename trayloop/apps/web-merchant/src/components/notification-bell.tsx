@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { apiFetch } from '../lib/api';
+import { hasMerchantSession } from '../lib/session';
 
 interface Notification {
   id: string;
@@ -37,8 +38,7 @@ export default function NotificationBell() {
   }, []);
 
   async function fetchNotifications() {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    if (!token) return;
+    if (!hasMerchantSession()) return;
     try {
       const res = await apiFetch('/api/notifications');
       setNotifications(res.data);

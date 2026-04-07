@@ -4,14 +4,17 @@ import { verifyToken } from '@trayloop/auth';
 import { eq } from 'drizzle-orm';
 import { UnauthorizedError } from '../errors.js';
 import type { AuthUser } from '../context.js';
+import { getSessionTokenFromRequest } from '../auth-cookies.js';
 
 async function authenticateRequest(request: FastifyRequest): Promise<AuthUser | null> {
   const authHeader = request.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) {
+  const token = authHeader?.startsWith('Bearer ')
+    ? authHeader.slice(7)
+    : getSessionTokenFromRequest(request);
+
+  if (!token) {
     return null;
   }
-
-  const token = authHeader.slice(7);
   const payload = await verifyToken(token);
 
   const [userRecord] = await db
@@ -37,7 +40,7 @@ async function authenticateRequest(request: FastifyRequest): Promise<AuthUser | 
 }
 
 export async function requireAuth(request: FastifyRequest, _reply: FastifyReply) {
-  if (!request.headers.authorization?.startsWith('Bearer ')) {
+  if (!request.headers.authorization?.startsWith('Bearer ') && !getSessionTokenFromRequest(request)) {
     throw new UnauthorizedError('Missing or invalid authorization header');
   }
 

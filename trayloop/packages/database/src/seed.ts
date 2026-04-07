@@ -1,5 +1,6 @@
 import { db } from './client.js';
 import { hashPassword } from '@trayloop/auth';
+import { randomBytes } from 'node:crypto';
 import {
   users,
   organizations,
@@ -18,7 +19,7 @@ import {
   payments,
 } from './schema/index.js';
 
-const SEED_PASSWORD = 'password123';
+const SEED_PASSWORD = process.env.TRAYLOOP_SEED_PASSWORD || randomBytes(12).toString('base64url');
 
 async function seed() {
   console.log('🌱 Seeding database...\n');

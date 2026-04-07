@@ -1,19 +1,19 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-const LEGACY_TOKEN_KEY = 'customer_token';
-const SESSION_MARKER_KEY = 'customer_session_present';
+const LEGACY_TOKEN_KEY = 'admin_token';
+const SESSION_MARKER_KEY = 'admin_session_present';
 
-export function hasCustomerSession() {
+export function hasAdminSession() {
   if (typeof window === 'undefined') return false;
   return Boolean(localStorage.getItem(SESSION_MARKER_KEY) || localStorage.getItem(LEGACY_TOKEN_KEY));
 }
 
-export function markCustomerSession() {
+export function markAdminSession() {
   if (typeof window === 'undefined') return;
   localStorage.setItem(SESSION_MARKER_KEY, '1');
   localStorage.removeItem(LEGACY_TOKEN_KEY);
 }
 
-export async function ensureCustomerSession() {
+export async function ensureAdminSession() {
   if (typeof window === 'undefined') return;
 
   const legacyToken = localStorage.getItem(LEGACY_TOKEN_KEY);
@@ -29,19 +29,15 @@ export async function ensureCustomerSession() {
   });
 
   if (!response.ok) {
-    clearCustomerSession();
+    clearAdminSession();
     return;
   }
 
-  markCustomerSession();
+  markAdminSession();
 }
 
-export function clearCustomerSession() {
+export function clearAdminSession() {
   if (typeof window === 'undefined') return;
   localStorage.removeItem(LEGACY_TOKEN_KEY);
   localStorage.removeItem(SESSION_MARKER_KEY);
-}
-
-export function customerResetHref() {
-  return '/reset-password';
 }

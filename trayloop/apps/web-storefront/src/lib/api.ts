@@ -1,9 +1,6 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { clearCustomerSession, ensureCustomerSession } from './session';
 
-function getCustomerToken() {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('customer_token');
-}
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export interface StorefrontLocation {
   slug: string;
@@ -245,13 +242,14 @@ export interface PublicOrderPaymentStatus {
 }
 
 export async function submitOrder(slug: string, order: OrderSubmission): Promise<StorefrontOrderResponse> {
-  const token = getCustomerToken();
+  await ensureCustomerSession();
   const res = await fetch(`${API_URL}/api/storefront/${slug}/order`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      'x-trayloop-session-scope': 'customer',
     },
+    credentials: 'include',
     body: JSON.stringify(order),
   });
 
@@ -335,6 +333,7 @@ export async function loginCustomer(email: string, password: string): Promise<Cu
   const res = await fetch(`${API_URL}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify({ email, password }),
   });
 
@@ -398,6 +397,7 @@ export async function trackStorefrontUpsell(
 export async function fetchOrderPaymentStatus(slug: string, orderId: string): Promise<PublicOrderPaymentStatus> {
   const res = await fetch(`${API_URL}/api/storefront/${slug}/orders/${orderId}/payment-status`, {
     cache: 'no-store',
+    credentials: 'include',
   });
 
   const json = await res.json();
@@ -414,6 +414,7 @@ export async function restartOrderCheckout(slug: string, orderId: string): Promi
     headers: {
       'Content-Type': 'application/json',
     },
+    credentials: 'include',
   });
 
   const json = await res.json();
@@ -439,6 +440,7 @@ export async function registerCustomer(input: {
   const res = await fetch(`${API_URL}/api/auth/register/customer`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify(input),
   });
 
@@ -451,21 +453,22 @@ export async function registerCustomer(input: {
 }
 
 export async function fetchCustomerAccount(): Promise<CustomerAccount> {
-  const token = getCustomerToken();
-  if (!token) {
-    throw new Error('Missing customer session');
-  }
+  await ensureCustomerSession();
 
   const res = await fetch(`${API_URL}/api/auth/customer/account`, {
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
+      'x-trayloop-session-scope': 'customer',
     },
+    credentials: 'include',
     cache: 'no-store',
   });
 
   const json = await res.json();
   if (!res.ok) {
+    if (res.status === 401 || res.status === 403) {
+      clearCustomerSession();
+    }
     throw new Error(json.error?.message ?? 'Failed to load account');
   }
 
@@ -473,18 +476,19 @@ export async function fetchCustomerAccount(): Promise<CustomerAccount> {
 }
 
 export async function fetchCurrentCustomer() {
-  const token = getCustomerToken();
-  if (!token) return null;
+  await ensureCustomerSession();
 
   const res = await fetch(`${API_URL}/api/auth/me`, {
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
+      'x-trayloop-session-scope': 'customer',
     },
+    credentials: 'include',
     cache: 'no-store',
   });
 
   if (res.status === 401 || res.status === 403) {
+    clearCustomerSession();
     return null;
   }
 
@@ -497,14 +501,12 @@ export async function fetchCurrentCustomer() {
 }
 
 export async function logoutCustomer() {
-  const token = getCustomerToken();
   await fetch(`${API_URL}/api/auth/logout`, {
     method: 'POST',
-    headers: token
-      ? {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        }
-      : { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-trayloop-session-scope': 'customer',
+    },
+    credentials: 'include',
   });
 }

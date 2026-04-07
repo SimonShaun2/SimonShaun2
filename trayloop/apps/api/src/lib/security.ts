@@ -58,6 +58,12 @@ export function getAllowedOrigins(): string[] {
   return Array.from(new Set([...explicitOrigins, ...derivedOrigins, ...localOrigins]));
 }
 
+export function assertProductionOrigins(allowedOrigins: string[]) {
+  if (process.env.NODE_ENV === 'production' && allowedOrigins.length === 0) {
+    throw new Error('CORS allowed origins must be configured in production');
+  }
+}
+
 function getSecurityHeaders() {
   const headers: Record<string, string> = {
     'content-security-policy': "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
@@ -102,6 +108,14 @@ function getRateLimitPolicy(request: FastifyRequest): RateLimitPolicy | null {
 
   if (path === '/api/auth/refresh') {
     return { key: 'auth-refresh', max: 20, windowMs: 15 * 60 * 1000 };
+  }
+
+  if (path === '/api/auth/password-reset/request') {
+    return { key: 'auth-password-reset-request', max: 5, windowMs: 60 * 60 * 1000 };
+  }
+
+  if (path === '/api/auth/password-reset/confirm') {
+    return { key: 'auth-password-reset-confirm', max: 10, windowMs: 15 * 60 * 1000 };
   }
 
   if (path.startsWith('/api/billing')) {

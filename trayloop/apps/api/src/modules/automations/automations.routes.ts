@@ -1,7 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import { requireAuth } from '../../lib/middleware/auth.js';
 import { requireTenant } from '../../lib/middleware/tenant.js';
-import { validateBody } from '../../lib/middleware/validate.js';
+import { validateBody, validateParams } from '../../lib/middleware/validate.js';
+import { idParamsSchema } from '../../lib/params.js';
 import {
   automationEvaluateSchema,
   automationProcessSchema,
@@ -23,8 +24,8 @@ export function registerRoutes(app: FastifyInstance) {
     return { data: await service.listAutomationRules(request.ctx.tenant!.organizationId, request.ctx.user.id) };
   });
 
-  app.patch('/rules/:id', { preHandler: [validateBody(automationRuleUpdateSchema)] }, async (request) => {
-    const { id } = request.params as { id: string };
+  app.patch('/rules/:id', { preHandler: [validateParams(idParamsSchema), validateBody(automationRuleUpdateSchema)] }, async (request) => {
+    const { id } = (request as any).validatedParams as { id: string };
     return {
       data: await service.updateAutomationRule(
         request.ctx.tenant!.organizationId,
@@ -50,8 +51,8 @@ export function registerRoutes(app: FastifyInstance) {
     return { data: await service.listAutomationRuns(request.ctx.tenant!.organizationId, query) };
   });
 
-  app.patch('/runs/:id', { preHandler: [validateBody(automationRunUpdateSchema)] }, async (request) => {
-    const { id } = request.params as { id: string };
+  app.patch('/runs/:id', { preHandler: [validateParams(idParamsSchema), validateBody(automationRunUpdateSchema)] }, async (request) => {
+    const { id } = (request as any).validatedParams as { id: string };
     return {
       data: await service.updateAutomationRun(
         request.ctx.tenant!.organizationId,

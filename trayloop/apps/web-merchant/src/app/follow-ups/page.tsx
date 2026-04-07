@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../../lib/api';
+import { hasMerchantSession } from '../../lib/session';
 
 interface FollowUp {
   id: string;
@@ -30,8 +31,7 @@ export default function FollowUpsPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) { window.location.href = '/login'; return; }
+    if (!hasMerchantSession()) { window.location.href = '/login'; return; }
     fetchFollowUps();
   }, [statusFilter]);
 

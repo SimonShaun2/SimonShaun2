@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createBillingCheckout } from '../../lib/api';
+import { ensureMerchantSession, hasMerchantSession, markMerchantSession } from '../../lib/session';
 import { useMobile } from '../../lib/use-mobile';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -33,7 +34,7 @@ function RegisterContent() {
   const [orgName, setOrgName] = useState('');
   const [orgSlug, setOrgSlug] = useState('');
   const [orgPhone, setOrgPhone] = useState('');
-  const [token, setToken] = useState('');
+  const [hasExistingMerchantSession, setHasExistingMerchantSession] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -41,7 +42,10 @@ function RegisterContent() {
     }
 
     if (existingMerchant) {
-      setToken(localStorage.getItem('token') ?? '');
+      setHasExistingMerchantSession(hasMerchantSession());
+      void ensureMerchantSession().then(() => {
+        setHasExistingMerchantSession(hasMerchantSession());
+      });
     }
   }, [existingMerchant]);
 
@@ -61,7 +65,10 @@ function RegisterContent() {
     setLoading(true);
 
     try {
-      const usingExistingMerchantSession = Boolean(token);
+      const usingExistingMerchantSession = hasExistingMerchantSession;
+      if (usingExistingMerchantSession) {
+        await ensureMerchantSession();
+      }
       const response = await fetch(
         usingExistingMerchantSession
           ? `${API_URL}/api/organizations`
@@ -70,8 +77,9 @@ function RegisterContent() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...(usingExistingMerchantSession ? { Authorization: `Bearer ${token}` } : {}),
+            ...(usingExistingMerchantSession ? { 'x-trayloop-session-scope': 'merchant' } : {}),
           },
+          credentials: 'include',
           body: JSON.stringify(
             usingExistingMerchantSession
               ? {
@@ -97,10 +105,9 @@ function RegisterContent() {
         throw new Error(json.error?.message ?? 'Failed to create merchant workspace');
       }
 
-      const nextToken = usingExistingMerchantSession ? token : json.data.token;
       const organization = usingExistingMerchantSession ? json.data : json.data.organization;
 
-      localStorage.setItem('token', nextToken);
+      markMerchantSession();
       localStorage.setItem('orgId', organization.id);
       localStorage.setItem('orgSlug', organization.slug ?? orgSlug.trim());
       localStorage.setItem('orgName', organization.name ?? orgName.trim());

@@ -4,6 +4,7 @@ import { logger } from '@trayloop/utils';
 import { calculatePricing } from '../../lib/pricing.js';
 import { NotFoundError } from '../../lib/errors.js';
 import { optionalAuth } from '../../lib/middleware/auth.js';
+import { storefrontOrderParamsSchema, storefrontSlugParamsSchema } from '../../lib/params.js';
 import { createOrderSchema } from '../orders/orders.schema.js';
 import * as service from './storefront.service.js';
 
@@ -65,7 +66,7 @@ const upsellTrackSchema = z.object({
 
 export function registerRoutes(app: FastifyInstance) {
   app.get('/:slug', async (request) => {
-    const { slug } = request.params as { slug: string };
+    const { slug } = storefrontSlugParamsSchema.parse(request.params);
 
     try {
       const storefront = await service.getStorefront(slug);
@@ -110,7 +111,7 @@ export function registerRoutes(app: FastifyInstance) {
   });
 
   app.post('/:slug/order', { preHandler: [optionalAuth] }, async (request, reply) => {
-    const { slug } = request.params as { slug: string };
+    const { slug } = storefrontSlugParamsSchema.parse(request.params);
     const body = createOrderSchema.parse(request.body);
     const customerUserId = request.ctx?.user?.role === 'customer' ? request.ctx.user.id : undefined;
     const result = await service.submitPublicOrder(slug, body, (app as any).eventBus, customerUserId);
@@ -118,33 +119,33 @@ export function registerRoutes(app: FastifyInstance) {
   });
 
   app.post('/:slug/upsells', async (request) => {
-    const { slug } = request.params as { slug: string };
+    const { slug } = storefrontSlugParamsSchema.parse(request.params);
     const body = upsellRequestSchema.parse(request.body);
     const result = await service.getStorefrontUpsellRecommendations(slug, body);
     return { data: result };
   });
 
   app.post('/:slug/upsells/track', async (request, reply) => {
-    const { slug } = request.params as { slug: string };
+    const { slug } = storefrontSlugParamsSchema.parse(request.params);
     const body = upsellTrackSchema.parse(request.body);
     const result = await service.trackStorefrontUpsellEvent(slug, body);
     return reply.status(201).send({ data: result });
   });
 
   app.get('/:slug/orders/:orderId/payment-status', async (request) => {
-    const { slug, orderId } = request.params as { slug: string; orderId: string };
+    const { slug, orderId } = storefrontOrderParamsSchema.parse(request.params);
     const result = await service.getPublicOrderPaymentStatus(slug, orderId);
     return { data: result };
   });
 
   app.post('/:slug/orders/:orderId/checkout', async (request, reply) => {
-    const { slug, orderId } = request.params as { slug: string; orderId: string };
+    const { slug, orderId } = storefrontOrderParamsSchema.parse(request.params);
     const result = await service.restartPublicOrderCheckout(slug, orderId, (app as any).eventBus);
     return reply.status(201).send({ data: result });
   });
 
   app.post('/:slug/orders/:orderId/deposit-checkout', async (request, reply) => {
-    const { slug, orderId } = request.params as { slug: string; orderId: string };
+    const { slug, orderId } = storefrontOrderParamsSchema.parse(request.params);
     const result = await service.restartPublicOrderCheckout(slug, orderId, (app as any).eventBus);
     return reply.status(201).send({ data: result });
   });

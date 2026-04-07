@@ -1,3 +1,5 @@
+import { clearAdminSession, ensureAdminSession } from './session';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export interface AdminRevenueOrganization {
@@ -112,18 +114,18 @@ export interface AdminAutomationIntelligence {
 }
 
 export async function apiFetch(path: string, options: RequestInit = {}) {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null;
+  await ensureAdminSession();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    'x-trayloop-session-scope': 'admin',
     ...(options.headers as Record<string, string> ?? {}),
   };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`${API_URL}${path}`, { ...options, headers });
+  const res = await fetch(`${API_URL}${path}`, { ...options, headers, credentials: 'include' });
 
   if (res.status === 401 || res.status === 403) {
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('admin_token');
+      clearAdminSession();
       window.location.href = '/login';
     }
     throw new Error(res.status === 403 ? 'Admin access required' : 'Unauthorized');

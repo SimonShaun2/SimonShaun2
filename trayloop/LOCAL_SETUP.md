@@ -70,7 +70,7 @@ cd ..\..
 Expected output:
 ```
 Seeding database...
-  Using password "password123" for all seed users
+  Using password "<generated-or-configured-password>" for all seed users
 Creating users...
   Created Alex Rivera, Jordan Lee, Sam Chen
 ...
@@ -93,9 +93,9 @@ npx tsx src/server.ts
 
 | Email | Password | Role |
 |-------|----------|------|
-| owner@trayloop.dev | password123 | Merchant (owner) |
-| staff@trayloop.dev | password123 | Merchant (manager) |
-| customer@trayloop.dev | password123 | Customer |
+| owner@trayloop.dev | Printed during seed (or `TRAYLOOP_SEED_PASSWORD`) | Merchant (owner) |
+| staff@trayloop.dev | Printed during seed (or `TRAYLOOP_SEED_PASSWORD`) | Merchant (manager) |
+| customer@trayloop.dev | Printed during seed (or `TRAYLOOP_SEED_PASSWORD`) | Customer |
 
 ## Ports
 

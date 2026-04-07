@@ -11,7 +11,7 @@ import {
   type MerchantBillingSubscription,
   type MerchantStorefrontContext,
 } from '../../lib/api';
-import { clearMerchantSession, merchantResetHref } from '../../lib/session';
+import { clearMerchantSession, hasMerchantSession, merchantResetHref } from '../../lib/session';
 import { useMobile } from '../../lib/use-mobile';
 
 interface PaymentStatus {
@@ -206,8 +206,7 @@ function SettingsContent() {
   const [locationMessage, setLocationMessage] = useState('');
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
+    if (!hasMerchantSession()) {
       window.location.href = '/login';
       return;
     }

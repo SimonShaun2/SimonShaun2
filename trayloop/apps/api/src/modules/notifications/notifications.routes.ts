@@ -1,5 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { requireAuth } from '../../lib/middleware/auth.js';
+import { idParamsSchema } from '../../lib/params.js';
+import { validateParams } from '../../lib/middleware/validate.js';
 import * as service from './notifications.service.js';
 
 export function registerRoutes(app: FastifyInstance) {
@@ -11,8 +13,8 @@ export function registerRoutes(app: FastifyInstance) {
     return { data: list, meta: { unread } };
   });
 
-  app.patch('/:id/read', async (request, reply) => {
-    const { id } = request.params as { id: string };
+  app.patch('/:id/read', { preHandler: [validateParams(idParamsSchema)] }, async (request, reply) => {
+    const { id } = (request as any).validatedParams as { id: string };
     await service.markRead(id);
     return reply.send({ data: { message: 'Marked as read' } });
   });

@@ -1,7 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import { requireAuth } from '../../lib/middleware/auth.js';
 import { requireTenant } from '../../lib/middleware/tenant.js';
-import { validateBody } from '../../lib/middleware/validate.js';
+import { validateBody, validateParams } from '../../lib/middleware/validate.js';
+import { idParamsSchema } from '../../lib/params.js';
 import { createFollowUpSchema, updateFollowUpSchema, followUpListQuerySchema } from './follow-ups.schema.js';
 import * as service from './follow-ups.service.js';
 
@@ -20,8 +21,8 @@ export function registerRoutes(app: FastifyInstance) {
     return reply.status(201).send({ data: result });
   });
 
-  app.patch('/:id', { preHandler: [validateBody(updateFollowUpSchema)] }, async (request, reply) => {
-    const { id } = request.params as { id: string };
+  app.patch('/:id', { preHandler: [validateParams(idParamsSchema), validateBody(updateFollowUpSchema)] }, async (request, reply) => {
+    const { id } = (request as any).validatedParams as { id: string };
     const result = await service.update(id, request.ctx.tenant!.organizationId, (request as any).validatedBody);
     return reply.send({ data: result });
   });

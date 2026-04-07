@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { clearMerchantSession, merchantResetHref } from '../../lib/session';
+import { clearMerchantSession, hasMerchantSession, markMerchantSession, merchantResetHref } from '../../lib/session';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -13,7 +13,7 @@ export default function LoginPage() {
   const [hasExistingSession, setHasExistingSession] = useState(false);
 
   useEffect(() => {
-    setHasExistingSession(Boolean(localStorage.getItem('token')));
+    setHasExistingSession(hasMerchantSession());
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -25,15 +25,17 @@ export default function LoginPage() {
       const res = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email, password }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error?.message ?? 'Login failed');
 
-      localStorage.setItem('token', json.data.token);
+      markMerchantSession();
       if (json.data.organizations?.length > 0) {
         localStorage.setItem('orgId', json.data.organizations[0].id);
         localStorage.setItem('orgSlug', json.data.organizations[0].slug);
+        localStorage.setItem('orgName', json.data.organizations[0].name);
         window.location.href = '/';
       } else {
         // No orgs - redirect to create one

@@ -146,9 +146,9 @@ cd trayloop && npm install && cd apps/api && npx tsc && node dist/server.js
 
 | Email | Password | Role |
 |-------|----------|------|
-| owner@trayloop.dev | password123 | Merchant (owner) |
-| staff@trayloop.dev | password123 | Merchant (manager) |
-| customer@trayloop.dev | password123 | Customer |
+| owner@trayloop.dev | Printed during seed (or `TRAYLOOP_SEED_PASSWORD`) | Merchant (owner) |
+| staff@trayloop.dev | Printed during seed (or `TRAYLOOP_SEED_PASSWORD`) | Merchant (manager) |
+| customer@trayloop.dev | Printed during seed (or `TRAYLOOP_SEED_PASSWORD`) | Customer |
 
 (Run seed against Supabase first)
 

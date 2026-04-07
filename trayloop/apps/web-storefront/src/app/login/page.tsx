@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { loginCustomer } from '../../lib/api';
-import { clearCustomerSession, customerResetHref, getCustomerToken, setCustomerSession } from '../../lib/session';
+import { clearCustomerSession, customerResetHref, hasCustomerSession, markCustomerSession } from '../../lib/session';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -28,7 +28,7 @@ function CustomerLoginContent() {
   const [hasExistingSession, setHasExistingSession] = useState(false);
 
   useEffect(() => {
-    setHasExistingSession(Boolean(getCustomerToken()));
+    setHasExistingSession(hasCustomerSession());
   }, []);
 
   async function handleSubmit(event: React.FormEvent) {
@@ -39,8 +39,8 @@ function CustomerLoginContent() {
     setError('');
 
     try {
-      const result = await loginCustomer(email, password);
-      setCustomerSession(result.token);
+      await loginCustomer(email, password);
+      markCustomerSession();
       router.push(nextPath);
       router.refresh();
     } catch (err) {

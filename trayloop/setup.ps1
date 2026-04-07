@@ -5,6 +5,10 @@ $ErrorActionPreference = "Stop"
 
 Write-Host "`n=== TrayLoop Local Setup ===" -ForegroundColor Cyan
 
+if (-not $env:TRAYLOOP_SEED_PASSWORD) {
+    $env:TRAYLOOP_SEED_PASSWORD = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 16 | ForEach-Object { [char]$_ })
+}
+
 # 1. Start Docker containers
 Write-Host "`n[1/5] Starting Docker containers..." -ForegroundColor Yellow
 Push-Location infrastructure/docker
@@ -74,7 +78,7 @@ Pop-Location
 Write-Host "`n=== Setup Complete ===" -ForegroundColor Green
 Write-Host "`nTest credentials:"
 Write-Host "  Email:    owner@trayloop.dev"
-Write-Host "  Password: password123"
+Write-Host "  Password: $env:TRAYLOOP_SEED_PASSWORD"
 Write-Host "`nStart the API:"
 Write-Host "  cd apps\api"
 Write-Host "  npx tsx src/server.ts"

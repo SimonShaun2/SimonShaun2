@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { clearAdminSession, hasAdminSession, markAdminSession } from '../../lib/session';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const ADMIN_RESET_HREF = '/reset-password';
@@ -13,7 +14,7 @@ export default function AdminLoginPage() {
   const [hasExistingSession, setHasExistingSession] = useState(false);
 
   useEffect(() => {
-    setHasExistingSession(Boolean(localStorage.getItem('admin_token')));
+    setHasExistingSession(hasAdminSession());
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -24,12 +25,13 @@ export default function AdminLoginPage() {
       const res = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email, password }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error?.message ?? 'Login failed');
       if (json.data.user.role !== 'admin') throw new Error('Access denied - admin role required');
-      localStorage.setItem('admin_token', json.data.token);
+      markAdminSession();
       window.location.href = '/';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
@@ -39,7 +41,7 @@ export default function AdminLoginPage() {
   }
 
   function handleSignOutCurrentSession() {
-    localStorage.removeItem('admin_token');
+    clearAdminSession();
     setHasExistingSession(false);
     setError('');
   }

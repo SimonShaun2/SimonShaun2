@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../lib/api';
+import { hasMerchantSession } from '../../lib/session';
 import { useMobile } from '../../lib/use-mobile';
 
 interface Package {
@@ -163,8 +164,7 @@ export default function CatalogPage() {
   const [addOnForm, setAddOnForm] = useState<AddOnFormState>(EMPTY_ADDON_FORM);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
+    if (!hasMerchantSession()) {
       window.location.href = '/login';
       return;
     }

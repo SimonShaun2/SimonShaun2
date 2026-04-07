@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { registerCustomer } from '../../lib/api';
-import { setCustomerSession } from '../../lib/session';
+import { markCustomerSession } from '../../lib/session';
 
 export default function CustomerSignupPage() {
   return (
@@ -36,7 +36,7 @@ function CustomerSignupContent() {
     setError('');
 
     try {
-      const result = await registerCustomer({
+      await registerCustomer({
         firstName,
         lastName,
         email,
@@ -44,7 +44,7 @@ function CustomerSignupContent() {
         phone: phone || undefined,
         companyName: companyName || undefined,
       });
-      setCustomerSession(result.token);
+      markCustomerSession();
       router.push(nextPath);
       router.refresh();
     } catch (err) {

@@ -281,7 +281,7 @@ export async function refreshToken(token: string) {
     role: user.role,
   });
 
-  return { token: newToken };
+  return { token: newToken, role: user.role };
 }
 
 export async function getMe(userId: string) {

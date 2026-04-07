@@ -1,8 +1,9 @@
 import type { FastifyInstance } from 'fastify';
 import { requireAuth } from '../../lib/middleware/auth.js';
 import { requireTenant } from '../../lib/middleware/tenant.js';
-import { validateBody } from '../../lib/middleware/validate.js';
+import { validateBody, validateParams } from '../../lib/middleware/validate.js';
 import { requireIdempotency } from '../../lib/middleware/idempotency.js';
+import { customerIdParamsSchema, idParamsSchema } from '../../lib/params.js';
 import {
   createOrderSchema,
   updateOrderStatusSchema,
@@ -24,8 +25,8 @@ export function registerRoutes(app: FastifyInstance) {
   });
 
   // List orders by customer
-  app.get('/customer/:customerId', async (request) => {
-    const { customerId } = request.params as { customerId: string };
+  app.get('/customer/:customerId', { preHandler: [validateParams(customerIdParamsSchema)] }, async (request) => {
+    const { customerId } = (request as any).validatedParams as { customerId: string };
     const result = await service.listByCustomer(customerId);
     return { data: result };
   });
@@ -38,8 +39,8 @@ export function registerRoutes(app: FastifyInstance) {
   });
 
   // Get order detail
-  app.get('/:id', async (request) => {
-    const { id } = request.params as { id: string };
+  app.get('/:id', { preHandler: [validateParams(idParamsSchema)] }, async (request) => {
+    const { id } = (request as any).validatedParams as { id: string };
     const order = await service.getById(id, request.ctx.tenant!.organizationId);
     return { data: order };
   });
@@ -55,8 +56,8 @@ export function registerRoutes(app: FastifyInstance) {
   });
 
   // Update order status
-  app.patch('/:id/status', { preHandler: [validateBody(updateOrderStatusSchema)] }, async (request, reply) => {
-    const { id } = request.params as { id: string };
+  app.patch('/:id/status', { preHandler: [validateParams(idParamsSchema), validateBody(updateOrderStatusSchema)] }, async (request, reply) => {
+    const { id } = (request as any).validatedParams as { id: string };
     const result = await service.updateStatus(
       id,
       request.ctx.tenant!.organizationId,
@@ -67,8 +68,8 @@ export function registerRoutes(app: FastifyInstance) {
   });
 
   // Send deposit link
-  app.post('/:id/send-deposit-link', async (request, reply) => {
-    const { id } = request.params as { id: string };
+  app.post('/:id/send-deposit-link', { preHandler: [validateParams(idParamsSchema)] }, async (request, reply) => {
+    const { id } = (request as any).validatedParams as { id: string };
     const body = sendDepositLinkSchema.parse(request.body ?? {});
     const result = await service.sendDepositLink(
       id,
@@ -80,8 +81,8 @@ export function registerRoutes(app: FastifyInstance) {
   });
 
   // Mark order as paid
-  app.patch('/:id/mark-paid', async (request, reply) => {
-    const { id } = request.params as { id: string };
+  app.patch('/:id/mark-paid', { preHandler: [validateParams(idParamsSchema)] }, async (request, reply) => {
+    const { id } = (request as any).validatedParams as { id: string };
     const result = await service.markPaid(
       id,
       request.ctx.tenant!.organizationId,
@@ -91,8 +92,8 @@ export function registerRoutes(app: FastifyInstance) {
   });
 
   // Reorder from existing order (idempotent)
-  app.post('/:id/reorder', { preHandler: [requireIdempotency()] }, async (request, reply) => {
-    const { id } = request.params as { id: string };
+  app.post('/:id/reorder', { preHandler: [validateParams(idParamsSchema), requireIdempotency()] }, async (request, reply) => {
+    const { id } = (request as any).validatedParams as { id: string };
     const body = reorderSchema.parse(request.body);
     const result = await service.reorder(
       id,
@@ -104,8 +105,8 @@ export function registerRoutes(app: FastifyInstance) {
   });
 
   // Refund deposit
-  app.post('/:id/refund-deposit', async (request, reply) => {
-    const { id } = request.params as { id: string };
+  app.post('/:id/refund-deposit', { preHandler: [validateParams(idParamsSchema)] }, async (request, reply) => {
+    const { id } = (request as any).validatedParams as { id: string };
     const result = await service.refundDeposit(
       id,
       request.ctx.tenant!.organizationId,

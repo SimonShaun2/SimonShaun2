@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { clearCustomerSession, getCustomerToken } from '../lib/session';
+import { clearCustomerSession, ensureCustomerSession, hasCustomerSession } from '../lib/session';
 import { fetchCurrentCustomer, logoutCustomer } from '../lib/api';
 
 const linkStyle: React.CSSProperties = {
@@ -24,8 +24,7 @@ export default function StorefrontAuthNav() {
     let cancelled = false;
 
     async function load() {
-      const token = getCustomerToken();
-      if (!token) {
+      if (!hasCustomerSession()) {
         if (!cancelled) {
           setCustomerName(null);
           setLoading(false);
@@ -34,6 +33,7 @@ export default function StorefrontAuthNav() {
       }
 
       try {
+        await ensureCustomerSession();
         const session = await fetchCurrentCustomer();
         if (!session || session.role !== 'customer') {
           clearCustomerSession();

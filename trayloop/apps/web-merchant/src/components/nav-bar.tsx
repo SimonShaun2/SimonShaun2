@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import NotificationBell from './notification-bell';
-import { clearMerchantSession } from '../lib/session';
+import { clearMerchantSession, hasMerchantSession } from '../lib/session';
 import { apiFetch, fetchStorefrontContext, type MerchantStorefrontContext } from '../lib/api';
 import { automationsEnabled } from '../lib/features';
 import { useMobile } from '../lib/use-mobile';
@@ -36,14 +36,14 @@ export default function NavBar() {
   useEffect(() => {
     if (isAuthPage) return;
 
-    const token = localStorage.getItem('token');
+    const signedIn = hasMerchantSession();
     const storedOrgName = localStorage.getItem('orgName');
-    setSignedIn(Boolean(token));
+    setSignedIn(signedIn);
     setOrgName(storedOrgName);
     setStorefrontUrl(null);
     setDefaultLocationName(null);
 
-    if (token) {
+    if (signedIn) {
       Promise.all([
         apiFetch('/api/organizations/current').catch(() => null),
         fetchStorefrontContext().catch(() => null),

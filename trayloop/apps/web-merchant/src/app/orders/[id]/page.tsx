@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { apiFetch } from '../../../lib/api';
+import { hasMerchantSession } from '../../../lib/session';
 
 interface OrderDetail {
   id: string;
@@ -65,8 +66,7 @@ export default function OrderDetailPage() {
   const [reorderSuccess, setReorderSuccess] = useState<{ orderNumber: string; id: string } | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) { window.location.href = '/login'; return; }
+    if (!hasMerchantSession()) { window.location.href = '/login'; return; }
     fetchOrder();
   }, [id]);
 

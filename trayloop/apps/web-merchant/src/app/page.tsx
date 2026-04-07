@@ -7,6 +7,7 @@ import SetupChecklist from '../components/setup-checklist';
 import AiSalesPanel from '../components/ai-sales-panel';
 import RevenueIntelligencePanel from '../components/revenue-intelligence-panel';
 import { automationsEnabled } from '../lib/features';
+import { hasMerchantSession } from '../lib/session';
 
 const AutomationSummaryPanel = dynamic(() => import('../components/automation-summary-panel'));
 
@@ -115,8 +116,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) { window.location.href = '/login'; return; }
+    if (!hasMerchantSession()) { window.location.href = '/login'; return; }
     fetchOrders();
     fetchStats();
   }, [statusFilter, page]);

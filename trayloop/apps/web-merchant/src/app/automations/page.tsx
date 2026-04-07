@@ -13,6 +13,7 @@ import {
   type AutomationRule,
   type AutomationRun,
 } from '../../lib/api';
+import { hasMerchantSession } from '../../lib/session';
 
 type RuleDraft = {
   status: AutomationRule['status'];
@@ -108,8 +109,7 @@ export default function AutomationsPage() {
   }
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
+    if (!hasMerchantSession()) {
       window.location.href = '/login';
       return;
     }
