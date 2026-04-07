@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   title: 'TrayLoop — Direct Catering Orders for Restaurants | No Commissions',
   description:
     'Take back your catering revenue. TrayLoop gives restaurants a branded online storefront for direct catering orders — no marketplace commissions, no middlemen.',
+  icons: { icon: '/favicon.svg' },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
