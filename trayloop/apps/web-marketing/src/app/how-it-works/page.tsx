@@ -351,7 +351,7 @@ export default function HowItWorksPage() {
                   fontFamily: 'monospace',
                 }}
               >
-                rosarioskitchen.trayloop.com
+                order.trayloophq.com/rosarios-kitchen
               </div>
               {[
                 { label: 'Standard Lunch', price: '$18/person' },
