@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import PillButton from '@/components/pill-button';
+import SavingsCalculator from '@/components/savings-calculator';
 
 /* ── Design tokens ── */
 const color = {
@@ -222,43 +223,7 @@ export default function HomePage() {
             </ul>
 
             {/* Calculator CTA card */}
-            <div
-              style={{
-                backgroundColor: color.white,
-                borderRadius: 16,
-                padding: 28,
-                border: `1px solid ${color.creamDark}`,
-                maxWidth: 420,
-              }}
-            >
-              <div style={{ fontSize: 14, fontWeight: 600, color: color.muted, marginBottom: 12 }}>
-                How much are you losing?
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  backgroundColor: color.cream,
-                  borderRadius: 10,
-                  padding: '10px 16px',
-                  marginBottom: 16,
-                }}
-              >
-                <span style={{ color: color.muted, fontSize: 14 }}>Monthly catering revenue</span>
-                <span
-                  style={{
-                    marginLeft: 'auto',
-                    fontWeight: 600,
-                    color: color.ink,
-                    fontSize: 16,
-                  }}
-                >
-                  $12,000
-                </span>
-              </div>
-              <PillButton text="See my savings →" href="/pricing" variant="primary" size="md" />
-            </div>
+            <SavingsCalculator />
           </div>
 
           {/* Right column – Dashboard mockup */}

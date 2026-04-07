@@ -108,6 +108,18 @@ const features = [
 
 /* ── Component ── */
 export default function PricingPage() {
+  const [orders, setOrders] = useState(12);
+  const [avgSize, setAvgSize] = useState(500);
+  const [feePercent, setFeePercent] = useState(20);
+
+  const monthlyVolume = orders * avgSize;
+  const marketplaceLoss = monthlyVolume * (feePercent / 100);
+  const trayloopCost = 49 + monthlyVolume * 0.05;
+  const annualSavings = Math.max(0, (marketplaceLoss - trayloopCost) * 12);
+
+  const fmt = (n: number) =>
+    n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+
   return (
     <>
       {/* Responsive style overrides for grids */}
@@ -477,6 +489,37 @@ export default function PricingPage() {
             See how much you could save
           </h2>
 
+          <style>{`
+            input[type="range"].roi-slider {
+              -webkit-appearance: none;
+              appearance: none;
+              width: 100%;
+              height: 8px;
+              border-radius: 4px;
+              background: #E0D8CE;
+              outline: none;
+            }
+            input[type="range"].roi-slider::-webkit-slider-thumb {
+              -webkit-appearance: none;
+              appearance: none;
+              width: 22px;
+              height: 22px;
+              border-radius: 50%;
+              background: #E85618;
+              cursor: pointer;
+              border: 3px solid #FEFCFA;
+              box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+            }
+            input[type="range"].roi-slider::-moz-range-thumb {
+              width: 22px;
+              height: 22px;
+              border-radius: 50%;
+              background: #E85618;
+              cursor: pointer;
+              border: 3px solid #FEFCFA;
+              box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+            }
+          `}</style>
           <div
             style={{
               maxWidth: 700,
@@ -486,53 +529,63 @@ export default function PricingPage() {
               gap: 28,
             }}
           >
-            {/* Slider mockups */}
-            {[
-              { label: 'Monthly catering orders', value: '25 orders' },
-              { label: 'Average order value', value: '$800' },
-              { label: 'Current commission rate', value: '25%' },
-            ].map((s) => (
-              <div
-                key={s.label}
-                style={{ textAlign: 'left' }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    marginBottom: 8,
-                  }}
-                >
-                  <span
-                    style={{ fontSize: 14, fontWeight: 600, color: C.ink }}
-                  >
-                    {s.label}
-                  </span>
-                  <span
-                    style={{ fontSize: 14, fontWeight: 700, color: C.orange }}
-                  >
-                    {s.value}
-                  </span>
-                </div>
-                <div
-                  style={{
-                    height: 8,
-                    borderRadius: 4,
-                    backgroundColor: '#E0D8CE',
-                    position: 'relative',
-                  }}
-                >
-                  <div
-                    style={{
-                      width: '60%',
-                      height: '100%',
-                      borderRadius: 4,
-                      backgroundColor: C.orange,
-                    }}
-                  />
-                </div>
+            {/* Monthly orders slider */}
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: C.ink }}>Monthly catering orders</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: C.orange }}>{orders} orders</span>
               </div>
-            ))}
+              <input
+                className="roi-slider"
+                type="range"
+                min={1}
+                max={50}
+                value={orders}
+                onChange={(e) => setOrders(Number(e.target.value))}
+                style={{
+                  background: `linear-gradient(to right, #E85618 0%, #E85618 ${((orders - 1) / 49) * 100}%, #E0D8CE ${((orders - 1) / 49) * 100}%, #E0D8CE 100%)`,
+                }}
+              />
+            </div>
+
+            {/* Average order size slider */}
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: C.ink }}>Average order size</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: C.orange }}>{fmt(avgSize)}</span>
+              </div>
+              <input
+                className="roi-slider"
+                type="range"
+                min={100}
+                max={2000}
+                step={50}
+                value={avgSize}
+                onChange={(e) => setAvgSize(Number(e.target.value))}
+                style={{
+                  background: `linear-gradient(to right, #E85618 0%, #E85618 ${((avgSize - 100) / 1900) * 100}%, #E0D8CE ${((avgSize - 100) / 1900) * 100}%, #E0D8CE 100%)`,
+                }}
+              />
+            </div>
+
+            {/* Current marketplace fee slider */}
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: C.ink }}>Current marketplace fee</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: C.orange }}>{feePercent}%</span>
+              </div>
+              <input
+                className="roi-slider"
+                type="range"
+                min={5}
+                max={30}
+                value={feePercent}
+                onChange={(e) => setFeePercent(Number(e.target.value))}
+                style={{
+                  background: `linear-gradient(to right, #E85618 0%, #E85618 ${((feePercent - 5) / 25) * 100}%, #E0D8CE ${((feePercent - 5) / 25) * 100}%, #E0D8CE 100%)`,
+                }}
+              />
+            </div>
 
             {/* Result */}
             <div
@@ -543,22 +596,33 @@ export default function PricingPage() {
                 marginTop: 8,
               }}
             >
-              <p
-                style={{
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: '#1D7A55',
-                  marginBottom: 4,
-                }}
-              >
+              <p style={{ fontSize: 14, fontWeight: 600, color: '#1D7A55', marginBottom: 4 }}>
                 Estimated annual savings
               </p>
               <p style={{ fontSize: 48, fontWeight: 800, color: '#1D7A55' }}>
-                $13,812
+                {fmt(annualSavings)}
               </p>
               <p style={{ fontSize: 14, color: C.muted, marginTop: 4 }}>
-                vs. a 25% commission marketplace
+                vs. a {feePercent}% commission marketplace
               </p>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  gap: 24,
+                  marginTop: 16,
+                  flexWrap: 'wrap',
+                }}
+              >
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 12, color: C.muted }}>Marketplace loss</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: '#FF6243' }}>{fmt(marketplaceLoss)}/mo</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 12, color: C.muted }}>TrayLoop cost</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: C.ink }}>{fmt(trayloopCost)}/mo</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

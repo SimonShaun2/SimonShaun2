@@ -111,6 +111,9 @@ export default function Nav() {
           <Link href="/product" style={linkStyle}>
             Product
           </Link>
+          <Link href="/how-it-works" style={linkStyle}>
+            How It Works
+          </Link>
           <Link href="/pricing" style={linkStyle}>
             Pricing
           </Link>
@@ -167,6 +170,13 @@ export default function Nav() {
           onClick={() => setMobileOpen(false)}
         >
           Product
+        </Link>
+        <Link
+          href="/how-it-works"
+          style={mobileLinkStyle}
+          onClick={() => setMobileOpen(false)}
+        >
+          How It Works
         </Link>
         <Link
           href="/pricing"
