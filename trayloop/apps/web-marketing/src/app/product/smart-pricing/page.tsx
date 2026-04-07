@@ -93,8 +93,8 @@ export default function SmartPricingPage() {
       {/* ── HERO IMAGE ── */}
       <Section bg={color.cream} style={{ paddingTop: 0, paddingBottom: 60 }}>
         <img
-          src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&h=400&fit=crop"
-          alt="Planning and numbers"
+          src="https://images.unsplash.com/photo-1555244162-803834f70033?w=900&h=400&fit=crop"
+          alt="Catering buffet spread with variety of dishes"
           style={{ width: '100%', height: 400, objectFit: 'cover', borderRadius: 16 }}
         />
       </Section>

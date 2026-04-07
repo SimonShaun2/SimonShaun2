@@ -94,8 +94,8 @@ export default function RecurringOrdersPage() {
       {/* ── HERO IMAGE ── */}
       <Section bg={color.cream} style={{ paddingTop: 0, paddingBottom: 60 }}>
         <img
-          src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&h=400&fit=crop"
-          alt="Business meeting with food"
+          src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=900&h=400&fit=crop"
+          alt="Restaurant service with elegant plating"
           style={{ width: '100%', height: 400, objectFit: 'cover', borderRadius: 16 }}
         />
       </Section>

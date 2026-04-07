@@ -94,8 +94,8 @@ export default function DepositCollectionPage() {
       {/* ── IMAGE ── */}
       <Section bg={color.white} style={{ paddingTop: 0, paddingBottom: 0 }}>
         <img
-          src="https://images.unsplash.com/photo-1556742393-d75f468bfcb0?w=800&h=400&fit=crop"
-          alt="Secure payment checkout"
+          src="https://images.unsplash.com/photo-1567521464027-f127ff144326?w=900&h=400&fit=crop"
+          alt="Food truck serving customers"
           style={{ width: '100%', height: 400, objectFit: 'cover', borderRadius: 16 }}
         />
       </Section>

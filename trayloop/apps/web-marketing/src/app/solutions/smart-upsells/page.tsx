@@ -94,8 +94,8 @@ export default function SmartUpsellsPage() {
       {/* ── IMAGE ── */}
       <Section bg={color.white} style={{ paddingTop: 0, paddingBottom: 0 }}>
         <img
-          src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&h=400&fit=crop"
-          alt="Delicious catering spread"
+          src="https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?w=900&h=400&fit=crop"
+          alt="Beautifully presented food dishes"
           style={{ width: '100%', height: 400, objectFit: 'cover', borderRadius: 16 }}
         />
       </Section>

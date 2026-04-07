@@ -94,8 +94,8 @@ export default function AiReengagementPage() {
       {/* ── IMAGE ── */}
       <Section bg={color.white} style={{ paddingTop: 0, paddingBottom: 0 }}>
         <img
-          src="https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=400&fit=crop"
-          alt="Team analyzing customer data"
+          src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=900&h=400&fit=crop"
+          alt="Busy restaurant kitchen with chefs at work"
           style={{ width: '100%', height: 400, objectFit: 'cover', borderRadius: 16 }}
         />
       </Section>

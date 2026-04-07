@@ -93,8 +93,8 @@ export default function MerchantPortalPage() {
       {/* ── HERO IMAGE ── */}
       <Section bg={color.cream} style={{ paddingTop: 0, paddingBottom: 60 }}>
         <img
-          src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=400&fit=crop"
-          alt="Dashboard and analytics"
+          src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=900&h=400&fit=crop"
+          alt="Modern restaurant interior with warm lighting"
           style={{ width: '100%', height: 400, objectFit: 'cover', borderRadius: 16 }}
         />
       </Section>

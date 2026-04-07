@@ -95,8 +95,8 @@ export default function CapacityManagementPage() {
       {/* ── HERO IMAGE ── */}
       <Section bg={color.cream} style={{ paddingTop: 0, paddingBottom: 60 }}>
         <img
-          src="https://images.unsplash.com/photo-1581299894007-aaa50297cf16?w=800&h=400&fit=crop"
-          alt="Busy kitchen"
+          src="https://images.unsplash.com/photo-1577219491135-ce391730fb2c?w=900&h=400&fit=crop"
+          alt="Chef working in a professional kitchen"
           style={{ width: '100%', height: 400, objectFit: 'cover', borderRadius: 16 }}
         />
       </Section>

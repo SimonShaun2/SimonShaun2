@@ -94,8 +94,8 @@ export default function DirectOrderingPage() {
       {/* ── IMAGE ── */}
       <Section bg={color.white} style={{ paddingTop: 0, paddingBottom: 0 }}>
         <img
-          src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&h=400&fit=crop"
-          alt="Direct ordering experience"
+          src="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=900&h=400&fit=crop"
+          alt="Fresh food platter with vibrant ingredients"
           style={{ width: '100%', height: 400, objectFit: 'cover', borderRadius: 16 }}
         />
       </Section>

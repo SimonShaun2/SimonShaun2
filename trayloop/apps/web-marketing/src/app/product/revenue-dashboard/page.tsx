@@ -94,8 +94,8 @@ export default function RevenueDashboardPage() {
       {/* ── HERO IMAGE ── */}
       <Section bg={color.cream} style={{ paddingTop: 0, paddingBottom: 60 }}>
         <img
-          src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=400&fit=crop"
-          alt="Analytics dashboard"
+          src="https://images.unsplash.com/photo-1600565193348-f74bd3c7ccdf?w=900&h=400&fit=crop"
+          alt="Catering event setup with decorated tables"
           style={{ width: '100%', height: 400, objectFit: 'cover', borderRadius: 16 }}
         />
       </Section>

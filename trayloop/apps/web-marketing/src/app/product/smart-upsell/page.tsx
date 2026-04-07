@@ -93,8 +93,8 @@ export default function SmartUpsellPage() {
       {/* ── HERO IMAGE ── */}
       <Section bg={color.cream} style={{ paddingTop: 0, paddingBottom: 60 }}>
         <img
-          src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&h=400&fit=crop"
-          alt="Food spread"
+          src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=900&h=400&fit=crop"
+          alt="Beautiful food spread with colorful dishes"
           style={{ width: '100%', height: 400, objectFit: 'cover', borderRadius: 16 }}
         />
       </Section>

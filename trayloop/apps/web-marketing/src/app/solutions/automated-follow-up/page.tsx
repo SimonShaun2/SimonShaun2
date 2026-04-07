@@ -94,8 +94,8 @@ export default function AutomatedFollowUpPage() {
       {/* ── IMAGE ── */}
       <Section bg={color.white} style={{ paddingTop: 0, paddingBottom: 0 }}>
         <img
-          src="https://images.unsplash.com/photo-1553877522-43269d4ea984?w=800&h=400&fit=crop"
-          alt="Automated follow-up workflow"
+          src="https://images.unsplash.com/photo-1559339352-11d035aa65de?w=900&h=400&fit=crop"
+          alt="Restaurant owner greeting customers"
           style={{ width: '100%', height: 400, objectFit: 'cover', borderRadius: 16 }}
         />
       </Section>
