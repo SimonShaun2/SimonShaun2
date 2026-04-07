@@ -215,7 +215,7 @@ export default function HomePage() {
 
           <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 24 }}>
             <PillButton text="See how much you're losing →" href="#calculator" variant="primary" />
-            <PillButton text="Book a free Demo →" href="/demo" variant="ghost" />
+            <PillButton text="Get Started →" href="https://dashboard.trayloophq.com/register" variant="ghost" />
           </div>
 
           <ul style={{ display: 'flex', gap: 24, justifyContent: 'center', flexWrap: 'wrap', padding: 0, margin: 0 }}>
