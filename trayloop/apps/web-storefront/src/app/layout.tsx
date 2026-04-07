@@ -4,6 +4,7 @@ import { showStagingBanner } from '../lib/features';
 export const metadata: Metadata = {
   title: 'Order Online',
   description: 'Browse the menu and place your order',
+  icons: { icon: '/favicon.svg' },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

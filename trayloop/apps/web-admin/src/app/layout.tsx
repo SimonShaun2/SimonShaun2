@@ -5,6 +5,7 @@ import { showStagingBanner } from '../lib/features';
 export const metadata: Metadata = {
   title: 'TrayLoop Admin',
   description: 'Platform administration',
+  icons: { icon: '/favicon.svg' },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
