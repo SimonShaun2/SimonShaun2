@@ -1137,32 +1137,7 @@ export default function HomePage() {
         </div>
       </Section>
 
-      {/* ── CLOSING CTA ── */}
-      <Section bg={color.ink}>
-        <div style={{ textAlign: 'center', maxWidth: 640, margin: '0 auto' }}>
-          <h2
-            style={{
-              fontSize: 36,
-              fontWeight: 700,
-              color: color.white,
-              lineHeight: 1.2,
-              marginBottom: 16,
-            }}
-          >
-            Stop leaking revenue. Start building a catering engine.
-          </h2>
-          <p style={{ fontSize: 16, color: '#C2B9AE', marginBottom: 8 }}>
-            $49/month + 5% platform fee. No contracts. No commissions. Cancel anytime.
-          </p>
-          <p style={{ fontSize: 14, color: color.muted, marginBottom: 32 }}>
-            We handle the full setup — your portal is live within 48 hours.
-          </p>
-          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <PillButton text="Book a free Demo →" href="/demo" variant="primary" />
-            <PillButton text="See how it works →" href="/product" variant="ghost" />
-          </div>
-        </div>
-      </Section>
+      {/* Footer pre-CTA handles the closing CTA */}
     </main>
   );
 }
