@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { trackEvent } from '@trayloop/analytics';
 import type {
   StorefrontData,
   OrderSubmission,
@@ -391,10 +392,28 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
     };
   }, [checkoutState, data.merchant.slug, returnedOrderId]);
 
+  useEffect(() => {
+    trackEvent('storefront_view', {
+      merchant_slug: data.merchant.slug,
+      merchant_name: data.merchant.name,
+      location_count: data.locations.length,
+      menu_count: data.menu.length,
+    });
+  }, [data.locations.length, data.menu.length, data.merchant.name, data.merchant.slug]);
+
   const togglePkg = (id: string) => {
     setSelectedPkgs((prev) => {
       const next = { ...prev };
-      if (next[id]) { delete next[id]; } else { next[id] = 1; }
+      if (next[id]) {
+        delete next[id];
+      } else {
+        next[id] = 1;
+        trackEvent('storefront_package_selected', {
+          merchant_slug: data.merchant.slug,
+          package_id: id,
+          service_type: serviceType,
+        });
+      }
       return next;
     });
   };
@@ -419,6 +438,11 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
         removeAcceptedUpsell(id);
       } else {
         next[id] = 1;
+        trackEvent('storefront_add_on_selected', {
+          merchant_slug: data.merchant.slug,
+          add_on_id: id,
+          service_type: serviceType,
+        });
       }
       return next;
     });
@@ -512,6 +536,14 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
   ]);
 
   const applyUpsellRecommendation = useCallback((recommendation: StorefrontUpsellRecommendation) => {
+    trackEvent('storefront_upsell_added', {
+      merchant_slug: data.merchant.slug,
+      add_on_id: recommendation.addOnId,
+      recommendation_type: recommendation.recommendationType,
+      suggested_quantity: recommendation.suggestedQuantity,
+      revenue_cents: recommendation.totalPrice,
+    });
+
     setSelectedAddOnIds((current) => ({
       ...current,
       [recommendation.addOnId]: Math.max(current[recommendation.addOnId] ?? 0, recommendation.suggestedQuantity),
@@ -567,6 +599,14 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
     setFieldErrors([]);
 
     setSubmitting(true);
+    trackEvent('begin_checkout', {
+      merchant_slug: data.merchant.slug,
+      service_type: serviceType,
+      headcount,
+      package_count: pkgSelections.length,
+      add_on_count: addOnSelections.length,
+      location_slug: selectedLocationSlug || (locations[0]?.slug ?? ''),
+    });
 
     // Combine date + time into a single datetime string for the API
     const combinedDateTime = eventTime ? `${eventDate}T${eventTime}` : eventDate;
@@ -601,13 +641,33 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
     try {
       const result = await submitOrder(data.merchant.slug, payload);
       if ((result.mode === 'deposit_checkout' || result.mode === 'full_checkout') && result.checkout?.url) {
+        trackEvent('checkout_redirected', {
+          merchant_slug: data.merchant.slug,
+          mode: result.mode,
+          amount: result.checkout.amount,
+          currency: result.checkout.currency,
+          order_id: result.order.id,
+          order_number: result.order.orderNumber,
+        });
         window.location.assign(result.checkout.url);
         return;
       }
 
+      trackEvent(result.mode === 'deposit_pending' ? 'deposit_pending' : 'order_received', {
+        merchant_slug: data.merchant.slug,
+        order_id: result.order.id,
+        order_number: result.order.orderNumber,
+        total: result.order.pricing.total,
+        service_type: result.order.serviceType,
+      });
       setConfirmationMode(result.mode === 'deposit_pending' ? 'deposit_pending' : 'order_received');
       setConfirmation(result.order);
     } catch (err) {
+      trackEvent('checkout_failed', {
+        merchant_slug: data.merchant.slug,
+        service_type: serviceType,
+        message: err instanceof Error ? err.message : 'unknown_error',
+      });
       if (err instanceof OrderError) {
         setError(err.message);
         if (err.details) setFieldErrors(err.details);
@@ -629,8 +689,19 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
     setPaymentStatusError('');
     try {
       const checkout = await restartOrderCheckout(data.merchant.slug, returnedOrderId);
+      trackEvent('checkout_retry_redirected', {
+        merchant_slug: data.merchant.slug,
+        order_id: returnedOrderId,
+        checkout_kind: checkout.kind,
+        amount: checkout.amount,
+      });
       window.location.assign(checkout.url);
     } catch (err) {
+      trackEvent('checkout_retry_failed', {
+        merchant_slug: data.merchant.slug,
+        order_id: returnedOrderId,
+        message: err instanceof Error ? err.message : 'unknown_error',
+      });
       setPaymentStatusError(err instanceof Error ? err.message : 'Failed to reopen checkout');
       setRetryingCheckout(false);
     }

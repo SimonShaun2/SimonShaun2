@@ -13,10 +13,13 @@
     "next": "^15.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "@trayloop/analytics": "*",
     "@trayloop/ui": "*",
     "@trayloop/types": "*",
     "@trayloop/config": "*",
-    "@trayloop/auth": "*"
+    "@trayloop/auth": "*",
+    "@vercel/analytics": "^1.5.0",
+    "@vercel/speed-insights": "^1.2.0"
   },
   "devDependencies": {
     "typescript": "^5.5.0",

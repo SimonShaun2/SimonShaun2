@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { trackEvent } from '@trayloop/analytics';
 import { apiFetch, fetchStorefrontContext, type MerchantStorefrontContext } from '../lib/api';
 
 interface SetupStep {
@@ -114,7 +115,10 @@ export default function SetupChecklist() {
         >
           <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{storefrontUrl}</span>
           <button
-            onClick={() => navigator.clipboard.writeText(storefrontUrl)}
+            onClick={() => {
+              trackEvent('merchant_storefront_url_copied', { storefront_url: storefrontUrl });
+              navigator.clipboard.writeText(storefrontUrl);
+            }}
             style={{
               background: 'none',
               border: '1px solid #D6D3D1',
@@ -134,6 +138,7 @@ export default function SetupChecklist() {
             href={storefrontUrl}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => trackEvent('merchant_storefront_view_clicked', { storefront_url: storefrontUrl })}
             style={{
               padding: '10px 20px',
               background: '#1C1917',
@@ -150,6 +155,7 @@ export default function SetupChecklist() {
             href={storefrontUrl}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => trackEvent('merchant_test_order_clicked', { storefront_url: storefrontUrl })}
             style={{
               padding: '10px 20px',
               background: '#FFF',
@@ -257,6 +263,7 @@ export default function SetupChecklist() {
                 {isActive ? (
                   <a
                     href={step.href}
+                    onClick={() => trackEvent('merchant_setup_cta_clicked', { step: step.key, cta: step.cta })}
                     style={{
                       padding: '8px 18px',
                       background: '#1C1917',

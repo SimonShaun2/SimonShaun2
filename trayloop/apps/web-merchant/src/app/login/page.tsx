@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { identifyAnalytics, trackEvent } from '@trayloop/analytics';
 import { clearMerchantSession, hasMerchantSession, markMerchantSession, merchantResetHref } from '../../lib/session';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -20,6 +21,7 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
+    trackEvent('merchant_login_started', { email });
 
     try {
       const res = await fetch(`${API_URL}/api/auth/login`, {
@@ -32,6 +34,13 @@ export default function LoginPage() {
       if (!res.ok) throw new Error(json.error?.message ?? 'Login failed');
 
       markMerchantSession();
+      identifyAnalytics(json.data.user.id, {
+        email: json.data.user.email,
+        role: json.data.user.role,
+      });
+      trackEvent('merchant_login_succeeded', {
+        organization_count: json.data.organizations?.length ?? 0,
+      });
       if (json.data.organizations?.length > 0) {
         localStorage.setItem('orgId', json.data.organizations[0].id);
         localStorage.setItem('orgSlug', json.data.organizations[0].slug);
@@ -42,6 +51,10 @@ export default function LoginPage() {
         window.location.href = '/register?step=org';
       }
     } catch (err) {
+      trackEvent('merchant_login_failed', {
+        email,
+        message: err instanceof Error ? err.message : 'unknown_error',
+      });
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
       setLoading(false);

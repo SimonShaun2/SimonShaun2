@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { identifyAnalytics, trackEvent } from '@trayloop/analytics';
 import { createBillingCheckout } from '../../lib/api';
 import { ensureMerchantSession, hasMerchantSession, markMerchantSession } from '../../lib/session';
 import { useMobile } from '../../lib/use-mobile';
@@ -63,6 +64,10 @@ function RegisterContent() {
     event.preventDefault();
     setError('');
     setLoading(true);
+    trackEvent('merchant_register_started', {
+      has_existing_session: hasExistingMerchantSession,
+      selected_plan: selectedPlan || TRAYLOOP_PRO_PLAN,
+    });
 
     try {
       const usingExistingMerchantSession = hasExistingMerchantSession;
@@ -108,20 +113,43 @@ function RegisterContent() {
       const organization = usingExistingMerchantSession ? json.data : json.data.organization;
 
       markMerchantSession();
+      identifyAnalytics(usingExistingMerchantSession ? organization.id : json.data.user.id, {
+        email: email.trim() || undefined,
+        organization_slug: organization.slug ?? orgSlug.trim(),
+        organization_name: organization.name ?? orgName.trim(),
+        flow: usingExistingMerchantSession ? 'existing_session' : 'new_registration',
+      });
+      trackEvent('merchant_workspace_created', {
+        organization_id: organization.id,
+        organization_slug: organization.slug ?? orgSlug.trim(),
+        flow: usingExistingMerchantSession ? 'existing_session' : 'new_registration',
+      });
       localStorage.setItem('orgId', organization.id);
       localStorage.setItem('orgSlug', organization.slug ?? orgSlug.trim());
       localStorage.setItem('orgName', organization.name ?? orgName.trim());
 
       try {
+        trackEvent('subscription_checkout_started', {
+          organization_id: organization.id,
+          organization_slug: organization.slug ?? orgSlug.trim(),
+        });
         const result = await createBillingCheckout({
           successUrl: `${window.location.origin}/onboarding?welcome=1&billing=success`,
           cancelUrl: `${window.location.origin}/onboarding?welcome=1&billing=cancel`,
         });
         window.location.href = result.url;
       } catch {
+        trackEvent('subscription_checkout_unavailable', {
+          organization_id: organization.id,
+          organization_slug: organization.slug ?? orgSlug.trim(),
+        });
         window.location.href = '/onboarding?welcome=1&billing=required';
       }
     } catch (err) {
+      trackEvent('merchant_register_failed', {
+        has_existing_session: hasExistingMerchantSession,
+        message: err instanceof Error ? err.message : 'unknown_error',
+      });
       setError(err instanceof Error ? err.message : 'Failed to create merchant workspace');
     } finally {
       setLoading(false);

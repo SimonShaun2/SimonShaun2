@@ -1,6 +1,7 @@
 'use client';
 
 import type { CSSProperties } from 'react';
+import { trackEvent } from '@trayloop/analytics';
 
 
 /* ── Palette ── */
@@ -183,7 +184,10 @@ export default function DemoPage() {
 
           <form
             style={{ display: 'flex', flexDirection: 'column', gap: 20 }}
-            onSubmit={(e) => e.preventDefault()}
+            onSubmit={(e) => {
+              e.preventDefault();
+              trackEvent('marketing_demo_form_submitted', { placement: 'demo_page' });
+            }}
           >
             {/* Name row */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>

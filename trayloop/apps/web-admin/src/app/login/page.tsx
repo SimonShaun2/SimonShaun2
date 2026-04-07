@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { identifyAnalytics, trackEvent } from '@trayloop/analytics';
 import { clearAdminSession, hasAdminSession, markAdminSession } from '../../lib/session';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -21,6 +22,7 @@ export default function AdminLoginPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
+    trackEvent('admin_login_started', { email });
     try {
       const res = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
@@ -32,8 +34,17 @@ export default function AdminLoginPage() {
       if (!res.ok) throw new Error(json.error?.message ?? 'Login failed');
       if (json.data.user.role !== 'admin') throw new Error('Access denied - admin role required');
       markAdminSession();
+      identifyAnalytics(json.data.user.id, {
+        email: json.data.user.email,
+        role: json.data.user.role,
+      });
+      trackEvent('admin_login_succeeded', { role: json.data.user.role });
       window.location.href = '/';
     } catch (err) {
+      trackEvent('admin_login_failed', {
+        email,
+        message: err instanceof Error ? err.message : 'unknown_error',
+      });
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
       setLoading(false);

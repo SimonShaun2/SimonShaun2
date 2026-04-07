@@ -1,5 +1,9 @@
 import type { Metadata } from 'next';
 import { showStagingBanner } from '../lib/features';
+import { GoogleAnalytics } from '@next/third-parties/google';
+import { AnalyticsProvider } from '@trayloop/analytics';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 export const metadata: Metadata = {
   title: 'Order Online',
@@ -8,6 +12,8 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const gaId = process.env.NEXT_PUBLIC_GA_ID;
+
   return (
     <html lang="en">
       <head>
@@ -37,7 +43,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </div>
         ) : null}
         {children}
+        <AnalyticsProvider appName="storefront" />
+        <Analytics />
+        <SpeedInsights />
       </body>
+      {gaId ? <GoogleAnalytics gaId={gaId} /> : null}
     </html>
   );
 }

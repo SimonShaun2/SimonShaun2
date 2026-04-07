@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
 import NavBar from '../components/nav-bar';
 import { showStagingBanner } from '../lib/features';
+import { AnalyticsProvider } from '@trayloop/analytics';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 export const metadata: Metadata = {
   title: 'TrayLoop Merchant',
@@ -61,6 +64,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </main>
         </div>
+        <AnalyticsProvider appName="merchant" />
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

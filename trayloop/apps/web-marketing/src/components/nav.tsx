@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import PillButton from './pill-button';
 import type { CSSProperties } from 'react';
+import { trackEvent } from '@trayloop/analytics';
+import PillButton from './pill-button';
 
 const NAV_HEIGHT = 64;
 
@@ -122,14 +123,17 @@ export default function Nav() {
             style={linkStyle}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => trackEvent('marketing_login_click', { placement: 'nav_desktop' })}
           >
             Login
           </a>
           <PillButton
-            text="Book a free Demo →"
+            text="Book a free Demo ->"
             href="/demo"
             variant="primary"
             size="sm"
+            analyticsEvent="marketing_demo_click"
+            analyticsProperties={{ placement: 'nav_desktop' }}
           />
         </div>
 
@@ -190,16 +194,21 @@ export default function Nav() {
           style={mobileLinkStyle}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={() => setMobileOpen(false)}
+          onClick={() => {
+            trackEvent('marketing_login_click', { placement: 'nav_mobile' });
+            setMobileOpen(false);
+          }}
         >
           Login
         </a>
         <div style={{ marginTop: '8px' }}>
           <PillButton
-            text="Book a free Demo →"
+            text="Book a free Demo ->"
             href="/demo"
             variant="primary"
             size="md"
+            analyticsEvent="marketing_demo_click"
+            analyticsProperties={{ placement: 'nav_mobile' }}
           />
         </div>
       </div>
