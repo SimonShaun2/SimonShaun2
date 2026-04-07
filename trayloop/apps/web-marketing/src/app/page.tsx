@@ -214,8 +214,8 @@ export default function HomePage() {
           </p>
 
           <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 24 }}>
-            <PillButton text="See how much you're losing →" href="/pricing" variant="primary" />
-            <PillButton text="Book a free Demo →" href="/demo" variant="ghost" />
+            <PillButton text="Sign Up →" href="https://dashboard.trayloophq.com/register" variant="primary" />
+            <PillButton text="See how much you're losing →" href="/pricing" variant="ghost" />
           </div>
 
           <ul style={{ display: 'flex', gap: 24, justifyContent: 'center', flexWrap: 'wrap', padding: 0, margin: 0 }}>
@@ -384,14 +384,18 @@ export default function HomePage() {
         <SavingsCalculator />
       </Section>
 
-      {/* ── IMAGE STRIP ── */}
+      {/* ── IMAGE STRIP — ICP ── */}
       <Section bg={color.cream} style={{ padding: '0 24px 40px' }}>
-        <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8 }}>
+        <div style={{ textAlign: 'center', marginBottom: 24 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: color.orange, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Built for</div>
+          <h2 style={{ fontSize: 28, fontWeight: 700, color: color.ink }}>Any kitchen that does catering</h2>
+        </div>
+        <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
           {[
-            { src: 'https://images.unsplash.com/photo-1555244162-803834f70033?w=400&h=300&fit=crop', alt: 'Catering buffet setup with chafing dishes', caption: 'Buffet catering setup' },
-            { src: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=300&fit=crop', alt: 'Freshly prepared food platter for catering', caption: 'Curated food platters' },
-            { src: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=300&fit=crop', alt: 'Elegant restaurant dining experience', caption: 'Restaurant dining' },
-            { src: 'https://images.unsplash.com/photo-1567521464027-f127ff144326?w=400&h=300&fit=crop', alt: 'Food truck serving customers', caption: 'Food truck service' },
+            { src: 'https://images.unsplash.com/photo-1577219491135-ce391730fb2c?w=400&h=300&fit=crop', alt: 'Restaurant chef preparing catering orders', caption: 'Restaurants' },
+            { src: 'https://images.unsplash.com/photo-1565123409695-7b5ef63a2efb?w=400&h=300&fit=crop', alt: 'Food truck owner serving customers', caption: 'Food Trucks' },
+            { src: 'https://images.unsplash.com/photo-1600565193348-f74bd3c7ccdf?w=400&h=300&fit=crop', alt: 'Catering company team setting up event', caption: 'Catering Companies' },
+            { src: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&h=300&fit=crop', alt: 'Cloud kitchen worker packaging orders', caption: 'Cloud Kitchens' },
           ].map((img) => (
             <div key={img.src} style={{ flexShrink: 0 }}>
               <img

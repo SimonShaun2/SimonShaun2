@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import type { CSSProperties } from 'react';
 import PillButton from '@/components/pill-button';
 
 const C = {
@@ -15,29 +14,17 @@ const C = {
 };
 
 export default function SavingsCalculator() {
-  const [revenue, setRevenue] = useState('');
-  const [showResult, setShowResult] = useState(false);
+  const [revenue, setRevenue] = useState('5000');
+  const [feePercent, setFeePercent] = useState(20);
 
   const numericRevenue = parseFloat(revenue.replace(/[^0-9.]/g, '')) || 0;
-  const marketplaceLoss = numericRevenue * 0.2;
+  const marketplaceLoss = numericRevenue * (feePercent / 100);
   const trayloopCost = 49;
   const monthlySavings = marketplaceLoss - trayloopCost;
   const annualSavings = monthlySavings * 12;
 
-  const handleCalculate = () => {
-    if (numericRevenue > 0) {
-      setShowResult(true);
-    }
-  };
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value.replace(/[^0-9]/g, '');
-    setRevenue(val);
-    if (parseFloat(val) > 0) {
-      setShowResult(true);
-    } else {
-      setShowResult(false);
-    }
+    setRevenue(e.target.value.replace(/[^0-9]/g, ''));
   };
 
   const fmt = (n: number) =>
@@ -45,109 +32,140 @@ export default function SavingsCalculator() {
 
   return (
     <div
+      id="calculator"
       style={{
         backgroundColor: C.white,
-        borderRadius: 16,
-        padding: 28,
+        borderRadius: 20,
+        padding: 36,
         border: `1px solid ${C.creamDark}`,
-        maxWidth: 520,
-      margin: '0 auto',
+        maxWidth: 580,
+        margin: '0 auto',
+        boxShadow: '0 4px 24px rgba(0,0,0,0.04)',
       }}
     >
-      <div style={{ fontSize: 14, fontWeight: 600, color: C.muted, marginBottom: 12 }}>
-        How much are you losing?
-      </div>
+      {/* Revenue input */}
+      <label style={{ fontSize: 14, fontWeight: 600, color: C.ink, display: 'block', marginBottom: 8 }}>
+        Monthly catering revenue
+      </label>
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 12,
           backgroundColor: C.cream,
-          borderRadius: 10,
-          padding: '10px 16px',
-          marginBottom: 16,
+          borderRadius: 12,
+          padding: '14px 20px',
+          marginBottom: 20,
+          border: `1px solid ${C.creamDark}`,
         }}
       >
-        <span style={{ color: C.muted, fontSize: 14, whiteSpace: 'nowrap' }}>Monthly catering revenue</span>
+        <span style={{ fontSize: 24, fontWeight: 700, color: C.ink, marginRight: 4 }}>$</span>
         <input
           type="text"
           inputMode="numeric"
-          placeholder="$5,000"
-          value={revenue ? `$${Number(revenue).toLocaleString()}` : ''}
+          placeholder="5,000"
+          value={revenue ? Number(revenue).toLocaleString() : ''}
           onChange={handleChange}
           style={{
-            marginLeft: 'auto',
-            fontWeight: 600,
+            fontWeight: 700,
             color: C.ink,
-            fontSize: 16,
+            fontSize: 24,
             border: 'none',
             background: 'transparent',
             outline: 'none',
-            textAlign: 'right',
-            width: 100,
+            width: '100%',
           }}
         />
+        <span style={{ fontSize: 14, color: C.muted, whiteSpace: 'nowrap' }}>/month</span>
       </div>
 
-      <div style={{ marginBottom: showResult ? 16 : 0 }}>
-        <button
-          onClick={handleCalculate}
+      {/* Fee slider */}
+      <label style={{ fontSize: 14, fontWeight: 600, color: C.ink, display: 'block', marginBottom: 8 }}>
+        Current marketplace commission
+      </label>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 28 }}>
+        <input
+          type="range"
+          min={5}
+          max={30}
+          value={feePercent}
+          onChange={(e) => setFeePercent(Number(e.target.value))}
           style={{
-            display: 'inline-block',
-            borderRadius: 999,
-            fontWeight: 600,
-            lineHeight: 1.4,
-            cursor: 'pointer',
-            transition: 'opacity 0.2s ease, transform 0.15s ease',
-            whiteSpace: 'nowrap',
-            backgroundColor: C.orange,
-            color: '#FEFCFA',
-            border: 'none',
-            padding: '12px 28px',
-            fontSize: 16,
+            flex: 1,
+            accentColor: C.orange,
+            height: 6,
           }}
-        >
-          See my savings &rarr;
-        </button>
+        />
+        <span style={{ fontSize: 18, fontWeight: 700, color: C.orange, minWidth: 48, textAlign: 'right' }}>
+          {feePercent}%
+        </span>
       </div>
 
-      {showResult && numericRevenue > 0 && (
-        <div
-          style={{
+      {/* Results — always visible when revenue > 0 */}
+      {numericRevenue > 0 && (
+        <>
+          {/* Comparison row */}
+          <div style={{ display: 'flex', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
+            {/* Marketplace */}
+            <div style={{
+              flex: '1 1 200px',
+              backgroundColor: '#FEF2F0',
+              borderRadius: 12,
+              padding: '16px 20px',
+              border: '1px solid #FCDDD8',
+            }}>
+              <div style={{ fontSize: 12, color: C.muted, marginBottom: 4 }}>Marketplace takes</div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#FF6243' }}>
+                -{fmt(marketplaceLoss)}
+              </div>
+              <div style={{ fontSize: 12, color: C.muted }}>/month at {feePercent}%</div>
+            </div>
+
+            {/* TrayLoop */}
+            <div style={{
+              flex: '1 1 200px',
+              backgroundColor: '#EAFAF3',
+              borderRadius: 12,
+              padding: '16px 20px',
+              border: '1px solid #C8F0DD',
+            }}>
+              <div style={{ fontSize: 12, color: C.muted, marginBottom: 4 }}>TrayLoop costs</div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#1D7A55' }}>
+                $49
+              </div>
+              <div style={{ fontSize: 12, color: C.muted }}>/month flat — no commissions</div>
+            </div>
+          </div>
+
+          {/* Annual savings */}
+          <div style={{
             backgroundColor: '#EAFAF3',
-            borderRadius: 12,
-            padding: 20,
-            marginTop: 4,
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-            <span style={{ fontSize: 13, color: C.muted }}>Marketplace commission (20%)</span>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#FF6243' }}>
-              -{fmt(marketplaceLoss)}/mo
-            </span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-            <span style={{ fontSize: 13, color: C.muted }}>TrayLoop (flat fee)</span>
-            <span style={{ fontSize: 13, fontWeight: 600, color: C.ink }}>
-              $49/mo
-            </span>
-          </div>
-          <div
-            style={{
-              borderTop: '1px solid rgba(29,122,85,0.2)',
-              paddingTop: 10,
-              marginTop: 6,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#1D7A55' }}>Annual savings</span>
-            <span style={{ fontSize: 22, fontWeight: 800, color: '#1D7A55' }}>
+            borderRadius: 14,
+            padding: '20px 24px',
+            textAlign: 'center',
+            marginBottom: 20,
+            border: '1px solid #C8F0DD',
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#1D7A55', marginBottom: 4 }}>
+              You&apos;d save
+            </div>
+            <div style={{ fontSize: 36, fontWeight: 800, color: '#1D7A55', lineHeight: 1.1 }}>
               {annualSavings > 0 ? fmt(annualSavings) : '$0'}
-            </span>
+            </div>
+            <div style={{ fontSize: 14, color: '#1D7A55', marginTop: 4 }}>
+              per year with TrayLoop
+            </div>
+            {monthlySavings > 0 && (
+              <div style={{ fontSize: 13, color: C.muted, marginTop: 8 }}>
+                That&apos;s {fmt(monthlySavings)} back in your pocket every month
+              </div>
+            )}
           </div>
-        </div>
+
+          {/* CTA */}
+          <div style={{ textAlign: 'center' }}>
+            <PillButton text="Sign Up and Start Saving →" href="https://dashboard.trayloophq.com/register" variant="primary" />
+          </div>
+        </>
       )}
     </div>
   );
