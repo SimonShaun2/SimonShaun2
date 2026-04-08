@@ -1,6 +1,6 @@
-# TrayLoopv2
+# TrayLoop
 
-Monorepo for the TrayLoop platform.
+Monorepo for the live TrayLoop platform.
 
 ## Structure
 
@@ -39,6 +39,12 @@ trayloop/
 npm install
 npm run dev
 ```
+
+## Operations
+
+- Production deployment notes: [C:\Users\simon\SimonShaun2\trayloop\PRODUCTION.md](C:\Users\simon\SimonShaun2\trayloop\PRODUCTION.md)
+- Launch checklist: [C:\Users\simon\SimonShaun2\trayloop\LAUNCH_CHECKLIST.md](C:\Users\simon\SimonShaun2\trayloop\LAUNCH_CHECKLIST.md)
+- Merchant launch runbook: [C:\Users\simon\SimonShaun2\trayloop\docs\runbooks\launch-flow.md](C:\Users\simon\SimonShaun2\trayloop\docs\runbooks\launch-flow.md)
 
 ## Scripts
 

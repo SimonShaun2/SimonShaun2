@@ -1,271 +1,136 @@
-# TrayLoop Production Deployment
+# TrayLoop Production
 
-## Architecture
+This document describes the current live production setup.
 
-```
-                    ┌─────────────┐
-                    │  CloudFlare  │ (DNS + CDN, optional)
-                    └──────┬──────┘
-                           │
-          ┌────────────────┼────────────────┐
-          │                │                │
-   ┌──────▼──────┐  ┌─────▼──────┐  ┌──────▼──────┐
-   │   Vercel    │  │   Vercel   │  │  AWS ALB    │
-   │  Storefront │  │  Merchant  │  │  (HTTPS)    │
-   │  :443       │  │  :443      │  └──────┬──────┘
-   └─────────────┘  └────────────┘         │
-                                    ┌──────▼──────┐
-                                    │ ECS Fargate │
-                                    │  API x2     │
-                                    │  :3001      │
-                                    └──────┬──────┘
-                                    ┌──────┴──────┐
-                               ┌────▼───┐   ┌────▼────┐
-                               │  RDS   │   │ ElastiC │
-                               │ PG 16  │   │ Redis 7 │
-                               └────────┘   └─────────┘
-```
+For the operator runbook, see:
 
-## Step-by-Step Setup
+- [Launch flow](C:\Users\simon\SimonShaun2\trayloop\docs\runbooks\launch-flow.md)
 
-### 1. Prerequisites
+## Current Architecture
 
-- AWS account with admin access
-- Domain name (trayloop.com) with DNS control
-- Stripe account with live keys
-- Resend account (for transactional email)
-- Vercel account (free tier works)
-- GitHub repository connected
+```text
+Vercel
+  - trayloophq.com
+  - order.trayloophq.com
+  - dashboard.trayloophq.com
+  - master.trayloophq.com
+  - api.trayloophq.com (proxy)
 
-### 2. AWS Bootstrap (one-time)
+Railway
+  - simonshaun2-production.up.railway.app (Fastify API)
+  - Railway Postgres
 
-```bash
-# Create Terraform state bucket
-aws s3api create-bucket \
-  --bucket trayloop-terraform-state \
-  --region us-east-1
+Stripe
+  - Billing for TrayLoop subscription
+  - Connect for merchant payouts
+  - Checkout for customer payments
 
-aws s3api put-bucket-versioning \
-  --bucket trayloop-terraform-state \
-  --versioning-configuration Status=Enabled
-
-# Create Terraform lock table
-aws dynamodb create-table \
-  --table-name trayloop-terraform-locks \
-  --attribute-definitions AttributeName=LockID,AttributeType=S \
-  --key-schema AttributeName=LockID,KeyType=HASH \
-  --billing-mode PAY_PER_REQUEST
-
-# Create ECR repository
-aws ecr create-repository --repository-name trayloop-api
-
-# Create OIDC provider for GitHub Actions
-aws iam create-open-id-connect-provider \
-  --url https://token.actions.githubusercontent.com \
-  --client-id-list sts.amazonaws.com \
-  --thumbprint-list 6938fd4d98bab03faadb97b34396831e3780aea1
+Resend
+  - transactional email
 ```
 
-### 3. Create GitHub Actions IAM Role
+## Production Domains
 
-```bash
-# Create trust policy (replace YOUR_GITHUB_ORG/YOUR_REPO)
-cat > trust-policy.json << 'EOF'
-{
-  "Version": "2012-10-17",
-  "Statement": [{
-    "Effect": "Allow",
-    "Principal": {
-      "Federated": "arn:aws:iam::ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com"
-    },
-    "Action": "sts:AssumeRoleWithWebIdentity",
-    "Condition": {
-      "StringEquals": {
-        "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
-      },
-      "StringLike": {
-        "token.actions.githubusercontent.com:sub": "repo:simonshaun2/simonshaun2:*"
-      }
-    }
-  }]
-}
-EOF
+- Marketing: `https://trayloophq.com`
+- Storefront: `https://order.trayloophq.com`
+- Merchant: `https://dashboard.trayloophq.com`
+- Admin: `https://master.trayloophq.com`
+- Public API: `https://api.trayloophq.com`
+- Railway API origin: `https://simonshaun2-production.up.railway.app`
 
-aws iam create-role \
-  --role-name trayloop-github-actions \
-  --assume-role-policy-document file://trust-policy.json
+## Required Production Environment
 
-# Attach required policies
-aws iam attach-role-policy --role-name trayloop-github-actions \
-  --policy-arn arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser
-aws iam attach-role-policy --role-name trayloop-github-actions \
-  --policy-arn arn:aws:iam::aws:policy/AmazonECS_FullAccess
-aws iam attach-role-policy --role-name trayloop-github-actions \
-  --policy-arn arn:aws:iam::aws:policy/SecretsManagerReadWrite
+### Railway API
+
+```env
+NODE_ENV=production
+DATABASE_URL=...
+JWT_SECRET=...
+MERCHANT_URL=https://dashboard.trayloophq.com
+ADMIN_URL=https://master.trayloophq.com
+STOREFRONT_URL=https://order.trayloophq.com
+STRIPE_SECRET_KEY=sk_live_...
+STRIPE_PUBLISHABLE_KEY=pk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PRICE_ID=price_...
+EMAIL_PROVIDER=resend
+EMAIL_FROM=TrayLoop <orders@mail.trayloophq.com>
+RESEND_API_KEY=...
+OPENAI_API_KEY=...
+OPENAI_MODEL=...
+AUTOMATIONS_ENABLED=false
 ```
 
-### 4. SSL Certificate
+### Merchant Vercel
 
-```bash
-# Request certificate (must be in us-east-1 for ALB)
-aws acm request-certificate \
-  --domain-name api.trayloop.com \
-  --subject-alternative-names "*.trayloop.com" \
-  --validation-method DNS
-
-# Add the CNAME records shown in the output to your DNS
-# Wait for validation (check with):
-aws acm describe-certificate --certificate-arn <ARN>
+```env
+NEXT_PUBLIC_API_URL=https://api.trayloophq.com
+NEXT_PUBLIC_APP_ENV=production
+NEXT_PUBLIC_AUTOMATIONS_ENABLED=false
+NEXT_PUBLIC_POSTHOG_KEY=...
+NEXT_PUBLIC_POSTHOG_HOST=...
 ```
 
-### 5. Terraform Apply
+### Admin Vercel
 
-```bash
-cd trayloop/infrastructure/terraform
-
-# Create tfvars for production
-cat > production.tfvars << 'EOF'
-environment         = "production"
-domain_name         = "trayloop.com"
-db_instance_class   = "db.t3.medium"
-redis_node_type     = "cache.t3.small"
-api_cpu             = 512
-api_memory          = 1024
-api_desired_count   = 2
-acm_certificate_arn = "arn:aws:acm:us-east-1:ACCOUNT:certificate/CERT_ID"
-EOF
-
-terraform init
-terraform plan -var-file=production.tfvars
-terraform apply -var-file=production.tfvars
+```env
+NEXT_PUBLIC_API_URL=https://api.trayloophq.com
+NEXT_PUBLIC_APP_ENV=production
+NEXT_PUBLIC_AUTOMATIONS_ENABLED=false
+NEXT_PUBLIC_POSTHOG_KEY=...
+NEXT_PUBLIC_POSTHOG_HOST=...
 ```
 
-### 6. Populate Secrets
+### Storefront Vercel
 
-After Terraform creates the Secrets Manager secret, populate it:
-
-```bash
-aws secretsmanager put-secret-value \
-  --secret-id trayloop/production/app \
-  --secret-string '{
-    "DATABASE_URL": "postgresql://trayloop_admin:PASSWORD@RDS_ENDPOINT:5432/trayloop?sslmode=require",
-    "REDIS_URL": "rediss://ELASTICACHE_ENDPOINT:6379",
-    "JWT_SECRET": "GENERATE_A_64_CHAR_RANDOM_STRING",
-    "STRIPE_SECRET_KEY": "sk_live_...",
-    "STRIPE_PUBLISHABLE_KEY": "pk_live_...",
-    "STRIPE_WEBHOOK_SECRET": "whsec_...",
-    "EMAIL_PROVIDER": "resend",
-    "EMAIL_FROM": "TrayLoop <orders@trayloop.com>",
-    "RESEND_API_KEY": "re_..."
-  }'
+```env
+NEXT_PUBLIC_API_URL=https://api.trayloophq.com
+NEXT_PUBLIC_APP_ENV=production
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=...
+NEXT_PUBLIC_GA_ID=G-...
+NEXT_PUBLIC_POSTHOG_KEY=...
+NEXT_PUBLIC_POSTHOG_HOST=...
 ```
 
-Generate JWT_SECRET: `openssl rand -hex 32`
+### Marketing Vercel
 
-### 7. Initialize Database
-
-```bash
-# Connect to RDS via a bastion or SSM Session Manager
-psql $DATABASE_URL -f packages/database/init.sql
+```env
+NEXT_PUBLIC_APP_ENV=production
+NEXT_PUBLIC_GA_ID=G-...
+NEXT_PUBLIC_POSTHOG_KEY=...
+NEXT_PUBLIC_POSTHOG_HOST=...
 ```
 
-### 8. GitHub Repository Secrets
+## Production Deployment Order
 
-Go to **Settings → Secrets and variables → Actions** and add:
+When payment, auth, or shared API behavior changes:
 
-| Secret | Value |
-|--------|-------|
-| `AWS_ROLE_ARN` | `arn:aws:iam::ACCOUNT:role/trayloop-github-actions` |
+1. Deploy Railway API
+2. Verify `https://api.trayloophq.com/health`
+3. Deploy merchant
+4. Deploy storefront
+5. Deploy admin
+6. Run the live checklist in [LAUNCH_CHECKLIST.md](C:\Users\simon\SimonShaun2\trayloop\LAUNCH_CHECKLIST.md)
 
-### 9. DNS Records
+## Stripe Notes
 
-Point these to the ALB DNS name (from `terraform output alb_dns`):
+- The platform must have live Connect enabled.
+- Merchant payouts onboarding depends on Stripe Connect, not just Stripe Billing.
+- The current connected-account creation flow uses controller properties aligned to the newer Connect responsibility model.
+- Webhook verification depends on the signing secret for the Railway endpoint, not the proxy domain.
 
-| Record | Type | Value |
-|--------|------|-------|
-| `api.trayloop.com` | CNAME | `trayloop-production-XXXXX.us-east-1.elb.amazonaws.com` |
+## Staging Policy
 
-### 10. Deploy Frontends to Vercel
+Keep risky or incomplete work in staging first:
 
-**Storefront:**
-```bash
-cd trayloop
-npx vercel link  # select apps/web-storefront as root
-npx vercel env add NEXT_PUBLIC_API_URL  # → https://api.trayloop.com
-npx vercel --prod
-```
+- staging dashboard
+- staging storefront
+- staging admin
+- staging API
 
-**Merchant Dashboard:**
-```bash
-npx vercel link  # select apps/web-merchant as root
-npx vercel env add NEXT_PUBLIC_API_URL  # → https://api.trayloop.com
-npx vercel --prod
-```
+Production should stay conservative:
 
-Then add custom domains in the Vercel dashboard:
-- Storefront: `order.trayloop.com`
-- Merchant: `dashboard.trayloop.com`
-
-### 11. Stripe Webhook
-
-In [Stripe Dashboard → Webhooks](https://dashboard.stripe.com/webhooks):
-
-1. Add endpoint: `https://api.trayloop.com/api/webhooks/stripe`
-2. Select events:
-   - `checkout.session.completed`
-   - `checkout.session.expired`
-3. Copy the signing secret → update in AWS Secrets Manager as `STRIPE_WEBHOOK_SECRET`
-
-### 12. Verify
-
-```bash
-# API health
-curl https://api.trayloop.com/health
-
-# Check ECS service
-aws ecs describe-services \
-  --cluster trayloop-production \
-  --services trayloop-production-api
-
-# Check logs
-aws logs tail /ecs/trayloop-production-api --follow
-```
-
-## Cost Estimate (Monthly)
-
-| Service | Staging | Production |
-|---------|---------|------------|
-| ECS Fargate (0.5 vCPU, 1GB × 2) | ~$30 | ~$30 |
-| RDS db.t3.medium (single-AZ) | ~$30 | ~$60 (multi-AZ) |
-| ElastiCache cache.t3.small | ~$12 | ~$25 (2 nodes) |
-| ALB | ~$16 | ~$16 |
-| NAT Gateway | ~$32 | ~$32 |
-| ECR, CloudWatch, Secrets | ~$5 | ~$5 |
-| **Total AWS** | **~$125** | **~$168** |
-| Vercel (free tier) | $0 | $0 |
-| Resend (free tier, 3k/mo) | $0 | $0 |
-| Stripe | 2.9% + $0.30/txn | 2.9% + $0.30/txn |
-
-## Cost Reduction Tips
-
-- **NAT Gateway** is the biggest fixed cost ($32/mo). Alternative: use VPC endpoints for ECR/CloudWatch/Secrets Manager and remove the NAT Gateway.
-- **Staging**: Use `db.t3.micro` ($13/mo) and single ElastiCache node.
-- **Start small**: 1 Fargate task is fine until you hit ~100 concurrent users.
-
-## Rollback
-
-```bash
-# Quick rollback to previous task definition
-PREV_TASK=$(aws ecs describe-services \
-  --cluster trayloop-production \
-  --services trayloop-production-api \
-  --query 'services[0].taskDefinition' --output text)
-
-# List revisions and pick the previous one
-aws ecs list-task-definitions --family trayloop-production-api --sort DESC
-
-aws ecs update-service \
-  --cluster trayloop-production \
-  --service trayloop-production-api \
-  --task-definition trayloop-production-api:PREVIOUS_REVISION
-```
+- automation off by default
+- migrations applied intentionally
+- one real merchant validated before broader rollout
