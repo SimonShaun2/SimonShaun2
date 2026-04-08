@@ -28,6 +28,15 @@ const logoStyle: CSSProperties = {
   fontWeight: 800,
   color: '#1A1612',
   letterSpacing: '-0.02em',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '10px',
+};
+
+const logoMarkStyle: CSSProperties = {
+  width: 28,
+  height: 28,
+  display: 'block',
 };
 
 const dotStyle: CSSProperties = {
@@ -105,7 +114,10 @@ export default function Nav() {
 
       <nav style={navStyle}>
         <Link href="/" style={logoStyle}>
-          Tray<span style={dotStyle}>.</span>Loop
+          <img src="/logo-mark.svg" alt="TrayLoop logo" style={logoMarkStyle} />
+          <span>
+            Tray<span style={dotStyle}>.</span>Loop
+          </span>
         </Link>
 
         <div className="nav-desktop-links" style={desktopLinksStyle}>
