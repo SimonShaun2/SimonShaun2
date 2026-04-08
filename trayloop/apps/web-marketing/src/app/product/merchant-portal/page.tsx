@@ -10,6 +10,7 @@ const color = {
   teal: '#42D9A0',
   muted: '#7B6F65',
   white: '#FEFCFA',
+  red: '#FF6243',
 };
 
 function Section({
@@ -28,33 +29,38 @@ function Section({
   );
 }
 
-function TealDot() {
-  return (
-    <span
-      style={{
-        display: 'inline-block',
-        width: 8,
-        height: 8,
-        borderRadius: '50%',
-        backgroundColor: color.teal,
-        marginRight: 10,
-        flexShrink: 0,
-        marginTop: 7,
-      }}
-    />
-  );
-}
-
-function BulletItem({ text }: { text: string }) {
-  return (
-    <li style={{ display: 'flex', alignItems: 'flex-start', marginBottom: 12, listStyle: 'none' }}>
-      <TealDot />
-      <span style={{ color: color.ink, fontSize: 15, lineHeight: 1.5 }}>{text}</span>
-    </li>
-  );
-}
-
 export default function MerchantPortalPage() {
+  const sidebarItems = [
+    'Dashboard',
+    'Orders',
+    'Customers',
+    'Offerings',
+    'Locations',
+    'Follow-Ups',
+    'Revenue Intelligence',
+    'Automations',
+    'Settings',
+  ];
+
+  const modules = [
+    { emoji: '\u{1F4CA}', name: 'Dashboard', desc: 'KPIs at a glance, recent orders, and a real-time activity feed.' },
+    { emoji: '\u{1F4E6}', name: 'Orders', desc: 'Status tracking, customer info, and a full order timeline.' },
+    { emoji: '\u{1F465}', name: 'Customers', desc: 'Health scores, order history, and smart customer segments.' },
+    { emoji: '\u{1F37D}\uFE0F', name: 'Offerings', desc: 'Package builder, add-on catalog, and flexible pricing rules.' },
+    { emoji: '\u{1F4CD}', name: 'Locations', desc: 'Multi-location management, delivery zones, and capacity caps.' },
+    { emoji: '\u{1F4E7}', name: 'Follow-Ups', desc: 'Automated outreach tracking across every customer touchpoint.' },
+    { emoji: '\u{1F4B0}', name: 'Revenue Intelligence', desc: 'AI-powered insights, revenue trends, and growth opportunities.' },
+    { emoji: '\u{1F916}', name: 'Automations', desc: 'Rules engine, campaign builder, and one-click approve/send.' },
+    { emoji: '\u2699\uFE0F', name: 'Settings', desc: 'Profile, team access, Stripe config, and brand customization.' },
+  ];
+
+  const selfServeCards = [
+    { title: 'Update your menu', desc: 'Changes go live instantly. No support ticket required.' },
+    { title: 'Adjust location settings', desc: 'Hours, zones, capacity \u2014 tweak anything per location.' },
+    { title: 'Review AI campaigns', desc: 'See what TrayLoop drafted, approve or edit, then send.' },
+    { title: 'Track everything', desc: 'Orders, revenue, customers \u2014 every metric in one place.' },
+  ];
+
   return (
     <main>
       {/* ── HERO ── */}
@@ -81,11 +87,20 @@ export default function MerchantPortalPage() {
               marginBottom: 20,
             }}
           >
-            Run Your Entire Catering Operation From One Dashboard
+            Run your entire catering operation from one dashboard
           </h1>
-          <p style={{ fontSize: 18, lineHeight: 1.6, color: color.muted, maxWidth: 600, margin: '0 auto' }}>
-            Manage orders, customers, menus, locations, and revenue from a single screen.
-            No support tickets. No back-and-forth emails. Everything you need, self-serve.
+          <p
+            style={{
+              fontSize: 18,
+              lineHeight: 1.6,
+              color: color.muted,
+              maxWidth: 600,
+              margin: '0 auto',
+            }}
+          >
+            Manage orders, customers, menus, locations, and revenue from a single
+            screen. No support tickets. No back-and-forth emails. Everything you
+            need, self-serve.
           </p>
         </div>
       </Section>
@@ -99,162 +114,258 @@ export default function MerchantPortalPage() {
         />
       </Section>
 
-      {/* ── BENEFITS + MOCKUP ── */}
+      {/* ── DASHBOARD MOCKUP ── */}
       <Section bg={color.white}>
-        <div
+        <h2
           style={{
-            display: 'flex',
-            gap: 48,
-            flexWrap: 'wrap',
-            alignItems: 'flex-start',
+            fontSize: 32,
+            fontWeight: 700,
+            color: color.ink,
+            textAlign: 'center',
+            marginBottom: 40,
           }}
         >
-          {/* Benefits */}
-          <div style={{ flex: '1 1 440px', minWidth: 300 }}>
-            <h2 style={{ fontSize: 28, fontWeight: 700, color: color.ink, lineHeight: 1.2, marginBottom: 24 }}>
-              Everything in one place
-            </h2>
-            <ul style={{ padding: 0, margin: 0 }}>
-              <BulletItem text="Full order management with status tracking and history" />
-              <BulletItem text="Customer database with health scores and lifetime value" />
-              <BulletItem text="Drag-and-drop menu builder with categories and modifiers" />
-              <BulletItem text="Location settings for hours, zones, and capacity" />
-              <BulletItem text="Revenue reporting with trends and breakdowns" />
-              <BulletItem text="Self-serve everything — no support tickets needed" />
-            </ul>
-          </div>
-
-          {/* Mockup: Dashboard sidebar */}
-          <div style={{ flex: '1 1 440px', minWidth: 300 }}>
+          Your command center
+        </h2>
+        <div
+          style={{
+            borderRadius: 16,
+            overflow: 'hidden',
+            border: `1px solid ${color.creamDark}`,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+          }}
+        >
+          {/* Browser chrome bar */}
+          <div
+            style={{
+              backgroundColor: color.creamDark,
+              padding: '10px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+            }}
+          >
+            <div style={{ display: 'flex', gap: 6 }}>
+              <span style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#FF5F57' }} />
+              <span style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#FFBD2E' }} />
+              <span style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#28C840' }} />
+            </div>
             <div
               style={{
+                flex: 1,
                 backgroundColor: color.white,
-                borderRadius: 16,
-                padding: 0,
-                border: `1px solid ${color.creamDark}`,
-                overflow: 'hidden',
-                display: 'flex',
+                borderRadius: 6,
+                padding: '6px 14px',
+                fontSize: 12,
+                color: color.muted,
+                fontFamily: 'monospace',
               }}
             >
-              {/* Sidebar */}
+              dashboard.trayloophq.com
+            </div>
+          </div>
+
+          {/* Dashboard body */}
+          <div style={{ display: 'flex', minHeight: 380 }}>
+            {/* Sidebar */}
+            <div
+              style={{
+                width: 220,
+                backgroundColor: color.ink,
+                padding: '24px 0',
+                flexShrink: 0,
+              }}
+            >
               <div
                 style={{
-                  width: 180,
-                  backgroundColor: color.ink,
-                  padding: '24px 0',
-                  flexShrink: 0,
+                  padding: '0 20px 24px',
+                  fontSize: 15,
+                  fontWeight: 700,
+                  color: color.white,
                 }}
               >
-                <div style={{ padding: '0 16px 20px', fontSize: 14, fontWeight: 700, color: color.white }}>
-                  TrayLoop
-                </div>
-                {[
-                  { name: 'Dashboard', active: true },
-                  { name: 'Orders', active: false },
-                  { name: 'Customers', active: false },
-                  { name: 'Menu Builder', active: false },
-                  { name: 'Locations', active: false },
-                  { name: 'Revenue', active: false },
-                  { name: 'Settings', active: false },
-                ].map((item) => (
-                  <div
-                    key={item.name}
-                    style={{
-                      padding: '10px 16px',
-                      fontSize: 13,
-                      fontWeight: item.active ? 600 : 400,
-                      color: item.active ? color.white : color.muted,
-                      backgroundColor: item.active ? 'rgba(66,217,160,0.15)' : 'transparent',
-                      borderLeft: item.active ? `3px solid ${color.teal}` : '3px solid transparent',
-                    }}
-                  >
-                    {item.name}
-                  </div>
-                ))}
+                TrayLoop
               </div>
-
-              {/* Main content area */}
-              <div style={{ flex: 1, padding: 20 }}>
-                <div style={{ fontSize: 16, fontWeight: 700, color: color.ink, marginBottom: 16 }}>
-                  Dashboard
-                </div>
+              {sidebarItems.map((item, i) => (
                 <div
+                  key={item}
                   style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: 10,
+                    padding: '10px 20px',
+                    fontSize: 13,
+                    fontWeight: i === 0 ? 600 : 400,
+                    color: i === 0 ? color.white : color.muted,
+                    backgroundColor: i === 0 ? 'rgba(66,217,160,0.15)' : 'transparent',
+                    borderLeft: i === 0 ? `3px solid ${color.teal}` : '3px solid transparent',
                   }}
                 >
-                  {[
-                    { label: 'This Month', value: '$8,420' },
-                    { label: 'Pending', value: '3' },
-                    { label: 'Accounts', value: '18' },
-                    { label: 'Reorder Rate', value: '72%' },
-                  ].map((s) => (
-                    <div
-                      key={s.label}
-                      style={{
-                        backgroundColor: color.cream,
-                        borderRadius: 8,
-                        padding: '10px 12px',
-                      }}
-                    >
-                      <div style={{ fontSize: 10, color: color.muted }}>{s.label}</div>
-                      <div style={{ fontSize: 18, fontWeight: 700, color: color.ink, marginTop: 2 }}>
-                        {s.value}
-                      </div>
-                    </div>
-                  ))}
+                  {item}
                 </div>
-              </div>
+              ))}
+            </div>
+
+            {/* Main content placeholder */}
+            <div
+              style={{
+                flex: 1,
+                backgroundColor: color.cream,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 16,
+                  color: color.muted,
+                  fontStyle: 'italic',
+                }}
+              >
+                Screenshot area
+              </span>
             </div>
           </div>
         </div>
       </Section>
 
-      {/* ── STATS ── */}
+      {/* ── 9 MODULES ── */}
       <Section bg={color.cream}>
+        <h2
+          style={{
+            fontSize: 32,
+            fontWeight: 700,
+            color: color.ink,
+            textAlign: 'center',
+            marginBottom: 12,
+          }}
+        >
+          9 modules. One platform.
+        </h2>
+        <p
+          style={{
+            fontSize: 16,
+            color: color.muted,
+            textAlign: 'center',
+            maxWidth: 560,
+            margin: '0 auto 48px',
+            lineHeight: 1.5,
+          }}
+        >
+          Everything you need to run, grow, and automate your catering business.
+        </p>
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: 24,
-            textAlign: 'center',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gap: 20,
           }}
         >
-          {[
-            { value: '0', label: 'Support tickets needed to manage your portal' },
-            { value: '48hrs', label: 'From signup to live portal' },
-            { value: '100%', label: 'Self-serve — you control everything' },
-          ].map((s) => (
-            <div key={s.label} style={{ padding: 24 }}>
-              <div style={{ fontSize: 40, fontWeight: 800, color: color.ink, marginBottom: 8 }}>
-                {s.value}
+          {modules.map((m) => (
+            <div
+              key={m.name}
+              style={{
+                backgroundColor: color.white,
+                borderRadius: 14,
+                padding: '28px 24px',
+                border: `1px solid ${color.creamDark}`,
+              }}
+            >
+              <div style={{ fontSize: 28, marginBottom: 12 }}>{m.emoji}</div>
+              <div
+                style={{
+                  fontSize: 16,
+                  fontWeight: 700,
+                  color: color.ink,
+                  marginBottom: 8,
+                }}
+              >
+                {m.name}
               </div>
-              <div style={{ fontSize: 15, color: color.muted, lineHeight: 1.4 }}>{s.label}</div>
+              <div style={{ fontSize: 14, color: color.muted, lineHeight: 1.5 }}>
+                {m.desc}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* ── SELF-SERVICE (dark bg) ── */}
+      <Section bg={color.ink}>
+        <h2
+          style={{
+            fontSize: 32,
+            fontWeight: 700,
+            color: color.white,
+            textAlign: 'center',
+            marginBottom: 12,
+          }}
+        >
+          Change anything. Anytime. Without calling anyone.
+        </h2>
+        <p
+          style={{
+            fontSize: 16,
+            color: '#C2B9AE',
+            textAlign: 'center',
+            maxWidth: 520,
+            margin: '0 auto 48px',
+            lineHeight: 1.5,
+          }}
+        >
+          Full self-service means you never wait on support for routine changes.
+        </p>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+            gap: 20,
+          }}
+        >
+          {selfServeCards.map((c) => (
+            <div
+              key={c.title}
+              style={{
+                backgroundColor: 'rgba(255,255,255,0.06)',
+                borderRadius: 14,
+                padding: '28px 24px',
+                border: '1px solid rgba(255,255,255,0.08)',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 16,
+                  fontWeight: 700,
+                  color: color.white,
+                  marginBottom: 8,
+                }}
+              >
+                {c.title}
+              </div>
+              <div style={{ fontSize: 14, color: '#C2B9AE', lineHeight: 1.5 }}>
+                {c.desc}
+              </div>
             </div>
           ))}
         </div>
       </Section>
 
       {/* ── CTA ── */}
-      <Section bg={color.ink}>
+      <Section bg={color.cream}>
         <div style={{ textAlign: 'center', maxWidth: 640, margin: '0 auto' }}>
           <h2
             style={{
               fontSize: 36,
               fontWeight: 700,
-              color: color.white,
+              color: color.ink,
               lineHeight: 1.2,
               marginBottom: 16,
             }}
           >
             Your catering dashboard, ready in 48 hours.
           </h2>
-          <p style={{ fontSize: 16, color: '#C2B9AE', marginBottom: 32 }}>
+          <p style={{ fontSize: 16, color: color.muted, marginBottom: 32 }}>
             See how the merchant portal puts you in full control of your operation.
           </p>
-          <PillButton text="Book a free Demo \u2192" href="/demo" variant="primary" />
+          <PillButton text="Book a free Demo &rarr;" href="/demo" variant="primary" />
         </div>
       </Section>
     </main>

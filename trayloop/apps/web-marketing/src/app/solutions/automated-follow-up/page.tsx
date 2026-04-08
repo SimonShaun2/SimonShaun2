@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import PillButton from '@/components/pill-button';
 
+/* ── Design tokens ── */
 const color = {
   cream: '#F9F5EF',
   creamDark: '#F0EBE1',
@@ -9,6 +10,7 @@ const color = {
   teal: '#42D9A0',
   muted: '#7B6F65',
   white: '#FEFCFA',
+  red: '#FF6243',
 };
 
 function Section({
@@ -44,21 +46,82 @@ function TealDot() {
   );
 }
 
-function BulletItem({ text }: { text: string }) {
-  return (
-    <li style={{ display: 'flex', alignItems: 'flex-start', marginBottom: 12, listStyle: 'none' }}>
-      <TealDot />
-      <span style={{ color: color.ink, fontSize: 15, lineHeight: 1.5 }}>{text}</span>
-    </li>
-  );
-}
-
 export default function AutomatedFollowUpPage() {
+  const genericRows = [
+    'Triggered by manual campaigns',
+    'Generic content templates',
+    'Sent when you remember to set it up',
+    'Personalized with first name only',
+    'Separate system from your orders',
+  ];
+
+  const trayloopRows = [
+    'Triggered by order events automatically',
+    'Order-specific content with real details',
+    'Timed automatically based on delivery date',
+    'Full order details, history, and preferences',
+    'IS the order system \u2014 no sync needed',
+  ];
+
+  const sequence = [
+    {
+      num: 1,
+      trigger: 'Order submitted',
+      action: 'Confirmation email + SMS sent',
+      timing: 'Instant',
+      desc: 'Customer receives order details, delivery date, and a link to modify. You get a new-order notification.',
+    },
+    {
+      num: 2,
+      trigger: '48 hours before delivery',
+      action: 'Pre-delivery reminder sent',
+      timing: 'T\u221248 hrs',
+      desc: 'Customer is reminded of the upcoming delivery with time, headcount, and any special instructions confirmed.',
+    },
+    {
+      num: 3,
+      trigger: 'Order fulfilled',
+      action: 'Post-delivery check-in sent',
+      timing: 'T+2 hrs',
+      desc: 'A quick satisfaction check-in asks how everything went and if anything needs attention.',
+    },
+    {
+      num: 4,
+      trigger: '7 days after delivery',
+      action: 'Feedback + reorder nudge sent',
+      timing: 'T+7 days',
+      desc: 'Customer receives a thank-you with a one-click reorder link pre-filled with their last order.',
+    },
+    {
+      num: 5,
+      trigger: 'AI detects reorder window',
+      action: 'Smart reorder campaign queued',
+      timing: 'AI-timed',
+      desc: 'Based on the customer\'s ordering cadence, TrayLoop queues a reorder nudge at exactly the right moment.',
+    },
+  ];
+
+  const customerGets = [
+    'Order confirmation with full details',
+    'Pre-delivery reminder with schedule',
+    'Post-delivery satisfaction check-in',
+    'One-click reorder link',
+    'AI-timed nudge at their reorder window',
+  ];
+
+  const youGet = [
+    'New order notification',
+    'Delivery prep reminder',
+    'Customer feedback alert',
+    'Reorder conversion notification',
+    'Weekly engagement summary',
+  ];
+
   return (
-    <>
+    <main>
       {/* ── HERO ── */}
       <Section bg={color.cream} style={{ paddingTop: 100, paddingBottom: 60 }}>
-        <div style={{ maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
+        <div style={{ textAlign: 'center', maxWidth: 720, margin: '0 auto' }}>
           <div
             style={{
               fontSize: 13,
@@ -69,7 +132,7 @@ export default function AutomatedFollowUpPage() {
               marginBottom: 12,
             }}
           >
-            Grow Revenue
+            Automated Follow-Up
           </div>
           <h1
             style={{
@@ -80,19 +143,26 @@ export default function AutomatedFollowUpPage() {
               marginBottom: 20,
             }}
           >
-            Never Lose a Catering Customer to Silence Again
+            Every order triggers a sequence. Every customer gets followed up.
           </h1>
-          <p style={{ fontSize: 18, lineHeight: 1.6, color: color.muted, marginBottom: 32 }}>
-            Most catering customers churn because no one follows up. TrayLoop automates every
-            touchpoint — from order confirmation to post-delivery check-in — so your customers feel
-            taken care of and keep coming back.
+          <p
+            style={{
+              fontSize: 18,
+              lineHeight: 1.6,
+              color: color.muted,
+              maxWidth: 600,
+              margin: '0 auto',
+            }}
+          >
+            Most catering customers churn because no one follows up. TrayLoop
+            automates every touchpoint so your customers feel taken care of and
+            keep coming back.
           </p>
-          <PillButton text="Book a free Demo →" href="/demo" variant="primary" />
         </div>
       </Section>
 
-      {/* ── IMAGE ── */}
-      <Section bg={color.white} style={{ paddingTop: 0, paddingBottom: 0 }}>
+      {/* ── HERO IMAGE ── */}
+      <Section bg={color.cream} style={{ paddingTop: 0, paddingBottom: 60 }}>
         <img
           src="https://images.unsplash.com/photo-1559339352-11d035aa65de?w=900&h=400&fit=crop"
           alt="Restaurant owner greeting customers"
@@ -100,95 +170,319 @@ export default function AutomatedFollowUpPage() {
         />
       </Section>
 
-      {/* ── TWO COLUMN: BENEFITS + TIMELINE ── */}
-      <Section bg={color.white}>
-        <div style={{ display: 'flex', gap: 48, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-          <div style={{ flex: '1 1 440px', minWidth: 300 }}>
-            <h2 style={{ fontSize: 28, fontWeight: 700, color: color.ink, lineHeight: 1.2, marginBottom: 20 }}>
-              Every touchpoint, handled automatically.
-            </h2>
-            <ul style={{ padding: 0, margin: 0 }}>
-              <BulletItem text="Instant order confirmations with delivery details" />
-              <BulletItem text="Pre-order reminders 24 hours before delivery" />
-              <BulletItem text="Post-delivery follow-up to check satisfaction" />
-              <BulletItem text="Reorder nudges based on each account's ordering cadence" />
-              <BulletItem text="Customizable templates that match your brand voice" />
-              <BulletItem text="No manual emails — everything runs on autopilot" />
-            </ul>
-          </div>
-
-          {/* ── TIMELINE MOCKUP ── */}
-          <div style={{ flex: '1 1 440px', minWidth: 300 }}>
+      {/* ── NOT EMAIL MARKETING ── */}
+      <Section bg={color.creamDark}>
+        <h2
+          style={{
+            fontSize: 32,
+            fontWeight: 700,
+            color: color.ink,
+            textAlign: 'center',
+            marginBottom: 12,
+          }}
+        >
+          This isn&apos;t email marketing
+        </h2>
+        <p
+          style={{
+            fontSize: 16,
+            color: color.muted,
+            textAlign: 'center',
+            maxWidth: 560,
+            margin: '0 auto 48px',
+            lineHeight: 1.5,
+          }}
+        >
+          Generic blast tools don&apos;t know what your customer ordered. TrayLoop does.
+        </p>
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 24,
+            justifyContent: 'center',
+          }}
+        >
+          {/* Generic side */}
+          <div
+            style={{
+              flex: '1 1 440px',
+              maxWidth: 520,
+              backgroundColor: color.white,
+              borderRadius: 14,
+              padding: '28px 24px',
+              border: `1px solid ${color.creamDark}`,
+              opacity: 0.7,
+            }}
+          >
             <div
               style={{
-                backgroundColor: color.ink,
-                borderRadius: 16,
-                padding: 28,
+                fontSize: 14,
+                fontWeight: 700,
+                color: color.muted,
+                marginBottom: 20,
+                textTransform: 'uppercase' as const,
+                letterSpacing: 0.8,
               }}
             >
-              <div style={{ fontSize: 13, color: color.muted, marginBottom: 20 }}>
-                Automated Sequence — Apex Financial
-              </div>
-              {[
-                {
-                  time: 'T+0 min',
-                  event: 'Order confirmed — email + SMS sent',
-                  dot: color.teal,
-                  detail: 'Hi Sarah, your lunch for 25 is confirmed for March 14 at 11:30 AM.',
-                },
-                {
-                  time: 'T-24 hr',
-                  event: 'Pre-delivery reminder sent',
-                  dot: color.orange,
-                  detail: 'Reminder: Your catering order arrives tomorrow at 11:30 AM.',
-                },
-                {
-                  time: 'T+0',
-                  event: 'Order delivered',
-                  dot: color.teal,
-                  detail: 'Delivery confirmed by driver.',
-                },
-                {
-                  time: 'T+2 hr',
-                  event: 'Satisfaction check-in sent',
-                  dot: color.orange,
-                  detail: 'How was everything today? Let us know if we can improve.',
-                },
-                {
-                  time: 'T+12 days',
-                  event: 'Reorder nudge sent',
-                  dot: color.teal,
-                  detail: 'Ready to reorder? Your last order for 25 is saved and ready.',
-                },
-              ].map((item) => (
-                <div
-                  key={item.time + item.event}
-                  style={{
-                    padding: '14px 0',
-                    borderBottom: '1px solid rgba(255,255,255,0.08)',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
-                    <span style={{ fontSize: 11, color: color.muted, width: 64, flexShrink: 0, fontFamily: 'monospace' }}>
-                      {item.time}
-                    </span>
-                    <span
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: '50%',
-                        backgroundColor: item.dot,
-                        flexShrink: 0,
-                      }}
-                    />
-                    <span style={{ fontSize: 14, color: color.white, fontWeight: 600 }}>{item.event}</span>
-                  </div>
-                  <div style={{ marginLeft: 84, fontSize: 12, color: color.muted, lineHeight: 1.5 }}>
-                    {item.detail}
-                  </div>
-                </div>
-              ))}
+              Generic Email Automation
             </div>
+            {genericRows.map((row) => (
+              <div
+                key={row}
+                style={{
+                  padding: '12px 0',
+                  borderBottom: `1px solid ${color.creamDark}`,
+                  fontSize: 14,
+                  color: color.muted,
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 10,
+                }}
+              >
+                <span style={{ color: color.muted, flexShrink: 0 }}>&times;</span>
+                {row}
+              </div>
+            ))}
+          </div>
+
+          {/* TrayLoop side */}
+          <div
+            style={{
+              flex: '1 1 440px',
+              maxWidth: 520,
+              backgroundColor: color.white,
+              borderRadius: 14,
+              padding: '28px 24px',
+              border: `2px solid ${color.teal}`,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 14,
+                fontWeight: 700,
+                color: color.teal,
+                marginBottom: 20,
+                textTransform: 'uppercase' as const,
+                letterSpacing: 0.8,
+              }}
+            >
+              TrayLoop Automated Follow-Up
+            </div>
+            {trayloopRows.map((row) => (
+              <div
+                key={row}
+                style={{
+                  padding: '12px 0',
+                  borderBottom: `1px solid ${color.creamDark}`,
+                  fontSize: 14,
+                  color: color.ink,
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 10,
+                }}
+              >
+                <TealDot />
+                {row}
+              </div>
+            ))}
+          </div>
+        </div>
+      </Section>
+
+      {/* ── THE SEQUENCE (dark bg) ── */}
+      <Section bg={color.ink}>
+        <h2
+          style={{
+            fontSize: 32,
+            fontWeight: 700,
+            color: color.white,
+            textAlign: 'center',
+            marginBottom: 12,
+          }}
+        >
+          The sequence
+        </h2>
+        <p
+          style={{
+            fontSize: 16,
+            color: '#C2B9AE',
+            textAlign: 'center',
+            maxWidth: 520,
+            margin: '0 auto 48px',
+            lineHeight: 1.5,
+          }}
+        >
+          Five touchpoints, fully automated, triggered by real order events.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {sequence.map((step) => (
+            <div
+              key={step.num}
+              style={{
+                backgroundColor: 'rgba(255,255,255,0.06)',
+                borderRadius: 14,
+                padding: '24px',
+                border: '1px solid rgba(255,255,255,0.08)',
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 20,
+                alignItems: 'flex-start',
+              }}
+            >
+              {/* Number */}
+              <div
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: '50%',
+                  backgroundColor: color.teal,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 16,
+                  fontWeight: 800,
+                  color: color.ink,
+                  flexShrink: 0,
+                }}
+              >
+                {step.num}
+              </div>
+
+              {/* Content */}
+              <div style={{ flex: '1 1 300px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', marginBottom: 8 }}>
+                  <span style={{ fontSize: 13, color: '#C2B9AE' }}>{step.trigger}</span>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: color.ink, backgroundColor: color.teal, borderRadius: 20, padding: '3px 10px' }}>
+                    {step.timing}
+                  </span>
+                </div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: color.teal, marginBottom: 6 }}>
+                  {step.action}
+                </div>
+                <div style={{ fontSize: 14, color: '#C2B9AE', lineHeight: 1.5 }}>
+                  {step.desc}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* ── BOTH SIDES GET NOTIFIED ── */}
+      <Section bg={color.creamDark}>
+        <h2
+          style={{
+            fontSize: 32,
+            fontWeight: 700,
+            color: color.ink,
+            textAlign: 'center',
+            marginBottom: 48,
+          }}
+        >
+          Both sides get notified
+        </h2>
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 24,
+            justifyContent: 'center',
+          }}
+        >
+          {/* Customer gets */}
+          <div
+            style={{
+              flex: '1 1 440px',
+              maxWidth: 520,
+              backgroundColor: color.white,
+              borderRadius: 14,
+              padding: '28px 24px',
+              border: `1px solid ${color.creamDark}`,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 14,
+                fontWeight: 700,
+                color: color.ink,
+                marginBottom: 20,
+                textTransform: 'uppercase' as const,
+                letterSpacing: 0.8,
+              }}
+            >
+              Customer Gets
+            </div>
+            {customerGets.map((item) => (
+              <div
+                key={item}
+                style={{
+                  padding: '12px 0',
+                  borderBottom: `1px solid ${color.creamDark}`,
+                  fontSize: 14,
+                  color: color.ink,
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 10,
+                }}
+              >
+                <TealDot />
+                {item}
+              </div>
+            ))}
+          </div>
+
+          {/* You get */}
+          <div
+            style={{
+              flex: '1 1 440px',
+              maxWidth: 520,
+              backgroundColor: color.white,
+              borderRadius: 14,
+              padding: '28px 24px',
+              border: `1px solid ${color.creamDark}`,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 14,
+                fontWeight: 700,
+                color: color.ink,
+                marginBottom: 20,
+                textTransform: 'uppercase' as const,
+                letterSpacing: 0.8,
+              }}
+            >
+              You Get
+            </div>
+            {youGet.map((item) => (
+              <div
+                key={item}
+                style={{
+                  padding: '12px 0',
+                  borderBottom: `1px solid ${color.creamDark}`,
+                  fontSize: 14,
+                  color: color.ink,
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 10,
+                }}
+              >
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    backgroundColor: color.orange,
+                    marginRight: 10,
+                    flexShrink: 0,
+                    marginTop: 7,
+                  }}
+                />
+                {item}
+              </div>
+            ))}
           </div>
         </div>
       </Section>
@@ -208,11 +502,12 @@ export default function AutomatedFollowUpPage() {
             Let TrayLoop handle the follow-up.
           </h2>
           <p style={{ fontSize: 16, color: '#C2B9AE', marginBottom: 32 }}>
-            Automated sequences that keep customers engaged — without adding to your workload.
+            Automated sequences that keep customers engaged &mdash; without adding
+            to your workload.
           </p>
-          <PillButton text="Book a free Demo →" href="/demo" variant="primary" />
+          <PillButton text="Book a free Demo &rarr;" href="/demo" variant="primary" />
         </div>
       </Section>
-    </>
+    </main>
   );
 }
