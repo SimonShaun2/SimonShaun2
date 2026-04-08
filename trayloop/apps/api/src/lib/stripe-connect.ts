@@ -89,6 +89,15 @@ function isConnectPlatformNotEnabledError(error: unknown) {
   return stripeError.message?.includes("You can only create new accounts if you've signed up") === true;
 }
 
+function isConnectResponsibilityMismatchError(error: unknown) {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const stripeError = error as { message?: string };
+  return stripeError.message?.includes('responsibilities of managing losses') === true;
+}
+
 function statusFromStripeAccount(account: Stripe.Account): ConnectAccountStatus {
   return buildStatus({
     stripeAccountId: account.id,
@@ -198,8 +207,26 @@ export async function createConnectAccount(orgId: string): Promise<ConnectAccoun
   let account: Stripe.Account;
   try {
     account = await stripe.accounts.create({
-      type: 'express',
       email: org.ownerEmail,
+      controller: {
+        fees: {
+          payer: 'account',
+        },
+        losses: {
+          payments: 'stripe',
+        },
+        stripe_dashboard: {
+          type: 'full',
+        },
+      },
+      capabilities: {
+        card_payments: {
+          requested: true,
+        },
+        transfers: {
+          requested: true,
+        },
+      },
       metadata: {
         trayloop_org_id: orgId,
         trayloop_org_slug: org.slug,
@@ -215,6 +242,9 @@ export async function createConnectAccount(orgId: string): Promise<ConnectAccoun
     });
     if (isConnectPlatformNotEnabledError(error)) {
       throw new ValidationError('Stripe Connect is not enabled on the TrayLoop platform account yet. Turn on Connect in the live Stripe dashboard, then try merchant payouts again.');
+    }
+    if (isConnectResponsibilityMismatchError(error)) {
+      throw new ValidationError('Stripe Connect is enabled, but the platform responsibility settings still need to finish updating in Stripe. Refresh the live Connect configuration, wait a minute, and try merchant payouts again.');
     }
     throw new ValidationError('Stripe could not start merchant payouts onboarding. Please try again or contact support.');
   }
