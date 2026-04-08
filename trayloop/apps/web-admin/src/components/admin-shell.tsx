@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: '/', label: 'Overview', icon: 'O', section: 'views' },
   { href: '/organizations', label: 'Restaurants', icon: 'R', section: 'views' },
   { href: '/users', label: 'Users', icon: 'U', section: 'views' },
+  { href: '/test-accounts', label: 'Test Accounts', icon: 'T', section: 'views' },
   { href: '/trial-conversions', label: 'Trial Conversions', icon: 'T', section: 'intelligence' },
   { href: '/mrr-movement', label: 'MRR Movement', icon: 'M', section: 'intelligence' },
   { href: '/revenue-intelligence', label: 'Revenue Intelligence', icon: 'I', section: 'intelligence' },

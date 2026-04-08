@@ -1,9 +1,13 @@
 import { db } from '@trayloop/database';
 import { customers, deposits, orders, organizationMemberships, organizations, payments, recurringOrders, subscriptions, users } from '@trayloop/database';
+import { hashPassword } from '@trayloop/auth';
 import { and, asc, desc, eq, gte, inArray, sql } from 'drizzle-orm';
+import { randomBytes } from 'node:crypto';
+import { ValidationError } from '../../lib/errors.js';
 import { getPlatformAutomationIntelligence } from '../automations/automations.service.js';
 import { getPlatformRevenueIntelligence } from '../revenue-intelligence/revenue-intelligence.service.js';
 import type { RevenueRange } from '../revenue-intelligence/revenue-intelligence.schema.js';
+import type { AdminCreateTestAccountInput } from './admin.schema.js';
 
 const FINAL_ORDER_STATUSES = ['confirmed', 'completed'] as const;
 const PLAN_PRICE_CENTS = 4900;
@@ -41,6 +45,30 @@ function formatServiceMode(mode: string) {
     default:
       return mode.charAt(0).toUpperCase() + mode.slice(1);
   }
+}
+
+function normalizeOptionalString(value: string | null | undefined) {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80) || 'test-account';
+}
+
+function buildDefaultTestEmail(role: 'merchant' | 'customer' | 'admin', name: string) {
+  const suffix = randomBytes(3).toString('hex');
+  const base = slugify(name).slice(0, 32);
+  const domain = process.env.TEST_ACCOUNT_EMAIL_DOMAIN || 'trayloop.test';
+  return `${role}.${base}.${suffix}@${domain}`;
+}
+
+function buildPassword() {
+  return `TrayLoop!${randomBytes(4).toString('hex')}`;
 }
 
 function isPaidSubscription(status: string | null | undefined) {
@@ -156,6 +184,111 @@ export async function getOrganizationSupportContext(orgId: string) {
     .limit(1);
 
   return organization ?? null;
+}
+
+export async function createTestAccount(input: AdminCreateTestAccountInput) {
+  const email = normalizeOptionalString(input.email) ?? buildDefaultTestEmail(input.role, input.name);
+  const password = normalizeOptionalString(input.password) ?? buildPassword();
+  const passwordHash = await hashPassword(password);
+
+  const [existingUser] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
+
+  if (existingUser) {
+    throw new ValidationError('A user with that email already exists');
+  }
+
+  if (input.role === 'merchant') {
+    const organizationName = normalizeOptionalString(input.organizationName) ?? `${input.name} Test Workspace`;
+    const organizationSlug = normalizeOptionalString(input.organizationSlug) ?? `${slugify(organizationName)}-${randomBytes(2).toString('hex')}`;
+
+    const [existingOrganization] = await db
+      .select({ id: organizations.id })
+      .from(organizations)
+      .where(eq(organizations.slug, organizationSlug))
+      .limit(1);
+
+    if (existingOrganization) {
+      throw new ValidationError('That organization slug is already in use');
+    }
+
+    const result = await db.transaction(async (tx) => {
+      const [user] = await tx
+        .insert(users)
+        .values({
+          email,
+          name: input.name,
+          passwordHash,
+          role: 'merchant',
+          emailVerified: true,
+          isActive: true,
+        })
+        .returning({
+          id: users.id,
+          email: users.email,
+          name: users.name,
+          role: users.role,
+        });
+
+      const [organization] = await tx
+        .insert(organizations)
+        .values({
+          name: organizationName,
+          slug: organizationSlug,
+          ownerId: user.id,
+        })
+        .returning({
+          id: organizations.id,
+          name: organizations.name,
+          slug: organizations.slug,
+        });
+
+      await tx.insert(organizationMemberships).values({
+        userId: user.id,
+        organizationId: organization.id,
+        role: 'owner',
+        status: 'active',
+        joinedAt: new Date(),
+      });
+
+      return { user, organization };
+    });
+
+    return {
+      role: result.user.role,
+      email: result.user.email,
+      password,
+      user: result.user,
+      organization: result.organization,
+    };
+  }
+
+  const [user] = await db
+    .insert(users)
+    .values({
+      email,
+      name: input.name,
+      passwordHash,
+      role: input.role,
+      emailVerified: true,
+      isActive: true,
+    })
+    .returning({
+      id: users.id,
+      email: users.email,
+      name: users.name,
+      role: users.role,
+    });
+
+  return {
+    role: user.role,
+    email: user.email,
+    password,
+    user,
+  };
 }
 
 export async function listUsers() {

@@ -5,7 +5,7 @@ import { ForbiddenError, NotFoundError } from '../../lib/errors.js';
 import { setSessionCookie } from '../../lib/auth-cookies.js';
 import { validateBody } from '../../lib/middleware/validate.js';
 import { isAutomationsEnabled } from '../../lib/features.js';
-import { adminStatusBodySchema, adminStatusParamsSchema } from './admin.schema.js';
+import { adminCreateTestAccountSchema, adminStatusBodySchema, adminStatusParamsSchema } from './admin.schema.js';
 import { revenueSummaryQuerySchema } from '../revenue-intelligence/revenue-intelligence.schema.js';
 import * as service from './admin.service.js';
 
@@ -67,6 +67,11 @@ export function registerRoutes(app: FastifyInstance) {
   app.get('/users', async () => {
     const users = await service.listUsers();
     return { data: users };
+  });
+
+  app.post('/test-accounts', { preHandler: [validateBody(adminCreateTestAccountSchema)] }, async (request, reply) => {
+    const result = await service.createTestAccount((request as any).validatedBody);
+    return reply.status(201).send({ data: result });
   });
 
   app.get('/stats', async () => {

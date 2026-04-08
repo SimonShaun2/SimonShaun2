@@ -113,6 +113,23 @@ export interface AdminAutomationIntelligence {
   organizations: AdminAutomationOrganization[];
 }
 
+export interface AdminTestAccountResult {
+  role: 'merchant' | 'customer' | 'admin';
+  email: string;
+  password: string;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    role: string;
+  };
+  organization?: {
+    id: string;
+    name: string;
+    slug: string;
+  };
+}
+
 export async function apiFetch(path: string, options: RequestInit = {}) {
   await ensureAdminSession();
   const headers: Record<string, string> = {
@@ -146,5 +163,21 @@ export async function fetchAdminRevenueIntelligence(
 
 export async function fetchAdminAutomationIntelligence(): Promise<AdminAutomationIntelligence> {
   const response = await apiFetch('/api/admin/automation-intelligence');
+  return response.data;
+}
+
+export async function createAdminTestAccount(input: {
+  role: 'merchant' | 'customer' | 'admin';
+  name: string;
+  email?: string;
+  password?: string;
+  organizationName?: string;
+  organizationSlug?: string;
+  companyName?: string;
+}): Promise<AdminTestAccountResult> {
+  const response = await apiFetch('/api/admin/test-accounts', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
   return response.data;
 }
