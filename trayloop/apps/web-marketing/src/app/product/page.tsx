@@ -536,29 +536,6 @@ export default function ProductPage() {
         </div>
       </Section>
 
-      {/* ── CLOSING CTA ── */}
-      <Section bg={color.cream}>
-        <div style={{ textAlign: 'center', maxWidth: 640, margin: '0 auto' }}>
-          <h2
-            style={{
-              fontSize: 36,
-              fontWeight: 700,
-              color: color.ink,
-              lineHeight: 1.2,
-              marginBottom: 16,
-            }}
-          >
-            Ready to take control of your catering revenue?
-          </h2>
-          <p style={{ fontSize: 16, color: color.muted, marginBottom: 32 }}>
-            We handle the full setup — your portal is live within 48 hours.
-          </p>
-          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <PillButton text="Book a free Demo →" href="/demo" variant="primary" />
-            <PillButton text="See Pricing →" href="/pricing" variant="ghost" />
-          </div>
-        </div>
-      </Section>
     </main>
   );
 }

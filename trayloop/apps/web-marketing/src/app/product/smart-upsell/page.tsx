@@ -1,6 +1,4 @@
 import type { CSSProperties } from 'react';
-import PillButton from '@/components/pill-button';
-
 /* ── Design tokens ── */
 const color = {
   cream: '#F9F5EF',
@@ -910,28 +908,6 @@ export default function SmartUpsellPage() {
         </div>
       </Section>
 
-      {/* ═══════════════════════════════════════════════
-          CTA
-      ═══════════════════════════════════════════════ */}
-      <Section bg={color.ink}>
-        <div style={{ textAlign: 'center', maxWidth: 640, margin: '0 auto' }}>
-          <h2
-            style={{
-              fontSize: 36,
-              fontWeight: 700,
-              color: color.white,
-              lineHeight: 1.2,
-              marginBottom: 16,
-            }}
-          >
-            Make every order worth more.
-          </h2>
-          <p style={{ fontSize: 16, color: '#C2B9AE', marginBottom: 32 }}>
-            See how Smart Upsell adds revenue to every checkout without adding work.
-          </p>
-          <PillButton text="Book a free Demo &#8594;" href="/demo" variant="primary" />
-        </div>
-      </Section>
     </main>
   );
 }

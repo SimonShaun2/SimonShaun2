@@ -1029,29 +1029,6 @@ export default function RecurringOrdersPage() {
         </div>
       </Section>
 
-      {/* ═══════════════════════════════════════════════
-          CTA
-      ═══════════════════════════════════════════════ */}
-      <Section bg={color.ink}>
-        <div style={{ textAlign: 'center', maxWidth: 640, margin: '0 auto' }}>
-          <h2
-            style={{
-              fontSize: 36,
-              fontWeight: 700,
-              color: color.white,
-              lineHeight: 1.2,
-              marginBottom: 16,
-            }}
-          >
-            Stop losing repeat revenue to silence.
-          </h2>
-          <p style={{ fontSize: 16, color: '#C2B9AE', marginBottom: 32 }}>
-            Let TrayLoop follow up with every account, every time, at exactly the right
-            moment.
-          </p>
-          <PillButton text="Book a free Demo &#8594;" href="/demo" variant="primary" />
-        </div>
-      </Section>
     </main>
   );
 }

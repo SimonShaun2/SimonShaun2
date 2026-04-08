@@ -1,6 +1,4 @@
 import type { CSSProperties } from 'react';
-import PillButton from '@/components/pill-button';
-
 /* ── Design tokens ── */
 const color = {
   cream: '#F9F5EF',
@@ -400,27 +398,6 @@ export default function CapacityManagementPage() {
         </div>
       </Section>
 
-      {/* ── CTA ── */}
-      <Section bg={color.cream}>
-        <div style={{ textAlign: 'center', maxWidth: 640, margin: '0 auto' }}>
-          <h2
-            style={{
-              fontSize: 36,
-              fontWeight: 700,
-              color: color.ink,
-              lineHeight: 1.2,
-              marginBottom: 16,
-            }}
-          >
-            Take control of your kitchen capacity.
-          </h2>
-          <p style={{ fontSize: 16, color: color.muted, marginBottom: 32 }}>
-            See how Capacity Management keeps your operation running smoothly at
-            every location.
-          </p>
-          <PillButton text="Book a free Demo &rarr;" href="/demo" variant="primary" />
-        </div>
-      </Section>
     </main>
   );
 }

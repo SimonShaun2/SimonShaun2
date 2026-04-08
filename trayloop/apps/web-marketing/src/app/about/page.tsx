@@ -1,6 +1,4 @@
 import type { CSSProperties } from 'react';
-import PillButton from '@/components/pill-button';
-
 const color = {
   cream: '#F9F5EF',
   creamDark: '#F0EBE1',
@@ -164,29 +162,6 @@ export default function AboutPage() {
         </div>
       </Section>
 
-      {/* ── CTA ── */}
-      <Section bg={color.ink}>
-        <div style={{ textAlign: 'center', maxWidth: 640, margin: '0 auto' }}>
-          <h2
-            style={{
-              fontSize: 36,
-              fontWeight: 700,
-              color: color.white,
-              lineHeight: 1.2,
-              marginBottom: 16,
-            }}
-          >
-            Ready to take back your catering revenue?
-          </h2>
-          <p style={{ fontSize: 16, color: '#C2B9AE', marginBottom: 32 }}>
-            $49/month + 5% platform fee. No contracts. No commissions. Cancel anytime.
-          </p>
-          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <PillButton text="Book a free Demo →" href="/demo" variant="primary" />
-            <PillButton text="See how it works →" href="/how-it-works" variant="ghost" />
-          </div>
-        </div>
-      </Section>
     </>
   );
 }

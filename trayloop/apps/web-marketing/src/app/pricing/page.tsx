@@ -648,42 +648,6 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* ── Closing CTA ── */}
-      <section
-        style={{
-          backgroundColor: C.ink,
-          textAlign: 'center',
-        }}
-      >
-        <div style={{ ...section(), maxWidth: 700 }}>
-          <h2
-            style={{
-              fontSize: 36,
-              fontWeight: 800,
-              color: C.white,
-              lineHeight: 1.2,
-              marginBottom: 16,
-            }}
-          >
-            Ready to keep more of your catering revenue?
-          </h2>
-          <p
-            style={{
-              fontSize: 16,
-              color: 'rgba(254,252,250,0.7)',
-              marginBottom: 32,
-              lineHeight: 1.6,
-            }}
-          >
-            Join restaurants that have already switched to direct ordering and
-            saved thousands every month.
-          </p>
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <PillButton text="Book a free Demo →" href="/demo" variant="primary" />
-            <PillButton text="See how it works →" href="/how-it-works" variant="ghost" />
-          </div>
-        </div>
-      </section>
     </>
   );
 }

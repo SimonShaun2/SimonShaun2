@@ -938,36 +938,6 @@ export default function HowItWorksPage() {
         </div>
       </Section>
 
-      {/* ── 11. CLOSING CTA ── */}
-      <Section bg={C.ink}>
-        <div style={{ textAlign: 'center', maxWidth: 640, margin: '0 auto' }}>
-          <h2
-            style={{
-              fontSize: 36,
-              fontWeight: 700,
-              color: C.white,
-              lineHeight: 1.2,
-              marginBottom: 16,
-            }}
-          >
-            Catering is a system, not a series of lucky phone calls.
-          </h2>
-          <p
-            style={{
-              fontSize: 16,
-              color: '#C2B9AE',
-              marginBottom: 32,
-              lineHeight: 1.6,
-            }}
-          >
-            $49/month + 5% platform fee. No contracts. No commissions. We handle the full setup.
-          </p>
-          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <PillButton text="Sign Up →" href="https://dashboard.trayloophq.com/register" variant="primary" />
-            <PillButton text="See pricing →" href="/pricing" variant="ghost" />
-          </div>
-        </div>
-      </Section>
     </>
   );
 }

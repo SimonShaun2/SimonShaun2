@@ -254,26 +254,6 @@ export default function SmartUpsellsPage() {
         </div>
       </Section>
 
-      {/* ── CTA ── */}
-      <Section bg={color.ink}>
-        <div style={{ textAlign: 'center', maxWidth: 640, margin: '0 auto' }}>
-          <h2
-            style={{
-              fontSize: 36,
-              fontWeight: 700,
-              color: color.white,
-              lineHeight: 1.2,
-              marginBottom: 16,
-            }}
-          >
-            Make more from every order.
-          </h2>
-          <p style={{ fontSize: 16, color: '#C2B9AE', marginBottom: 32 }}>
-            Smart upsells that increase revenue without increasing effort.
-          </p>
-          <PillButton text="Book a free Demo →" href="/demo" variant="primary" />
-        </div>
-      </Section>
     </>
   );
 }
