@@ -214,6 +214,7 @@ export default function HomePage() {
           }
           .tl-desktop-hero { display: none !important; }
           .tl-mobile-hero { display: block !important; }
+          .tl-desktop-only-section { display: none !important; }
         }
         @media (max-width: 480px) {
           .tl-hero-headline {
@@ -267,8 +268,12 @@ export default function HomePage() {
         </div>
       </Section>
 
-      {/* ── SAVINGS CALCULATOR ── */}
-      <Section bg={color.creamDark} style={{ padding: '48px 24px' }}>
+      {/* ── SAVINGS CALCULATOR — desktop only (mobile has it in the hero) ── */}
+      <Section
+        bg={color.creamDark}
+        style={{ padding: '48px 24px' }}
+        className="tl-desktop-only-section"
+      >
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <h2 style={{ fontSize: 32, fontWeight: 800, color: color.ink, marginBottom: 8 }}>See what you&apos;re losing.</h2>
           <p style={{ fontSize: 15, color: color.muted }}>Most owners underestimate this by thousands.</p>

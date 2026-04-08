@@ -13,6 +13,14 @@ const C = {
   red: '#FF6243',
 };
 
+/* One-tap example prompts — auto-fill and auto-submit */
+const EXAMPLE_CHIPS: { label: string; prompt: string }[] = [
+  { label: '🍕 Pizza · $8k/mo', prompt: 'Pizza restaurant doing about $8,000/month on EzCater' },
+  { label: '🌮 Food truck · $15k/mo', prompt: 'Mexican food truck doing $15,000/month in catering, mostly direct' },
+  { label: '🏢 Catering co · $40k/mo', prompt: 'Full-service catering company doing $40,000/month, no marketplace' },
+  { label: '🍔 BBQ · $20k/mo', prompt: 'BBQ restaurant in Austin doing $20,000/month on EzCater and DoorDash Work' },
+];
+
 interface AiCalculatorResult {
   monthlyRevenue: number;
   commissionRate: number;
@@ -46,8 +54,9 @@ export default function MobileHeroCard() {
   const [result, setResult] = useState<AiCalculatorResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleAnalyze() {
-    if (!prompt.trim()) {
+  async function runAnalysis(text: string) {
+    const trimmed = text.trim();
+    if (!trimmed) {
       setError('Tell us about your catering business.');
       setResult(null);
       return;
@@ -60,7 +69,7 @@ export default function MobileHeroCard() {
       const response = await fetch('/api/ai-calculator', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt: trimmed }),
       });
 
       const payload = (await response.json()) as AiCalculatorResult & { error?: string };
@@ -76,6 +85,15 @@ export default function MobileHeroCard() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleAnalyze() {
+    void runAnalysis(prompt);
+  }
+
+  function runExample(examplePrompt: string) {
+    setPrompt(examplePrompt);
+    void runAnalysis(examplePrompt);
   }
 
   function reset() {
@@ -236,6 +254,40 @@ export default function MobileHeroCard() {
                 opacity: loading ? 0.6 : 1,
               }}
             />
+
+            {/* One-tap example chips — auto-fill + analyze */}
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 6,
+                marginBottom: 10,
+              }}
+            >
+              {EXAMPLE_CHIPS.map((chip) => (
+                <button
+                  key={chip.label}
+                  type="button"
+                  onClick={() => runExample(chip.prompt)}
+                  disabled={loading}
+                  style={{
+                    flex: '1 1 auto',
+                    border: `1px solid ${C.creamDark}`,
+                    borderRadius: 999,
+                    padding: '7px 10px',
+                    backgroundColor: C.cream,
+                    color: C.ink,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    cursor: loading ? 'wait' : 'pointer',
+                    whiteSpace: 'nowrap',
+                    opacity: loading ? 0.6 : 1,
+                  }}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
 
             {error ? (
               <div
