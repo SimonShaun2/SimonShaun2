@@ -169,7 +169,7 @@ export default function SavingsCalculator() {
               marginBottom: 24,
             }}>
               <div style={{ fontSize: 14, fontWeight: 600, color: '#A8E6CE', marginBottom: 6 }}>
-                Switch to TrayLoop and keep
+                You keep
               </div>
               <div style={{ fontSize: 42, fontWeight: 800, color: '#FFFFFF', lineHeight: 1.1 }}>
                 {fmt(extraPerMonth)} more
@@ -177,12 +177,16 @@ export default function SavingsCalculator() {
               <div style={{ fontSize: 16, color: '#A8E6CE', marginTop: 4 }}>
                 every month — {fmt(extraPerYear)} per year
               </div>
+              <div style={{ fontSize: 13, color: '#A8E6CE', marginTop: 10, opacity: 0.8 }}>
+                That&apos;s not a projection. That&apos;s what you paid last month.<br />
+                And you&apos;ll pay it again next month if nothing changes.
+              </div>
             </div>
           )}
 
           {/* CTA */}
           <div style={{ textAlign: 'center' }}>
-            <PillButton text="Sign Up →" href="https://dashboard.trayloophq.com/register" variant="primary" />
+            <PillButton text="Start Keeping Your Revenue →" href="https://dashboard.trayloophq.com/register" variant="primary" />
           </div>
         </>
       )}

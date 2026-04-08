@@ -183,9 +183,6 @@ export default function HomePage() {
       <Section bg={color.cream} style={{ paddingTop: 80, paddingBottom: 0 }}>
         {/* Hero text — centered */}
         <div style={{ textAlign: 'center', maxWidth: 800, margin: '0 auto', marginBottom: 48 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: color.orange, marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Direct catering orders · Zero commissions
-          </div>
           <h1
             style={{
               fontSize: 52,
@@ -195,31 +192,54 @@ export default function HomePage() {
               marginBottom: 20,
             }}
           >
-            Your Catering Revenue Is&nbsp;Leaking. Every&nbsp;Week.
+            Stop paying 20–30% on every catering order.
           </h1>
           <p
             style={{
               fontSize: 19,
               lineHeight: 1.6,
               color: color.muted,
+              marginBottom: 16,
+              maxWidth: 640,
+              margin: '0 auto 16px',
+            }}
+          >
+            TrayLoop gives you a direct ordering system you own — so every catering dollar stays with your restaurant, not a marketplace.
+          </p>
+          <p
+            style={{
+              fontSize: 17,
+              lineHeight: 1.6,
+              color: color.ink,
+              marginBottom: 12,
+              maxWidth: 580,
+              margin: '0 auto 12px',
+              fontWeight: 500,
+            }}
+          >
+            You built the menu. You prepped the food. You delivered it on time.<br />
+            Why is someone else keeping 20%?
+          </p>
+          <p
+            style={{
+              fontSize: 15,
+              lineHeight: 1.6,
+              color: color.muted,
               marginBottom: 32,
-              maxWidth: 620,
+              maxWidth: 520,
               margin: '0 auto 32px',
             }}
           >
-            The average restaurant loses{' '}
-            <strong style={{ color: color.ink }}>$4,840/month</strong> to marketplace commissions
-            and missed reorders. TrayLoop gives you a branded ordering system, automated
-            follow-up, and AI-assisted re-engagement — so every catering customer comes back.
+            Most restaurants don&apos;t switch because they think it&apos;s complicated. It&apos;s not.
           </p>
 
           <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 24 }}>
-            <PillButton text="See how much you're losing →" href="#calculator" variant="primary" />
-            <PillButton text="Get Started →" href="https://dashboard.trayloophq.com/register" variant="ghost" />
+            <PillButton text="See What You're Losing →" href="#calculator" variant="primary" />
+            <PillButton text="Start Keeping Your Revenue →" href="https://dashboard.trayloophq.com/register" variant="ghost" />
           </div>
 
           <ul style={{ display: 'flex', gap: 24, justifyContent: 'center', flexWrap: 'wrap', padding: 0, margin: 0 }}>
-            {['No commissions on direct orders', '$49/mo + 5% platform fee', 'We handle the setup'].map(t => (
+            {['$49/month · No commissions', 'No contracts · Cancel anytime', 'We handle the setup'].map(t => (
               <li key={t} style={{ display: 'flex', alignItems: 'center', gap: 8, listStyle: 'none', fontSize: 14, color: color.muted }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: color.teal, flexShrink: 0 }} />
                 {t}
@@ -377,9 +397,9 @@ export default function HomePage() {
       {/* ── SAVINGS CALCULATOR ── */}
       <Section bg={color.creamDark} style={{ padding: '48px 24px' }}>
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: color.orange, marginBottom: 8 }}>Revenue Calculator</div>
-          <h2 style={{ fontSize: 28, fontWeight: 700, color: color.ink, marginBottom: 8 }}>How much are you losing to marketplaces?</h2>
-          <p style={{ fontSize: 15, color: color.muted }}>Enter your monthly catering revenue to see the difference.</p>
+          <div style={{ fontSize: 14, fontWeight: 700, color: color.orange, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>The Marketplace Tax</div>
+          <h2 style={{ fontSize: 28, fontWeight: 700, color: color.ink, marginBottom: 8 }}>You already know you&apos;re paying too much. Here&apos;s the number.</h2>
+          <p style={{ fontSize: 15, color: color.muted }}>Most restaurants don&apos;t realize how much they&apos;re losing until they see it.</p>
         </div>
         <SavingsCalculator />
       </Section>
@@ -482,8 +502,8 @@ export default function HomePage() {
       {/* ── MID CTA ── */}
       <Section bg={color.cream} style={{ padding: '0 24px 80px' }}>
         <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <PillButton text="See how much you're losing →" href="/pricing" variant="primary" />
-          <PillButton text="See how it works →" href="/product" variant="ghost" />
+          <PillButton text="See What You're Losing →" href="#calculator" variant="primary" />
+          <PillButton text="See the System →" href="/product" variant="ghost" />
         </div>
       </Section>
 
@@ -502,7 +522,7 @@ export default function HomePage() {
             marginRight: 'auto',
           }}
         >
-          You&apos;re generating catering orders. You&apos;re not generating catering revenue.
+          Marketplace platforms don&apos;t grow your catering business. They tax it.
         </h2>
 
         <img
@@ -515,11 +535,11 @@ export default function HomePage() {
           {/* Pain points */}
           <div style={{ flex: '1 1 460px' }}>
             <ul style={{ padding: 0 }}>
-              <XItem text="30% of every order goes to the marketplace — not your kitchen." />
-              <XItem text="You don't own the customer. They reorder through the platform, not you." />
-              <XItem text="No one follows up. The $3,000 Friday lunch account quietly disappears." />
-              <XItem text="You're too busy running service to chase reorders and send proposals." />
-              <XItem text="Your catering revenue is unpredictable because there's no system behind it." />
+              <XItem text="They take 15–30% of every order. Not for finding the customer. Not for cooking the food. Just for sitting in the middle." />
+              <XItem text="They own your customers. That corporate account ordering $800/month? The marketplace has their data. You get a name on a ticket." />
+              <XItem text="There's no follow-up. No repeat system. No compounding. Every Monday, your catering revenue starts at zero." />
+              <XItem text="You're too busy running service to chase reorders and send proposals manually." />
+              <XItem text="The longer you wait, the more it costs. Every month is more commissions paid and more customers lost." />
             </ul>
           </div>
 
@@ -599,26 +619,29 @@ export default function HomePage() {
             The System
           </div>
           <h2 style={{ fontSize: 36, fontWeight: 700, color: color.ink, lineHeight: 1.2 }}>
-            Three steps to catering revenue that grows itself
+            TrayLoop replaces one-off orders with a repeatable catering system.
           </h2>
         </div>
         <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
           <StepCard
             number="01"
             title="Capture"
-            description="Replace marketplace dependency with your own branded ordering portal. Customers order directly from you — no commissions, no middlemen. Import existing accounts or let new ones sign up in seconds."
+            description="Every order comes directly to you. A branded ordering page replaces marketplace listings. Customers see your menu, your packages, your pricing. Deposits collected automatically. Zero commissions on every order."
           />
           <StepCard
             number="02"
             title="Convert"
-            description="Automatically follow up with every account at the right time. Smart reorder reminders, personalized upsells, and AI-assisted proposals turn one-time orders into recurring revenue."
+            description="Every order runs itself. Confirmation, reminders, deposit collection — all triggered by the order, not by you remembering. Your kitchen gets a clean order. Your customer gets a professional experience. You touch nothing."
           />
           <StepCard
             number="03"
             title="Repeat"
-            description="Build a predictable catering pipeline. Track every account, see who's about to churn, and let the system keep your best customers coming back — without you lifting a finger."
+            description="Every customer comes back. The system tracks ordering patterns and reaches out before customers go quiet. Targeted, timed outreach based on when each account is due to reorder. Revenue compounds instead of resetting."
           />
         </div>
+        <p style={{ textAlign: 'center', fontSize: 17, fontWeight: 600, color: color.ink, marginTop: 40 }}>
+          Once it&apos;s set up, your catering doesn&apos;t reset every week. It builds.
+        </p>
       </Section>
 
       {/* ── SEE THE STOREFRONT IN ACTION ── */}
@@ -662,7 +685,7 @@ export default function HomePage() {
               Your customers order directly from you
             </h2>
             <p style={{ fontSize: 16, lineHeight: 1.7, color: color.muted, marginBottom: 24 }}>
-              No marketplace middleman. No 30% commissions. Your customers see your brand, your menu, and your prices on a clean ordering portal built just for you. Deposits are collected automatically at checkout, and every order flows straight into your dashboard.
+              No marketplace middleman. No commissions. Your customers see your brand, your menu, and your prices — on a storefront you own. Deposits are collected at checkout. Every order flows straight into your dashboard. You keep the customer relationship and the revenue.
             </p>
             <ul style={{ padding: 0, marginBottom: 24 }}>
               <CheckItem text="Branded URL — your name, your identity" />
@@ -716,7 +739,7 @@ export default function HomePage() {
               margin: '0 auto',
             }}
           >
-            Turn one catering order into a recurring revenue account
+            Turn one order into a recurring account. Then do it again.
           </h2>
         </div>
 
@@ -981,11 +1004,11 @@ export default function HomePage() {
             </div>
             <ul style={{ padding: 0 }}>
               {[
-                'Paying 30% commissions on every marketplace order',
-                'No idea which accounts are about to churn',
-                'Manually sending follow-up emails (when you remember)',
-                'Revenue swings wildly week to week',
-                'No system — just hustle and hope',
+                '15–30% of every order goes to a platform you don\'t control',
+                'No idea which accounts are about to stop ordering',
+                'Follow-up happens when you remember — which is rarely',
+                'Revenue resets to zero every Monday',
+                'No system. Just hustle.',
               ].map((t) => (
                 <XItem key={t} text={t} />
               ))}
@@ -1016,10 +1039,10 @@ export default function HomePage() {
             </div>
             <ul style={{ padding: 0 }}>
               {[
-                'Zero commissions — customers order direct through your portal',
-                'AI flags at-risk accounts before they disappear',
-                'Automated reorder reminders and personalized upsells',
-                'Predictable, growing monthly catering revenue',
+                'Zero commissions — every dollar stays with your restaurant',
+                'At-risk accounts flagged before they disappear',
+                'Automated follow-up and reorder outreach runs without you',
+                'Revenue that compounds month over month',
                 'A system that runs while you run service',
               ].map((t) => (
                 <CheckItem key={t} text={t} />
@@ -1044,9 +1067,7 @@ export default function HomePage() {
               marginBottom: 24,
             }}
           >
-            We were paying marketplaces $3,200 a month in commissions and had no idea who our customers
-            even were. TrayLoop gave us our accounts back. Now 72% of them reorder automatically,
-            and our catering revenue is up 40% in three months.
+            We were paying $3,200 a month in marketplace commissions and had no idea who our customers even were. TrayLoop gave us our accounts back. Now 72% of them reorder on their own.
           </blockquote>
           <div style={{ fontWeight: 700, color: color.ink }}>Maria S.</div>
           <div style={{ fontSize: 14, color: color.muted }}>

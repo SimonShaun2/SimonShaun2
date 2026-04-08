@@ -91,7 +91,7 @@ export default function Footer() {
               marginBottom: 16,
             }}
           >
-            The easiest way to grow your catering revenue.
+            Every order you take through a marketplace is money you give away.
           </h2>
           <p
             style={{
@@ -100,7 +100,7 @@ export default function Footer() {
               marginBottom: 32,
             }}
           >
-            $49/month flat. No commissions. No contracts.
+            $49/month. No commissions. No contracts. The longer you wait, the more you lose.
           </p>
           <div
             style={{
@@ -110,8 +110,8 @@ export default function Footer() {
               flexWrap: 'wrap',
             }}
           >
-            <PillButton text="Book a free Demo →" href="/demo" variant="primary" />
-            <PillButton text="See how it works →" href="/how-it-works" variant="ghost" />
+            <PillButton text="Start Keeping Your Revenue →" href="https://dashboard.trayloophq.com/register" variant="primary" />
+            <PillButton text="See the System →" href="/product" variant="ghost" />
           </div>
         </div>
       </section>
