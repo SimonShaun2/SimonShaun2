@@ -415,6 +415,7 @@ export async function fetchPaymentStatus(): Promise<MerchantPaymentStatus> {
 export async function syncPaymentStatus(): Promise<MerchantPaymentStatus> {
   const response = await apiFetch('/api/organizations/current/payment-status/sync', {
     method: 'POST',
+    body: JSON.stringify({}),
   });
   return response.data;
 }

@@ -96,11 +96,12 @@ export function registerRoutes(app: FastifyInstance) {
     if (!process.env.MERCHANT_URL) {
       console.warn('[stripe] MERCHANT_URL not configured — using localhost fallback');
     }
-    const baseUrl = body?.returnUrl || process.env.MERCHANT_URL || 'http://localhost:3003/settings';
+    const returnUrl = body?.returnUrl || process.env.MERCHANT_URL || 'http://localhost:3003/settings';
+    const refreshUrl = body?.refreshUrl || returnUrl;
     const result = await createOnboardingLink(
       request.ctx.tenant!.organizationId,
-      `${baseUrl}?stripe=complete`,
-      `${baseUrl}?stripe=refresh`,
+      `${returnUrl}?stripe=complete`,
+      `${refreshUrl}?stripe=refresh`,
     );
     return reply.status(201).send({ data: result });
   });

@@ -256,7 +256,10 @@ function SettingsContent() {
 
       const paymentRes =
         initialPaymentRes.data?.stripeAccountId && !initialPaymentRes.data?.onboardingComplete
-          ? await apiFetch('/api/organizations/current/payment-status/sync', { method: 'POST' }).catch(() => initialPaymentRes)
+          ? await apiFetch('/api/organizations/current/payment-status/sync', {
+              method: 'POST',
+              body: JSON.stringify({}),
+            }).catch(() => initialPaymentRes)
           : initialPaymentRes;
 
       const nextOrganization = orgRes.data as Organization;
@@ -293,7 +296,10 @@ function SettingsContent() {
 
   async function syncStatus() {
     try {
-      const res = await apiFetch('/api/organizations/current/payment-status/sync', { method: 'POST' });
+      const res = await apiFetch('/api/organizations/current/payment-status/sync', {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
       applyStatus(res.data);
       setBannerTone('success');
       setBannerMessage('Stripe status refreshed.');

@@ -80,6 +80,15 @@ function isMissingConnectedAccountError(error: unknown) {
   return stripeError.code === 'resource_missing' || stripeError.message?.includes('No such account') === true;
 }
 
+function isConnectPlatformNotEnabledError(error: unknown) {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const stripeError = error as { message?: string };
+  return stripeError.message?.includes("You can only create new accounts if you've signed up") === true;
+}
+
 function statusFromStripeAccount(account: Stripe.Account): ConnectAccountStatus {
   return buildStatus({
     stripeAccountId: account.id,
@@ -204,6 +213,9 @@ export async function createConnectAccount(orgId: string): Promise<ConnectAccoun
       orgId,
       error: error instanceof Error ? error.message : 'Unknown error',
     });
+    if (isConnectPlatformNotEnabledError(error)) {
+      throw new ValidationError('Stripe Connect is not enabled on the TrayLoop platform account yet. Turn on Connect in the live Stripe dashboard, then try merchant payouts again.');
+    }
     throw new ValidationError('Stripe could not start merchant payouts onboarding. Please try again or contact support.');
   }
 
