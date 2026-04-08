@@ -450,6 +450,7 @@ export async function createSupportSession(orgId: string): Promise<MerchantSuppo
       'x-trayloop-session-scope': 'admin',
     },
     credentials: 'include',
+    body: JSON.stringify({}),
   });
 
   const json = await response.json().catch(() => null);
