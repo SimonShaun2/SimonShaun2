@@ -91,7 +91,7 @@ export default function Footer() {
               marginBottom: 16,
             }}
           >
-            Every order you take through a marketplace is money you give away.
+            Stop giving your revenue to marketplaces.
           </h2>
           <p
             style={{
@@ -100,7 +100,7 @@ export default function Footer() {
               marginBottom: 32,
             }}
           >
-            $49/month. No commissions. No contracts. The longer you wait, the more you lose.
+            $49/month. No commissions. No contracts.
           </p>
           <div
             style={{
@@ -110,7 +110,7 @@ export default function Footer() {
               flexWrap: 'wrap',
             }}
           >
-            <PillButton text="Start Keeping Your Revenue Today →" href="https://dashboard.trayloophq.com/register" variant="primary" />
+            <PillButton text="Start Keeping Your Revenue →" href="https://dashboard.trayloophq.com/register" variant="primary" />
             <PillButton text="See the System →" href="/product" variant="ghost" />
           </div>
         </div>

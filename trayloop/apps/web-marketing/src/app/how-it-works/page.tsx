@@ -188,11 +188,10 @@ export default function HowItWorksPage() {
               marginBottom: 20,
             }}
           >
-            The System Behind Every High-Performing Catering Program
+            The system behind every high-performing catering program
           </h1>
           <p style={{ fontSize: 18, lineHeight: 1.6, color: C.muted, marginBottom: 48 }}>
-            Most restaurants have catering orders. Few have catering infrastructure. TrayLoop is the
-            operating system that turns scattered orders into a predictable, growing revenue stream.
+            Turn scattered catering orders into a predictable revenue stream.
           </p>
 
           {/* Stats row */}

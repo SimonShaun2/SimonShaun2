@@ -382,7 +382,7 @@ export default function ProductPage() {
               marginBottom: 20,
             }}
           >
-            Everything your catering program needs to grow revenue on autopilot.
+            Everything you need to grow catering on autopilot.
           </h1>
           <p
             style={{
@@ -392,8 +392,7 @@ export default function ProductPage() {
               marginBottom: 32,
             }}
           >
-            Five core capabilities — each designed to capture more orders, increase order value,
-            and turn one-time customers into recurring accounts.
+            Five capabilities that capture orders, lift order value, and turn one-time buyers into recurring accounts.
           </p>
           <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 48 }}>
             <PillButton text="Book a free Demo →" href="/demo" variant="primary" />
