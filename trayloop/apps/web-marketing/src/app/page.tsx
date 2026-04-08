@@ -180,224 +180,306 @@ export default function HomePage() {
   return (
     <main>
       {/* ── HERO ── */}
-      <Section bg={color.cream} style={{ paddingTop: 80, paddingBottom: 0 }}>
-        {/* Hero text — centered */}
-        <div style={{ textAlign: 'center', maxWidth: 800, margin: '0 auto', marginBottom: 48 }}>
-          <h1
-            style={{
-              fontSize: 52,
-              fontWeight: 800,
-              color: color.ink,
-              lineHeight: 1.12,
-              marginBottom: 20,
-            }}
-          >
-            Stop paying 20–30% on catering orders you already earned.
-          </h1>
-          <p
-            style={{
-              fontSize: 19,
-              lineHeight: 1.6,
-              color: color.muted,
-              marginBottom: 32,
-              maxWidth: 620,
-              margin: '0 auto 32px',
-            }}
-          >
-            TrayLoop is direct catering ordering you own. Keep every dollar.
-          </p>
+      <Section bg={color.cream} style={{ paddingTop: 72, paddingBottom: 64 }}>
+        <style>{`
+          @keyframes tl-float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+          }
+          @keyframes tl-feed {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-50%); }
+          }
+          @keyframes tl-pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.85); }
+          }
+          .tl-hero-grid {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 48px;
+            align-items: center;
+          }
+          .tl-hero-text { text-align: left; }
+          .tl-hero-phone-wrap { display: flex; justify-content: center; }
+          @media (max-width: 860px) {
+            .tl-hero-grid {
+              grid-template-columns: 1fr;
+              gap: 32px;
+            }
+            .tl-hero-text { text-align: center; }
+            .tl-hero-ctas { justify-content: center !important; }
+            .tl-hero-h1 { font-size: 40px !important; }
+          }
+        `}</style>
 
-          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 24 }}>
-            <PillButton text="See What You're Losing →" href="#calculator" variant="primary" />
-            <PillButton text="Start Keeping Your Revenue →" href="https://dashboard.trayloophq.com/register" variant="ghost" />
-          </div>
-
-          {/* Loss preview — immediate money visual */}
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 20,
-              backgroundColor: color.white,
-              border: `1px solid ${color.creamDark}`,
-              borderRadius: 12,
-              padding: '16px 24px',
-              marginBottom: 20,
-              flexWrap: 'wrap',
-              justifyContent: 'center',
-              boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
-            }}
-          >
-            <div style={{ textAlign: 'left' }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: color.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                At $10k/mo catering
-              </div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: color.red, marginTop: 2 }}>
-                You&apos;re giving away $2,000/mo
-              </div>
-            </div>
-            <div style={{ width: 1, height: 36, backgroundColor: color.creamDark }} />
-            <div style={{ textAlign: 'left' }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: color.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                With TrayLoop
-              </div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: color.teal, marginTop: 2 }}>
-                Keep $23,412 per year
-              </div>
-            </div>
-          </div>
-
-          <ul style={{ display: 'flex', gap: 24, justifyContent: 'center', flexWrap: 'wrap', padding: 0, margin: 0 }}>
-            {['$49/month · No commissions', 'No contracts · Cancel anytime', 'We handle the setup'].map(t => (
-              <li key={t} style={{ display: 'flex', alignItems: 'center', gap: 8, listStyle: 'none', fontSize: 14, color: color.muted }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: color.teal, flexShrink: 0 }} />
-                {t}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Hero visual — overlapping browser + phone mockup */}
-        <div style={{ position: 'relative', maxWidth: 1100, margin: '0 auto', paddingBottom: 60 }}>
-          {/* Browser frame — Dashboard */}
-          <div
-            style={{
-              backgroundColor: color.white,
-              borderRadius: 16,
-              border: `1px solid ${color.creamDark}`,
-              overflow: 'hidden',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.08)',
-            }}
-          >
-            {/* Browser chrome */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', backgroundColor: color.creamDark, borderBottom: `1px solid ${color.creamDark}` }}>
-              <span style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#E85618', opacity: 0.6 }} />
-              <span style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#F5C542', opacity: 0.6 }} />
-              <span style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#42D9A0', opacity: 0.6 }} />
-              <div style={{ flex: 1, marginLeft: 12, backgroundColor: color.white, borderRadius: 6, padding: '6px 14px', fontSize: 12, color: color.muted }}>
-                dashboard.trayloophq.com
-              </div>
-            </div>
-
-            {/* Dashboard content */}
-            <div style={{ display: 'flex', minHeight: 380 }}>
-              {/* Sidebar */}
-              <div style={{ width: 200, backgroundColor: color.ink, padding: '20px 0', flexShrink: 0 }}>
-                <div style={{ padding: '0 16px 20px', fontSize: 16, fontWeight: 700, color: color.white }}>Tray.Loop</div>
-                {['Dashboard', 'Orders', 'Customers', 'Offerings', 'Follow-Ups', 'Revenue', 'Automations'].map((item, i) => (
-                  <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', fontSize: 13, color: i === 0 ? color.orange : '#9A8E84', backgroundColor: i === 0 ? 'rgba(232,86,24,0.1)' : 'transparent', borderLeft: i === 0 ? `3px solid ${color.orange}` : '3px solid transparent' }}>
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: i === 0 ? color.orange : '#5A5350' }} />
-                    {item}
-                  </div>
-                ))}
-              </div>
-
-              {/* Main area */}
-              <div style={{ flex: 1, padding: 24 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                  <div>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: color.ink }}>Dashboard</div>
-                    <div style={{ fontSize: 13, color: color.muted }}>Downtown Kitchen · Austin, TX</div>
-                  </div>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, backgroundColor: '#E8FAF1', color: '#1A8A5A', fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 999 }}>
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: color.teal }} />
-                    System running
-                  </div>
-                </div>
-
-                {/* KPI cards */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
-                  {[
-                    { label: 'MONTHLY RECURRING', value: '$6,200', sub: 'from 7 accounts', accent: false },
-                    { label: 'RECOVERED', value: '$1,840', sub: 'from re-engagement', accent: true },
-                    { label: 'AT-RISK', value: '3', sub: 'dormant 30+ days', accent: false },
-                    { label: 'UPCOMING', value: '8', sub: 'deposits secured', accent: false },
-                  ].map(k => (
-                    <div key={k.label} style={{ backgroundColor: color.cream, borderRadius: 10, padding: 14 }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: color.muted, letterSpacing: '0.05em' }}>{k.label}</div>
-                      <div style={{ fontSize: 22, fontWeight: 700, color: k.accent ? color.teal : color.ink, marginTop: 4 }}>{k.value}</div>
-                      <div style={{ fontSize: 11, color: color.muted, marginTop: 2 }}>{k.sub}</div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Activity rows */}
-                <div style={{ fontSize: 11, fontWeight: 700, color: color.muted, marginBottom: 8, letterSpacing: '0.05em' }}>RECENT ACTIVITY</div>
-                {[
-                  { text: 'Reorder reminder sent to Apex Financial', time: '2 hrs ago', c: color.teal },
-                  { text: 'New catering order — $1,240 from TechCorp', time: '5 hrs ago', c: color.orange },
-                  { text: 'Upsell added: beverage package +$85', time: 'Yesterday', c: color.teal },
-                ].map(a => (
-                  <div key={a.text} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: `1px solid ${color.creamDark}` }}>
-                    <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: a.c, flexShrink: 0 }} />
-                    <span style={{ fontSize: 13, color: color.ink, flex: 1 }}>{a.text}</span>
-                    <span style={{ fontSize: 11, color: color.muted, whiteSpace: 'nowrap' }}>{a.time}</span>
-                  </div>
-                ))}
-              </div>
+        <div className="tl-hero-grid">
+          {/* LEFT — text */}
+          <div className="tl-hero-text">
+            <h1
+              className="tl-hero-h1"
+              style={{
+                fontSize: 56,
+                fontWeight: 800,
+                color: color.ink,
+                lineHeight: 1.08,
+                marginBottom: 20,
+                letterSpacing: '-0.02em',
+              }}
+            >
+              Keep every dollar on your catering orders.
+            </h1>
+            <p
+              style={{
+                fontSize: 19,
+                lineHeight: 1.5,
+                color: color.muted,
+                marginBottom: 32,
+                maxWidth: 480,
+              }}
+            >
+              Direct ordering you own. No commissions. $49/month.
+            </p>
+            <div
+              className="tl-hero-ctas"
+              style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}
+            >
+              <PillButton text="Book a free demo →" href="/demo" variant="primary" />
+              <PillButton text="See how it works" href="/how-it-works" variant="ghost" />
             </div>
           </div>
 
-          {/* Phone mockup — Storefront, floating on the right */}
-          <div
-            style={{
-              position: 'absolute',
-              right: -20,
-              bottom: -20,
-              width: 280,
-              backgroundColor: color.white,
-              borderRadius: 28,
-              border: `3px solid ${color.ink}`,
-              boxShadow: '0 24px 60px rgba(0,0,0,0.15)',
-              overflow: 'hidden',
-            }}
-          >
-            {/* Phone notch */}
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0 4px', backgroundColor: color.ink }}>
-              <div style={{ width: 80, height: 5, borderRadius: 10, backgroundColor: '#333' }} />
-            </div>
-            {/* Storefront header */}
-            <div style={{ backgroundColor: color.cream, padding: '16px 16px 12px' }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: color.ink }}>Downtown Kitchen</div>
-              <div style={{ fontSize: 11, color: color.muted, marginTop: 2 }}>Austin, TX · Corporate Catering</div>
-              <div style={{ fontSize: 10, color: color.teal, marginTop: 6, fontWeight: 600 }}>● Accepting Orders</div>
-            </div>
-            {/* Menu items */}
-            <div style={{ padding: '8px 12px', backgroundColor: color.cream }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: color.muted, marginBottom: 8, letterSpacing: '0.05em' }}>LUNCH PACKAGES</div>
-              {[
-                { name: 'Taco Platter', price: '$10/person', min: 'Min 10' },
-                { name: 'Basic Lunch Box', price: '$14.95/person', min: 'Min 10' },
-                { name: 'Premium Buffet', price: '$29.95/person', min: 'Min 20' },
-              ].map(p => (
-                <div key={p.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: `1px solid ${color.creamDark}` }}>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: color.ink }}>{p.name}</div>
-                    <div style={{ fontSize: 11, color: color.muted }}>{p.min}</div>
+          {/* RIGHT — animated phone mockup */}
+          <div className="tl-hero-phone-wrap">
+            <div
+              style={{
+                width: '100%',
+                maxWidth: 320,
+                animation: 'tl-float 6s ease-in-out infinite',
+                backgroundColor: color.ink,
+                borderRadius: 36,
+                padding: 6,
+                boxShadow: '0 30px 80px rgba(0,0,0,0.18)',
+              }}
+            >
+              <div
+                style={{
+                  backgroundColor: color.white,
+                  borderRadius: 30,
+                  overflow: 'hidden',
+                }}
+              >
+                {/* Notch */}
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    padding: '10px 0 6px',
+                    backgroundColor: color.white,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 80,
+                      height: 5,
+                      borderRadius: 10,
+                      backgroundColor: color.ink,
+                    }}
+                  />
+                </div>
+
+                {/* App header */}
+                <div
+                  style={{
+                    padding: '14px 18px 10px',
+                    borderBottom: `1px solid ${color.creamDark}`,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: color.muted,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                    }}
+                  >
+                    Monthly revenue
                   </div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: color.orange }}>{p.price}</div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'baseline',
+                      gap: 8,
+                      marginTop: 2,
+                    }}
+                  >
+                    <span style={{ fontSize: 26, fontWeight: 800, color: color.ink }}>
+                      $10,240
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: color.teal,
+                      }}
+                    >
+                      ↑ 23%
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      marginTop: 8,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: '#1A8A5A',
+                      backgroundColor: '#E8FAF1',
+                      padding: '3px 10px',
+                      borderRadius: 999,
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: '50%',
+                        backgroundColor: color.teal,
+                        animation: 'tl-pulse 1.6s ease-in-out infinite',
+                      }}
+                    />
+                    Live
+                  </div>
                 </div>
-              ))}
-              <div style={{ fontSize: 10, fontWeight: 700, color: color.muted, marginTop: 12, marginBottom: 8, letterSpacing: '0.05em' }}>ADD-ONS</div>
-              {[
-                { name: 'Dessert Tray', price: '+$45' },
-                { name: 'Coffee & Tea', price: '+$3/pp' },
-              ].map(a => (
-                <div key={a.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${color.creamDark}` }}>
-                  <span style={{ fontSize: 12, color: color.ink }}>{a.name}</span>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: color.teal }}>{a.price}</span>
+
+                {/* Scrolling feed */}
+                <div
+                  style={{
+                    padding: '12px 18px 4px',
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: color.muted,
+                    letterSpacing: '0.05em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Activity
                 </div>
-              ))}
-            </div>
-            {/* Order button */}
-            <div style={{ padding: '12px 16px', backgroundColor: color.cream }}>
-              <div style={{ backgroundColor: color.orange, color: color.white, textAlign: 'center', padding: '10px 0', borderRadius: 10, fontSize: 13, fontWeight: 700 }}>
-                Place Catering Order →
+                <div
+                  style={{
+                    height: 260,
+                    overflow: 'hidden',
+                    position: 'relative',
+                    padding: '0 14px 14px',
+                  }}
+                >
+                  <div style={{ animation: 'tl-feed 18s linear infinite' }}>
+                    {[
+                      ...[
+                        { icon: '🟢', t: 'New order — $1,240', s: 'TechCorp HQ' },
+                        { icon: '✉️', t: 'Reorder reminder sent', s: 'Apex Financial' },
+                        { icon: '💰', t: 'Upsell added +$85', s: 'Beverage package' },
+                        { icon: '🟢', t: 'New order — $680', s: 'Metro Law Group' },
+                        { icon: '🔒', t: 'Deposit secured', s: '$400 · Friday event' },
+                        { icon: '🟢', t: 'New order — $2,100', s: 'StartupCo' },
+                        { icon: '⚡', t: 'Follow-up generated', s: 'Greenleaf Co.' },
+                        { icon: '🟢', t: 'New order — $960', s: 'Downtown Kitchen' },
+                      ],
+                      ...[
+                        { icon: '🟢', t: 'New order — $1,240', s: 'TechCorp HQ' },
+                        { icon: '✉️', t: 'Reorder reminder sent', s: 'Apex Financial' },
+                        { icon: '💰', t: 'Upsell added +$85', s: 'Beverage package' },
+                        { icon: '🟢', t: 'New order — $680', s: 'Metro Law Group' },
+                        { icon: '🔒', t: 'Deposit secured', s: '$400 · Friday event' },
+                        { icon: '🟢', t: 'New order — $2,100', s: 'StartupCo' },
+                        { icon: '⚡', t: 'Follow-up generated', s: 'Greenleaf Co.' },
+                        { icon: '🟢', t: 'New order — $960', s: 'Downtown Kitchen' },
+                      ],
+                    ].map((row, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          padding: '9px 6px',
+                          borderBottom: `1px solid ${color.creamDark}`,
+                        }}
+                      >
+                        <span style={{ fontSize: 14 }}>{row.icon}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div
+                            style={{
+                              fontSize: 12,
+                              fontWeight: 700,
+                              color: color.ink,
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            {row.t}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 10,
+                              color: color.muted,
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            {row.s}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {/* top + bottom fades */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: 24,
+                      background: `linear-gradient(${color.white}, rgba(255,255,255,0))`,
+                      pointerEvents: 'none',
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      height: 32,
+                      background: `linear-gradient(rgba(255,255,255,0), ${color.white})`,
+                      pointerEvents: 'none',
+                    }}
+                  />
+                </div>
+
+                {/* Home indicator */}
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    padding: '6px 0 10px',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 90,
+                      height: 4,
+                      borderRadius: 10,
+                      backgroundColor: color.ink,
+                    }}
+                  />
+                </div>
               </div>
-            </div>
-            {/* Phone bottom bar */}
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '6px 0', backgroundColor: color.ink }}>
-              <div style={{ width: 60, height: 4, borderRadius: 10, backgroundColor: '#444' }} />
             </div>
           </div>
         </div>
@@ -406,8 +488,7 @@ export default function HomePage() {
       {/* ── SAVINGS CALCULATOR ── */}
       <Section bg={color.creamDark} style={{ padding: '48px 24px' }}>
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: color.orange, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>The Marketplace Tax</div>
-          <h2 style={{ fontSize: 28, fontWeight: 700, color: color.ink, marginBottom: 8 }}>See what you&apos;re losing.</h2>
+          <h2 style={{ fontSize: 28, fontWeight: 700, color: color.ink }}>See what you&apos;re losing.</h2>
         </div>
         <SavingsCalculator />
       </Section>
@@ -415,8 +496,7 @@ export default function HomePage() {
       {/* ── IMAGE STRIP — ICP ── */}
       <Section bg={color.cream} style={{ padding: '0 24px 40px' }}>
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: color.orange, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Built for</div>
-          <h2 style={{ fontSize: 28, fontWeight: 700, color: color.ink }}>Any kitchen that does catering</h2>
+          <h2 style={{ fontSize: 28, fontWeight: 700, color: color.ink }}>Built for any kitchen that does catering</h2>
         </div>
         <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
           {[
@@ -465,12 +545,12 @@ export default function HomePage() {
           }}
         >
           {[
-            { label: 'Live in days', desc: 'not weeks' },
-            { label: 'No migration risk', desc: 'we handle setup' },
-            { label: 'Works with your process', desc: 'POS-agnostic' },
-            { label: 'Keep existing channels', desc: 'marketplace-compatible' },
-          ].map((t) => (
-            <div key={t.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            'Live in days',
+            'We handle setup',
+            'POS-agnostic',
+            'Keep your marketplaces',
+          ].map((label) => (
+            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span
                 style={{
                   display: 'inline-flex',
@@ -487,10 +567,7 @@ export default function HomePage() {
               >
                 ✓
               </span>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: color.ink }}>{t.label}</div>
-                <div style={{ fontSize: 12, color: color.muted }}>{t.desc}</div>
-              </div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: color.ink }}>{label}</div>
             </div>
           ))}
         </div>
