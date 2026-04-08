@@ -192,7 +192,7 @@ export default function HomePage() {
               marginBottom: 20,
             }}
           >
-            Stop paying 20–30% on every catering order.
+            You&apos;re paying 20–30% on catering orders you already earned.
           </h1>
           <p
             style={{
@@ -236,6 +236,41 @@ export default function HomePage() {
           <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 24 }}>
             <PillButton text="See What You're Losing →" href="#calculator" variant="primary" />
             <PillButton text="Start Keeping Your Revenue →" href="https://dashboard.trayloophq.com/register" variant="ghost" />
+          </div>
+
+          {/* Loss preview — immediate money visual */}
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 20,
+              backgroundColor: color.white,
+              border: `1px solid ${color.creamDark}`,
+              borderRadius: 12,
+              padding: '16px 24px',
+              marginBottom: 20,
+              flexWrap: 'wrap',
+              justifyContent: 'center',
+              boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+            }}
+          >
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: color.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                At $10k/mo catering
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: color.red, marginTop: 2 }}>
+                You&apos;re giving away $2,000/mo
+              </div>
+            </div>
+            <div style={{ width: 1, height: 36, backgroundColor: color.creamDark }} />
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: color.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                With TrayLoop
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: color.teal, marginTop: 2 }}>
+                Keep $23,412 per year
+              </div>
+            </div>
           </div>
 
           <ul style={{ display: 'flex', gap: 24, justifyContent: 'center', flexWrap: 'wrap', padding: 0, margin: 0 }}>
@@ -399,7 +434,8 @@ export default function HomePage() {
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: color.orange, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>The Marketplace Tax</div>
           <h2 style={{ fontSize: 28, fontWeight: 700, color: color.ink, marginBottom: 8 }}>You already know you&apos;re paying too much. Here&apos;s the number.</h2>
-          <p style={{ fontSize: 15, color: color.muted }}>Most restaurants don&apos;t realize how much they&apos;re losing until they see it.</p>
+          <p style={{ fontSize: 15, color: color.muted, marginBottom: 4 }}>Most restaurant owners underestimate this by thousands.</p>
+          <p style={{ fontSize: 13, color: color.muted, fontStyle: 'italic' }}>This keeps happening every month until you stop.</p>
         </div>
         <SavingsCalculator />
       </Section>
@@ -437,12 +473,54 @@ export default function HomePage() {
             flexWrap: 'wrap',
             gap: 32,
             justifyContent: 'center',
+            marginBottom: 32,
           }}
         >
           <StatCard value="$2.4M+" label="Catering revenue processed" />
           <StatCard value="72%" label="Average reorder rate" />
           <StatCard value="3×" label="More repeat orders vs. marketplace" />
           <StatCard value="$1,840/mo" label="Average revenue recovered" />
+        </div>
+        {/* Trust compression */}
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 24,
+            justifyContent: 'center',
+            borderTop: `1px solid rgba(0,0,0,0.06)`,
+            paddingTop: 24,
+          }}
+        >
+          {[
+            { label: 'Live in days', desc: 'not weeks' },
+            { label: 'No migration risk', desc: 'we handle setup' },
+            { label: 'Works with your process', desc: 'POS-agnostic' },
+            { label: 'Keep existing channels', desc: 'marketplace-compatible' },
+          ].map((t) => (
+            <div key={t.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 22,
+                  height: 22,
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(66, 217, 160, 0.15)',
+                  color: color.teal,
+                  fontSize: 12,
+                  fontWeight: 800,
+                }}
+              >
+                ✓
+              </span>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: color.ink }}>{t.label}</div>
+                <div style={{ fontSize: 12, color: color.muted }}>{t.desc}</div>
+              </div>
+            </div>
+          ))}
         </div>
       </Section>
 
@@ -524,6 +602,18 @@ export default function HomePage() {
         >
           Marketplace platforms don&apos;t grow your catering business. They tax it.
         </h2>
+        <p
+          style={{
+            fontSize: 18,
+            lineHeight: 1.5,
+            color: color.muted,
+            textAlign: 'center',
+            maxWidth: 680,
+            margin: '-24px auto 40px',
+          }}
+        >
+          They don&apos;t help you grow. They sit in the middle and take a percentage.
+        </p>
 
         <img
           src="https://images.unsplash.com/photo-1552566626-52f8b828add9?w=1100&h=400&fit=crop"
@@ -618,9 +708,12 @@ export default function HomePage() {
           >
             The System
           </div>
-          <h2 style={{ fontSize: 36, fontWeight: 700, color: color.ink, lineHeight: 1.2 }}>
-            TrayLoop replaces one-off orders with a repeatable catering system.
+          <h2 style={{ fontSize: 36, fontWeight: 700, color: color.ink, lineHeight: 1.2, maxWidth: 760, margin: '0 auto 16px' }}>
+            You don&apos;t have a catering system. You have transactions.
           </h2>
+          <p style={{ fontSize: 18, color: color.muted, maxWidth: 640, margin: '0 auto', lineHeight: 1.5 }}>
+            TrayLoop replaces one-off orders with a repeatable system that captures, converts, and compounds — automatically.
+          </p>
         </div>
         <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
           <StepCard
@@ -639,9 +732,14 @@ export default function HomePage() {
             description="Every customer comes back. The system tracks ordering patterns and reaches out before customers go quiet. Targeted, timed outreach based on when each account is due to reorder. Revenue compounds instead of resetting."
           />
         </div>
-        <p style={{ textAlign: 'center', fontSize: 17, fontWeight: 600, color: color.ink, marginTop: 40 }}>
-          Once it&apos;s set up, your catering doesn&apos;t reset every week. It builds.
-        </p>
+        <div style={{ textAlign: 'center', marginTop: 40 }}>
+          <p style={{ fontSize: 17, fontWeight: 600, color: color.ink, marginBottom: 6 }}>
+            Once it&apos;s set up, your catering doesn&apos;t reset every week. It builds.
+          </p>
+          <p style={{ fontSize: 15, color: color.muted }}>
+            This is what marketplaces don&apos;t give you.
+          </p>
+        </div>
       </Section>
 
       {/* ── SEE THE STOREFRONT IN ACTION ── */}

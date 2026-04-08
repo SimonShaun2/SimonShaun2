@@ -110,7 +110,7 @@ export default function Footer() {
               flexWrap: 'wrap',
             }}
           >
-            <PillButton text="Start Keeping Your Revenue →" href="https://dashboard.trayloophq.com/register" variant="primary" />
+            <PillButton text="Start Keeping Your Revenue Today →" href="https://dashboard.trayloophq.com/register" variant="primary" />
             <PillButton text="See the System →" href="/product" variant="ghost" />
           </div>
         </div>
