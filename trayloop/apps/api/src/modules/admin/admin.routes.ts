@@ -1,6 +1,8 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { createToken } from '@trayloop/auth';
 import { requireAuth } from '../../lib/middleware/auth.js';
-import { ForbiddenError } from '../../lib/errors.js';
+import { ForbiddenError, NotFoundError } from '../../lib/errors.js';
+import { setSessionCookie } from '../../lib/auth-cookies.js';
 import { validateBody } from '../../lib/middleware/validate.js';
 import { isAutomationsEnabled } from '../../lib/features.js';
 import { adminStatusBodySchema, adminStatusParamsSchema } from './admin.schema.js';
@@ -26,6 +28,40 @@ export function registerRoutes(app: FastifyInstance) {
   app.get('/restaurants', async () => {
     const restaurants = await service.listRestaurantDirectory();
     return { data: restaurants };
+  });
+
+  app.post('/organizations/:id/support-session', async (request, reply) => {
+    const { id } = adminStatusParamsSchema.parse(request.params);
+    const organization = await service.getOrganizationSupportContext(id);
+
+    if (!organization) {
+      throw new NotFoundError('Organization');
+    }
+
+    if (!organization.isActive) {
+      throw new ForbiddenError('This merchant workspace is inactive');
+    }
+
+    const user = request.ctx?.user;
+    if (!user) {
+      throw new ForbiddenError('Platform admin access required');
+    }
+
+    const token = await createToken({
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      supportOrganizationId: organization.id,
+      supportMemberRole: 'admin',
+    }, '8h');
+
+    setSessionCookie(reply, token, 'merchant');
+
+    return reply.send({
+      data: {
+        organization,
+      },
+    });
   });
 
   app.get('/users', async () => {

@@ -26,7 +26,10 @@ const VISIBLE_NAV_ITEMS = automationsEnabled
 
 export default function NavBar() {
   const pathname = usePathname();
-  const isAuthPage = pathname === '/login' || pathname === '/register' || pathname === '/reset-password';
+  const isAuthPage = pathname === '/login'
+    || pathname === '/register'
+    || pathname === '/reset-password'
+    || pathname === '/support-access';
   const isMobile = useMobile();
   const [storefrontUrl, setStorefrontUrl] = useState<string | null>(null);
   const [signedIn, setSignedIn] = useState(false);

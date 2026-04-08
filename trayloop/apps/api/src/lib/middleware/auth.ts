@@ -36,6 +36,8 @@ async function authenticateRequest(request: FastifyRequest): Promise<AuthUser | 
     id: userRecord.id,
     email: userRecord.email,
     role: userRecord.role,
+    supportOrganizationId: payload.supportOrganizationId,
+    supportMemberRole: payload.supportMemberRole,
   };
 }
 

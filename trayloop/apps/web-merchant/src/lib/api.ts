@@ -109,6 +109,15 @@ export interface MerchantOnboardingStatus {
   };
 }
 
+export interface MerchantSupportSession {
+  organization: {
+    id: string;
+    name: string;
+    slug: string;
+    isActive: boolean;
+  };
+}
+
 export interface AiSalesReactivationSummary {
   repeatCustomerCount: number;
   allCustomers: number;
@@ -431,6 +440,24 @@ export async function createPaymentOnboardingLink(input: { returnUrl?: string; r
 export async function fetchOnboardingStatus(): Promise<MerchantOnboardingStatus> {
   const response = await apiFetch('/api/organizations/current/onboarding-status');
   return response.data;
+}
+
+export async function createSupportSession(orgId: string): Promise<MerchantSupportSession> {
+  const response = await fetch(`${API_URL}/api/admin/organizations/${orgId}/support-session`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-trayloop-session-scope': 'admin',
+    },
+    credentials: 'include',
+  });
+
+  const json = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(json?.error?.message ?? 'Unable to access merchant workspace');
+  }
+
+  return json.data;
 }
 
 export async function createBillingCheckout(input: { successUrl?: string; cancelUrl?: string } = {}) {

@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../lib/api';
 
+const MERCHANT_APP_URL = process.env.NEXT_PUBLIC_MERCHANT_URL || 'https://dashboard.trayloophq.com';
+const STOREFRONT_URL = process.env.NEXT_PUBLIC_STOREFRONT_URL || 'https://order.trayloophq.com';
+
 interface Restaurant {
   id: string;
   name: string;
@@ -27,6 +30,21 @@ function cents(amount: number): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   })}`;
+}
+
+function buildMerchantSupportUrl(restaurant: Restaurant, target: '/catalog' | '/onboarding') {
+  const params = new URLSearchParams({
+    orgId: restaurant.id,
+    orgSlug: restaurant.slug,
+    orgName: restaurant.name,
+    target,
+  });
+
+  return `${MERCHANT_APP_URL}/support-access?${params.toString()}`;
+}
+
+function buildStorefrontUrl(restaurant: Restaurant) {
+  return `${STOREFRONT_URL}/${restaurant.slug}`;
 }
 
 export default function OrganizationsPage() {
@@ -183,7 +201,7 @@ export default function OrganizationsPage() {
       ) : (
         <div style={{ border: '1px solid #E7E5E4', borderRadius: 10, background: '#FFFFFF', overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', minWidth: 920, borderCollapse: 'collapse', fontSize: 13 }}>
+            <table style={{ width: '100%', minWidth: 1120, borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #E7E5E4' }}>
                   <Th>Restaurant</Th>
@@ -195,6 +213,7 @@ export default function OrganizationsPage() {
                   <Th align="right">Orders</Th>
                   <Th align="right">Avg Order</Th>
                   <Th>Last Order</Th>
+                  <Th>Actions</Th>
                 </tr>
               </thead>
               <tbody>
@@ -210,7 +229,7 @@ export default function OrganizationsPage() {
                       </div>
                     </td>
                     <td style={{ padding: '14px 16px', color: '#78716C', fontSize: 12 }}>
-                      {restaurant.ownerName ?? '—'}
+                      {restaurant.ownerName ?? '--'}
                     </td>
                     <td style={{ padding: '14px 16px' }}>
                       <Badge
@@ -236,10 +255,38 @@ export default function OrganizationsPage() {
                       {restaurant.orderCount}
                     </td>
                     <td style={{ padding: '14px 16px', textAlign: 'right', color: '#78716C' }}>
-                      {restaurant.orderCount > 0 ? cents(restaurant.avgOrderValue) : '—'}
+                      {restaurant.orderCount > 0 ? cents(restaurant.avgOrderValue) : '--'}
                     </td>
                     <td style={{ padding: '14px 16px', color: '#78716C', fontSize: 12 }}>
-                      {restaurant.lastOrderAt ? new Date(restaurant.lastOrderAt).toLocaleDateString() : '—'}
+                      {restaurant.lastOrderAt ? new Date(restaurant.lastOrderAt).toLocaleDateString() : '--'}
+                    </td>
+                    <td style={{ padding: '14px 16px' }}>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <a
+                          href={buildMerchantSupportUrl(restaurant, '/catalog')}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={primaryActionLinkStyle}
+                        >
+                          Menu Editor
+                        </a>
+                        <a
+                          href={buildMerchantSupportUrl(restaurant, '/onboarding')}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={secondaryActionLinkStyle}
+                        >
+                          Launch Setup
+                        </a>
+                        <a
+                          href={buildStorefrontUrl(restaurant)}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={secondaryActionLinkStyle}
+                        >
+                          Storefront
+                        </a>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -251,6 +298,27 @@ export default function OrganizationsPage() {
     </div>
   );
 }
+
+const primaryActionLinkStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '7px 10px',
+  borderRadius: 8,
+  background: '#1C1917',
+  color: '#FAFAF9',
+  fontSize: 12,
+  fontWeight: 700,
+  textDecoration: 'none',
+  whiteSpace: 'nowrap',
+};
+
+const secondaryActionLinkStyle: React.CSSProperties = {
+  ...primaryActionLinkStyle,
+  background: '#FFFFFF',
+  color: '#44403C',
+  border: '1px solid #D6D3D1',
+};
 
 function Th({ children, align }: { children: React.ReactNode; align?: 'left' | 'right' }) {
   return (

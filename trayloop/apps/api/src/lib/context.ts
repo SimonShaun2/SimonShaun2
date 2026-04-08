@@ -2,6 +2,8 @@ export interface AuthUser {
   id: string;
   email: string;
   role: string;
+  supportOrganizationId?: string;
+  supportMemberRole?: string;
 }
 
 export interface TenantContext {

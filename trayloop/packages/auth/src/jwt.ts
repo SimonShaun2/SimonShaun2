@@ -22,13 +22,15 @@ export interface TokenPayload {
   sub: string;
   email: string;
   role: string;
+  supportOrganizationId?: string;
+  supportMemberRole?: string;
 }
 
-export async function createToken(payload: TokenPayload): Promise<string> {
+export async function createToken(payload: TokenPayload, expiresIn = process.env.JWT_EXPIRES_IN || '7d'): Promise<string> {
   return new SignJWT(payload as unknown as Record<string, unknown>)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime(process.env.JWT_EXPIRES_IN || '7d')
+    .setExpirationTime(expiresIn)
     .sign(getJwtSecret());
 }
 

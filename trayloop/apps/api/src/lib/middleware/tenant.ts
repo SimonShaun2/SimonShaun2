@@ -19,6 +19,15 @@ export async function requireTenant(request: FastifyRequest, _reply: FastifyRepl
     throw new ForbiddenError('Missing x-organization-id header');
   }
 
+  const supportOrgId = request.ctx.user.supportOrganizationId;
+  if (request.ctx.user.role === 'admin' && supportOrgId === orgId) {
+    request.ctx.tenant = {
+      organizationId: orgId,
+      memberRole: request.ctx.user.supportMemberRole ?? 'admin',
+    };
+    return;
+  }
+
   const [membership] = await db
     .select({
       role: organizationMemberships.role,

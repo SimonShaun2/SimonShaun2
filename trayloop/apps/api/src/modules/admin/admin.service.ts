@@ -143,6 +143,21 @@ export async function listOrganizations() {
     .from(organizations);
 }
 
+export async function getOrganizationSupportContext(orgId: string) {
+  const [organization] = await db
+    .select({
+      id: organizations.id,
+      name: organizations.name,
+      slug: organizations.slug,
+      isActive: organizations.isActive,
+    })
+    .from(organizations)
+    .where(eq(organizations.id, orgId))
+    .limit(1);
+
+  return organization ?? null;
+}
+
 export async function listUsers() {
   return db
     .select({
