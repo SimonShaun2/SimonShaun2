@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import PillButton from '@/components/pill-button';
 import SavingsCalculator from '@/components/savings-calculator';
+import AnimatedHero from '@/components/animated-hero';
 
 /* ── Design tokens ── */
 const color = {
@@ -179,263 +180,49 @@ function OutcomeCard({
 export default function HomePage() {
   return (
     <main>
-      {/* ── HERO ── */}
-      <Section bg={color.cream} style={{ paddingTop: 80, paddingBottom: 0 }}>
-        {/* Hero text — centered */}
-        <div style={{ textAlign: 'center', maxWidth: 800, margin: '0 auto', marginBottom: 48 }}>
+      {/* ── HERO — Lean: headline + 2 CTAs + animated product ── */}
+      <Section bg={color.cream} style={{ paddingTop: 80, paddingBottom: 40 }}>
+        <div style={{ textAlign: 'center', maxWidth: 780, margin: '0 auto 40px' }}>
           <h1
             style={{
-              fontSize: 52,
+              fontSize: 56,
               fontWeight: 800,
               color: color.ink,
-              lineHeight: 1.12,
+              lineHeight: 1.1,
               marginBottom: 20,
+              letterSpacing: '-0.02em',
             }}
           >
-            You&apos;re paying 20–30% on catering orders you already earned.
+            Catering revenue that stays with your restaurant.
           </h1>
           <p
             style={{
               fontSize: 19,
-              lineHeight: 1.6,
-              color: color.muted,
-              marginBottom: 16,
-              maxWidth: 640,
-              margin: '0 auto 16px',
-            }}
-          >
-            TrayLoop gives you a direct ordering system you own — so every catering dollar stays with your restaurant, not a marketplace.
-          </p>
-          <p
-            style={{
-              fontSize: 17,
-              lineHeight: 1.6,
-              color: color.ink,
-              marginBottom: 12,
-              maxWidth: 580,
-              margin: '0 auto 12px',
-              fontWeight: 500,
-            }}
-          >
-            You built the menu. You prepped the food. You delivered it on time.<br />
-            Why is someone else keeping 20%?
-          </p>
-          <p
-            style={{
-              fontSize: 15,
-              lineHeight: 1.6,
+              lineHeight: 1.5,
               color: color.muted,
               marginBottom: 32,
-              maxWidth: 520,
+              maxWidth: 560,
               margin: '0 auto 32px',
             }}
           >
-            Most restaurants don&apos;t switch because they think it&apos;s complicated. It&apos;s not.
+            Replace marketplace commissions with a direct ordering system you own.
           </p>
 
-          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 24 }}>
-            <PillButton text="See What You're Losing →" href="#calculator" variant="primary" />
-            <PillButton text="Start Keeping Your Revenue →" href="https://dashboard.trayloophq.com/register" variant="ghost" />
-          </div>
-
-          {/* Loss preview — immediate money visual */}
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 20,
-              backgroundColor: color.white,
-              border: `1px solid ${color.creamDark}`,
-              borderRadius: 12,
-              padding: '16px 24px',
-              marginBottom: 20,
-              flexWrap: 'wrap',
-              justifyContent: 'center',
-              boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
-            }}
-          >
-            <div style={{ textAlign: 'left' }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: color.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                At $10k/mo catering
-              </div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: color.red, marginTop: 2 }}>
-                You&apos;re giving away $2,000/mo
-              </div>
-            </div>
-            <div style={{ width: 1, height: 36, backgroundColor: color.creamDark }} />
-            <div style={{ textAlign: 'left' }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: color.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                With TrayLoop
-              </div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: color.teal, marginTop: 2 }}>
-                Keep $23,412 per year
-              </div>
-            </div>
-          </div>
-
-          <ul style={{ display: 'flex', gap: 24, justifyContent: 'center', flexWrap: 'wrap', padding: 0, margin: 0 }}>
-            {['$49/month · No commissions', 'No contracts · Cancel anytime', 'We handle the setup'].map(t => (
-              <li key={t} style={{ display: 'flex', alignItems: 'center', gap: 8, listStyle: 'none', fontSize: 14, color: color.muted }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: color.teal, flexShrink: 0 }} />
-                {t}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Hero visual — overlapping browser + phone mockup */}
-        <div style={{ position: 'relative', maxWidth: 1100, margin: '0 auto', paddingBottom: 60 }}>
-          {/* Browser frame — Dashboard */}
-          <div
-            style={{
-              backgroundColor: color.white,
-              borderRadius: 16,
-              border: `1px solid ${color.creamDark}`,
-              overflow: 'hidden',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.08)',
-            }}
-          >
-            {/* Browser chrome */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', backgroundColor: color.creamDark, borderBottom: `1px solid ${color.creamDark}` }}>
-              <span style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#E85618', opacity: 0.6 }} />
-              <span style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#F5C542', opacity: 0.6 }} />
-              <span style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: '#42D9A0', opacity: 0.6 }} />
-              <div style={{ flex: 1, marginLeft: 12, backgroundColor: color.white, borderRadius: 6, padding: '6px 14px', fontSize: 12, color: color.muted }}>
-                dashboard.trayloophq.com
-              </div>
-            </div>
-
-            {/* Dashboard content */}
-            <div style={{ display: 'flex', minHeight: 380 }}>
-              {/* Sidebar */}
-              <div style={{ width: 200, backgroundColor: color.ink, padding: '20px 0', flexShrink: 0 }}>
-                <div style={{ padding: '0 16px 20px', fontSize: 16, fontWeight: 700, color: color.white }}>Tray.Loop</div>
-                {['Dashboard', 'Orders', 'Customers', 'Offerings', 'Follow-Ups', 'Revenue', 'Automations'].map((item, i) => (
-                  <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', fontSize: 13, color: i === 0 ? color.orange : '#9A8E84', backgroundColor: i === 0 ? 'rgba(232,86,24,0.1)' : 'transparent', borderLeft: i === 0 ? `3px solid ${color.orange}` : '3px solid transparent' }}>
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: i === 0 ? color.orange : '#5A5350' }} />
-                    {item}
-                  </div>
-                ))}
-              </div>
-
-              {/* Main area */}
-              <div style={{ flex: 1, padding: 24 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                  <div>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: color.ink }}>Dashboard</div>
-                    <div style={{ fontSize: 13, color: color.muted }}>Downtown Kitchen · Austin, TX</div>
-                  </div>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, backgroundColor: '#E8FAF1', color: '#1A8A5A', fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 999 }}>
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: color.teal }} />
-                    System running
-                  </div>
-                </div>
-
-                {/* KPI cards */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
-                  {[
-                    { label: 'MONTHLY RECURRING', value: '$6,200', sub: 'from 7 accounts', accent: false },
-                    { label: 'RECOVERED', value: '$1,840', sub: 'from re-engagement', accent: true },
-                    { label: 'AT-RISK', value: '3', sub: 'dormant 30+ days', accent: false },
-                    { label: 'UPCOMING', value: '8', sub: 'deposits secured', accent: false },
-                  ].map(k => (
-                    <div key={k.label} style={{ backgroundColor: color.cream, borderRadius: 10, padding: 14 }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: color.muted, letterSpacing: '0.05em' }}>{k.label}</div>
-                      <div style={{ fontSize: 22, fontWeight: 700, color: k.accent ? color.teal : color.ink, marginTop: 4 }}>{k.value}</div>
-                      <div style={{ fontSize: 11, color: color.muted, marginTop: 2 }}>{k.sub}</div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Activity rows */}
-                <div style={{ fontSize: 11, fontWeight: 700, color: color.muted, marginBottom: 8, letterSpacing: '0.05em' }}>RECENT ACTIVITY</div>
-                {[
-                  { text: 'Reorder reminder sent to Apex Financial', time: '2 hrs ago', c: color.teal },
-                  { text: 'New catering order — $1,240 from TechCorp', time: '5 hrs ago', c: color.orange },
-                  { text: 'Upsell added: beverage package +$85', time: 'Yesterday', c: color.teal },
-                ].map(a => (
-                  <div key={a.text} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: `1px solid ${color.creamDark}` }}>
-                    <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: a.c, flexShrink: 0 }} />
-                    <span style={{ fontSize: 13, color: color.ink, flex: 1 }}>{a.text}</span>
-                    <span style={{ fontSize: 11, color: color.muted, whiteSpace: 'nowrap' }}>{a.time}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Phone mockup — Storefront, floating on the right */}
-          <div
-            style={{
-              position: 'absolute',
-              right: -20,
-              bottom: -20,
-              width: 280,
-              backgroundColor: color.white,
-              borderRadius: 28,
-              border: `3px solid ${color.ink}`,
-              boxShadow: '0 24px 60px rgba(0,0,0,0.15)',
-              overflow: 'hidden',
-            }}
-          >
-            {/* Phone notch */}
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0 4px', backgroundColor: color.ink }}>
-              <div style={{ width: 80, height: 5, borderRadius: 10, backgroundColor: '#333' }} />
-            </div>
-            {/* Storefront header */}
-            <div style={{ backgroundColor: color.cream, padding: '16px 16px 12px' }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: color.ink }}>Downtown Kitchen</div>
-              <div style={{ fontSize: 11, color: color.muted, marginTop: 2 }}>Austin, TX · Corporate Catering</div>
-              <div style={{ fontSize: 10, color: color.teal, marginTop: 6, fontWeight: 600 }}>● Accepting Orders</div>
-            </div>
-            {/* Menu items */}
-            <div style={{ padding: '8px 12px', backgroundColor: color.cream }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: color.muted, marginBottom: 8, letterSpacing: '0.05em' }}>LUNCH PACKAGES</div>
-              {[
-                { name: 'Taco Platter', price: '$10/person', min: 'Min 10' },
-                { name: 'Basic Lunch Box', price: '$14.95/person', min: 'Min 10' },
-                { name: 'Premium Buffet', price: '$29.95/person', min: 'Min 20' },
-              ].map(p => (
-                <div key={p.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: `1px solid ${color.creamDark}` }}>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: color.ink }}>{p.name}</div>
-                    <div style={{ fontSize: 11, color: color.muted }}>{p.min}</div>
-                  </div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: color.orange }}>{p.price}</div>
-                </div>
-              ))}
-              <div style={{ fontSize: 10, fontWeight: 700, color: color.muted, marginTop: 12, marginBottom: 8, letterSpacing: '0.05em' }}>ADD-ONS</div>
-              {[
-                { name: 'Dessert Tray', price: '+$45' },
-                { name: 'Coffee & Tea', price: '+$3/pp' },
-              ].map(a => (
-                <div key={a.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${color.creamDark}` }}>
-                  <span style={{ fontSize: 12, color: color.ink }}>{a.name}</span>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: color.teal }}>{a.price}</span>
-                </div>
-              ))}
-            </div>
-            {/* Order button */}
-            <div style={{ padding: '12px 16px', backgroundColor: color.cream }}>
-              <div style={{ backgroundColor: color.orange, color: color.white, textAlign: 'center', padding: '10px 0', borderRadius: 10, fontSize: 13, fontWeight: 700 }}>
-                Place Catering Order →
-              </div>
-            </div>
-            {/* Phone bottom bar */}
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '6px 0', backgroundColor: color.ink }}>
-              <div style={{ width: 60, height: 4, borderRadius: 10, backgroundColor: '#444' }} />
-            </div>
+          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <PillButton text="Start Keeping Your Revenue →" href="https://dashboard.trayloophq.com/register" variant="primary" />
+            <PillButton text="See the System →" href="/product" variant="ghost" />
           </div>
         </div>
+
+        {/* Animated product hero */}
+        <AnimatedHero />
       </Section>
 
       {/* ── SAVINGS CALCULATOR ── */}
       <Section bg={color.creamDark} style={{ padding: '48px 24px' }}>
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: color.orange, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>The Marketplace Tax</div>
-          <h2 style={{ fontSize: 28, fontWeight: 700, color: color.ink, marginBottom: 8 }}>You already know you&apos;re paying too much. Here&apos;s the number.</h2>
-          <p style={{ fontSize: 15, color: color.muted, marginBottom: 4 }}>Most restaurant owners underestimate this by thousands.</p>
-          <p style={{ fontSize: 13, color: color.muted, fontStyle: 'italic' }}>This keeps happening every month until you stop.</p>
+          <h2 style={{ fontSize: 32, fontWeight: 800, color: color.ink, marginBottom: 8 }}>See what you&apos;re losing.</h2>
+          <p style={{ fontSize: 15, color: color.muted }}>Most owners underestimate this by thousands.</p>
         </div>
         <SavingsCalculator />
       </Section>
