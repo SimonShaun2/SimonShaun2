@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 const C = {
   cream: '#F9F5EF',
@@ -13,236 +13,543 @@ const C = {
   red: '#FF6243',
 };
 
-const activities = [
-  { text: 'New order — TechCorp', amount: '+$1,240', color: '#42D9A0' },
-  { text: 'Reorder triggered — Apex', amount: 'auto', color: '#E85618' },
-  { text: 'Deposit collected', amount: '+$247', color: '#42D9A0' },
-];
+interface AiCalculatorResult {
+  monthlyRevenue: number;
+  commissionRate: number;
+  businessType: string;
+  location: string | null;
+  marketplace: string | null;
+  marketplaceLossMonthly: number;
+  trayLoopCost: number;
+  monthlySavings: number;
+  annualSavings: number;
+  insight: string;
+}
 
+function formatCurrency(n: number) {
+  return n.toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  });
+}
+
+/**
+ * Compact AI Calculator for the mobile hero.
+ * Shares the /api/ai-calculator endpoint with the desktop SavingsCalculator.
+ * Sized so the headline + CTAs can still fit above the fold on a typical
+ * 6.1" phone viewport.
+ */
 export default function MobileHeroCard() {
-  const [idx, setIdx] = useState(0);
+  const [prompt, setPrompt] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<AiCalculatorResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const timer = setInterval(() => setIdx((i) => (i + 1) % activities.length), 2400);
-    return () => clearInterval(timer);
-  }, []);
+  async function handleAnalyze() {
+    if (!prompt.trim()) {
+      setError('Tell us about your catering business.');
+      setResult(null);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/ai-calculator', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+      });
+
+      const payload = (await response.json()) as AiCalculatorResult & { error?: string };
+
+      if (!response.ok) {
+        throw new Error(payload.error || 'We could not analyze your business.');
+      }
+
+      setResult(payload);
+    } catch (err) {
+      setResult(null);
+      setError(err instanceof Error ? err.message : 'We could not analyze your business.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function reset() {
+    setResult(null);
+    setError(null);
+  }
+
+  const youKeepMarketplace = result ? result.monthlyRevenue - result.marketplaceLossMonthly : 0;
+  const youKeepTrayloop = result ? result.monthlyRevenue - result.trayLoopCost : 0;
 
   return (
     <div
       style={{
         position: 'relative',
-        maxWidth: 340,
+        maxWidth: 320,
         margin: '0 auto',
-        padding: '20px 0 40px',
+        padding: '8px 0 16px',
       }}
     >
       <style>{`
-        @keyframes mhFadeUp {
-          0% { opacity: 0; transform: translateY(8px); }
+        @keyframes mhcFadeUp {
+          0% { opacity: 0; transform: translateY(6px); }
           100% { opacity: 1; transform: translateY(0); }
         }
-        @keyframes mhPulse {
-          0%, 100% { opacity: 0.4; }
-          50% { opacity: 1; }
+        @keyframes mhcPulse {
+          0%, 80%, 100% { transform: scale(0.7); opacity: 0.45; }
+          40% { transform: scale(1); opacity: 1; }
         }
-        .mh-new { animation: mhFadeUp 0.5s ease-out; }
-        .mh-pulse { animation: mhPulse 2s ease-in-out infinite; }
+        .mhc-fade { animation: mhcFadeUp 0.4s ease-out; }
+        .mhc-dots {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+        }
+        .mhc-dots span {
+          width: 6px;
+          height: 6px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.92);
+          animation: mhcPulse 1s infinite ease-in-out;
+        }
+        .mhc-dots span:nth-child(2) { animation-delay: 0.15s; }
+        .mhc-dots span:nth-child(3) { animation-delay: 0.3s; }
       `}</style>
 
-      {/* Decorative teal gradient bg — like Owner.com */}
+      {/* Subtle teal glow behind card */}
       <div
         style={{
           position: 'absolute',
-          top: 40,
+          top: 10,
           left: '50%',
           transform: 'translateX(-50%)',
-          width: 300,
-          height: 300,
+          width: 260,
+          height: 260,
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(66,217,160,0.15) 0%, rgba(66,217,160,0) 70%)',
+          background:
+            'radial-gradient(circle, rgba(66,217,160,0.12) 0%, rgba(66,217,160,0) 70%)',
           zIndex: 0,
+          pointerEvents: 'none',
         }}
       />
 
-      {/* Floating product card */}
+      {/* Calculator card — compact */}
       <div
         style={{
           position: 'relative',
-          backgroundColor: C.white,
-          borderRadius: 20,
-          border: `1px solid ${C.creamDark}`,
-          padding: 20,
-          boxShadow: '0 20px 60px rgba(0,0,0,0.12)',
           zIndex: 1,
+          backgroundColor: C.white,
+          borderRadius: 16,
+          border: `1px solid ${C.creamDark}`,
+          padding: 16,
+          boxShadow: '0 12px 32px rgba(0,0,0,0.10)',
         }}
       >
-        {/* Header */}
+        {/* Header: AI badge + GPT-4o */}
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            marginBottom: 16,
+            alignItems: 'center',
+            marginBottom: 10,
           }}
         >
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, letterSpacing: '0.08em' }}>
-              YOUR DASHBOARD
-            </div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: C.ink, marginTop: 2 }}>
-              Downtown Kitchen
-            </div>
-          </div>
           <div
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: 5,
-              backgroundColor: '#E8FAF1',
-              color: '#1A8A5A',
-              fontSize: 10,
-              fontWeight: 700,
-              padding: '3px 8px',
+              backgroundColor: C.ink,
               borderRadius: 999,
+              padding: '3px 9px',
             }}
           >
+            <span style={{ fontSize: 9, color: C.orange }}>✨</span>
             <span
-              className="mh-pulse"
-              style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: C.teal }}
+              style={{
+                fontSize: 8,
+                fontWeight: 800,
+                color: C.white,
+                letterSpacing: '0.04em',
+              }}
+            >
+              AI CALCULATOR
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span
+              style={{
+                width: 5,
+                height: 5,
+                borderRadius: '50%',
+                backgroundColor: C.teal,
+              }}
             />
-            LIVE
+            <span style={{ fontSize: 9, fontWeight: 500, color: C.muted }}>GPT-4o</span>
           </div>
         </div>
 
-        {/* Hero stat — big and bold */}
-        <div
-          style={{
-            backgroundColor: C.ink,
-            borderRadius: 14,
-            padding: '18px 18px 16px',
-            marginBottom: 12,
-          }}
-        >
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#9A8E84', letterSpacing: '0.06em' }}>
-            RECURRING REVENUE
-          </div>
-          <div
-            style={{
-              fontSize: 32,
-              fontWeight: 800,
-              color: C.white,
-              marginTop: 2,
-              letterSpacing: '-0.02em',
-            }}
-          >
-            $18,400
-          </div>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 4,
-              fontSize: 11,
-              fontWeight: 700,
-              color: C.teal,
-              marginTop: 2,
-            }}
-          >
-            <span>↑ 23%</span>
-            <span style={{ color: '#9A8E84', fontWeight: 400 }}>this month</span>
-          </div>
-        </div>
+        {!result ? (
+          <>
+            {/* Empty / prompt state */}
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 700,
+                color: C.ink,
+                marginBottom: 6,
+                textAlign: 'center',
+              }}
+            >
+              What are marketplaces costing you?
+            </div>
 
-        {/* Secondary KPI row */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-          <div
-            style={{
-              flex: 1,
-              backgroundColor: C.cream,
-              borderRadius: 10,
-              padding: '10px 12px',
-            }}
-          >
-            <div style={{ fontSize: 9, fontWeight: 700, color: C.muted, letterSpacing: '0.04em' }}>
-              RECURRING
-            </div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: C.teal, marginTop: 2 }}>
-              $12.8K
-            </div>
-          </div>
-          <div
-            style={{
-              flex: 1,
-              backgroundColor: C.cream,
-              borderRadius: 10,
-              padding: '10px 12px',
-            }}
-          >
-            <div style={{ fontSize: 9, fontWeight: 700, color: C.muted, letterSpacing: '0.04em' }}>
-              REORDER RATE
-            </div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: C.ink, marginTop: 2 }}>72%</div>
-          </div>
-        </div>
+            <textarea
+              value={prompt}
+              onChange={(e) => {
+                setPrompt(e.target.value);
+                if (error) setError(null);
+              }}
+              placeholder='"BBQ restaurant in Austin, $12k/mo on EzCater"'
+              rows={3}
+              disabled={loading}
+              style={{
+                width: '100%',
+                resize: 'none',
+                minHeight: 68,
+                borderRadius: 10,
+                border: `1.5px solid ${error ? '#F4B7AA' : C.creamDark}`,
+                backgroundColor: C.cream,
+                color: C.ink,
+                fontSize: 12,
+                lineHeight: 1.5,
+                padding: '10px 12px',
+                outline: 'none',
+                fontFamily: 'inherit',
+                marginBottom: 8,
+                boxSizing: 'border-box',
+                opacity: loading ? 0.6 : 1,
+              }}
+            />
 
-        {/* Live activity */}
-        <div style={{ fontSize: 9, fontWeight: 700, color: C.muted, letterSpacing: '0.06em', marginBottom: 8 }}>
-          LIVE ACTIVITY
-        </div>
-        <div
-          key={idx}
-          className="mh-new"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            backgroundColor: C.cream,
-            borderRadius: 10,
-            padding: '10px 12px',
-            marginBottom: 6,
-          }}
-        >
-          <span
-            className="mh-pulse"
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              backgroundColor: activities[idx].color,
-              flexShrink: 0,
-            }}
-          />
-          <span style={{ fontSize: 12, color: C.ink, flex: 1, fontWeight: 500 }}>
-            {activities[idx].text}
-          </span>
-          <span style={{ fontSize: 12, fontWeight: 800, color: activities[idx].color }}>
-            {activities[idx].amount}
-          </span>
-        </div>
+            {error ? (
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: '#C74D36',
+                  marginBottom: 8,
+                }}
+              >
+                {error}
+              </div>
+            ) : null}
 
-        {/* Zero commissions badge */}
-        <div
-          style={{
-            marginTop: 12,
-            backgroundColor: '#FEF6F1',
-            border: `1px solid ${C.creamDark}`,
-            borderRadius: 10,
-            padding: '10px 12px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, letterSpacing: '0.04em' }}>
-              COMMISSION FEES
+            <button
+              type="button"
+              onClick={handleAnalyze}
+              disabled={loading}
+              style={{
+                width: '100%',
+                border: 'none',
+                borderRadius: 10,
+                padding: '12px 14px',
+                fontSize: 13,
+                fontWeight: 800,
+                cursor: loading ? 'wait' : 'pointer',
+                backgroundColor: loading ? C.ink : C.orange,
+                color: C.white,
+                marginBottom: 8,
+              }}
+            >
+              {loading ? (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 7,
+                    justifyContent: 'center',
+                  }}
+                >
+                  <span className="mhc-dots" aria-hidden="true">
+                    <span />
+                    <span />
+                    <span />
+                  </span>
+                  Analyzing...
+                </span>
+              ) : (
+                '✨ Analyze with AI →'
+              )}
+            </button>
+
+            {/* Trust row */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                gap: 10,
+                fontSize: 9,
+                color: C.muted,
+                fontWeight: 500,
+              }}
+            >
+              <span>🔒 No email</span>
+              <span>⚡ 2 sec</span>
+              <span>💯 Free</span>
             </div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: C.orange, marginTop: 1 }}>$0</div>
-          </div>
-          <div style={{ fontSize: 11, color: C.muted, textAlign: 'right', maxWidth: 120, lineHeight: 1.3 }}>
-            kept from<br />marketplaces
-          </div>
-        </div>
+          </>
+        ) : (
+          <>
+            {/* Result state — State 4 compact */}
+            <div
+              className="mhc-fade"
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                backgroundColor: C.cream,
+                borderRadius: 8,
+                padding: '6px 10px',
+                marginBottom: 8,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 10,
+                  color: C.muted,
+                  fontWeight: 500,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  maxWidth: 210,
+                }}
+              >
+                💬 {result.businessType}
+                {result.location ? ` · ${result.location}` : ''}
+              </span>
+              <button
+                type="button"
+                onClick={reset}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  color: C.orange,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  padding: 0,
+                }}
+              >
+                Edit
+              </button>
+            </div>
+
+            {/* AI insight card */}
+            <div
+              className="mhc-fade"
+              style={{
+                backgroundColor: C.ink,
+                borderRadius: 12,
+                padding: '11px 13px',
+                marginBottom: 8,
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  marginBottom: 4,
+                }}
+              >
+                <span style={{ fontSize: 9, color: C.orange }}>✨</span>
+                <span
+                  style={{
+                    fontSize: 8,
+                    fontWeight: 800,
+                    color: C.orange,
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  AI ANALYSIS
+                </span>
+              </div>
+              <div
+                style={{
+                  fontSize: 11,
+                  lineHeight: 1.5,
+                  color: C.white,
+                  fontWeight: 500,
+                }}
+              >
+                {result.insight}
+              </div>
+            </div>
+
+            {/* Marketplace card */}
+            <div
+              className="mhc-fade"
+              style={{
+                backgroundColor: '#FEF2F0',
+                border: '1px solid #FCDDD8',
+                borderRadius: 10,
+                padding: '9px 11px',
+                marginBottom: 6,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 8,
+                  fontWeight: 800,
+                  color: C.muted,
+                  letterSpacing: '0.04em',
+                  marginBottom: 3,
+                }}
+              >
+                {result.marketplace
+                  ? `WITH ${result.marketplace.toUpperCase()}`
+                  : 'WITH MARKETPLACE'}
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: 10,
+                  color: C.muted,
+                  marginBottom: 2,
+                }}
+              >
+                <span>Commission ({result.commissionRate}%)</span>
+                <span style={{ fontWeight: 700, color: C.red }}>
+                  -{formatCurrency(result.marketplaceLossMonthly)}
+                </span>
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  borderTop: '1px solid #F5CCC5',
+                  paddingTop: 4,
+                  marginTop: 4,
+                }}
+              >
+                <span style={{ fontSize: 10, fontWeight: 700, color: C.ink }}>You keep</span>
+                <span style={{ fontSize: 14, fontWeight: 800, color: C.ink }}>
+                  {formatCurrency(youKeepMarketplace)}
+                </span>
+              </div>
+            </div>
+
+            {/* TrayLoop card */}
+            <div
+              className="mhc-fade"
+              style={{
+                backgroundColor: '#EAFAF3',
+                border: `2px solid ${C.teal}`,
+                borderRadius: 10,
+                padding: '9px 11px',
+                marginBottom: 8,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 8,
+                  fontWeight: 800,
+                  color: '#1D7A55',
+                  letterSpacing: '0.04em',
+                  marginBottom: 3,
+                }}
+              >
+                WITH TRAYLOOP
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: 10,
+                  color: C.muted,
+                  marginBottom: 2,
+                }}
+              >
+                <span>Flat fee</span>
+                <span style={{ fontWeight: 700, color: '#1D7A55' }}>
+                  -{formatCurrency(result.trayLoopCost)}
+                </span>
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  borderTop: '1px solid #B8E8D4',
+                  paddingTop: 4,
+                  marginTop: 4,
+                }}
+              >
+                <span style={{ fontSize: 10, fontWeight: 700, color: '#1D7A55' }}>You keep</span>
+                <span style={{ fontSize: 14, fontWeight: 800, color: '#1D7A55' }}>
+                  {formatCurrency(youKeepTrayloop)}
+                </span>
+              </div>
+            </div>
+
+            {/* Punchline */}
+            {result.monthlySavings > 0 ? (
+              <div
+                className="mhc-fade"
+                style={{
+                  backgroundColor: '#1D7A55',
+                  borderRadius: 12,
+                  padding: '12px 14px',
+                  textAlign: 'center',
+                  marginBottom: 8,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 9,
+                    fontWeight: 600,
+                    color: '#A8E6CE',
+                    marginBottom: 1,
+                  }}
+                >
+                  You&apos;d keep
+                </div>
+                <div style={{ fontSize: 24, fontWeight: 800, color: C.white, lineHeight: 1.1 }}>
+                  {formatCurrency(result.monthlySavings)} more
+                </div>
+                <div style={{ fontSize: 10, color: '#A8E6CE', marginTop: 2 }}>
+                  every month — {formatCurrency(result.annualSavings)}/year
+                </div>
+              </div>
+            ) : null}
+
+            {/* CTA */}
+            <a
+              href="https://dashboard.trayloophq.com/register"
+              style={{
+                display: 'block',
+                textAlign: 'center',
+                textDecoration: 'none',
+                backgroundColor: C.orange,
+                color: C.white,
+                fontSize: 12,
+                fontWeight: 800,
+                padding: '12px 14px',
+                borderRadius: 10,
+              }}
+            >
+              Start Keeping My Revenue →
+            </a>
+          </>
+        )}
       </div>
     </div>
   );
