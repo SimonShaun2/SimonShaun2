@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import PillButton from '@/components/pill-button';
 import SavingsCalculator from '@/components/savings-calculator';
 import AnimatedHero from '@/components/animated-hero';
+import MobileHeroCard from '@/components/mobile-hero-card';
 
 /* ── Design tokens ── */
 const color = {
@@ -185,36 +186,38 @@ export default function HomePage() {
     <main>
       {/* ── HERO — Lean: headline + 2 CTAs + animated product ── */}
       <style>{`
+        .tl-desktop-hero { display: block; }
+        .tl-mobile-hero { display: none; }
         @media (max-width: 768px) {
           .tl-hero-section {
-            padding-top: 32px !important;
-            padding-bottom: 24px !important;
+            padding-top: 28px !important;
+            padding-bottom: 20px !important;
           }
           .tl-hero-text {
-            margin-bottom: 20px !important;
+            margin-bottom: 16px !important;
           }
           .tl-hero-headline {
-            font-size: 32px !important;
+            font-size: 30px !important;
             line-height: 1.15 !important;
-            margin-bottom: 12px !important;
+            margin-bottom: 10px !important;
+            letter-spacing: -0.01em !important;
           }
           .tl-hero-sub {
-            font-size: 15px !important;
-            margin-bottom: 20px !important;
+            font-size: 14px !important;
+            margin-bottom: 16px !important;
           }
           .tl-hero-ctas {
-            gap: 10px !important;
+            gap: 8px !important;
           }
           .tl-hero-ctas > * {
             font-size: 13px !important;
           }
+          .tl-desktop-hero { display: none !important; }
+          .tl-mobile-hero { display: block !important; }
         }
         @media (max-width: 480px) {
-          .tl-hero-section {
-            padding-top: 24px !important;
-          }
           .tl-hero-headline {
-            font-size: 28px !important;
+            font-size: 26px !important;
           }
         }
       `}</style>
@@ -253,8 +256,15 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Animated product hero */}
-        <AnimatedHero />
+        {/* Desktop: full browser + phone animated hero */}
+        <div className="tl-desktop-hero">
+          <AnimatedHero />
+        </div>
+
+        {/* Mobile: single focused product card */}
+        <div className="tl-mobile-hero">
+          <MobileHeroCard />
+        </div>
       </Section>
 
       {/* ── SAVINGS CALCULATOR ── */}
