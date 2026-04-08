@@ -3,6 +3,7 @@ import PillButton from '@/components/pill-button';
 import SavingsCalculator from '@/components/savings-calculator';
 import AnimatedHero from '@/components/animated-hero';
 import MobileHeroCard from '@/components/mobile-hero-card';
+import MobileDashboardCard from '@/components/mobile-dashboard-card';
 
 /* ── Design tokens ── */
 const color = {
@@ -188,23 +189,30 @@ export default function HomePage() {
       <style>{`
         .tl-desktop-hero { display: block; }
         .tl-mobile-hero { display: none; }
+        .tl-mobile-dashboard { display: none; }
+
         @media (max-width: 768px) {
+          /* ── Hero adjustments ── */
           .tl-hero-section {
-            padding-top: 28px !important;
-            padding-bottom: 20px !important;
+            padding-top: 24px !important;
+            padding-bottom: 16px !important;
           }
           .tl-hero-text {
             margin-bottom: 16px !important;
+            padding-left: 4px !important;
+            padding-right: 4px !important;
           }
           .tl-hero-headline {
-            font-size: 30px !important;
-            line-height: 1.15 !important;
+            font-size: 28px !important;
+            line-height: 1.18 !important;
             margin-bottom: 10px !important;
             letter-spacing: -0.01em !important;
           }
           .tl-hero-sub {
             font-size: 14px !important;
+            line-height: 1.5 !important;
             margin-bottom: 16px !important;
+            max-width: 320px !important;
           }
           .tl-hero-ctas {
             gap: 8px !important;
@@ -214,11 +222,59 @@ export default function HomePage() {
           }
           .tl-desktop-hero { display: none !important; }
           .tl-mobile-hero { display: block !important; }
+          .tl-mobile-dashboard { display: block !important; }
           .tl-desktop-only-section { display: none !important; }
+
+          /* ── Global mobile typography normalization ── */
+          main h1 {
+            font-size: 28px !important;
+            line-height: 1.18 !important;
+            letter-spacing: -0.01em !important;
+          }
+          main h2 {
+            font-size: 22px !important;
+            line-height: 1.25 !important;
+            letter-spacing: -0.005em !important;
+          }
+          main h3 {
+            font-size: 17px !important;
+            line-height: 1.3 !important;
+          }
+          main section {
+            padding-top: 48px !important;
+            padding-bottom: 48px !important;
+            padding-left: 20px !important;
+            padding-right: 20px !important;
+          }
+          main section p {
+            font-size: 14px !important;
+            line-height: 1.55 !important;
+          }
+          /* Dashboard mockup text overrides — don't shrink these */
+          main .tl-mobile-dashboard h1,
+          main .tl-mobile-dashboard h2,
+          main .tl-mobile-dashboard h3,
+          main .tl-mobile-dashboard p {
+            font-size: unset !important;
+            line-height: unset !important;
+          }
+          main .tl-mobile-hero h1,
+          main .tl-mobile-hero h2,
+          main .tl-mobile-hero h3,
+          main .tl-mobile-hero p {
+            font-size: unset !important;
+            line-height: unset !important;
+          }
         }
         @media (max-width: 480px) {
           .tl-hero-headline {
-            font-size: 26px !important;
+            font-size: 24px !important;
+          }
+          main h1 { font-size: 24px !important; }
+          main h2 { font-size: 20px !important; }
+          main section {
+            padding-top: 40px !important;
+            padding-bottom: 40px !important;
           }
         }
       `}</style>
@@ -262,9 +318,27 @@ export default function HomePage() {
           <AnimatedHero />
         </div>
 
-        {/* Mobile: single focused product card */}
+        {/* Mobile: AI calculator as the opening image */}
         <div className="tl-mobile-hero">
           <MobileHeroCard />
+        </div>
+
+        {/* Mobile: live dashboard preview below the calculator */}
+        <div className="tl-mobile-dashboard" style={{ marginTop: 20 }}>
+          <div
+            style={{
+              textAlign: 'center',
+              fontSize: 11,
+              fontWeight: 700,
+              color: color.muted,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              marginBottom: 10,
+            }}
+          >
+            Here&apos;s what happens after you switch
+          </div>
+          <MobileDashboardCard />
         </div>
       </Section>
 
