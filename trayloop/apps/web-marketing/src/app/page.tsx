@@ -20,13 +20,16 @@ function Section({
   children,
   bg = 'transparent',
   style,
+  className,
 }: {
   children: React.ReactNode;
   bg?: string;
   style?: CSSProperties;
+  className?: string;
 }) {
   return (
     <section
+      className={className}
       style={{
         backgroundColor: bg,
         padding: '80px 24px',
@@ -181,9 +184,44 @@ export default function HomePage() {
   return (
     <main>
       {/* ── HERO — Lean: headline + 2 CTAs + animated product ── */}
-      <Section bg={color.cream} style={{ paddingTop: 80, paddingBottom: 40 }}>
-        <div style={{ textAlign: 'center', maxWidth: 780, margin: '0 auto 40px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .tl-hero-section {
+            padding-top: 32px !important;
+            padding-bottom: 24px !important;
+          }
+          .tl-hero-text {
+            margin-bottom: 20px !important;
+          }
+          .tl-hero-headline {
+            font-size: 32px !important;
+            line-height: 1.15 !important;
+            margin-bottom: 12px !important;
+          }
+          .tl-hero-sub {
+            font-size: 15px !important;
+            margin-bottom: 20px !important;
+          }
+          .tl-hero-ctas {
+            gap: 10px !important;
+          }
+          .tl-hero-ctas > * {
+            font-size: 13px !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .tl-hero-section {
+            padding-top: 24px !important;
+          }
+          .tl-hero-headline {
+            font-size: 28px !important;
+          }
+        }
+      `}</style>
+      <Section bg={color.cream} style={{ paddingTop: 80, paddingBottom: 40 }} className="tl-hero-section">
+        <div className="tl-hero-text" style={{ textAlign: 'center', maxWidth: 780, margin: '0 auto 40px' }}>
           <h1
+            className="tl-hero-headline"
             style={{
               fontSize: 56,
               fontWeight: 800,
@@ -196,6 +234,7 @@ export default function HomePage() {
             Catering revenue that stays with your restaurant.
           </h1>
           <p
+            className="tl-hero-sub"
             style={{
               fontSize: 19,
               lineHeight: 1.5,
@@ -208,7 +247,7 @@ export default function HomePage() {
             Replace marketplace commissions with a direct ordering system you own.
           </p>
 
-          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div className="tl-hero-ctas" style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
             <PillButton text="Start Keeping Your Revenue →" href="https://dashboard.trayloophq.com/register" variant="primary" />
             <PillButton text="See the System →" href="/product" variant="ghost" />
           </div>

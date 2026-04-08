@@ -86,14 +86,69 @@ export default function AnimatedHero() {
         .tl-pulse { animation: tlPulse 2s ease-in-out infinite; }
         .tl-activity { animation: tlSlideIn 0.5s ease-out; }
         @media (max-width: 900px) {
+          .tl-hero-browser {
+            padding-right: 0 !important;
+          }
           .tl-hero-phone {
             position: relative !important;
             right: auto !important;
             bottom: auto !important;
-            margin: 24px auto 0 !important;
+            margin: 20px auto 0 !important;
+            width: 230px !important;
           }
+        }
+        @media (max-width: 768px) {
           .tl-hero-browser {
-            padding-right: 0 !important;
+            border-radius: 12px !important;
+          }
+          .tl-hero-dash-area {
+            min-height: 280px !important;
+          }
+          .tl-hero-sidebar {
+            width: 120px !important;
+          }
+          .tl-hero-sidebar-logo {
+            font-size: 13px !important;
+            padding: 0 12px 14px !important;
+          }
+          .tl-hero-sidebar-item {
+            font-size: 11px !important;
+            padding: 6px 12px !important;
+          }
+          .tl-hero-dash-main {
+            padding: 16px !important;
+          }
+          .tl-hero-dash-title {
+            font-size: 15px !important;
+          }
+          .tl-hero-kpi-value {
+            font-size: 16px !important;
+          }
+          .tl-hero-kpi-label {
+            font-size: 10px !important;
+          }
+          .tl-hero-phone {
+            width: 200px !important;
+            margin-top: 14px !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .tl-hero-sidebar {
+            width: 88px !important;
+          }
+          .tl-hero-sidebar-logo {
+            font-size: 11px !important;
+            padding: 0 10px 12px !important;
+          }
+          .tl-hero-sidebar-item {
+            font-size: 10px !important;
+            padding: 5px 10px !important;
+          }
+          .tl-hero-dash-main {
+            padding: 12px !important;
+          }
+          .tl-hero-phone {
+            width: 180px !important;
           }
         }
       `}</style>
@@ -138,9 +193,10 @@ export default function AnimatedHero() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', minHeight: 360 }}>
+        <div className="tl-hero-dash-area" style={{ display: 'flex', minHeight: 360 }}>
           {/* Sidebar */}
           <div
+            className="tl-hero-sidebar"
             style={{
               width: 180,
               backgroundColor: C.ink,
@@ -148,13 +204,14 @@ export default function AnimatedHero() {
               flexShrink: 0,
             }}
           >
-            <div style={{ padding: '0 16px 20px', fontSize: 16, fontWeight: 700, color: C.white }}>
+            <div className="tl-hero-sidebar-logo" style={{ padding: '0 16px 20px', fontSize: 16, fontWeight: 700, color: C.white }}>
               Tray.Loop
             </div>
             {['Dashboard', 'Orders', 'Customers', 'Offerings', 'Follow-Ups', 'Revenue'].map(
               (item, i) => (
                 <div
                   key={item}
+                  className="tl-hero-sidebar-item"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -181,7 +238,7 @@ export default function AnimatedHero() {
           </div>
 
           {/* Main */}
-          <div style={{ flex: 1, padding: 24, minWidth: 0 }}>
+          <div className="tl-hero-dash-main" style={{ flex: 1, padding: 24, minWidth: 0 }}>
             <div
               style={{
                 display: 'flex',
@@ -193,7 +250,7 @@ export default function AnimatedHero() {
               }}
             >
               <div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: C.ink }}>Dashboard</div>
+                <div className="tl-hero-dash-title" style={{ fontSize: 18, fontWeight: 700, color: C.ink }}>Dashboard</div>
                 <div style={{ fontSize: 12, color: C.muted }}>Downtown Kitchen · Austin, TX</div>
               </div>
               <div
@@ -239,10 +296,10 @@ export default function AnimatedHero() {
                     padding: '12px 14px',
                   }}
                 >
-                  <div style={{ fontSize: 11, color: C.muted }}>{kpi.label}</div>
+                  <div className="tl-hero-kpi-label" style={{ fontSize: 11, color: C.muted }}>{kpi.label}</div>
                   <div
                     key={`${kpi.value}-${activityPulse}`}
-                    className="tl-activity"
+                    className="tl-activity tl-hero-kpi-value"
                     style={{ fontSize: 20, fontWeight: 700, color: kpi.color, marginTop: 2 }}
                   >
                     {kpi.value}
