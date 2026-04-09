@@ -85,16 +85,33 @@ export default function StorefrontAuthNav({ variant = 'dark' }: { variant?: 'dar
 
   if (!customerName) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          flexWrap: 'nowrap',
+          justifyContent: 'flex-end',
+          whiteSpace: 'nowrap',
+        }}
+      >
         <Link href="/login" style={linkStyle}>Sign In</Link>
-        <Link href="/signup" style={linkStyle}>Create Account</Link>
       </div>
     );
   }
 
   return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-        <Link href="/account" style={linkStyle}>Account</Link>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        flexWrap: 'nowrap',
+        justifyContent: 'flex-end',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      <Link href="/account" style={linkStyle}>Account</Link>
       <span style={{ color: isLight ? '#57534E' : '#D6D3D1', fontSize: 12, whiteSpace: 'nowrap' }}>{customerName}</span>
       <button
         type="button"
