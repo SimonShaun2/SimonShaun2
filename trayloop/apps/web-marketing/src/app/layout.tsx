@@ -37,9 +37,13 @@ export const metadata: Metadata = {
   },
 };
 
+// Meta Pixel ID is public (visible in page source) so hardcoding is safe.
+// Env var override still works for staging/test pixels.
+const DEFAULT_FB_PIXEL_ID = '1744035356719506';
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const gaId = process.env.NEXT_PUBLIC_GA_ID;
-  const fbPixelId = process.env.NEXT_PUBLIC_FB_PIXEL_ID;
+  const fbPixelId = process.env.NEXT_PUBLIC_FB_PIXEL_ID ?? DEFAULT_FB_PIXEL_ID;
 
   return (
     <html lang="en">
