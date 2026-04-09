@@ -48,6 +48,10 @@ interface RecurringPreset {
   deliveriesPerMonth: number;
   apiInterval: 'weekly' | 'biweekly' | 'monthly';
 }
+type ItemModalState =
+  | { type: 'package'; id: string }
+  | { type: 'addon'; id: string }
+  | null;
 
 const SERVICE_MODE_LABELS: Record<StorefrontServiceMode, string> = {
   delivery: 'Delivery',
@@ -565,6 +569,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
   >([]);
   const [oftenAdded, setOftenAdded] = useState<StorefrontAddOn[]>([]);
   const [socialProof, setSocialProof] = useState<StorefrontUpsellSocialProof | null>(null);
+  const [itemModal, setItemModal] = useState<ItemModalState>(null);
   const recurringPresets = useMemo(() => getRecurringPresets(new Date().getDay()), []);
   const [recurringEnabled, setRecurringEnabled] = useState(false);
   const [recurringPreset, setRecurringPreset] = useState<RecurringPresetId>(
@@ -609,6 +614,14 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
     [allAddOns, searchTerm],
   );
   const primaryUpsell = upsellRecommendations[0] ?? null;
+  const modalPackage =
+    itemModal?.type === 'package'
+      ? allPackages.find((pkg) => pkg.id === itemModal.id) ?? null
+      : null;
+  const modalAddOn =
+    itemModal?.type === 'addon'
+      ? allAddOns.find((addOn) => addOn.id === itemModal.id) ?? null
+      : null;
   const showSocialProof = Boolean(socialProof && socialProof.ordersAnalyzed >= 3);
   const socialProofLabel =
     showSocialProof && socialProof
@@ -658,6 +671,11 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
     () => oftenAdded.filter((addOn) => (selectedAddOnIds[addOn.id] ?? 0) === 0).slice(0, 3),
     [oftenAdded, selectedAddOnIds],
   );
+  const modalSuggestedAddOns = useMemo(() => {
+    const excludeId = itemModal?.type === 'addon' ? itemModal.id : null;
+    const base = suggestedOftenAdded.length > 0 ? suggestedOftenAdded : filteredAddOns;
+    return base.filter((addOn) => addOn.id !== excludeId).slice(0, 3);
+  }, [filteredAddOns, itemModal, suggestedOftenAdded]);
   const socialProofAverageLabel = socialProof?.averageAddOnRevenue
     ? formatCurrencyAmount(Math.round(socialProof.averageAddOnRevenue))
     : null;
@@ -824,6 +842,14 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
       cancelled = true;
     };
   }, [merchant.slug, searchParams]);
+  useEffect(() => {
+    if (!itemModal) return;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setItemModal(null);
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [itemModal]);
   useEffect(() => {
     if (!primaryUpsell) return;
     const trackingKey = `${primaryUpsell.addOnId}:${headcount}:${selectedLocationSlug}`;
@@ -2185,6 +2211,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                       return (
                         <article
                           key={pkg.id}
+                          onClick={() => setItemModal({ type: 'package', id: pkg.id })}
                           style={{
                             flex: '0 0 auto',
                             width: isMobile ? 184 : isLaptop ? 228 : 244,
@@ -2196,6 +2223,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                             display: 'grid',
                             gridTemplateRows: isMobile ? '108px 1fr' : isLaptop ? '170px 1fr' : '184px 1fr',
                             scrollSnapAlign: 'start',
+                            cursor: 'pointer',
                           }}
                         >
                           <div style={{ background: pkg.imageUrl ? '#F5F5F4' : undefined }}>
@@ -2253,11 +2281,11 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                                 <div
                                   style={{
                                     marginTop: 6,
-                                    fontSize: 11,
+                                    fontSize: 10,
                                     lineHeight: 1.45,
                                     color: MUTED,
                                     display: '-webkit-box',
-                                    WebkitLineClamp: 2,
+                                    WebkitLineClamp: 1,
                                     WebkitBoxOrient: 'vertical',
                                     overflow: 'hidden',
                                   }}
@@ -2288,7 +2316,10 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                               ) : (
                                 <button
                                   type="button"
-                                  onClick={() => updatePackageQuantity(pkg.id, 1)}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    updatePackageQuantity(pkg.id, 1);
+                                  }}
                                   style={{
                                     width: 34,
                                     height: 34,
@@ -2401,6 +2432,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                       return (
                         <article
                           key={addOn.id}
+                          onClick={() => setItemModal({ type: 'addon', id: addOn.id })}
                           style={{
                             flex: '0 0 auto',
                             width: isMobile ? 184 : isLaptop ? 228 : 244,
@@ -2412,6 +2444,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                             display: 'grid',
                             gridTemplateRows: isMobile ? '108px 1fr' : isLaptop ? '170px 1fr' : '184px 1fr',
                             scrollSnapAlign: 'start',
+                            cursor: 'pointer',
                           }}
                         >
                           <div style={{ background: addOn.imageUrl ? '#F5F5F4' : undefined }}>
@@ -2432,11 +2465,11 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                                 <div
                                   style={{
                                     marginTop: 6,
-                                    fontSize: 11,
+                                    fontSize: 10,
                                     lineHeight: 1.45,
                                     color: MUTED,
                                     display: '-webkit-box',
-                                    WebkitLineClamp: 2,
+                                    WebkitLineClamp: 1,
                                     WebkitBoxOrient: 'vertical',
                                     overflow: 'hidden',
                                   }}
@@ -2466,7 +2499,10 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                               ) : (
                                 <button
                                   type="button"
-                                  onClick={() => updateAddOnQuantity(addOn.id, 1)}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    updateAddOnQuantity(addOn.id, 1);
+                                  }}
                                   style={{
                                     width: 34,
                                     height: 34,
@@ -2971,6 +3007,232 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
             >
               {submitting ? 'Preparing order...' : 'Place Order ->'}
             </button>
+          </div>
+        </div>
+      ) : null}
+      {itemModal && (modalPackage || modalAddOn) ? (
+        <div
+          onClick={() => setItemModal(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 80,
+            background: 'rgba(26,22,18,0.48)',
+            display: 'grid',
+            placeItems: 'center',
+            padding: isMobile ? '16px' : '28px',
+          }}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: isMobile ? 420 : 760,
+              maxHeight: '84vh',
+              overflowY: 'auto',
+              borderRadius: isMobile ? 24 : 28,
+              background: '#FFFFFF',
+              boxShadow: '0 30px 80px rgba(26,22,18,0.28)',
+            }}
+            className="storefront-scrollbar"
+          >
+            {(() => {
+              const activePackage = modalPackage;
+              const activeAddOn = modalAddOn;
+              const activeName = activePackage?.name ?? activeAddOn?.name ?? '';
+              const activeDescription =
+                activePackage?.description ??
+                activeAddOn?.description ??
+                'Prepared fresh by the merchant.';
+              const activeImage = activePackage?.imageUrl ?? activeAddOn?.imageUrl ?? null;
+              const activeQuantity =
+                activePackage
+                  ? selectedPkgs[activePackage.id] ?? 0
+                  : activeAddOn
+                    ? selectedAddOnIds[activeAddOn.id] ?? 0
+                    : 0;
+              const activePrice = activePackage
+                ? activePackage.pricePerHead * headcount
+                : activeAddOn
+                  ? activeAddOn.price
+                  : 0;
+              return (
+                <>
+                  <div style={{ position: 'relative' }}>
+                    <div style={{ height: isMobile ? 220 : 300, background: activeImage ? '#F5F5F4' : undefined }}>
+                      {activeImage ? (
+                        <img
+                          src={activeImage}
+                          alt={activeName}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      ) : (
+                        placeholderCardImage(activeName, brandColor)
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setItemModal(null)}
+                      style={{
+                        position: 'absolute',
+                        top: 14,
+                        right: 14,
+                        width: 40,
+                        height: 40,
+                        borderRadius: 999,
+                        border: 'none',
+                        background: 'rgba(255,255,255,0.96)',
+                        color: INK,
+                        fontSize: 22,
+                        lineHeight: 1,
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div style={{ padding: isMobile ? 18 : 24, display: 'grid', gap: 18 }}>
+                    <div style={{ display: 'grid', gap: 8 }}>
+                      <div
+                        style={{
+                          fontFamily: displayFontFamily,
+                          fontSize: isMobile ? 28 : 34,
+                          lineHeight: 1,
+                          fontWeight: 900,
+                        }}
+                      >
+                        {activeName}
+                      </div>
+                      <div style={{ fontSize: 15, lineHeight: 1.7, color: MUTED }}>{activeDescription}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 24, fontWeight: 900 }}>{formatCurrencyAmount(activePrice)}</span>
+                        {activePackage ? (
+                          <span style={{ fontSize: 12, fontWeight: 800, color: MUTED }}>
+                            Serves {activePackage.minimumHeadcount ?? headcount}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                    {modalSuggestedAddOns.length > 0 ? (
+                      <div
+                        style={{
+                          borderTop: `1px solid ${BORDER}`,
+                          paddingTop: 18,
+                          display: 'grid',
+                          gap: 12,
+                        }}
+                      >
+                        <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase', color: MUTED }}>
+                          Goes well with
+                        </div>
+                        <div style={{ display: 'grid', gap: 10 }}>
+                          {modalSuggestedAddOns.map((addOn) => (
+                            <div
+                              key={addOn.id}
+                              style={{
+                                display: 'grid',
+                                gridTemplateColumns: '56px minmax(0,1fr) auto',
+                                gap: 12,
+                                alignItems: 'center',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: 56,
+                                  height: 56,
+                                  borderRadius: 16,
+                                  overflow: 'hidden',
+                                  background: addOn.imageUrl ? '#F5F5F4' : undefined,
+                                }}
+                              >
+                                {addOn.imageUrl ? (
+                                  <img
+                                    src={addOn.imageUrl}
+                                    alt={addOn.name}
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  />
+                                ) : (
+                                  placeholderCardImage(addOn.name, brandColor)
+                                )}
+                              </div>
+                              <div style={{ minWidth: 0 }}>
+                                <div style={{ fontSize: 15, fontWeight: 800 }}>{addOn.name}</div>
+                                <div style={{ marginTop: 3, fontSize: 12, color: MUTED }}>
+                                  {formatCurrencyAmount(addOn.price)}
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => updateAddOnQuantity(addOn.id, (selectedAddOnIds[addOn.id] ?? 0) + 1)}
+                                style={{
+                                  width: 38,
+                                  height: 38,
+                                  borderRadius: 999,
+                                  border: `1px solid ${BORDER}`,
+                                  background: '#FFFFFF',
+                                  color: INK,
+                                  fontSize: 20,
+                                  lineHeight: 1,
+                                }}
+                              >
+                                +
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                    <div
+                      style={{
+                        position: 'sticky',
+                        bottom: 0,
+                        background: '#FFFFFF',
+                        paddingTop: 8,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 12,
+                        borderTop: `1px solid ${BORDER}`,
+                      }}
+                    >
+                      <QuantityStepper
+                        quantity={activeQuantity || 1}
+                        onDecrease={() => {
+                          if (activePackage) updatePackageQuantity(activePackage.id, Math.max(activeQuantity - 1, 0));
+                          if (activeAddOn) updateAddOnQuantity(activeAddOn.id, Math.max(activeQuantity - 1, 0));
+                        }}
+                        onIncrease={() => {
+                          if (activePackage) updatePackageQuantity(activePackage.id, (activeQuantity || 0) + 1);
+                          if (activeAddOn) updateAddOnQuantity(activeAddOn.id, (activeQuantity || 0) + 1);
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (activePackage) updatePackageQuantity(activePackage.id, Math.max(activeQuantity, 1));
+                          if (activeAddOn) updateAddOnQuantity(activeAddOn.id, Math.max(activeQuantity, 1));
+                          setItemModal(null);
+                        }}
+                        style={{
+                          flex: 1,
+                          height: 48,
+                          borderRadius: 16,
+                          border: 'none',
+                          background: brandColor,
+                          color: '#FFFFFF',
+                          fontSize: 15,
+                          fontWeight: 900,
+                        }}
+                      >
+                        {activeQuantity > 0 ? 'Update item' : 'Add item'}
+                      </button>
+                      <div style={{ fontSize: 20, fontWeight: 900, whiteSpace: 'nowrap' }}>
+                        {formatCurrencyAmount(activePrice * Math.max(activeQuantity || 1, 1) / (activePackage ? 1 : 1))}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
       ) : null}
