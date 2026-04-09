@@ -290,6 +290,71 @@ async function createStripeCustomer(record: Awaited<ReturnType<typeof getBilling
   return customer.id;
 }
 
+async function getStripeSubscriptionForRecord(record: Awaited<ReturnType<typeof getBillingRecord>>) {
+  if (!record.stripeCustomerId) {
+    throw new ValidationError('Start TrayLoop Pro billing before adding Growth Advisor.');
+  }
+
+  const stripe = getStripe();
+  const subscription =
+    record.stripeSubscriptionId
+      ? await stripe.subscriptions.retrieve(record.stripeSubscriptionId)
+      : (await stripe.subscriptions.list({
+          customer: record.stripeCustomerId,
+          status: 'all',
+          limit: 1,
+        })).data[0] ?? null;
+
+  if (!subscription) {
+    throw new ValidationError('Start TrayLoop Pro billing before adding Growth Advisor.');
+  }
+
+  return subscription;
+}
+
+async function addGrowthAdvisorToExistingSubscription(
+  record: Awaited<ReturnType<typeof getBillingRecord>>,
+  input: BillingCheckoutInput,
+) {
+  const growthAdvisorPriceId = getGrowthAdvisorPriceId();
+  if (!growthAdvisorPriceId) {
+    throw new ValidationError('Growth Advisor add-on is not configured yet. Set STRIPE_GROWTH_ADVISOR_PRICE_ID before selling it.');
+  }
+
+  const subscription = await getStripeSubscriptionForRecord(record);
+  const existingItem = subscription.items.data.find((item) => item.price?.id === growthAdvisorPriceId);
+
+  if (existingItem) {
+    await syncSubscriptionSnapshot(record.organizationId, record.stripeCustomerId!, subscription);
+    throw new ValidationError('Growth Advisor is already included in this subscription.');
+  }
+
+  const stripe = getStripe();
+  const updatedSubscription = await stripe.subscriptions.update(subscription.id, {
+    items: [
+      {
+        price: growthAdvisorPriceId,
+        quantity: 1,
+      },
+    ],
+    proration_behavior: 'always_invoice',
+  });
+
+  await syncSubscriptionSnapshot(record.organizationId, record.stripeCustomerId!, updatedSubscription);
+
+  logger.info('Growth Advisor added to existing subscription', {
+    organizationId: record.organizationId,
+    stripeCustomerId: record.stripeCustomerId,
+    stripeSubscriptionId: updatedSubscription.id,
+    growthAdvisorPriceId,
+  });
+
+  return {
+    url: input.successUrl ?? `${getMerchantBaseUrl()}/growth-advisor?upgraded=1`,
+    sessionId: updatedSubscription.id,
+  };
+}
+
 export async function createCheckoutSession(orgId: string, input: BillingCheckoutInput) {
   if (!isStripeEnabled()) {
     throw new ValidationError('Stripe is not configured. Contact support.');
@@ -298,6 +363,10 @@ export async function createCheckoutSession(orgId: string, input: BillingCheckou
   const priceId = getSubscriptionPriceId();
   const record = await getBillingRecord(orgId);
   const state = mapSubscriptionStatus(record.status);
+
+  if (input.includeGrowthAdvisor && (state === 'active' || state === 'trialing' || state === 'past_due' || state === 'unpaid')) {
+    return addGrowthAdvisorToExistingSubscription(record, input);
+  }
 
   if (state === 'active' || state === 'trialing' || state === 'past_due' || state === 'unpaid') {
     throw new ValidationError('A subscription already exists for this merchant. Use manage subscription instead.');

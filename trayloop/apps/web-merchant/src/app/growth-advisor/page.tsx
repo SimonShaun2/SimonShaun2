@@ -256,9 +256,14 @@ export default function GrowthAdvisorPage() {
     setError('');
 
     try {
+      const usingExistingSubscription = Boolean(billing?.subscription) && !(billing?.canCheckout ?? false);
       const result = await createBillingCheckout({
-        successUrl: `${window.location.origin}/onboarding?billing=success`,
-        cancelUrl: `${window.location.origin}/onboarding?billing=cancel`,
+        successUrl: usingExistingSubscription
+          ? `${window.location.origin}/growth-advisor?upgraded=1`
+          : `${window.location.origin}/onboarding?billing=success`,
+        cancelUrl: usingExistingSubscription
+          ? `${window.location.origin}/growth-advisor`
+          : `${window.location.origin}/onboarding?billing=cancel`,
         includeGrowthAdvisor: true,
       });
       window.location.href = result.url;
@@ -290,7 +295,8 @@ export default function GrowthAdvisorPage() {
 
   const entitlement = billing?.features.growthAdvisor;
   const unlocked = growthAdvisorEnabled && Boolean(entitlement?.enabled);
-  const canPurchase = growthAdvisorEnabled && Boolean(entitlement?.available) && (billing?.canCheckout ?? false);
+  const canPurchase = growthAdvisorEnabled && Boolean(entitlement?.available) && ((billing?.canCheckout ?? false) || Boolean(billing?.subscription));
+  const usingExistingSubscription = Boolean(billing?.subscription) && !(billing?.canCheckout ?? false);
 
   if (checkingAccess) {
     return <p style={{ color: '#78716C' }}>Loading Growth Advisor...</p>;
@@ -305,7 +311,7 @@ export default function GrowthAdvisorPage() {
           </div>
           <h1 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: '#1C1917' }}>Growth Advisor</h1>
           <p style={{ fontSize: 14, color: '#57534E', margin: '10px 0 0', maxWidth: 760, lineHeight: 1.7 }}>
-            Growth Advisor is sold as an add-on product. It stays hidden from merchant workspaces until the add-on is purchased during onboarding or billing.
+            Growth Advisor is sold as an add-on product. Add it from this page and it unlocks immediately for this merchant workspace.
           </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginTop: 22 }}>
@@ -324,6 +330,11 @@ export default function GrowthAdvisorPage() {
             <div style={{ ...featureCalloutStyle }}>
               Designed as an incremental revenue add-on, separate from the base TrayLoop Pro subscription.
             </div>
+            {usingExistingSubscription ? (
+              <div style={{ ...featureCalloutStyle, borderColor: '#FDE68A', background: '#FFFBEB', color: '#92400E' }}>
+                This merchant already has TrayLoop Pro billing active. Add Growth Advisor here and we will attach it to the current subscription.
+              </div>
+            ) : null}
           </div>
 
           {error ? (
