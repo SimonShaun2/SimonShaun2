@@ -48,8 +48,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AnalyticsProvider appName="marketing" />
         <Analytics />
         <SpeedInsights />
+        {gaId ? <GoogleAnalytics gaId={gaId} /> : null}
       </body>
-      {gaId ? <GoogleAnalytics gaId={gaId} /> : null}
     </html>
   );
 }
