@@ -1167,8 +1167,8 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
             </button>
           ))}
         </div>
-      </div>
-    ) : null;
+    </div>
+  ) : null;
   const recurringCard =
     subtotalCents > 0 ? (
       <div
@@ -2695,9 +2695,20 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
             </div>
           </div>
           {showDesktopCart ? (
-            <aside style={{ position: 'sticky', top: sidebarTop, display: 'grid', gap: 14 }}>
+            <aside
+              style={{
+                position: 'sticky',
+                top: sidebarTop,
+                display: 'grid',
+                gap: 14,
+                alignSelf: 'start',
+              }}
+            >
               <div
                 style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  maxHeight: `calc(100vh - ${sidebarTop + 20}px)`,
                   borderRadius: 26,
                   overflow: 'hidden',
                   border: `1px solid ${BORDER}`,
@@ -2740,14 +2751,27 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                     {headcount} guests
                   </div>
                 </div>
-                <div style={{ padding: isTablet ? 16 : 18, display: 'grid', gap: 14 }}>
+                <div
+                  style={{
+                    flex: 1,
+                    minHeight: 0,
+                    overflowY: 'auto',
+                    overscrollBehavior: 'contain',
+                    padding: isTablet ? 16 : 18,
+                    display: 'grid',
+                    gap: 14,
+                  }}
+                  className="storefront-scrollbar"
+                >
+                  {recurringCard}
+                  {smartUpsellCard}
                   <div style={{ display: 'grid', gap: 10 }}>
                     {selectedPkgList.length === 0 && selectedAddOnList.length === 0 ? (
                       <div
                         style={{
                           borderRadius: 18,
                           border: `1px dashed ${BORDER}`,
-                          padding: 16,
+                          padding: 14,
                           fontSize: 13,
                           lineHeight: 1.6,
                           color: MUTED,
@@ -2829,9 +2853,6 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                       </>
                     )}
                   </div>
-                  {smartUpsellCard}
-                  {oftenAddedRow}
-                  {recurringCard}
                   <div
                     style={{
                       borderTop: `1px solid ${BORDER}`,
