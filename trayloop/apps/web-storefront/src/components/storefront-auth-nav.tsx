@@ -95,7 +95,9 @@ export default function StorefrontAuthNav({ variant = 'dark' }: { variant?: 'dar
           whiteSpace: 'nowrap',
         }}
       >
-        <Link href="/login" style={linkStyle}>Sign In</Link>
+        <Link href="/login" style={linkStyle}>
+          Sign In
+        </Link>
       </div>
     );
   }
@@ -111,8 +113,12 @@ export default function StorefrontAuthNav({ variant = 'dark' }: { variant?: 'dar
         whiteSpace: 'nowrap',
       }}
     >
-      <Link href="/account" style={linkStyle}>Account</Link>
-      <span style={{ color: isLight ? '#57534E' : '#D6D3D1', fontSize: 12, whiteSpace: 'nowrap' }}>{customerName}</span>
+      <Link href="/account" style={linkStyle}>
+        Account
+      </Link>
+      <span style={{ color: isLight ? '#57534E' : '#D6D3D1', fontSize: 12, whiteSpace: 'nowrap' }}>
+        {customerName}
+      </span>
       <button
         type="button"
         onClick={handleSignOut}

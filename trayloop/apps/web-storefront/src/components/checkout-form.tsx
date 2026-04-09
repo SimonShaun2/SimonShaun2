@@ -504,7 +504,8 @@ function ConfirmationView({
 }
 export default function CheckoutForm({ data, initialLocationSlug }: Props) {
   const isMobile = useMobile(860);
-  const isTablet = useMobile(1180);
+  const isTablet = useMobile(1080);
+  const isLaptop = useMobile(1440);
   const isCompactDesktop = useMobile(1320);
   const router = useRouter();
   const pathname = usePathname();
@@ -692,23 +693,33 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
     email &&
     (serviceType !== 'delivery' || (address && city && state && zipCode)),
   );
-  const showDesktopSidebar = !isMobile && !isTablet;
-  const showDesktopCart = !isMobile;
-  const showCategoryChips = isMobile || isTablet;
+  const showDesktopSidebar = !isMobile && !isLaptop;
+  const showDesktopCart = !isTablet;
+  const showCategoryChips = isMobile || isLaptop;
+  const showBottomCartBar = !showDesktopCart;
   const layoutColumns = isMobile
     ? '1fr'
-    : isTablet
-      ? 'minmax(0, 1fr) 332px'
-      : '200px minmax(0, 1fr) 340px';
+    : showDesktopSidebar
+      ? '184px minmax(0, 1fr) 324px'
+      : showDesktopCart
+        ? 'minmax(0, 1fr) 316px'
+        : '1fr';
   const controlBarColumns = isMobile
     ? '1fr'
-    : isTablet
+    : isLaptop
       ? 'repeat(2, minmax(0, 1fr))'
       : '1.1fr 0.95fr 0.8fr 1.2fr';
   const heroHeight = isMobile ? 180 : isTablet ? 220 : isCompactDesktop ? 248 : 280;
   const heroTitleSize = isMobile ? 34 : isTablet ? 40 : isCompactDesktop ? 46 : 52;
   const controlBarTop = isMobile ? 104 : isTablet ? 129 : 141;
-  const sidebarTop = isTablet ? 208 : 236;
+  const sidebarTop = isLaptop ? 212 : 236;
+  const menuCardColumns = isMobile ? '1fr' : isTablet ? '1fr' : 'repeat(2, minmax(0, 1fr))';
+  const menuCardImageColumn = isMobile
+    ? '112px minmax(0, 1fr)'
+    : isLaptop
+      ? 'minmax(0, 1fr) 152px'
+      : 'minmax(0, 1fr) 180px';
+  const menuCardMinHeight = isLaptop ? 164 : 180;
 
   useEffect(() => {
     if (menuSections.length > 0)
@@ -1433,6 +1444,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
     : `linear-gradient(135deg, ${brandColor}, ${INK})`;
   const searchInput = !isMobile ? (
     <input
+      className="storefront-field"
       value={searchTerm}
       onChange={(event) => setSearchTerm(event.target.value)}
       placeholder="Search the menu..."
@@ -1458,7 +1470,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
         fontFamily: 'var(--font-body), Inter, sans-serif',
       }}
     >
-      <style>{`@keyframes storefrontPulse { 0% { transform: scale(1); opacity: .55; } 70% { transform: scale(1.45); opacity: .05; } 100% { transform: scale(1); opacity: .55; } } .storefront-pulse-dot { animation: storefrontPulse 1.8s infinite; } .storefront-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; } .storefront-scrollbar::-webkit-scrollbar-thumb { background: rgba(26,22,18,.16); border-radius: 999px; }`}</style>
+      <style>{`@keyframes storefrontPulse { 0% { transform: scale(1); opacity: .55; } 70% { transform: scale(1.45); opacity: .05; } 100% { transform: scale(1); opacity: .55; } } .storefront-pulse-dot { animation: storefrontPulse 1.8s infinite; } .storefront-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; } .storefront-scrollbar::-webkit-scrollbar-thumb { background: rgba(26,22,18,.16); border-radius: 999px; } .storefront-field { box-sizing: border-box; width: 100%; min-width: 0; }`}</style>
       <div
         style={{
           position: 'sticky',
@@ -1473,7 +1485,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
           style={{
             maxWidth: PAGE_MAX_WIDTH,
             margin: '0 auto',
-            height: isMobile ? 60 : isTablet ? 68 : 76,
+            height: isMobile ? 60 : isLaptop ? 68 : 76,
             display: 'flex',
             alignItems: 'center',
             gap: isMobile ? 10 : isTablet ? 12 : 18,
@@ -1521,7 +1533,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
               marginLeft: 'auto',
               display: 'flex',
               alignItems: 'center',
-              gap: isMobile ? 10 : isTablet ? 10 : 14,
+              gap: isMobile ? 10 : isLaptop ? 10 : 14,
               flexShrink: 0,
             }}
           >
@@ -1579,7 +1591,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
             overflow: 'hidden',
             position: 'relative',
             background: heroBackground,
-            padding: isMobile ? '20px 16px' : isTablet ? '24px 20px 26px' : '28px 28px 32px',
+            padding: isMobile ? '20px 16px' : isLaptop ? '24px 20px 26px' : '28px 28px 32px',
             display: 'flex',
             alignItems: 'flex-end',
           }}
@@ -1606,7 +1618,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
             <h1
               style={{
                 margin: isMobile ? '14px 0 0' : '20px 0 0',
-                maxWidth: isTablet ? 620 : 760,
+                maxWidth: isLaptop ? 620 : 760,
                 fontFamily: displayFontFamily,
                 fontSize: heroTitleSize,
                 lineHeight: 0.96,
@@ -1624,7 +1636,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                   flexWrap: 'wrap',
                   gap: 14,
                   color: 'rgba(255,255,255,0.88)',
-                  fontSize: isMobile ? 12 : 14,
+                  fontSize: isMobile ? 12 : isLaptop ? 13 : 14,
                   fontWeight: 600,
                 }}
               >
@@ -1651,7 +1663,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
           style={{
             maxWidth: PAGE_MAX_WIDTH,
             margin: '0 auto',
-            padding: isMobile ? '10px 14px' : isTablet ? '0 18px' : '0 24px',
+            padding: isMobile ? '10px 14px' : isLaptop ? '0 18px' : '0 24px',
           }}
         >
           <div
@@ -1659,7 +1671,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
               minHeight: isMobile ? 44 : 64,
               display: 'flex',
               alignItems: 'center',
-              gap: isMobile ? 14 : isTablet ? 18 : 26,
+              gap: isMobile ? 14 : isLaptop ? 18 : 26,
               overflowX: 'auto',
             }}
             className="storefront-scrollbar"
@@ -1688,7 +1700,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                   borderRadius: 999,
                   background: `${brandColor}18`,
                   color: brandColor,
-                  padding: isTablet ? '8px 12px' : '10px 14px',
+                  padding: isLaptop ? '8px 12px' : '10px 14px',
                   fontSize: 12,
                   fontWeight: 900,
                 }}
@@ -1712,7 +1724,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
           style={{
             maxWidth: PAGE_MAX_WIDTH,
             margin: '0 auto',
-            padding: isMobile ? '12px 14px' : isTablet ? '12px 18px' : '14px 24px',
+            padding: isMobile ? '12px 14px' : isLaptop ? '12px 18px' : '14px 24px',
           }}
         >
           <div
@@ -1777,6 +1789,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
               {!isMobile ? (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   <input
+                    className="storefront-field"
                     type="date"
                     value={eventDate}
                     onChange={(event) => setEventDate(event.target.value)}
@@ -1789,6 +1802,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                     }}
                   />
                   <input
+                    className="storefront-field"
                     type="time"
                     value={eventTime}
                     onChange={(event) => setEventTime(event.target.value)}
@@ -1849,6 +1863,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
             <div style={{ display: 'grid', gap: 8 }}>
               <div style={{ position: 'relative' }}>
                 <input
+                  className="storefront-field"
                   value={address}
                   onChange={(event) => setAddress(event.target.value)}
                   placeholder={
@@ -1889,11 +1904,12 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                 <div
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: isTablet ? '1fr 0.8fr 0.8fr' : '1.4fr 0.8fr 0.8fr',
+                    gridTemplateColumns: isLaptop ? '1fr 0.8fr 0.8fr' : '1.4fr 0.8fr 0.8fr',
                     gap: 8,
                   }}
                 >
                   <input
+                    className="storefront-field"
                     value={city}
                     onChange={(event) => setCity(event.target.value)}
                     placeholder="City"
@@ -1906,6 +1922,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                     }}
                   />
                   <input
+                    className="storefront-field"
                     value={state}
                     onChange={(event) => setState(event.target.value)}
                     placeholder="State"
@@ -1918,6 +1935,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                     }}
                   />
                   <input
+                    className="storefront-field"
                     value={zipCode}
                     onChange={(event) => setZipCode(event.target.value)}
                     placeholder="Zip"
@@ -1939,7 +1957,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
         style={{
           maxWidth: PAGE_MAX_WIDTH,
           margin: '0 auto',
-          padding: isMobile ? '18px 14px 0' : isTablet ? '20px 18px 0' : '26px 24px 0',
+          padding: isMobile ? '18px 14px 0' : isLaptop ? '20px 18px 0' : '26px 24px 0',
         }}
       >
         {searchParams.get('checkout') && !error ? (
@@ -2115,11 +2133,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                     style={{
                       marginTop: 18,
                       display: 'grid',
-                      gridTemplateColumns: isMobile
-                        ? '1fr'
-                        : isTablet
-                          ? '1fr'
-                          : 'repeat(2, minmax(0, 1fr))',
+                      gridTemplateColumns: menuCardColumns,
                       gap: 16,
                     }}
                   >
@@ -2131,12 +2145,8 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                           key={pkg.id}
                           style={{
                             display: 'grid',
-                            gridTemplateColumns: isMobile
-                              ? '112px minmax(0, 1fr)'
-                              : isTablet
-                                ? 'minmax(0, 1fr) 144px'
-                                : 'minmax(0, 1fr) 180px',
-                            minHeight: isTablet ? 164 : 180,
+                            gridTemplateColumns: menuCardImageColumn,
+                            minHeight: menuCardMinHeight,
                             borderRadius: 24,
                             border: `1px solid ${BORDER}`,
                             overflow: 'hidden',
@@ -2160,7 +2170,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                             style={{
                               padding: isMobile
                                 ? '14px 14px 14px 16px'
-                                : isTablet
+                                : isLaptop
                                   ? '16px'
                                   : '18px 16px 16px 18px',
                               display: 'grid',
@@ -2169,7 +2179,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                           >
                             <div
                               style={{
-                                fontSize: isMobile ? 18 : isTablet ? 18 : 20,
+                                fontSize: isMobile ? 18 : isLaptop ? 18 : 20,
                                 lineHeight: 1.1,
                                 fontWeight: 900,
                               }}
@@ -2261,7 +2271,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                       );
                     })}
                   </div>
-                  {isMobile && sectionIndex === 0 ? (
+                  {!showDesktopCart && sectionIndex === 0 ? (
                     <div style={{ marginTop: 18, display: 'grid', gap: 12 }}>
                       {smartUpsellCard}
                       {oftenAddedRow}
@@ -2291,11 +2301,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                     style={{
                       marginTop: 18,
                       display: 'grid',
-                      gridTemplateColumns: isMobile
-                        ? '1fr'
-                        : isTablet
-                          ? '1fr'
-                          : 'repeat(2, minmax(0, 1fr))',
+                      gridTemplateColumns: menuCardColumns,
                       gap: 14,
                     }}
                   >
@@ -2447,6 +2453,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                   }}
                 >
                   <input
+                    className="storefront-field"
                     value={firstName}
                     onChange={(event) => setFirstName(event.target.value)}
                     placeholder="First name"
@@ -2459,6 +2466,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                     }}
                   />
                   <input
+                    className="storefront-field"
                     value={lastName}
                     onChange={(event) => setLastName(event.target.value)}
                     placeholder="Last name"
@@ -2471,6 +2479,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                     }}
                   />
                   <input
+                    className="storefront-field"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     placeholder="Email"
@@ -2483,6 +2492,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                     }}
                   />
                   <input
+                    className="storefront-field"
                     value={phone}
                     onChange={(event) => setPhone(event.target.value)}
                     placeholder="Phone"
@@ -2495,6 +2505,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                     }}
                   />
                   <input
+                    className="storefront-field"
                     value={companyName}
                     onChange={(event) => setCompanyName(event.target.value)}
                     placeholder="Company / event name (optional)"
@@ -2508,6 +2519,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                     }}
                   />
                   <textarea
+                    className="storefront-field"
                     value={notes}
                     onChange={(event) => setNotes(event.target.value)}
                     placeholder="Any setup notes, delivery instructions, or dietary questions?"
@@ -2571,7 +2583,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                     {headcount} guests
                   </div>
                 </div>
-                  <div style={{ padding: isTablet ? 16 : 18, display: 'grid', gap: 14 }}>
+                <div style={{ padding: isTablet ? 16 : 18, display: 'grid', gap: 14 }}>
                   <div style={{ display: 'grid', gap: 10 }}>
                     {selectedPkgList.length === 0 && selectedAddOnList.length === 0 ? (
                       <div
@@ -2786,9 +2798,9 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
             </aside>
           ) : null}
         </div>
-        <div style={{ height: isMobile ? 112 : 0 }} />
+        <div style={{ height: showBottomCartBar ? 112 : 0 }} />
       </div>
-      {isMobile ? (
+      {showBottomCartBar ? (
         <div
           style={{
             position: 'fixed',
