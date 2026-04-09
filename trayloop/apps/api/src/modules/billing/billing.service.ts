@@ -1,7 +1,8 @@
 import { db, organizations, subscriptions, users } from '@trayloop/database';
 import { eq } from 'drizzle-orm';
 import { ValidationError } from '../../lib/errors.js';
-import { getStripe, getSubscriptionPriceId, getSubscriptionTrialDays, isStripeEnabled } from '../../lib/stripe.js';
+import { getStripe, getSubscriptionPriceId, getSubscriptionTrialDays, isStripeEnabled, getGrowthAdvisorPriceId } from '../../lib/stripe.js';
+import { getOrganizationFeatureEntitlements, syncSubscriptionFeatureEntitlements } from '../../lib/organization-features.js';
 import { logger } from '@trayloop/utils';
 import type { BillingCheckoutInput, BillingPortalInput } from './billing.schema.js';
 import Stripe from 'stripe';
@@ -186,6 +187,8 @@ async function syncSubscriptionSnapshot(
         updatedAt: new Date(),
       },
     });
+
+  await syncSubscriptionFeatureEntitlements(orgId, subscription);
 }
 
 async function syncSubscriptionFromStripe(record: Awaited<ReturnType<typeof getBillingRecord>>) {
@@ -231,10 +234,11 @@ async function syncSubscriptionFromStripe(record: Awaited<ReturnType<typeof getB
   }
 }
 
-function buildSubscriptionResponse(record: Awaited<ReturnType<typeof getBillingRecord>>) {
+async function buildSubscriptionResponse(record: Awaited<ReturnType<typeof getBillingRecord>>) {
   const state = mapSubscriptionStatus(record.status);
   const trialDaysRemaining = getTrialDaysRemaining(record.trialEnd);
   const hasStripeCustomer = Boolean(record.stripeCustomerId);
+  const features = await getOrganizationFeatureEntitlements(record.organizationId);
 
   return {
     organizationId: record.organizationId,
@@ -246,6 +250,7 @@ function buildSubscriptionResponse(record: Awaited<ReturnType<typeof getBillingR
     canCheckout: state === 'not_started' || state === 'canceled',
     canManage: hasStripeCustomer && state !== 'not_started',
     trialDaysRemaining,
+    features,
     subscription: record.subscriptionId
       ? {
           id: record.subscriptionId,
@@ -303,22 +308,37 @@ export async function createCheckoutSession(orgId: string, input: BillingCheckou
   const { successUrl, cancelUrl } = buildCheckoutUrls(input);
   const trialDays = getSubscriptionTrialDays();
   const includeTrialPeriod = !record.stripeSubscriptionId && trialDays > 0;
+  const growthAdvisorPriceId = getGrowthAdvisorPriceId();
+
+  if (input.includeGrowthAdvisor && !growthAdvisorPriceId) {
+    throw new ValidationError('Growth Advisor add-on is not configured yet. Set STRIPE_GROWTH_ADVISOR_PRICE_ID before selling it.');
+  }
+
+  const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
+    {
+      price: priceId,
+      quantity: 1,
+    },
+  ];
+
+  if (input.includeGrowthAdvisor && growthAdvisorPriceId) {
+    lineItems.push({
+      price: growthAdvisorPriceId,
+      quantity: 1,
+    });
+  }
 
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
     customer: stripeCustomerId,
     client_reference_id: record.organizationId,
-    line_items: [
-      {
-        price: priceId,
-        quantity: 1,
-      },
-    ],
+    line_items: lineItems,
     success_url: successUrl,
     cancel_url: cancelUrl,
     metadata: {
       trayloop_org_id: record.organizationId,
       trayloop_billing: 'true',
+      trayloop_growth_advisor: input.includeGrowthAdvisor ? 'true' : 'false',
     },
     subscription_data: {
       metadata: {

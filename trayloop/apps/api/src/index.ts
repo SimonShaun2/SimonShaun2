@@ -22,6 +22,7 @@ import { billingModule } from './modules/billing/index.js';
 import { followUpsModule } from './modules/follow-ups/index.js';
 import { notificationsModule } from './modules/notifications/index.js';
 import { aiSalesModule } from './modules/ai-sales/index.js';
+import { growthAdvisorModule } from './modules/growth-advisor/index.js';
 import { automationsModule } from './modules/automations/index.js';
 import { revenueIntelligenceModule } from './modules/revenue-intelligence/index.js';
 import { adminModule } from './modules/admin/index.js';
@@ -104,6 +105,7 @@ export async function buildApp() {
     await protectedApp.register(followUpsModule, { prefix: '/api/follow-ups' });
     await protectedApp.register(notificationsModule, { prefix: '/api/notifications' });
     await protectedApp.register(aiSalesModule, { prefix: '/api/ai-sales' });
+    await protectedApp.register(growthAdvisorModule, { prefix: '/api/growth-advisor' });
     if (automationsEnabled) {
       await protectedApp.register(automationsModule, { prefix: '/api/automations' });
     }

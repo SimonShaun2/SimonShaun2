@@ -28,6 +28,7 @@ DROP TABLE IF EXISTS catalogs CASCADE;
 DROP TABLE IF EXISTS location_settings CASCADE;
 DROP TABLE IF EXISTS locations CASCADE;
 DROP TABLE IF EXISTS organization_memberships CASCADE;
+DROP TABLE IF EXISTS organization_features CASCADE;
 DROP TABLE IF EXISTS subscriptions CASCADE;
 DROP TABLE IF EXISTS organizations CASCADE;
 DROP TABLE IF EXISTS password_reset_tokens CASCADE;
@@ -52,6 +53,7 @@ DROP TYPE IF EXISTS package_pricing CASCADE;
 DROP TYPE IF EXISTS recurrence_interval CASCADE;
 DROP TYPE IF EXISTS follow_up_status CASCADE;
 DROP TYPE IF EXISTS audit_action CASCADE;
+DROP TYPE IF EXISTS organization_feature_key CASCADE;
 
 -- =============================================================================
 -- CREATE ENUM TYPES
@@ -72,6 +74,7 @@ CREATE TYPE package_pricing AS ENUM ('per_head', 'flat');
 CREATE TYPE recurrence_interval AS ENUM ('weekly', 'biweekly', 'monthly', 'quarterly');
 CREATE TYPE follow_up_status AS ENUM ('pending', 'completed');
 CREATE TYPE audit_action AS ENUM ('create', 'update', 'delete', 'login', 'logout', 'status_change');
+CREATE TYPE organization_feature_key AS ENUM ('growth_advisor');
 
 -- =============================================================================
 -- CREATE TABLES (dependency order)
@@ -147,6 +150,24 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- ---------------------------------------------------------------------------
+-- organization_features
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS organization_features (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  feature_key organization_feature_key NOT NULL,
+  enabled BOOLEAN NOT NULL DEFAULT false,
+  source TEXT NOT NULL DEFAULT 'subscription',
+  stripe_price_id TEXT,
+  stripe_subscription_item_id TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS organization_features_org_feature_key_idx
+  ON organization_features (organization_id, feature_key);
 
 -- ---------------------------------------------------------------------------
 -- organization_memberships

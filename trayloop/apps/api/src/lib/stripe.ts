@@ -8,6 +8,7 @@ export interface StripeConfig {
   publishableKey: string;
   webhookSecret: string;
   subscriptionPriceId: string | null;
+  growthAdvisorPriceId: string | null;
   subscriptionTrialDays: number;
 }
 
@@ -18,6 +19,7 @@ function loadConfig(): StripeConfig | null {
   const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   const subscriptionPriceId = process.env.STRIPE_PRICE_ID ?? null;
+  const growthAdvisorPriceId = process.env.STRIPE_GROWTH_ADVISOR_PRICE_ID ?? null;
   const subscriptionTrialDays = Number.parseInt(process.env.STRIPE_SUBSCRIPTION_TRIAL_DAYS ?? '0', 10);
 
   if (!secretKey || !publishableKey || !webhookSecret) {
@@ -34,6 +36,7 @@ function loadConfig(): StripeConfig | null {
     publishableKey,
     webhookSecret,
     subscriptionPriceId,
+    growthAdvisorPriceId,
     subscriptionTrialDays: Number.isNaN(subscriptionTrialDays) ? 0 : Math.max(0, subscriptionTrialDays),
   };
 }
@@ -110,6 +113,11 @@ export function getSubscriptionPriceId(): string {
 export function getSubscriptionTrialDays(): number {
   const config = loadConfig();
   return config?.subscriptionTrialDays ?? 0;
+}
+
+export function getGrowthAdvisorPriceId(): string | null {
+  const config = loadConfig();
+  return config?.growthAdvisorPriceId ?? null;
 }
 
 export function getStripeMode(): StripeMode {

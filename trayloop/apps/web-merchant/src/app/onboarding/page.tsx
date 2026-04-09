@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useMobile } from '../../lib/use-mobile';
+import { growthAdvisorEnabled } from '../../lib/features';
 import {
   createBillingCheckout,
   createBillingPortal,
@@ -11,6 +12,8 @@ import {
   syncPaymentStatus,
   type MerchantOnboardingStatus,
 } from '../../lib/api';
+
+const GROWTH_ADVISOR_SELECTION_KEY = 'trayloop-growth-advisor-selected';
 
 type BannerTone = 'success' | 'warning' | 'error';
 
@@ -27,6 +30,15 @@ function MerchantOnboardingPageContent() {
   const [paymentAction, setPaymentAction] = useState<'connect' | 'refresh' | null>(null);
   const [billingAction, setBillingAction] = useState<'checkout' | 'portal' | null>(null);
   const [billingRedirectStarted, setBillingRedirectStarted] = useState(false);
+  const [includeGrowthAdvisor, setIncludeGrowthAdvisor] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    setIncludeGrowthAdvisor(window.localStorage.getItem(GROWTH_ADVISOR_SELECTION_KEY) === 'true');
+  }, []);
 
   useEffect(() => {
     void loadOnboarding();
@@ -71,6 +83,10 @@ function MerchantOnboardingPageContent() {
 
   useEffect(() => {
     if (!data || data.billing.state !== 'not_started' || billingRedirectStarted || billingAction !== null) {
+      return;
+    }
+
+    if (growthAdvisorEnabled) {
       return;
     }
 
@@ -135,6 +151,7 @@ function MerchantOnboardingPageContent() {
       const result = await createBillingCheckout({
         successUrl: `${window.location.origin}/onboarding?billing=success`,
         cancelUrl: `${window.location.origin}/onboarding?billing=cancel`,
+        includeGrowthAdvisor: growthAdvisorEnabled && includeGrowthAdvisor,
       });
       window.location.href = result.url;
     } catch (err) {
@@ -168,6 +185,15 @@ function MerchantOnboardingPageContent() {
     const status = data?.billing.state ?? 'not_started';
     return billingConfig(status);
   }, [data?.billing.state]);
+
+  const growthAdvisorOffer = data?.billing.features.growthAdvisor ?? null;
+
+  function toggleGrowthAdvisor(nextValue: boolean) {
+    setIncludeGrowthAdvisor(nextValue);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(GROWTH_ADVISOR_SELECTION_KEY, String(nextValue));
+    }
+  }
 
   if (loading && !data) {
     return <p style={{ color: '#78716C' }}>Loading merchant onboarding...</p>;
@@ -208,6 +234,37 @@ function MerchantOnboardingPageContent() {
             <div style={{ ...noteStyle, marginTop: 16 }}>
               Plan: {data.billing.planName} at ${(data.billing.priceCents / 100).toFixed(0)}/{data.billing.interval}
             </div>
+            {growthAdvisorEnabled && growthAdvisorOffer?.available ? (
+              <label
+                style={{
+                  display: 'flex',
+                  gap: 12,
+                  alignItems: 'flex-start',
+                  marginTop: 16,
+                  padding: '14px 16px',
+                  borderRadius: 14,
+                  border: `1px solid ${includeGrowthAdvisor ? '#1D7A55' : '#E7E5E4'}`,
+                  background: includeGrowthAdvisor ? '#F0FDF4' : '#FFFFFF',
+                  cursor: 'pointer',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={includeGrowthAdvisor}
+                  onChange={(event) => toggleGrowthAdvisor(event.target.checked)}
+                  style={{ marginTop: 4 }}
+                />
+                <div>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 6 }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: '#1C1917' }}>Add Growth Advisor</div>
+                    <Pill bg="#1C1917" color="#FAFAF9">{`+$${(growthAdvisorOffer.priceCents / 100).toFixed(0)}/${growthAdvisorOffer.interval}`}</Pill>
+                  </div>
+                  <div style={{ fontSize: 13, color: '#57534E', lineHeight: 1.6 }}>
+                    Attach the premium growth plan add-on during onboarding so the merchant workspace unlocks it immediately after billing syncs.
+                  </div>
+                </div>
+              </label>
+            ) : null}
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : undefined, gap: 10, marginTop: 18 }}>
               <button type="button" onClick={handleStartSubscription} disabled={billingAction !== null} style={{ ...primaryButtonStyle, width: isMobile ? '100%' : undefined }}>
                 {billingAction === 'checkout' ? 'Redirecting...' : 'Continue Secure Checkout'}
@@ -283,6 +340,11 @@ function MerchantOnboardingPageContent() {
               ) : null}
               <a href="/billing" style={{ ...secondaryButtonStyle, width: isMobile ? '100%' : undefined }}>Open Billing Hub</a>
             </div>
+            {growthAdvisorEnabled && growthAdvisorOffer?.available && !growthAdvisorOffer.enabled ? (
+              <div style={{ ...noteStyle, marginTop: 14 }}>
+                Growth Advisor stays hidden until it is purchased. Add it during onboarding checkout to unlock the premium strategy workspace right away.
+              </div>
+            ) : null}
           </SectionCard>
 
           <SectionCard

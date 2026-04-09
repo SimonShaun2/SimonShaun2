@@ -44,6 +44,17 @@ export interface MerchantBillingSubscription {
   canCheckout: boolean;
   canManage: boolean;
   trialDaysRemaining: number | null;
+  features: {
+    growthAdvisor: {
+      enabled: boolean;
+      source: string | null;
+      stripePriceId: string | null;
+      stripeSubscriptionItemId: string | null;
+      available: boolean;
+      priceCents: number;
+      interval: 'month';
+    };
+  };
   subscription: null | {
     id: string;
     stripeCustomerId: string;
@@ -116,6 +127,57 @@ export interface MerchantSupportSession {
     slug: string;
     isActive: boolean;
   };
+}
+
+export interface GrowthAdvisorSnapshot {
+  organizationName: string;
+  cuisineHint: string | null;
+  website: string | null;
+  activeLocations: number;
+  activePackages: number;
+  activeAddOns: number;
+  averagePackagePriceCents: number | null;
+  priceRange: {
+    lowCents: number | null;
+    highCents: number | null;
+  };
+  leadTimeDays: number | null;
+  minimumOrderCents: number | null;
+  depositRequired: boolean | null;
+  serviceTypes: string[];
+  completedOrders: number;
+  recentOrders30d: number;
+  averageOrderValueCents: number | null;
+  packageNames: string[];
+  payoutsReady: boolean;
+}
+
+export interface GrowthAdvisorPlan {
+  businessStage: string;
+  stageSummary: string;
+  growthInsight: string;
+  biggestOpportunity: string;
+  recommendedOffer: {
+    name: string;
+    description: string;
+    priceCents: number;
+    minimumGuests: number;
+    serviceStyle: string;
+  };
+  pricingGuidance: {
+    minimumOrderCents: number;
+    deliveryFeeCents: number;
+    depositPolicy: string;
+    notes: string;
+  };
+  channelStrategy: string[];
+  nextSteps: string[];
+  thirtyDayGoal: string;
+}
+
+export interface GrowthAdvisorResult {
+  snapshot: GrowthAdvisorSnapshot;
+  analysis: GrowthAdvisorPlan;
 }
 
 export interface AiSalesReactivationSummary {
@@ -461,7 +523,16 @@ export async function createSupportSession(orgId: string): Promise<MerchantSuppo
   return json.data;
 }
 
-export async function createBillingCheckout(input: { successUrl?: string; cancelUrl?: string } = {}) {
+export async function generateGrowthAdvisor(input: { notes?: string } = {}): Promise<GrowthAdvisorResult> {
+  const response = await apiFetch('/api/growth-advisor/analyze', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+
+  return response.data;
+}
+
+export async function createBillingCheckout(input: { successUrl?: string; cancelUrl?: string; includeGrowthAdvisor?: boolean } = {}) {
   const response = await apiFetch('/api/billing/checkout', {
     method: 'POST',
     body: JSON.stringify(input),

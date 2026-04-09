@@ -10,3 +10,7 @@ export const automationsEnabled = parseEnvBoolean(
   process.env.NEXT_PUBLIC_AUTOMATIONS_ENABLED,
   process.env.NODE_ENV !== 'production',
 );
+export const growthAdvisorEnabled = parseEnvBoolean(
+  process.env.NEXT_PUBLIC_GROWTH_ADVISOR_ENABLED,
+  false,
+);

@@ -34,6 +34,52 @@ export interface RevenueInsightInput {
   }>;
 }
 
+export interface GrowthAdvisorInput {
+  organizationName: string;
+  cuisineHint: string | null;
+  website: string | null;
+  activeLocations: number;
+  activePackages: number;
+  activeAddOns: number;
+  averagePackagePriceCents: number | null;
+  priceRange: {
+    lowCents: number | null;
+    highCents: number | null;
+  };
+  leadTimeDays: number | null;
+  minimumOrderCents: number | null;
+  depositRequired: boolean | null;
+  serviceTypes: string[];
+  completedOrders: number;
+  recentOrders30d: number;
+  averageOrderValueCents: number | null;
+  merchantNotes?: string | null;
+  packageNames: string[];
+}
+
+export interface GeneratedGrowthAdvisorPlan {
+  businessStage: string;
+  stageSummary: string;
+  growthInsight: string;
+  biggestOpportunity: string;
+  recommendedOffer: {
+    name: string;
+    description: string;
+    priceCents: number;
+    minimumGuests: number;
+    serviceStyle: string;
+  };
+  pricingGuidance: {
+    minimumOrderCents: number;
+    deliveryFeeCents: number;
+    depositPolicy: string;
+    notes: string;
+  };
+  channelStrategy: string[];
+  nextSteps: string[];
+  thirtyDayGoal: string;
+}
+
 interface GenerateCampaignMessageInput {
   merchantName: string;
   segment: 'frequent' | 'at_risk' | 'dormant';
@@ -170,6 +216,42 @@ interface RevenueInsightPromptPayload {
   };
 }
 
+interface GrowthAdvisorPromptPayload {
+  brand: string;
+  positioning: string;
+  organization: {
+    name: string;
+    cuisineHint: string | null;
+    website: string | null;
+  };
+  currentProgram: {
+    activeLocations: number;
+    activePackages: number;
+    activeAddOns: number;
+    packageNames: string[];
+    averagePackagePrice: string | null;
+    packagePriceRange: {
+      low: string | null;
+      high: string | null;
+    };
+    leadTimeDays: number | null;
+    minimumOrder: string | null;
+    depositRequired: boolean | null;
+    serviceTypes: string[];
+  };
+  traction: {
+    completedOrders: number;
+    recentOrders30d: number;
+    averageOrderValue: string | null;
+  };
+  merchantNotes: string | null;
+  requirements: {
+    outputFormat: string;
+    writingStyle: string;
+    constraints: string[];
+  };
+}
+
 type ParsedCampaignPayload = Partial<GeneratedCampaignMessage> & {
   recommendedSendWindow?: string;
   recommendedTone?: string;
@@ -180,6 +262,7 @@ type ParsedUpsellPayload = Partial<GeneratedUpsellCopy>;
 type ParsedRevenueInsightPayload = {
   insights?: string[];
 };
+type ParsedGrowthAdvisorPayload = Partial<GeneratedGrowthAdvisorPlan>;
 
 const CAMPAIGN_RESPONSE_SCHEMA = {
   name: 'campaign_message',
@@ -233,6 +316,64 @@ const REVENUE_INSIGHTS_RESPONSE_SCHEMA = {
       },
     },
     required: ['insights'],
+  },
+} as const;
+
+const GROWTH_ADVISOR_RESPONSE_SCHEMA = {
+  name: 'growth_advisor',
+  strict: true,
+  schema: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      businessStage: { type: 'string' },
+      stageSummary: { type: 'string' },
+      growthInsight: { type: 'string' },
+      biggestOpportunity: { type: 'string' },
+      recommendedOffer: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          name: { type: 'string' },
+          description: { type: 'string' },
+          priceCents: { type: 'integer' },
+          minimumGuests: { type: 'integer' },
+          serviceStyle: { type: 'string' },
+        },
+        required: ['name', 'description', 'priceCents', 'minimumGuests', 'serviceStyle'],
+      },
+      pricingGuidance: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          minimumOrderCents: { type: 'integer' },
+          deliveryFeeCents: { type: 'integer' },
+          depositPolicy: { type: 'string' },
+          notes: { type: 'string' },
+        },
+        required: ['minimumOrderCents', 'deliveryFeeCents', 'depositPolicy', 'notes'],
+      },
+      channelStrategy: {
+        type: 'array',
+        items: { type: 'string' },
+      },
+      nextSteps: {
+        type: 'array',
+        items: { type: 'string' },
+      },
+      thirtyDayGoal: { type: 'string' },
+    },
+    required: [
+      'businessStage',
+      'stageSummary',
+      'growthInsight',
+      'biggestOpportunity',
+      'recommendedOffer',
+      'pricingGuidance',
+      'channelStrategy',
+      'nextSteps',
+      'thirtyDayGoal',
+    ],
   },
 } as const;
 
@@ -398,6 +539,55 @@ function buildRevenueInsightPrompt(input: RevenueInsightInput): RevenueInsightPr
   };
 }
 
+function buildGrowthAdvisorPrompt(input: GrowthAdvisorInput): GrowthAdvisorPromptPayload {
+  return {
+    brand: 'TrayLoop',
+    positioning:
+      'TrayLoop helps restaurants launch and grow catering revenue with stronger storefronts, better offers, and repeat-order systems.',
+    organization: {
+      name: input.organizationName,
+      cuisineHint: input.cuisineHint,
+      website: input.website,
+    },
+    currentProgram: {
+      activeLocations: input.activeLocations,
+      activePackages: input.activePackages,
+      activeAddOns: input.activeAddOns,
+      packageNames: input.packageNames.slice(0, 6),
+      averagePackagePrice: input.averagePackagePriceCents != null ? formatCurrency(input.averagePackagePriceCents) : null,
+      packagePriceRange: {
+        low: input.priceRange.lowCents != null ? formatCurrency(input.priceRange.lowCents) : null,
+        high: input.priceRange.highCents != null ? formatCurrency(input.priceRange.highCents) : null,
+      },
+      leadTimeDays: input.leadTimeDays,
+      minimumOrder: input.minimumOrderCents != null ? formatCurrency(input.minimumOrderCents) : null,
+      depositRequired: input.depositRequired,
+      serviceTypes: input.serviceTypes,
+    },
+    traction: {
+      completedOrders: input.completedOrders,
+      recentOrders30d: input.recentOrders30d,
+      averageOrderValue: input.averageOrderValueCents != null ? formatCurrency(input.averageOrderValueCents) : null,
+    },
+    merchantNotes: input.merchantNotes?.trim() || null,
+    requirements: {
+      outputFormat:
+        'Return strict JSON with businessStage, stageSummary, growthInsight, biggestOpportunity, recommendedOffer, pricingGuidance, channelStrategy, nextSteps, and thirtyDayGoal.',
+      writingStyle:
+        'Write like a sharp catering operator and launch strategist. Keep advice specific, direct, and practical for a restaurant team.',
+      constraints: [
+        'Do not mention AI.',
+        'Do not use emojis.',
+        'Be specific to restaurant catering, not general restaurant advice.',
+        'Assume Growth Advisor is a premium add-on, so the recommendations should feel high-value.',
+        'Channel strategy should be 3 short bullets or fewer.',
+        'Next steps should be exactly 3 concrete actions.',
+        'Recommended pricing should be realistic for B2B catering and easy to implement.',
+      ],
+    },
+  };
+}
+
 function parseOpenAIError(text: string): OpenAIErrorResponse['error'] {
   try {
     const parsed = JSON.parse(text) as OpenAIErrorResponse;
@@ -503,6 +693,53 @@ function parseGeneratedRevenueInsightsContent(content: string): string[] {
   }
 
   return insights.slice(0, 5);
+}
+
+function parseGeneratedGrowthAdvisorContent(content: string): GeneratedGrowthAdvisorPlan {
+  const parsed = JSON.parse(content) as ParsedGrowthAdvisorPayload;
+
+  if (
+    !parsed.businessStage ||
+    !parsed.stageSummary ||
+    !parsed.growthInsight ||
+    !parsed.biggestOpportunity ||
+    !parsed.recommendedOffer ||
+    !parsed.pricingGuidance ||
+    !Array.isArray(parsed.channelStrategy) ||
+    !Array.isArray(parsed.nextSteps) ||
+    !parsed.thirtyDayGoal
+  ) {
+    throw new Error('OpenAI returned an invalid growth advisor response.');
+  }
+
+  return {
+    businessStage: parsed.businessStage.trim(),
+    stageSummary: parsed.stageSummary.trim(),
+    growthInsight: parsed.growthInsight.trim(),
+    biggestOpportunity: parsed.biggestOpportunity.trim(),
+    recommendedOffer: {
+      name: parsed.recommendedOffer.name.trim(),
+      description: parsed.recommendedOffer.description.trim(),
+      priceCents: Math.max(0, Math.round(parsed.recommendedOffer.priceCents)),
+      minimumGuests: Math.max(1, Math.round(parsed.recommendedOffer.minimumGuests)),
+      serviceStyle: parsed.recommendedOffer.serviceStyle.trim(),
+    },
+    pricingGuidance: {
+      minimumOrderCents: Math.max(0, Math.round(parsed.pricingGuidance.minimumOrderCents)),
+      deliveryFeeCents: Math.max(0, Math.round(parsed.pricingGuidance.deliveryFeeCents)),
+      depositPolicy: parsed.pricingGuidance.depositPolicy.trim(),
+      notes: parsed.pricingGuidance.notes.trim(),
+    },
+    channelStrategy: parsed.channelStrategy
+      .map((item) => (typeof item === 'string' ? item.trim() : ''))
+      .filter(Boolean)
+      .slice(0, 3),
+    nextSteps: parsed.nextSteps
+      .map((item) => (typeof item === 'string' ? item.trim() : ''))
+      .filter(Boolean)
+      .slice(0, 3),
+    thirtyDayGoal: parsed.thirtyDayGoal.trim(),
+  };
 }
 
 async function requestResponsesApi(
@@ -761,6 +998,97 @@ async function requestRevenueInsightChatCompletionsApi(
   return parseGeneratedRevenueInsightsContent(content);
 }
 
+async function requestGrowthAdvisorResponsesApi(
+  apiKey: string,
+  prompt: GrowthAdvisorPromptPayload,
+): Promise<GeneratedGrowthAdvisorPlan> {
+  const response = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: getModel(),
+      temperature: 0.6,
+      input: [
+        {
+          role: 'system',
+          content:
+            'You are TrayLoop Growth Advisor. You help restaurant teams launch and grow catering revenue with specific, operator-grade guidance. Return only valid JSON that matches the schema.',
+        },
+        {
+          role: 'user',
+          content: JSON.stringify(prompt),
+        },
+      ],
+      text: {
+        format: {
+          type: 'json_schema',
+          name: GROWTH_ADVISOR_RESPONSE_SCHEMA.name,
+          strict: GROWTH_ADVISOR_RESPONSE_SCHEMA.strict,
+          schema: GROWTH_ADVISOR_RESPONSE_SCHEMA.schema,
+        },
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    await throwOpenAIResponseError(response);
+  }
+
+  const data = (await response.json()) as OpenAIResponsesApiResponse;
+  const content = extractResponsesText(data);
+
+  if (!content) {
+    throw new Error('OpenAI returned an empty growth advisor response.');
+  }
+
+  return parseGeneratedGrowthAdvisorContent(content);
+}
+
+async function requestGrowthAdvisorChatCompletionsApi(
+  apiKey: string,
+  prompt: GrowthAdvisorPromptPayload,
+): Promise<GeneratedGrowthAdvisorPlan> {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: getModel(),
+      temperature: 0.6,
+      response_format: { type: 'json_object' },
+      messages: [
+        {
+          role: 'system',
+          content:
+            'You are TrayLoop Growth Advisor. You help restaurant teams launch and grow catering revenue with specific, operator-grade guidance. Return only valid JSON.',
+        },
+        {
+          role: 'user',
+          content: JSON.stringify(prompt),
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    await throwOpenAIResponseError(response);
+  }
+
+  const data = (await response.json()) as OpenAIChatCompletionResponse;
+  const content = data.choices?.[0]?.message?.content;
+
+  if (typeof content !== 'string' || !content.trim()) {
+    throw new Error('OpenAI returned an invalid growth advisor response.');
+  }
+
+  return parseGeneratedGrowthAdvisorContent(content);
+}
+
 function shouldFallbackToChat(error: unknown) {
   if (!(error instanceof OpenAIRequestError)) {
     return false;
@@ -863,5 +1191,32 @@ export async function generateRevenueInsights(
     });
 
     return requestRevenueInsightChatCompletionsApi(apiKey, prompt);
+  }
+}
+
+export async function generateGrowthAdvisor(
+  input: GrowthAdvisorInput,
+): Promise<GeneratedGrowthAdvisorPlan> {
+  const apiKey = getApiKey();
+
+  if (!apiKey) {
+    throw new Error('OpenAI is not configured. Set OPENAI_API_KEY to enable Growth Advisor.');
+  }
+
+  const prompt = buildGrowthAdvisorPrompt(input);
+
+  try {
+    return await requestGrowthAdvisorResponsesApi(apiKey, prompt);
+  } catch (error) {
+    if (!shouldFallbackToChat(error)) {
+      throw error;
+    }
+
+    logger.warn('Responses API growth advisor generation failed, falling back to chat completions', {
+      model: getModel(),
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+
+    return requestGrowthAdvisorChatCompletionsApi(apiKey, prompt);
   }
 }

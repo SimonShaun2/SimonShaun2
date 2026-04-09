@@ -20,3 +20,4 @@ export const aiCampaignSegmentEnum = pgEnum('ai_campaign_segment', ['frequent', 
 export const aiCampaignChannelEnum = pgEnum('ai_campaign_channel', ['email', 'sms_copy']);
 export const aiCampaignStatusEnum = pgEnum('ai_campaign_status', ['draft', 'sent', 'copied']);
 export const aiCampaignRecipientStatusEnum = pgEnum('ai_campaign_recipient_status', ['pending', 'sent', 'copied', 'failed']);
+export const organizationFeatureKeyEnum = pgEnum('organization_feature_key', ['growth_advisor']);

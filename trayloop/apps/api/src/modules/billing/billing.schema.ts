@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const billingCheckoutSchema = z.object({
   successUrl: z.string().url().optional(),
   cancelUrl: z.string().url().optional(),
+  includeGrowthAdvisor: z.boolean().optional(),
 });
 
 export const billingPortalSchema = z.object({

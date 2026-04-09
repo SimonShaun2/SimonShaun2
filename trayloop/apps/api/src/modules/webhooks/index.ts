@@ -6,6 +6,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { getStripe, getWebhookSecret, isStripeEnabled } from '../../lib/stripe.js';
 import { recordOrderEvent } from '../../lib/order-events.js';
 import { notifyDepositPaid } from '../../lib/notifications.js';
+import { syncSubscriptionFeatureEntitlements } from '../../lib/organization-features.js';
 import { logger } from '@trayloop/utils';
 
 /** Safely convert a Stripe unix timestamp to a Date, returning null for invalid/missing values. */
@@ -239,6 +240,8 @@ async function upsertSubscriptionSnapshot(
       stripeSubscriptionId: subscriptions.stripeSubscriptionId,
       status: subscriptions.status,
     });
+
+  await syncSubscriptionFeatureEntitlements(organizationId, subscription);
 
   logSubscriptionWebhook('info', 'Subscription snapshot synced', {
     eventId,

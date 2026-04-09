@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import NotificationBell from './notification-bell';
 import { clearMerchantSession, hasMerchantSession } from '../lib/session';
-import { apiFetch, fetchStorefrontContext, type MerchantStorefrontContext } from '../lib/api';
-import { automationsEnabled } from '../lib/features';
+import { apiFetch, fetchBillingSubscription, fetchStorefrontContext, type MerchantStorefrontContext } from '../lib/api';
+import { automationsEnabled, growthAdvisorEnabled } from '../lib/features';
 import { useMobile } from '../lib/use-mobile';
 
 const NAV_ITEMS = [
@@ -14,15 +14,12 @@ const NAV_ITEMS = [
   { href: '/onboarding', label: 'Launch Setup', section: 'workspace' },
   { href: '/follow-ups', label: 'Follow-Ups', section: 'workspace' },
   { href: '/automations', label: 'Automations', section: 'workspace' },
+  { href: '/growth-advisor', label: 'Growth Advisor', section: 'workspace' },
   { href: '/revenue-intelligence', label: 'Revenue', section: 'workspace' },
   { href: '/customers', label: 'Customers', section: 'workspace' },
   { href: '/catalog', label: 'Offerings', section: 'workspace' },
   { href: '/settings', label: 'Settings', section: 'configure' },
 ];
-
-const VISIBLE_NAV_ITEMS = automationsEnabled
-  ? NAV_ITEMS
-  : NAV_ITEMS.filter((item) => item.href !== '/automations');
 
 export default function NavBar() {
   const pathname = usePathname();
@@ -35,6 +32,13 @@ export default function NavBar() {
   const [signedIn, setSignedIn] = useState(false);
   const [orgName, setOrgName] = useState<string | null>(null);
   const [defaultLocationName, setDefaultLocationName] = useState<string | null>(null);
+  const [hasGrowthAdvisorAccess, setHasGrowthAdvisorAccess] = useState(false);
+
+  const visibleNavItems = NAV_ITEMS.filter((item) => {
+    if (item.href === '/automations' && !automationsEnabled) return false;
+    if (item.href === '/growth-advisor' && !(growthAdvisorEnabled && hasGrowthAdvisorAccess)) return false;
+    return true;
+  });
 
   useEffect(() => {
     if (isAuthPage) return;
@@ -45,13 +49,15 @@ export default function NavBar() {
     setOrgName(storedOrgName);
     setStorefrontUrl(null);
     setDefaultLocationName(null);
+    setHasGrowthAdvisorAccess(false);
 
     if (signedIn) {
       Promise.all([
         apiFetch('/api/organizations/current').catch(() => null),
         fetchStorefrontContext().catch(() => null),
+        fetchBillingSubscription().catch(() => null),
       ])
-        .then(([orgRes, storefrontContext]) => {
+        .then(([orgRes, storefrontContext, billing]) => {
           if (orgRes?.data?.name) {
             localStorage.setItem('orgName', orgRes.data.name);
             setOrgName(orgRes.data.name);
@@ -70,6 +76,8 @@ export default function NavBar() {
             setStorefrontUrl(null);
             setDefaultLocationName(null);
           }
+
+          setHasGrowthAdvisorAccess(Boolean(billing?.features?.growthAdvisor?.enabled));
         })
         .catch(() => {});
     }
@@ -173,7 +181,7 @@ export default function NavBar() {
             padding: '0 16px 16px',
           }}
         >
-          {VISIBLE_NAV_ITEMS.map((item) => {
+          {visibleNavItems.map((item) => {
             const isActive = pathname === item.href;
             return (
               <a
@@ -307,7 +315,7 @@ export default function NavBar() {
             >
               {section === 'workspace' ? 'Workspace' : 'Configure'}
             </div>
-            {VISIBLE_NAV_ITEMS.filter((item) => item.section === section).map((item) => {
+            {visibleNavItems.filter((item) => item.section === section).map((item) => {
               const isActive = pathname === item.href;
               return (
                 <a
