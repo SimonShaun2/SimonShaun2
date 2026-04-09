@@ -218,6 +218,77 @@ function Row({ label, value, valueColor }: { label: string; value: string; value
     </div>
   );
 }
+function QuantityStepper({
+  quantity,
+  onDecrease,
+  onIncrease,
+  compact = false,
+}: {
+  quantity: number;
+  onDecrease: () => void;
+  onIncrease: () => void;
+  compact?: boolean;
+}) {
+  return (
+    <div
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: compact ? 6 : 8,
+        borderRadius: 999,
+        border: `2px solid ${INK}`,
+        background: '#FFFFFF',
+        padding: compact ? '2px 4px' : '3px 5px',
+      }}
+    >
+      <button
+        type="button"
+        onClick={onDecrease}
+        style={{
+          width: compact ? 22 : 24,
+          height: compact ? 22 : 24,
+          borderRadius: 999,
+          border: 'none',
+          background: '#F5F5F4',
+          color: INK,
+          fontSize: compact ? 14 : 15,
+          fontWeight: 900,
+          lineHeight: 1,
+        }}
+      >
+        -
+      </button>
+      <span
+        style={{
+          minWidth: compact ? 14 : 18,
+          textAlign: 'center',
+          fontSize: compact ? 11 : 12,
+          fontWeight: 900,
+          color: INK,
+        }}
+      >
+        {quantity}
+      </span>
+      <button
+        type="button"
+        onClick={onIncrease}
+        style={{
+          width: compact ? 22 : 24,
+          height: compact ? 22 : 24,
+          borderRadius: 999,
+          border: 'none',
+          background: '#F5F5F4',
+          color: INK,
+          fontSize: compact ? 14 : 15,
+          fontWeight: 900,
+          lineHeight: 1,
+        }}
+      >
+        +
+      </button>
+    </div>
+  );
+}
 function ReturnedCheckoutBanner({
   checkoutState,
   returnedOrderNumber,
@@ -562,9 +633,6 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
   const subtotalCents =
     selectedPkgList.reduce((sum, item) => sum + item.total, 0) +
     selectedAddOnList.reduce((sum, item) => sum + item.total, 0);
-  const smartUpsellSubtotal = primaryUpsell
-    ? (selectedAddOnIds[primaryUpsell.addOnId] ?? 0) * primaryUpsell.unitPrice
-    : 0;
   const recurringDeliveryCount =
     recurringPresets.find((preset) => preset.id === recurringPreset)?.deliveriesPerMonth ?? 4;
   const recurringDiscountCents = recurringEnabled ? Math.round(subtotalCents * 0.05) : 0;
@@ -1737,45 +1805,45 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                 +
               </button>
             </div>
-            <div style={{ position: 'relative' }}>
-              <input
-                className="storefront-field"
-                value={address}
-                onChange={(event) => setAddress(event.target.value)}
-                placeholder={
-                  serviceType === 'delivery'
-                    ? 'Address'
-                    : 'Optional delivery address'
-                }
-                style={{
-                  width: '100%',
-                  height: 44,
-                  boxSizing: 'border-box',
-                  borderRadius: 14,
-                  border: `1px solid ${BORDER}`,
-                  background: '#FFFFFF',
-                  padding: '0 98px 0 14px',
-                  fontSize: 12,
-                }}
-                />
-              {address && serviceType === 'delivery' ? (
-                <span
+            {!stackDesktopControls ? (
+              <div style={{ position: 'relative' }}>
+                <input
+                  className="storefront-field"
+                  value={address}
+                  onChange={(event) => setAddress(event.target.value)}
+                  placeholder={
+                    serviceType === 'delivery' ? 'Address' : 'Optional delivery address'
+                  }
                   style={{
-                    position: 'absolute',
-                    right: 10,
-                    top: 8,
-                    borderRadius: 999,
-                    background: '#EAF8EF',
-                    color: '#166534',
-                    padding: '6px 9px',
-                    fontSize: 10,
-                    fontWeight: 800,
+                    width: '100%',
+                    height: 44,
+                    boxSizing: 'border-box',
+                    borderRadius: 14,
+                    border: `1px solid ${BORDER}`,
+                    background: '#FFFFFF',
+                    padding: '0 98px 0 14px',
+                    fontSize: 12,
                   }}
-                >
-                  In zone
-                </span>
-              ) : null}
-            </div>
+                />
+                {address && serviceType === 'delivery' ? (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      right: 10,
+                      top: 8,
+                      borderRadius: 999,
+                      background: '#EAF8EF',
+                      color: '#166534',
+                      padding: '6px 9px',
+                      fontSize: 10,
+                      fontWeight: 800,
+                    }}
+                  >
+                    In zone
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
           </div>
           {stackDesktopControls ? (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
@@ -2210,24 +2278,17 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                               <div style={{ fontSize: isMobile ? 16 : 18, fontWeight: 900 }}>
                                 {formatCurrencyAmount(price)}
                               </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                {quantity > 0 ? (
-                                  <span
-                                    style={{
-                                      borderRadius: 999,
-                                      background: `${brandColor}18`,
-                                      color: brandColor,
-                                      padding: '5px 8px',
-                                      fontSize: 10,
-                                      fontWeight: 900,
-                                    }}
-                                  >
-                                    {quantity}
-                                  </span>
-                                ) : null}
+                              {quantity > 0 ? (
+                                <QuantityStepper
+                                  quantity={quantity}
+                                  compact={isMobile}
+                                  onDecrease={() => updatePackageQuantity(pkg.id, quantity - 1)}
+                                  onIncrease={() => updatePackageQuantity(pkg.id, quantity + 1)}
+                                />
+                              ) : (
                                 <button
                                   type="button"
-                                  onClick={() => updatePackageQuantity(pkg.id, quantity + 1 || 1)}
+                                  onClick={() => updatePackageQuantity(pkg.id, 1)}
                                   style={{
                                     width: 34,
                                     height: 34,
@@ -2241,7 +2302,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                                 >
                                   +
                                 </button>
-                              </div>
+                              )}
                             </div>
                           </div>
                         </article>
@@ -2395,24 +2456,17 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                               <div style={{ fontSize: isMobile ? 16 : 18, fontWeight: 900 }}>
                                 {formatCurrencyAmount(addOn.price)}
                               </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                {quantity > 0 ? (
-                                  <span
-                                    style={{
-                                      borderRadius: 999,
-                                      background: `${brandColor}18`,
-                                      color: brandColor,
-                                      padding: '5px 8px',
-                                      fontSize: 10,
-                                      fontWeight: 900,
-                                    }}
-                                  >
-                                    {quantity}
-                                  </span>
-                                ) : null}
+                              {quantity > 0 ? (
+                                <QuantityStepper
+                                  quantity={quantity}
+                                  compact={isMobile}
+                                  onDecrease={() => updateAddOnQuantity(addOn.id, quantity - 1)}
+                                  onIncrease={() => updateAddOnQuantity(addOn.id, quantity + 1)}
+                                />
+                              ) : (
                                 <button
                                   type="button"
-                                  onClick={() => updateAddOnQuantity(addOn.id, quantity + 1 || 1)}
+                                  onClick={() => updateAddOnQuantity(addOn.id, 1)}
                                   style={{
                                     width: 34,
                                     height: 34,
@@ -2426,7 +2480,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                                 >
                                   +
                                 </button>
-                              </div>
+                              )}
                             </div>
                           </div>
                         </article>
@@ -2675,24 +2729,15 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                               display: 'grid',
                               gridTemplateColumns: 'auto minmax(0,1fr) auto',
                               gap: 12,
-                              alignItems: 'start',
+                              alignItems: 'center',
                             }}
                           >
-                            <div
-                              style={{
-                                minWidth: 34,
-                                height: 34,
-                                borderRadius: 999,
-                                background: `${brandColor}18`,
-                                color: brandColor,
-                                display: 'grid',
-                                placeItems: 'center',
-                                fontSize: 12,
-                                fontWeight: 900,
-                              }}
-                            >
-                              {item.quantity}
-                            </div>
+                            <QuantityStepper
+                              quantity={item.quantity}
+                              compact
+                              onDecrease={() => updatePackageQuantity(item.packageId, item.quantity - 1)}
+                              onIncrease={() => updatePackageQuantity(item.packageId, item.quantity + 1)}
+                            />
                             <div>
                               <div style={{ fontSize: 13, fontWeight: 800 }}>{item.name}</div>
                               <div
@@ -2718,24 +2763,15 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                               display: 'grid',
                               gridTemplateColumns: 'auto minmax(0,1fr) auto',
                               gap: 12,
-                              alignItems: 'start',
+                              alignItems: 'center',
                             }}
                           >
-                            <div
-                              style={{
-                                minWidth: 34,
-                                height: 34,
-                                borderRadius: 999,
-                                background: '#FFF7ED',
-                                color: '#EA580C',
-                                display: 'grid',
-                                placeItems: 'center',
-                                fontSize: 12,
-                                fontWeight: 900,
-                              }}
-                            >
-                              {item.quantity}
-                            </div>
+                            <QuantityStepper
+                              quantity={item.quantity}
+                              compact
+                              onDecrease={() => updateAddOnQuantity(item.addOnId, item.quantity - 1)}
+                              onIncrease={() => updateAddOnQuantity(item.addOnId, item.quantity + 1)}
+                            />
                             <div>
                               <div style={{ fontSize: 13, fontWeight: 800 }}>{item.name}</div>
                               <div
@@ -2769,12 +2805,6 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                     }}
                   >
                     <Row label="Subtotal" value={formatCurrencyAmount(subtotalCents)} />
-                    <Row
-                      label="Smart upsell"
-                      value={
-                        smartUpsellSubtotal > 0 ? formatCurrencyAmount(smartUpsellSubtotal) : '-'
-                      }
-                    />
                     <Row
                       label="Recurring discount"
                       value={
