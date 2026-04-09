@@ -658,7 +658,6 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
   const heroMetaParts = [
     merchant.rating && merchant.reviewCount ? `${merchant.rating.toFixed(1)} stars` : '',
     selectedLocation ? `${selectedLocation.city}, ${selectedLocation.state}` : '',
-    merchant.responseTimeLabel || 'Replies same day',
   ].filter(Boolean);
   const trustItems = [
     {
@@ -676,7 +675,6 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
           : '$0',
     },
     { label: 'Deposit', value: selectedLocation.depositRequired ? 'Required' : 'Not required' },
-    { label: 'Response', value: merchant.responseTimeLabel || 'Usually replies same day' },
     { label: 'Verified', value: 'Direct from merchant' },
   ];
   const merchantContact = merchant.phone || selectedLocation?.phone || null;
