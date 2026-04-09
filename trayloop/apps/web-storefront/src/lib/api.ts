@@ -54,6 +54,7 @@ export interface StorefrontAddOn {
   id: string;
   name: string;
   description: string | null;
+  imageUrl: string | null;
   price: number;
   currency: string;
   upsellEligible?: boolean;
@@ -88,12 +89,27 @@ export interface StorefrontMerchant {
   website: string | null;
   phone: string | null;
   logoUrl: string | null;
+  brandColor: string | null;
+  displayFont: 'bricolage' | 'fraunces' | 'inter' | null;
+  rating: number | null;
+  reviewCount: number | null;
+  heroImageUrl: string | null;
+  tagline: string | null;
+  responseTimeLabel: string | null;
 }
 
 export interface StorefrontData {
   merchant: StorefrontMerchant;
   locations: StorefrontLocation[];
   menu: StorefrontMenu[];
+}
+
+export interface StorefrontUpsellSocialProof {
+  ordersAnalyzed: number;
+  ordersWithAddOn: number;
+  similarHeadcount: boolean;
+  averageAddOnRevenue: number;
+  cuisineTag: string | null;
 }
 
 export async function fetchStorefront(slug: string): Promise<StorefrontData> {
@@ -370,6 +386,40 @@ export async function fetchStorefrontUpsells(
   }
 
   const json = await res.json();
+  return json.data;
+}
+
+export async function fetchStorefrontUpsellSocialProof(
+  slug: string,
+  input: { addOnId: string; headcount: number },
+): Promise<StorefrontUpsellSocialProof> {
+  const params = new URLSearchParams({
+    addOnId: input.addOnId,
+    headcount: String(input.headcount),
+  });
+
+  const res = await fetch(`${API_URL}/api/storefront/${slug}/upsells/social-proof?${params.toString()}`, {
+    cache: 'no-store',
+  });
+
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(json.error?.message ?? 'Failed to load upsell social proof');
+  }
+
+  return json.data;
+}
+
+export async function fetchStorefrontOftenAdded(slug: string): Promise<StorefrontAddOn[]> {
+  const res = await fetch(`${API_URL}/api/storefront/${slug}/often-added`, {
+    cache: 'no-store',
+  });
+
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(json.error?.message ?? 'Failed to load popular add-ons');
+  }
+
   return json.data;
 }
 

@@ -12,9 +12,10 @@ import {
   deposits,
   payments,
   orders,
+  orderItems,
   upsellEvents,
 } from '@trayloop/database';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, gte, lte, ne } from 'drizzle-orm';
 import { NotFoundError, ValidationError } from '../../lib/errors.js';
 import { getStripe, isStripeEnabled } from '../../lib/stripe.js';
 import { buildUpsellRecommendations } from '../../lib/upsells.js';
@@ -190,6 +191,8 @@ export async function getStorefront(slug: string) {
       website: organizations.website,
       phone: organizations.phone,
       logoUrl: organizations.logoUrl,
+      brandColor: organizations.brandColor,
+      displayFont: organizations.displayFont,
     })
     .from(organizations)
     .where(and(eq(organizations.slug, slug), eq(organizations.isActive, true)))
@@ -267,6 +270,13 @@ export async function getStorefront(slug: string) {
         website: org.website,
         phone: org.phone,
         logoUrl: org.logoUrl,
+        brandColor: org.brandColor,
+        displayFont: org.displayFont,
+        rating: null,
+        reviewCount: null,
+        heroImageUrl: null,
+        tagline: null,
+        responseTimeLabel: 'Usually replies same day',
       },
       locations: locationDtos,
       menu: [],
@@ -325,6 +335,7 @@ export async function getStorefront(slug: string) {
         catalogId: addOns.catalogId,
         name: addOns.name,
         description: addOns.description,
+        imageUrl: addOns.imageUrl,
         price: addOns.price,
         currency: addOns.currency,
         upsellEligible: addOns.upsellEligible,
@@ -393,6 +404,7 @@ export async function getStorefront(slug: string) {
       id: a.id,
       name: a.name,
       description: a.description,
+      imageUrl: a.imageUrl,
       price: a.price,
       currency: a.currency,
       upsellEligible: a.upsellEligible,
@@ -431,6 +443,13 @@ export async function getStorefront(slug: string) {
       website: org.website,
       phone: org.phone,
       logoUrl: org.logoUrl,
+      brandColor: org.brandColor,
+      displayFont: org.displayFont,
+      rating: null,
+      reviewCount: null,
+      heroImageUrl: null,
+      tagline: null,
+      responseTimeLabel: 'Usually replies same day',
     },
     locations: locationDtos,
     menu,
@@ -722,6 +741,141 @@ export async function trackStorefrontUpsellEvent(
   });
 
   return { ok: true };
+}
+
+async function getStorefrontOrganization(slug: string) {
+  const [org] = await db
+    .select({ id: organizations.id, name: organizations.name, description: organizations.description })
+    .from(organizations)
+    .where(and(eq(organizations.slug, slug), eq(organizations.isActive, true)))
+    .limit(1);
+
+  if (!org) {
+    throw new NotFoundError('Storefront');
+  }
+
+  return org;
+}
+
+async function getOrganizationAddOns(orgId: string) {
+  return db
+    .select({
+      id: addOns.id,
+      name: addOns.name,
+      description: addOns.description,
+      imageUrl: addOns.imageUrl,
+      price: addOns.price,
+      currency: addOns.currency,
+      upsellEligible: addOns.upsellEligible,
+      upsellFeatured: addOns.upsellFeatured,
+      upsellPriority: addOns.upsellPriority,
+    })
+    .from(addOns)
+    .innerJoin(catalogs, eq(catalogs.id, addOns.catalogId))
+    .where(and(eq(catalogs.organizationId, orgId), eq(addOns.isActive, true)));
+}
+
+export async function getStorefrontUpsellSocialProof(
+  slug: string,
+  input: { addOnId: string; headcount: number },
+) {
+  const org = await getStorefrontOrganization(slug);
+  const addOnRows = await getOrganizationAddOns(org.id);
+  const addOn = addOnRows.find((row) => row.id === input.addOnId);
+
+  if (!addOn) {
+    throw new NotFoundError('Add-on');
+  }
+
+  const minHeadcount = Math.max(1, Math.floor(input.headcount * 0.75));
+  const maxHeadcount = Math.max(input.headcount, Math.ceil(input.headcount * 1.5));
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+  const rows = await db
+    .select({
+      orderId: orders.id,
+      itemName: orderItems.name,
+      itemTotalPrice: orderItems.totalPrice,
+    })
+    .from(orders)
+    .leftJoin(orderItems, eq(orderItems.orderId, orders.id))
+    .where(
+      and(
+        eq(orders.organizationId, org.id),
+        ne(orders.status, 'cancelled'),
+        gte(orders.createdAt, thirtyDaysAgo),
+        gte(orders.headCount, minHeadcount),
+        lte(orders.headCount, maxHeadcount),
+      ),
+    );
+
+  const ordersAnalyzed = new Set(rows.map((row) => row.orderId)).size;
+  const matchingRows = rows.filter((row) => row.itemName === addOn.name);
+  const ordersWithAddOn = new Set(matchingRows.map((row) => row.orderId)).size;
+  const averageAddOnRevenue = matchingRows.length > 0
+    ? Math.round(matchingRows.reduce((sum, row) => sum + (row.itemTotalPrice ?? 0), 0) / matchingRows.length)
+    : addOn.price;
+
+  return {
+    ordersAnalyzed,
+    ordersWithAddOn,
+    similarHeadcount: ordersAnalyzed > 0,
+    averageAddOnRevenue,
+    cuisineTag: org.description?.split(/\s+/).slice(0, 2).join(' ') || org.name,
+  };
+}
+
+export async function getStorefrontOftenAdded(slug: string) {
+  const org = await getStorefrontOrganization(slug);
+  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+  const addOnRows = await getOrganizationAddOns(org.id);
+
+  if (addOnRows.length === 0) {
+    return [];
+  }
+
+  const rows = await db
+    .select({
+      orderId: orders.id,
+      itemName: orderItems.name,
+    })
+    .from(orders)
+    .leftJoin(orderItems, eq(orderItems.orderId, orders.id))
+    .where(
+      and(
+        eq(orders.organizationId, org.id),
+        ne(orders.status, 'cancelled'),
+        gte(orders.createdAt, ninetyDaysAgo),
+      ),
+    );
+
+  const totalOrders = new Set(rows.map((row) => row.orderId)).size;
+  if (totalOrders === 0) {
+    return [];
+  }
+
+  const ranked = addOnRows
+    .map((addOn) => {
+      const attachedOrderCount = new Set(
+        rows.filter((row) => row.itemName === addOn.name).map((row) => row.orderId),
+      ).size;
+
+      return {
+        ...addOn,
+        attachRate: attachedOrderCount / totalOrders,
+      };
+    })
+    .filter((row) => row.attachRate > 0)
+    .sort((a, b) => {
+      if (b.attachRate !== a.attachRate) {
+        return b.attachRate - a.attachRate;
+      }
+
+      return (b.upsellPriority ?? 0) - (a.upsellPriority ?? 0);
+    })
+    .slice(0, 3);
+
+  return ranked.map(({ attachRate: _attachRate, ...addOn }) => addOn);
 }
 
 function getStorefrontBaseUrl() {

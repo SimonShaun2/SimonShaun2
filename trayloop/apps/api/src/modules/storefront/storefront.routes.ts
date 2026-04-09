@@ -64,6 +64,11 @@ const upsellTrackSchema = z.object({
   reason: z.string().max(280).optional(),
 });
 
+const upsellSocialProofQuerySchema = z.object({
+  addOnId: z.string().uuid(),
+  headcount: z.coerce.number().int().positive(),
+});
+
 export function registerRoutes(app: FastifyInstance) {
   app.get('/:slug', async (request) => {
     const { slug } = storefrontSlugParamsSchema.parse(request.params);
@@ -130,6 +135,19 @@ export function registerRoutes(app: FastifyInstance) {
     const body = upsellTrackSchema.parse(request.body);
     const result = await service.trackStorefrontUpsellEvent(slug, body);
     return reply.status(201).send({ data: result });
+  });
+
+  app.get('/:slug/upsells/social-proof', async (request) => {
+    const { slug } = storefrontSlugParamsSchema.parse(request.params);
+    const query = upsellSocialProofQuerySchema.parse(request.query);
+    const result = await service.getStorefrontUpsellSocialProof(slug, query);
+    return { data: result };
+  });
+
+  app.get('/:slug/often-added', async (request) => {
+    const { slug } = storefrontSlugParamsSchema.parse(request.params);
+    const result = await service.getStorefrontOftenAdded(slug);
+    return { data: result };
   });
 
   app.get('/:slug/orders/:orderId/payment-status', async (request) => {

@@ -18,6 +18,7 @@ const NAV_ITEMS = [
   { href: '/revenue-intelligence', label: 'Revenue', section: 'workspace' },
   { href: '/customers', label: 'Customers', section: 'workspace' },
   { href: '/catalog', label: 'Offerings', section: 'workspace' },
+  { href: '/storefront/customize', label: 'Storefront', section: 'configure' },
   { href: '/settings', label: 'Settings', section: 'configure' },
 ];
 

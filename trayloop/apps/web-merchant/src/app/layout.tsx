@@ -4,6 +4,28 @@ import { showStagingBanner } from '../lib/features';
 import { AnalyticsProvider } from '@trayloop/analytics';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import { Bricolage_Grotesque, Fraunces, Inter } from 'next/font/google';
+
+const inter = Inter({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-body',
+  display: 'swap',
+});
+
+const bricolage = Bricolage_Grotesque({
+  subsets: ['latin'],
+  weight: ['400', '700', '800'],
+  variable: '--font-display-bricolage',
+  display: 'swap',
+});
+
+const fraunces = Fraunces({
+  subsets: ['latin'],
+  weight: ['700'],
+  variable: '--font-display-fraunces',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'TrayLoop Merchant',
@@ -13,18 +35,21 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-      </head>
+    <html lang="en" className={`${inter.variable} ${bricolage.variable} ${fraunces.variable}`}>
       <body style={{
         margin: 0,
-        fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        fontFamily: 'var(--font-body), Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         color: '#1C1917',
         lineHeight: 1.5,
         backgroundColor: '#FAFAF9',
+        ['--font-display' as string]: 'var(--font-display-bricolage)',
+        ['--brand' as string]: '#E85618',
+        ['--brand-bg' as string]: '#FEF2E8',
+        ['--ink' as string]: '#1A1612',
+        ['--cream' as string]: '#F9F5EF',
+        ['--cream-dark' as string]: '#F0EBE1',
+        ['--border' as string]: '#E7E5E4',
+        ['--muted' as string]: '#78716C',
       }}>
         <style>{`
           @media (max-width: 960px) {

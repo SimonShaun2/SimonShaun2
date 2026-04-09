@@ -6,19 +6,19 @@ import { usePathname, useRouter } from 'next/navigation';
 import { clearCustomerSession, ensureCustomerSession, hasCustomerSession } from '../lib/session';
 import { fetchCurrentCustomer, logoutCustomer } from '../lib/api';
 
-const linkStyle: React.CSSProperties = {
-  color: '#FFFFFF',
-  fontSize: 13,
-  fontWeight: 600,
-  textDecoration: 'none',
-  opacity: 0.92,
-};
-
-export default function StorefrontAuthNav() {
+export default function StorefrontAuthNav({ variant = 'dark' }: { variant?: 'dark' | 'light' }) {
   const [customerName, setCustomerName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const pathname = usePathname();
   const router = useRouter();
+  const isLight = variant === 'light';
+  const linkStyle: React.CSSProperties = {
+    color: isLight ? '#1A1612' : '#FFFFFF',
+    fontSize: 13,
+    fontWeight: 600,
+    textDecoration: 'none',
+    opacity: 0.92,
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -77,7 +77,7 @@ export default function StorefrontAuthNav() {
 
   if (loading) {
     return (
-      <div style={{ color: '#D6D3D1', fontSize: 12, fontWeight: 500 }}>
+      <div style={{ color: isLight ? '#78716C' : '#D6D3D1', fontSize: 12, fontWeight: 500 }}>
         Loading account...
       </div>
     );
@@ -93,16 +93,16 @@ export default function StorefrontAuthNav() {
   }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-      <Link href="/account" style={linkStyle}>Account</Link>
-      <span style={{ color: '#D6D3D1', fontSize: 12, whiteSpace: 'nowrap' }}>{customerName}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <Link href="/account" style={linkStyle}>Account</Link>
+      <span style={{ color: isLight ? '#57534E' : '#D6D3D1', fontSize: 12, whiteSpace: 'nowrap' }}>{customerName}</span>
       <button
         type="button"
         onClick={handleSignOut}
         style={{
-          border: '1px solid rgba(255,255,255,0.18)',
-          background: 'transparent',
-          color: '#FFFFFF',
+          border: isLight ? '1px solid #D6D3D1' : '1px solid rgba(255,255,255,0.18)',
+          background: isLight ? '#FFFFFF' : 'transparent',
+          color: isLight ? '#1A1612' : '#FFFFFF',
           borderRadius: 999,
           padding: '6px 10px',
           fontSize: 12,

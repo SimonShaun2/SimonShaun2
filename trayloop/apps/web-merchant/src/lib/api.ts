@@ -21,6 +21,18 @@ export interface MerchantStorefrontContext {
   defaultLocationName: string | null;
 }
 
+export interface MerchantOrganization {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  website: string | null;
+  phone: string | null;
+  logoUrl: string | null;
+  brandColor: string | null;
+  displayFont: 'bricolage' | 'fraunces' | 'inter' | null;
+}
+
 export interface MerchantPaymentStatus {
   stripeAccountId: string | null;
   chargesEnabled: boolean;
@@ -470,6 +482,20 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
 
 export async function fetchStorefrontContext(): Promise<MerchantStorefrontContext> {
   const response = await apiFetch('/api/organizations/current/storefront-context');
+  return response.data;
+}
+
+export async function fetchCurrentOrganization(): Promise<MerchantOrganization> {
+  const response = await apiFetch('/api/organizations/current');
+  return response.data;
+}
+
+export async function updateCurrentOrganization(input: Partial<Pick<MerchantOrganization, 'name' | 'description' | 'website' | 'phone' | 'logoUrl' | 'brandColor' | 'displayFont'>>): Promise<MerchantOrganization> {
+  const response = await apiFetch('/api/organizations/current', {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+
   return response.data;
 }
 

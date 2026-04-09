@@ -172,6 +172,7 @@ export async function getFullMenu(orgId: string) {
     db.select({
       id: addOns.id, catalogId: addOns.catalogId,
       name: addOns.name, description: addOns.description,
+      imageUrl: addOns.imageUrl,
       price: addOns.price, currency: addOns.currency,
       isActive: addOns.isActive, sortOrder: addOns.sortOrder,
     }).from(addOns)
@@ -231,6 +232,7 @@ export async function getFullMenu(orgId: string) {
         catalogId: a.catalogId,
         name: a.name,
         description: a.description,
+        imageUrl: a.imageUrl,
         price: a.price,
         currency: a.currency,
         sortOrder: a.sortOrder,

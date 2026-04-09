@@ -28,6 +28,7 @@ interface AddOn {
   catalogId: string;
   name: string;
   description: string | null;
+  imageUrl: string | null;
   price: number;
   currency: string;
   upsellEligible: boolean;
@@ -94,6 +95,7 @@ interface AddOnFormState {
   catalogId: string;
   name: string;
   description: string;
+  imageUrl: string;
   price: string;
   sortOrder: string;
   upsellEligible: boolean;
@@ -142,6 +144,7 @@ const EMPTY_ADDON_FORM: AddOnFormState = {
   catalogId: '',
   name: '',
   description: '',
+  imageUrl: '',
   price: '',
   sortOrder: '0',
   upsellEligible: true,
@@ -150,6 +153,52 @@ const EMPTY_ADDON_FORM: AddOnFormState = {
   isActive: true,
 };
 
+const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_UPLOAD_BYTES = 6 * 1024 * 1024;
+const MAX_IMAGE_DIMENSION = 1600;
+
+async function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Unable to read image file.'));
+    reader.onload = () => resolve(String(reader.result));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function optimizeImageFile(file: File) {
+  if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+    throw new Error('Please upload a JPG, PNG, or WebP image.');
+  }
+
+  if (file.size > MAX_UPLOAD_BYTES) {
+    throw new Error('Please upload an image smaller than 6 MB.');
+  }
+
+  const sourceUrl = await readFileAsDataUrl(file);
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const next = new Image();
+    next.onload = () => resolve(next);
+    next.onerror = () => reject(new Error('Unable to process this image.'));
+    next.src = sourceUrl;
+  });
+
+  const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(image.width, image.height));
+  const width = Math.max(1, Math.round(image.width * scale));
+  const height = Math.max(1, Math.round(image.height * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext('2d');
+  if (!context) {
+    throw new Error('Unable to prepare image preview.');
+  }
+
+  context.drawImage(image, 0, 0, width, height);
+  return canvas.toDataURL('image/webp', 0.82);
+}
+
 export default function CatalogPage() {
   const isMobile = useMobile();
   const [catalogs, setCatalogs] = useState<Catalog[]>([]);
@@ -157,6 +206,7 @@ export default function CatalogPage() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [saving, setSaving] = useState(false);
+  const [uploadingImageFor, setUploadingImageFor] = useState<'package' | 'addon' | null>(null);
   const [editor, setEditor] = useState<EditorState>(null);
   const [catalogForm, setCatalogForm] = useState<CatalogFormState>(EMPTY_CATALOG_FORM);
   const [categoryForm, setCategoryForm] = useState<CategoryFormState>(EMPTY_CATEGORY_FORM);
@@ -298,6 +348,7 @@ export default function CatalogPage() {
       catalogId: addOn.catalogId,
       name: addOn.name,
       description: addOn.description ?? '',
+      imageUrl: addOn.imageUrl ?? '',
       price: centsToDollars(addOn.price),
       sortOrder: String(addOn.sortOrder),
       upsellEligible: addOn.upsellEligible,
@@ -440,6 +491,7 @@ export default function CatalogPage() {
         catalogId: requiredValue(addOnForm.catalogId, 'Catalog'),
         name: requiredValue(addOnForm.name, 'Add-on name'),
         description: optionalValue(addOnForm.description),
+        imageUrl: optionalValue(addOnForm.imageUrl),
         price: dollarsToCents(addOnForm.price, 'Add-on price'),
         sortOrder: parseNumberField(addOnForm.sortOrder, 'Sort order', false),
         upsellEligible: addOnForm.upsellEligible,
@@ -470,6 +522,35 @@ export default function CatalogPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function handleImageUpload(kind: 'package' | 'addon', file: File | null) {
+    if (!file) return;
+
+    setUploadingImageFor(kind);
+    setError('');
+
+    try {
+      const imageUrl = await optimizeImageFile(file);
+      if (kind === 'package') {
+        setPackageForm((current) => ({ ...current, imageUrl }));
+      } else {
+        setAddOnForm((current) => ({ ...current, imageUrl }));
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to upload image.');
+    } finally {
+      setUploadingImageFor(null);
+    }
+  }
+
+  function clearImage(kind: 'package' | 'addon') {
+    if (kind === 'package') {
+      setPackageForm((current) => ({ ...current, imageUrl: '' }));
+      return;
+    }
+
+    setAddOnForm((current) => ({ ...current, imageUrl: '' }));
   }
 
   if (loading) return <p style={{ color: '#6b7280' }}>Loading offerings...</p>;
@@ -841,14 +922,34 @@ export default function CatalogPage() {
                         placeholder="Optional"
                       />
                     </Field>
-                    <Field label="Image URL">
-                      <input
-                        value={packageForm.imageUrl}
-                        onChange={(event) => setPackageForm((current) => ({ ...current, imageUrl: event.target.value }))}
-                        style={inputStyle}
-                        placeholder="https://..."
-                      />
+                    <Field label="Package Image">
+                      <div style={{ display: 'grid', gap: 10 }}>
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp"
+                          onChange={(event) => void handleImageUpload('package', event.target.files?.[0] ?? null)}
+                          style={inputStyle}
+                        />
+                        <div style={{ fontSize: 12, color: '#78716C', lineHeight: 1.5 }}>
+                          Upload a JPG, PNG, or WebP image, or paste an existing hosted image URL below.
+                        </div>
+                        <input
+                          value={packageForm.imageUrl}
+                          onChange={(event) => setPackageForm((current) => ({ ...current, imageUrl: event.target.value }))}
+                          style={inputStyle}
+                          placeholder="https://... or uploaded image data"
+                        />
+                        {packageForm.imageUrl ? (
+                          <button type="button" onClick={() => clearImage('package')} style={ghostButtonStyle}>
+                            Remove image
+                          </button>
+                        ) : null}
+                        {uploadingImageFor === 'package' ? (
+                          <div style={{ fontSize: 12, color: '#A16207' }}>Optimizing image...</div>
+                        ) : null}
+                      </div>
                     </Field>
+                    <ImagePreview src={packageForm.imageUrl} alt={packageForm.name || 'Package preview'} />
                     <Field label="Description">
                       <textarea
                         value={packageForm.description}
@@ -940,6 +1041,34 @@ export default function CatalogPage() {
                         placeholder="Optional upsell details for merchants and customers."
                       />
                     </Field>
+                    <Field label="Add-On Image">
+                      <div style={{ display: 'grid', gap: 10 }}>
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp"
+                          onChange={(event) => void handleImageUpload('addon', event.target.files?.[0] ?? null)}
+                          style={inputStyle}
+                        />
+                        <div style={{ fontSize: 12, color: '#78716C', lineHeight: 1.5 }}>
+                          Upload a JPG, PNG, or WebP image, or paste an existing hosted image URL below.
+                        </div>
+                        <input
+                          value={addOnForm.imageUrl}
+                          onChange={(event) => setAddOnForm((current) => ({ ...current, imageUrl: event.target.value }))}
+                          style={inputStyle}
+                          placeholder="https://... or uploaded image data"
+                        />
+                        {addOnForm.imageUrl ? (
+                          <button type="button" onClick={() => clearImage('addon')} style={ghostButtonStyle}>
+                            Remove image
+                          </button>
+                        ) : null}
+                        {uploadingImageFor === 'addon' ? (
+                          <div style={{ fontSize: 12, color: '#A16207' }}>Optimizing image...</div>
+                        ) : null}
+                      </div>
+                    </Field>
+                    <ImagePreview src={addOnForm.imageUrl} alt={addOnForm.name || 'Add-on preview'} />
                     <Field label="Upsell Priority">
                       <input
                         value={addOnForm.upsellPriority}
@@ -1013,9 +1142,58 @@ function Banner({ tone, text }: { tone: 'success' | 'error'; text: string }) {
   );
 }
 
+function ImagePreview({
+  src,
+  alt,
+  height = 120,
+}: {
+  src: string | null | undefined;
+  alt: string;
+  height?: number;
+}) {
+  if (!src) return null;
+
+  return (
+    <div
+      style={{
+        border: '1px solid #E7E5E4',
+        borderRadius: 12,
+        overflow: 'hidden',
+        background: '#FAFAF9',
+      }}
+    >
+      <img
+        src={src}
+        alt={alt}
+        style={{
+          display: 'block',
+          width: '100%',
+          height,
+          objectFit: 'cover',
+        }}
+      />
+    </div>
+  );
+}
+
 function PackageRow({ pkg, onEdit }: { pkg: Package; onEdit: () => void }) {
   return (
     <div style={rowStyle}>
+      {pkg.imageUrl ? (
+        <img
+          src={pkg.imageUrl}
+          alt={pkg.name}
+          style={{
+            width: 72,
+            height: 72,
+            borderRadius: 10,
+            objectFit: 'cover',
+            border: '1px solid #E7E5E4',
+            background: '#FAFAF9',
+            flexShrink: 0,
+          }}
+        />
+      ) : null}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 14, fontWeight: 600 }}>{pkg.name}</span>
@@ -1047,6 +1225,21 @@ function PackageRow({ pkg, onEdit }: { pkg: Package; onEdit: () => void }) {
 function AddOnCard({ addOn, onEdit }: { addOn: AddOn; onEdit: () => void }) {
   return (
     <div style={addOnCardStyle}>
+      {addOn.imageUrl ? (
+        <img
+          src={addOn.imageUrl}
+          alt={addOn.name}
+          style={{
+            width: '100%',
+            height: 140,
+            borderRadius: 10,
+            objectFit: 'cover',
+            border: '1px solid #E7E5E4',
+            background: '#FAFAF9',
+            marginBottom: 12,
+          }}
+        />
+      ) : null}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 14, fontWeight: 600 }}>{addOn.name}</span>

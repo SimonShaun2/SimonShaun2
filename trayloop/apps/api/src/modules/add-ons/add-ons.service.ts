@@ -9,6 +9,7 @@ interface AddOnDto {
   catalogId: string;
   name: string;
   description: string | null;
+  imageUrl: string | null;
   price: number;
   currency: string;
   upsellEligible: boolean;
@@ -26,6 +27,7 @@ function toDto(a: typeof addOns.$inferSelect): AddOnDto {
     catalogId: a.catalogId,
     name: a.name,
     description: a.description,
+    imageUrl: a.imageUrl,
     price: a.price,
     currency: a.currency,
     upsellEligible: a.upsellEligible,
@@ -69,9 +71,22 @@ export async function create(orgId: string, input: CreateAddOnInput) {
 }
 
 export async function update(id: string, input: UpdateAddOnInput) {
+  const updateData: Record<string, unknown> = { updatedAt: new Date() };
+
+  if (input.name !== undefined) updateData.name = input.name;
+  if (input.description !== undefined) updateData.description = input.description;
+  if (input.imageUrl !== undefined) updateData.imageUrl = input.imageUrl;
+  if (input.price !== undefined) updateData.price = input.price;
+  if (input.currency !== undefined) updateData.currency = input.currency;
+  if (input.upsellEligible !== undefined) updateData.upsellEligible = input.upsellEligible;
+  if (input.upsellFeatured !== undefined) updateData.upsellFeatured = input.upsellFeatured;
+  if (input.upsellPriority !== undefined) updateData.upsellPriority = input.upsellPriority;
+  if (input.isActive !== undefined) updateData.isActive = input.isActive;
+  if (input.sortOrder !== undefined) updateData.sortOrder = input.sortOrder;
+
   const [updated] = await db
     .update(addOns)
-    .set({ ...input, updatedAt: new Date() })
+    .set(updateData)
     .where(eq(addOns.id, id))
     .returning();
 

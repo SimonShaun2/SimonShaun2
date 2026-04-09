@@ -10,6 +10,8 @@ export const organizations = pgTable('organizations', {
   website: text('website'),
   phone: varchar('phone', { length: 50 }),
   logoUrl: text('logo_url'),
+  brandColor: varchar('brand_color', { length: 7 }),
+  displayFont: text('display_font'),
   ownerId: uuid('owner_id').notNull().references(() => users.id),
   stripeAccountId: text('stripe_account_id'),
   stripeChargesEnabled: boolean('stripe_charges_enabled').notNull().default(false),

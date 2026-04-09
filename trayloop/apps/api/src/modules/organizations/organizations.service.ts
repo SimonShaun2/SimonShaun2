@@ -15,6 +15,8 @@ interface OrgDto {
   website: string | null;
   phone: string | null;
   logoUrl: string | null;
+  brandColor: string | null;
+  displayFont: string | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -29,6 +31,8 @@ function toDto(org: typeof organizations.$inferSelect): OrgDto {
     website: org.website,
     phone: org.phone,
     logoUrl: org.logoUrl,
+    brandColor: org.brandColor,
+    displayFont: org.displayFont,
     isActive: org.isActive,
     createdAt: org.createdAt,
     updatedAt: org.updatedAt,

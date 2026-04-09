@@ -61,6 +61,7 @@ export const addOns = pgTable('add_ons', {
   catalogId: uuid('catalog_id').notNull().references(() => catalogs.id, { onDelete: 'cascade' }),
   name: varchar('name', { length: 255 }).notNull(),
   description: text('description'),
+  imageUrl: text('image_url'),
   price: integer('price').notNull(),
   currency: varchar('currency', { length: 3 }).notNull().default('USD'),
   upsellEligible: boolean('upsell_eligible').notNull().default(true),
