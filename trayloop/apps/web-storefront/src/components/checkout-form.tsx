@@ -671,6 +671,18 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
     () => oftenAdded.filter((addOn) => (selectedAddOnIds[addOn.id] ?? 0) === 0).slice(0, 3),
     [oftenAdded, selectedAddOnIds],
   );
+  const fallbackUpsell =
+    primaryUpsell ??
+    (suggestedOftenAdded[0]
+      ? {
+          addOnId: suggestedOftenAdded[0].id,
+          headline: `Add ${suggestedOftenAdded[0].name} to this order?`,
+          reason: 'Popular with similar catering orders.',
+          recommendationType: 'often_added',
+          suggestedQuantity: 1,
+          totalPrice: suggestedOftenAdded[0].price,
+        }
+      : null);
   const modalSuggestedAddOns = useMemo(() => {
     const excludeId = itemModal?.type === 'addon' ? itemModal.id : null;
     const base = suggestedOftenAdded.length > 0 ? suggestedOftenAdded : filteredAddOns;
@@ -915,12 +927,19 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
     [merchant.slug],
   );
   const applyUpsellRecommendation = useCallback(() => {
-    if (!primaryUpsell) return;
-    const currentQuantity = selectedAddOnIds[primaryUpsell.addOnId] ?? 0;
+    if (!fallbackUpsell) return;
+    const currentQuantity = selectedAddOnIds[fallbackUpsell.addOnId] ?? 0;
     updateAddOnQuantity(
-      primaryUpsell.addOnId,
-      currentQuantity === 0 ? Math.max(primaryUpsell.suggestedQuantity, 1) : currentQuantity + 1,
+      fallbackUpsell.addOnId,
+      currentQuantity === 0 ? Math.max(fallbackUpsell.suggestedQuantity, 1) : currentQuantity + 1,
     );
+    if (!primaryUpsell) {
+      trackEvent('storefront_upsell_added', {
+        merchantSlug: merchant.slug,
+        addOnId: fallbackUpsell.addOnId,
+      });
+      return;
+    }
     const trackingKey = `${primaryUpsell.addOnId}:${headcount}:${selectedLocationSlug}`;
     if (!clickedUpsellKeysRef.current.has(trackingKey)) {
       clickedUpsellKeysRef.current.add(trackingKey);
@@ -938,9 +957,10 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
     }
     trackEvent('storefront_upsell_added', {
       merchantSlug: merchant.slug,
-      addOnId: primaryUpsell.addOnId,
+      addOnId: fallbackUpsell.addOnId,
     });
   }, [
+    fallbackUpsell,
     primaryUpsell,
     updateAddOnQuantity,
     selectedAddOnIds,
@@ -976,7 +996,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
     return deliveries;
   }, [eventDate, recurringPreset]);
 
-  const smartUpsellCard = primaryUpsell ? (
+  const smartUpsellCard = fallbackUpsell ? (
     <div
       style={{
         borderRadius: 24,
@@ -1027,9 +1047,9 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
         </span>
       </div>
       <div style={{ fontSize: isMobile ? 18 : 20, fontWeight: 900, lineHeight: 1.2 }}>
-        {primaryUpsell.headline}
+        {fallbackUpsell.headline}
       </div>
-      {showSocialProof ? (
+      {primaryUpsell && showSocialProof ? (
         <div
           style={{
             borderRadius: 16,
@@ -1086,7 +1106,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
       <div style={{ display: 'grid', gap: 8, fontSize: 12, color: MUTED }}>
         <div>
           📈 Avg uplift on similar orders{' '}
-          {socialProofAverageLabel ?? formatCurrencyAmount(primaryUpsell.totalPrice)}
+          {socialProofAverageLabel ?? formatCurrencyAmount(fallbackUpsell.totalPrice)}
         </div>
         <div>⏱ 60 sec to add</div>
         <div>💸 Goes 100% to the merchant</div>
@@ -1101,10 +1121,10 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
       >
         <div>
           <div style={{ fontSize: 28, fontWeight: 900, color: '#6D28D9' }}>
-            {formatCurrencyAmount(primaryUpsell.totalPrice)}
+            {formatCurrencyAmount(fallbackUpsell.totalPrice)}
           </div>
           <div style={{ fontSize: 11, color: MUTED }}>
-            {primaryUpsell.suggestedQuantity} suggested
+            {fallbackUpsell.suggestedQuantity} suggested
           </div>
         </div>
         <button
@@ -1170,7 +1190,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
     </div>
   ) : null;
   const recurringCard =
-    subtotalCents > 0 ? (
+    recurringPresets.length > 0 ? (
       <div
         style={{
           borderRadius: 24,
@@ -1271,6 +1291,11 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
           >
             {formatCurrencyAmount(projectedRecurringSavingsThreeMonths)} over 3 months
           </div>
+          {subtotalCents === 0 ? (
+            <div style={{ fontSize: 11, color: MUTED }}>
+              Add your first item to preview recurring savings on this order.
+            </div>
+          ) : null}
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10 }}>
             {recurringBars.map((bar) => (
               <div key={bar.label} style={{ display: 'grid', gap: 6, justifyItems: 'center' }}>
