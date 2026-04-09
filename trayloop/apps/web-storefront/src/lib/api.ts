@@ -95,7 +95,6 @@ export interface StorefrontMerchant {
   reviewCount: number | null;
   heroImageUrl: string | null;
   tagline: string | null;
-  responseTimeLabel: string | null;
 }
 
 export interface StorefrontData {
