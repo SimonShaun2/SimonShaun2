@@ -154,22 +154,8 @@ function getDisplayFontFamily(displayFont: DisplayFontKey | null | undefined) {
   if (displayFont === 'inter') return 'var(--font-body), Inter, sans-serif';
   return 'var(--font-display-bricolage), var(--font-body), sans-serif';
 }
-function parseSingleLineAddress(input: string) {
-  const trimmed = input.trim();
-  if (!trimmed) return null;
-  const parts = trimmed.split(',').map((part) => part.trim()).filter(Boolean);
-  if (parts.length < 3) return null;
-  const street = parts[0] ?? '';
-  const city = parts[1] ?? '';
-  const stateZip = parts.slice(2).join(' ');
-  const match = stateZip.match(/^([A-Za-z]{2})\s+(\d{5}(?:-\d{4})?)$/);
-  if (!street || !city || !match) return null;
-  return {
-    address: street,
-    city,
-    state: match[1].toUpperCase(),
-    zipCode: match[2],
-  };
+function buildAddressSummary(address: string, city: string, state: string, zipCode: string) {
+  return [address, city, state, zipCode].filter(Boolean).join(', ');
 }
 function buildSections(data: StorefrontData['menu'], query: string): MenuSection[] {
   const q = query.trim().toLowerCase();
@@ -261,11 +247,7 @@ function QuantityStepper({
     >
       <button
         type="button"
-        onMouseDown={(event) => event.stopPropagation()}
-        onClick={(event) => {
-          event.stopPropagation();
-          onDecrease();
-        }}
+        onClick={onDecrease}
         style={{
           width: compact ? 22 : 24,
           height: compact ? 22 : 24,
@@ -293,11 +275,7 @@ function QuantityStepper({
       </span>
       <button
         type="button"
-        onMouseDown={(event) => event.stopPropagation()}
-        onClick={(event) => {
-          event.stopPropagation();
-          onIncrease();
-        }}
+        onClick={onIncrease}
         style={{
           width: compact ? 22 : 24,
           height: compact ? 22 : 24,
@@ -575,6 +553,9 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
   const [phone, setPhone] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [zipCode, setZipCode] = useState('');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -589,7 +570,6 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
   const [oftenAdded, setOftenAdded] = useState<StorefrontAddOn[]>([]);
   const [socialProof, setSocialProof] = useState<StorefrontUpsellSocialProof | null>(null);
   const [itemModal, setItemModal] = useState<ItemModalState>(null);
-  const [modalQuantity, setModalQuantity] = useState(1);
   const recurringPresets = useMemo(() => getRecurringPresets(new Date().getDay()), []);
   const [recurringEnabled, setRecurringEnabled] = useState(false);
   const [recurringPreset, setRecurringPreset] = useState<RecurringPresetId>(
@@ -643,7 +623,6 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
       ? allAddOns.find((addOn) => addOn.id === itemModal.id) ?? null
       : null;
   const showSocialProof = Boolean(socialProof && socialProof.ordersAnalyzed >= 3);
-  const parsedDeliveryAddress = useMemo(() => parseSingleLineAddress(address), [address]);
   const socialProofLabel =
     showSocialProof && socialProof
       ? `${socialProof.ordersWithAddOn} of last ${socialProof.ordersAnalyzed} similar orders for ${headcount}+ added this`
@@ -721,7 +700,8 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
   const merchantContact = merchant.phone || selectedLocation?.phone || null;
   const deliverySummary =
     serviceType === 'delivery'
-      ? address || 'Add a delivery address to validate the zone.'
+      ? buildAddressSummary(address, city, state, zipCode) ||
+        'Add a delivery address to validate the zone.'
       : `Pickup or service at ${selectedLocation.name}`;
   const canSubmit = Boolean(
     selectedLocation &&
@@ -729,7 +709,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
     firstName &&
     lastName &&
     email &&
-    (serviceType !== 'delivery' || address),
+    (serviceType !== 'delivery' || (address && city && state && zipCode)),
   );
   const showDesktopSidebar = !isCompactDesktop;
   const showDesktopCart = !isTablet;
@@ -870,16 +850,6 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
   }, [itemModal]);
-  useEffect(() => {
-    if (!itemModal) return;
-    if (itemModal.type === 'package' && modalPackage) {
-      setModalQuantity(Math.max(selectedPkgs[modalPackage.id] ?? 0, 1));
-      return;
-    }
-    if (itemModal.type === 'addon' && modalAddOn) {
-      setModalQuantity(Math.max(selectedAddOnIds[modalAddOn.id] ?? 0, 1));
-    }
-  }, [itemModal, modalAddOn, modalPackage, selectedAddOnIds, selectedPkgs]);
   useEffect(() => {
     if (!primaryUpsell) return;
     const trackingKey = `${primaryUpsell.addOnId}:${headcount}:${selectedLocationSlug}`;
@@ -1157,6 +1127,48 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
       <div style={{ fontSize: 11, color: MUTED }}>Why this rec? Updated moments ago.</div>
     </div>
   ) : null;
+  const oftenAddedRow =
+    suggestedOftenAdded.length > 0 ? (
+      <div style={{ display: 'grid', gap: 10 }}>
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 900,
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+            color: MUTED,
+          }}
+        >
+          Often added
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {suggestedOftenAdded.map((addOn) => (
+            <button
+              key={addOn.id}
+              type="button"
+              onClick={() => updateAddOnQuantity(addOn.id, (selectedAddOnIds[addOn.id] ?? 0) + 1)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                height: 34,
+                borderRadius: 999,
+                border: `1px solid ${BORDER}`,
+                background: '#FFFFFF',
+                padding: '0 12px',
+                fontSize: 12,
+                fontWeight: 800,
+                color: INK,
+              }}
+            >
+              <span style={{ fontSize: 13 }}>+</span>
+              <span>{addOn.name}</span>
+              <span style={{ color: MUTED }}>{formatCurrencyAmount(addOn.price)}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    ) : null;
   const recurringCard =
     subtotalCents > 0 ? (
       <div
@@ -1361,11 +1373,6 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
     setSubmitting(true);
     setError('');
     setFieldErrors([]);
-    if (serviceType === 'delivery' && !parsedDeliveryAddress) {
-      setError('Enter a full delivery address like "1000 W 12th St, Austin, TX 78701".');
-      setSubmitting(false);
-      return;
-    }
     trackEvent('begin_checkout', {
       merchantSlug: merchant.slug,
       itemCount: itemsInCart,
@@ -1390,9 +1397,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
       },
       notes: notes || undefined,
       deliveryAddress:
-        serviceType === 'delivery' && parsedDeliveryAddress
-          ? { ...parsedDeliveryAddress, country: 'US' }
-          : undefined,
+        serviceType === 'delivery' ? { address, city, state, zipCode, country: 'US' } : undefined,
       recurring: recurringEnabled
         ? {
             interval:
@@ -1833,9 +1838,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                   value={address}
                   onChange={(event) => setAddress(event.target.value)}
                   placeholder={
-                    serviceType === 'delivery'
-                      ? 'Address · City, ST ZIP'
-                      : 'Optional delivery address'
+                    serviceType === 'delivery' ? 'Address' : 'Optional delivery address'
                   }
                   style={{
                     width: '100%',
@@ -1875,11 +1878,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                   className="storefront-field"
                   value={address}
                   onChange={(event) => setAddress(event.target.value)}
-                  placeholder={
-                    serviceType === 'delivery'
-                      ? 'Address · City, ST ZIP'
-                      : 'Optional delivery address'
-                  }
+                  placeholder={serviceType === 'delivery' ? 'Address' : 'Optional delivery address'}
                   style={{
                     width: '100%',
                     height: 44,
@@ -2216,13 +2215,13 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                           style={{
                             flex: '0 0 auto',
                             width: isMobile ? 184 : isLaptop ? 228 : 244,
-                            minHeight: isMobile ? 228 : isLaptop ? 266 : 276,
+                            minHeight: isMobile ? 248 : isLaptop ? 292 : 304,
                             borderRadius: 24,
                             border: `1px solid ${BORDER}`,
                             background: '#FFFFFF',
                             overflow: 'hidden',
                             display: 'grid',
-                            gridTemplateRows: isMobile ? '108px 1fr' : isLaptop ? '166px 1fr' : '176px 1fr',
+                            gridTemplateRows: isMobile ? '108px 1fr' : isLaptop ? '170px 1fr' : '184px 1fr',
                             scrollSnapAlign: 'start',
                             cursor: 'pointer',
                           }}
@@ -2242,7 +2241,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                             style={{
                               padding: isMobile ? 12 : 14,
                               display: 'grid',
-                              gap: 6,
+                              gap: 8,
                             }}
                           >
                             <div>
@@ -2278,6 +2277,22 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                                   ? ` • ${merchant.rating.toFixed(1)}`
                                   : ''}
                               </div>
+                              {pkg.description ? (
+                                <div
+                                  style={{
+                                    marginTop: 6,
+                                    fontSize: 10,
+                                    lineHeight: 1.45,
+                                    color: MUTED,
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 1,
+                                    WebkitBoxOrient: 'vertical',
+                                    overflow: 'hidden',
+                                  }}
+                                >
+                                  {pkg.description}
+                                </div>
+                              ) : null}
                             </div>
                             <div
                               style={{
@@ -2328,8 +2343,9 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                   </div>
                   {!showDesktopCart && sectionIndex === 0 ? (
                     <div style={{ marginTop: 18, display: 'grid', gap: 12 }}>
-                      {recurringCard}
                       {smartUpsellCard}
+                      {oftenAddedRow}
+                      {recurringCard}
                     </div>
                   ) : null}
                 </section>
@@ -2420,13 +2436,13 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                           style={{
                             flex: '0 0 auto',
                             width: isMobile ? 184 : isLaptop ? 228 : 244,
-                            minHeight: isMobile ? 228 : isLaptop ? 266 : 276,
+                            minHeight: isMobile ? 248 : isLaptop ? 292 : 304,
                             borderRadius: 24,
                             border: `1px solid ${BORDER}`,
                             background: '#FFFFFF',
                             overflow: 'hidden',
                             display: 'grid',
-                            gridTemplateRows: isMobile ? '108px 1fr' : isLaptop ? '166px 1fr' : '176px 1fr',
+                            gridTemplateRows: isMobile ? '108px 1fr' : isLaptop ? '170px 1fr' : '184px 1fr',
                             scrollSnapAlign: 'start',
                             cursor: 'pointer',
                           }}
@@ -2442,9 +2458,25 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                               placeholderCardImage(addOn.name, brandColor)
                             )}
                           </div>
-                          <div style={{ minWidth: 0, display: 'grid', gap: 6, padding: isMobile ? 12 : 14 }}>
+                          <div style={{ minWidth: 0, display: 'grid', gap: 8, padding: isMobile ? 12 : 14 }}>
                             <div>
                               <div style={{ fontSize: isMobile ? 16 : 18, fontWeight: 900 }}>{addOn.name}</div>
+                              {addOn.description ? (
+                                <div
+                                  style={{
+                                    marginTop: 6,
+                                    fontSize: 10,
+                                    lineHeight: 1.45,
+                                    color: MUTED,
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 1,
+                                    WebkitBoxOrient: 'vertical',
+                                    overflow: 'hidden',
+                                  }}
+                                >
+                                  {addOn.description}
+                                </div>
+                              ) : null}
                             </div>
                             <div
                               style={{
@@ -2578,6 +2610,57 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                       fontSize: 13,
                     }}
                   />
+                  {serviceType === 'delivery' ? (
+                    <>
+                      <input
+                        className="storefront-field"
+                        value={city}
+                        onChange={(event) => setCity(event.target.value)}
+                        placeholder="City"
+                        style={{
+                          height: 46,
+                          borderRadius: 14,
+                          border: `1px solid ${BORDER}`,
+                          padding: '0 14px',
+                          fontSize: 13,
+                        }}
+                      />
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                          gap: 12,
+                        }}
+                      >
+                        <input
+                          className="storefront-field"
+                          value={state}
+                          onChange={(event) => setState(event.target.value)}
+                          placeholder="State"
+                          style={{
+                            height: 46,
+                            borderRadius: 14,
+                            border: `1px solid ${BORDER}`,
+                            padding: '0 14px',
+                            fontSize: 13,
+                          }}
+                        />
+                        <input
+                          className="storefront-field"
+                          value={zipCode}
+                          onChange={(event) => setZipCode(event.target.value)}
+                          placeholder="Zip"
+                          style={{
+                            height: 46,
+                            borderRadius: 14,
+                            border: `1px solid ${BORDER}`,
+                            padding: '0 14px',
+                            fontSize: 13,
+                          }}
+                        />
+                      </div>
+                    </>
+                  ) : null}
                   <input
                     className="storefront-field"
                     value={companyName}
@@ -2746,8 +2829,9 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                       </>
                     )}
                   </div>
-                  {recurringCard}
                   {smartUpsellCard}
+                  {oftenAddedRow}
+                  {recurringCard}
                   <div
                     style={{
                       borderTop: `1px solid ${BORDER}`,
@@ -2943,15 +3027,14 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
             onClick={(event) => event.stopPropagation()}
             style={{
               width: '100%',
-              maxWidth: isMobile ? 420 : 720,
-              maxHeight: 'min(84vh, 820px)',
+              maxWidth: isMobile ? 420 : 760,
+              maxHeight: '84vh',
+              overflowY: 'auto',
               borderRadius: isMobile ? 24 : 28,
               background: '#FFFFFF',
               boxShadow: '0 30px 80px rgba(26,22,18,0.28)',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
             }}
+            className="storefront-scrollbar"
           >
             {(() => {
               const activePackage = modalPackage;
@@ -2973,16 +3056,10 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                 : activeAddOn
                   ? activeAddOn.price
                   : 0;
-              const nextModalQuantity = Math.max(modalQuantity, 0);
               return (
                 <>
-                  <div style={{ position: 'relative', flexShrink: 0 }}>
-                    <div
-                      style={{
-                        height: isMobile ? 220 : 280,
-                        background: activeImage ? '#F5F5F4' : undefined,
-                      }}
-                    >
+                  <div style={{ position: 'relative' }}>
+                    <div style={{ height: isMobile ? 220 : 300, background: activeImage ? '#F5F5F4' : undefined }}>
                       {activeImage ? (
                         <img
                           src={activeImage}
@@ -3013,16 +3090,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                       ×
                     </button>
                   </div>
-                  <div
-                    style={{
-                      flex: 1,
-                      minHeight: 0,
-                      overflowY: 'auto',
-                      WebkitOverflowScrolling: 'touch',
-                    }}
-                    className="storefront-scrollbar"
-                  >
-                    <div style={{ padding: isMobile ? 18 : 24, display: 'grid', gap: 18 }}>
+                  <div style={{ padding: isMobile ? 18 : 24, display: 'grid', gap: 18 }}>
                     <div style={{ display: 'grid', gap: 8 }}>
                       <div
                         style={{
@@ -3113,12 +3181,12 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                         </div>
                       </div>
                     ) : null}
-                    </div>
                     <div
                       style={{
-                        flexShrink: 0,
+                        position: 'sticky',
+                        bottom: 0,
                         background: '#FFFFFF',
-                        padding: isMobile ? '12px 18px 18px' : '14px 24px 24px',
+                        paddingTop: 8,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
@@ -3127,15 +3195,21 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                       }}
                     >
                       <QuantityStepper
-                        quantity={nextModalQuantity}
-                        onDecrease={() => setModalQuantity((current) => Math.max(current - 1, 0))}
-                        onIncrease={() => setModalQuantity((current) => current + 1)}
+                        quantity={activeQuantity || 1}
+                        onDecrease={() => {
+                          if (activePackage) updatePackageQuantity(activePackage.id, Math.max(activeQuantity - 1, 0));
+                          if (activeAddOn) updateAddOnQuantity(activeAddOn.id, Math.max(activeQuantity - 1, 0));
+                        }}
+                        onIncrease={() => {
+                          if (activePackage) updatePackageQuantity(activePackage.id, (activeQuantity || 0) + 1);
+                          if (activeAddOn) updateAddOnQuantity(activeAddOn.id, (activeQuantity || 0) + 1);
+                        }}
                       />
                       <button
                         type="button"
                         onClick={() => {
-                          if (activePackage) updatePackageQuantity(activePackage.id, nextModalQuantity);
-                          if (activeAddOn) updateAddOnQuantity(activeAddOn.id, nextModalQuantity);
+                          if (activePackage) updatePackageQuantity(activePackage.id, Math.max(activeQuantity, 1));
+                          if (activeAddOn) updateAddOnQuantity(activeAddOn.id, Math.max(activeQuantity, 1));
                           setItemModal(null);
                         }}
                         style={{
@@ -3149,14 +3223,10 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                           fontWeight: 900,
                         }}
                       >
-                        {nextModalQuantity > 0
-                          ? activeQuantity > 0
-                            ? 'Update item'
-                            : 'Add item'
-                          : 'Remove item'}
+                        {activeQuantity > 0 ? 'Update item' : 'Add item'}
                       </button>
                       <div style={{ fontSize: 20, fontWeight: 900, whiteSpace: 'nowrap' }}>
-                        {formatCurrencyAmount(activePrice * nextModalQuantity)}
+                        {formatCurrencyAmount(activePrice * Math.max(activeQuantity || 1, 1) / (activePackage ? 1 : 1))}
                       </div>
                     </div>
                   </div>
