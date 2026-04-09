@@ -14,7 +14,7 @@ const NAV_ITEMS = [
   { href: '/onboarding', label: 'Launch Setup', section: 'workspace' },
   { href: '/follow-ups', label: 'Follow-Ups', section: 'workspace' },
   { href: '/automations', label: 'Automations', section: 'workspace' },
-  { href: '/growth-advisor', label: 'Growth Advisor', section: 'workspace' },
+  { href: '/growth-advisor', label: 'Growth Advisor', section: 'workspace', premium: true },
   { href: '/revenue-intelligence', label: 'Revenue', section: 'workspace' },
   { href: '/customers', label: 'Customers', section: 'workspace' },
   { href: '/catalog', label: 'Offerings', section: 'workspace' },
@@ -36,7 +36,7 @@ export default function NavBar() {
 
   const visibleNavItems = NAV_ITEMS.filter((item) => {
     if (item.href === '/automations' && !automationsEnabled) return false;
-    if (item.href === '/growth-advisor' && !(growthAdvisorEnabled && hasGrowthAdvisorAccess)) return false;
+    if (item.href === '/growth-advisor' && !growthAdvisorEnabled) return false;
     return true;
   });
 
@@ -191,6 +191,7 @@ export default function NavBar() {
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  gap: 8,
                   borderRadius: 999,
                   padding: '8px 12px',
                   whiteSpace: 'nowrap',
@@ -202,7 +203,26 @@ export default function NavBar() {
                   border: isActive ? '1px solid rgba(212, 168, 83, 0.35)' : '1px solid #2C2724',
                 }}
               >
-                {item.label}
+                <span>{item.label}</span>
+                {item.href === '/growth-advisor' && !hasGrowthAdvisorAccess ? (
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: 999,
+                      background: '#D4A853',
+                      color: '#1C1917',
+                      padding: '2px 7px',
+                      fontSize: 10,
+                      fontWeight: 800,
+                      letterSpacing: '0.04em',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Add-on
+                  </span>
+                ) : null}
               </a>
             );
           })}
@@ -334,18 +354,38 @@ export default function NavBar() {
                     fontWeight: isActive ? 700 : 500,
                     textDecoration: 'none',
                   }}
-                >
-                  <span
-                    style={{
-                      width: 7,
-                      height: 7,
+                  >
+                    <span
+                      style={{
+                        width: 7,
+                        height: 7,
                       borderRadius: '50%',
                       background: isActive ? '#D4A853' : '#44403C',
                       display: 'inline-block',
                       flexShrink: 0,
-                    }}
-                  />
-                  {item.label}
+                      }}
+                    />
+                  <span style={{ flex: 1 }}>{item.label}</span>
+                  {item.href === '/growth-advisor' && !hasGrowthAdvisorAccess ? (
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: 999,
+                        background: '#D4A853',
+                        color: '#1C1917',
+                        padding: '2px 7px',
+                        fontSize: 10,
+                        fontWeight: 800,
+                        letterSpacing: '0.04em',
+                        textTransform: 'uppercase',
+                        flexShrink: 0,
+                      }}
+                    >
+                      Add-on
+                    </span>
+                  ) : null}
                 </a>
               );
             })}
