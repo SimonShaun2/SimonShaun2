@@ -134,16 +134,16 @@ export default function StorefrontCustomizePage() {
   }
 
   return (
-    <div style={{ display: 'grid', gap: 24 }}>
+    <div style={{ maxWidth: 860, margin: '0 auto', padding: '20px 0 40px', display: 'grid', gap: 20 }}>
       <div>
-        <div style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 800, color: '#D97706' }}>
-          Storefront Design
+        <div style={{ display: 'inline-flex', alignItems: 'center', borderRadius: 999, background: '#FFF2E8', color: '#E85618', padding: '7px 12px', fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 800 }}>
+          Merchant settings
         </div>
-        <h1 style={{ margin: '8px 0 0', fontSize: 36, lineHeight: 1.05, letterSpacing: '-0.04em', fontFamily: 'var(--font-display), var(--font-body), sans-serif' }}>
-          Brand Customization
+        <h1 style={{ margin: '12px 0 0', fontSize: 40, lineHeight: 1.02, letterSpacing: '-0.05em', fontFamily: 'var(--font-display), var(--font-body), sans-serif' }}>
+          Make your storefront yours
         </h1>
-        <p style={{ margin: '10px 0 0', maxWidth: 720, color: 'var(--muted)', fontSize: 15, lineHeight: 1.7 }}>
-          Control the look of your public storefront with your logo, your core brand color, and a display font that matches your restaurant.
+        <p style={{ margin: '10px 0 0', maxWidth: 720, color: 'var(--muted)', fontSize: 16, lineHeight: 1.7 }}>
+          Customers see exactly what you brand. Logo, colors, and display font all update your live storefront.
         </p>
       </div>
 
@@ -159,8 +159,8 @@ export default function StorefrontCustomizePage() {
         </div>
       ) : null}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.05fr) minmax(340px, 0.95fr)', gap: 24 }}>
-        <section style={{ background: '#FFFFFF', border: '1px solid var(--border)', borderRadius: 24, padding: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 24 }}>
+        <section style={{ background: '#FFFFFF', border: '1px solid var(--border)', borderRadius: 28, padding: 28 }}>
           <div style={{ display: 'grid', gap: 28 }}>
             <div>
               <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>Logo</h2>
@@ -284,7 +284,7 @@ export default function StorefrontCustomizePage() {
           </div>
         </section>
 
-        <section style={{ background: '#FFFFFF', border: '1px solid var(--border)', borderRadius: 24, padding: 24, position: 'sticky', top: 28, alignSelf: 'start' }}>
+        <section style={{ background: '#FFFFFF', border: '1px solid var(--border)', borderRadius: 28, padding: 28 }}>
           <div style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 800, color: 'var(--muted)' }}>
             Live preview
           </div>
