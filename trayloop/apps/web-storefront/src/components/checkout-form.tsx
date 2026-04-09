@@ -121,10 +121,6 @@ function formatLocationAddress(location: StorefrontData['locations'][number]) {
     .join(' • ');
 }
 
-function formatServiceModeList(modes: string[]) {
-  return modes.map((mode) => SERVICE_MODE_LABELS[mode as StorefrontServiceMode] ?? mode).join(' • ');
-}
-
 function formatCurrencyAmount(cents: number) {
   const hasCents = cents % 100 !== 0;
   return new Intl.NumberFormat('en-US', {
@@ -887,8 +883,27 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
   const selectedAddOnList = allAddOns.filter((a) => selectedAddOnIds[a.id]);
 
   /* ── Render ── */
+  const mobileCtaLabel = submitting
+    ? 'Placing order…'
+    : canSubmit
+      ? selectedLocation?.depositRequired ? 'Continue to Payment' : 'Place Order'
+      : !hasPackages
+        ? 'Select a package'
+        : !eventDate
+          ? 'Select a date'
+          : 'Continue';
+
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 32, alignItems: 'flex-start' }}>
+    <form
+      onSubmit={handleSubmit}
+      style={{
+        display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: 32,
+        alignItems: 'flex-start',
+        paddingBottom: isMobile ? 88 : 0,
+      }}
+    >
       {/* ── LEFT COLUMN: Form sections ── */}
       <div style={{ flex: isMobile ? '1 1 auto' : '0 0 620px', width: isMobile ? '100%' : undefined, display: 'flex', flexDirection: 'column', gap: 24 }}>
 
@@ -998,42 +1013,6 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
             ) : null}
           </div>
 
-          {selectedLocation ? (
-            <div
-              style={{
-                marginTop: 16,
-                padding: '14px 16px',
-                borderRadius: 12,
-                background: '#FAFAF9',
-                border: `1px solid ${T.cardBorder}`,
-              }}
-            >
-              <div style={{ fontSize: 12, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}>
-                Location Snapshot
-              </div>
-              <div style={{ fontSize: 14, color: T.textPrimary, fontWeight: 600 }}>
-                {selectedLocation.name}
-              </div>
-              <div style={{ fontSize: 12, color: T.textMuted, marginTop: 4, lineHeight: 1.5 }}>
-                {formatLocationAddress(selectedLocation)}
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
-                <span style={locationMetaChipStyle}>Lead time {selectedLocation.leadTimeHours}h</span>
-                {selectedLocation.minimumOrderAmount > 0 ? (
-                  <span style={locationMetaChipStyle}>Min {formatCurrencyAmount(selectedLocation.minimumOrderAmount)}</span>
-                ) : null}
-                <span style={locationMetaChipStyle}>Modes: {formatServiceModeList(selectedLocation.serviceTypes)}</span>
-                <span style={locationMetaChipStyle}>
-                  {selectedLocation.depositRequired ? 'Deposit required' : 'No deposit required'}
-                </span>
-                {selectedLocation.deliveryEnabled && selectedLocation.deliveryRadiusMiles ? (
-                  <span style={locationMetaChipStyle}>{selectedLocation.deliveryRadiusMiles} mi delivery radius</span>
-                ) : null}
-                {selectedLocation.phone ? <span style={locationMetaChipStyle}>{selectedLocation.phone}</span> : null}
-              </div>
-            </div>
-          ) : null}
-
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginTop: 20 }}>
             <div>
               <label style={labelStyle}>Event Date</label>
@@ -1056,35 +1035,49 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
             </div>
           </div>
 
-          {/* Service Type Toggle */}
+          {/* Service Type — segmented control */}
           <div style={{ marginTop: 20 }}>
             <label style={labelStyle}>Service Type</label>
-            {selectedLocation ? (
-              <p style={{ ...sectionSubtitleStyle, marginTop: 0, marginBottom: 10 }}>
-                Available at {selectedLocation.name}: {formatServiceModeList(availableServiceModes)}
-              </p>
-            ) : null}
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
-              {availableServiceModes.map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  onClick={() => setServiceType(mode)}
-                  style={{
-                    flex: 1,
-                    height: 42,
-                    border: serviceType === mode ? `2px solid ${T.toggleSelectedBorder}` : `1px solid ${T.borderInput}`,
-                    borderRadius: 8,
-                    background: serviceType === mode ? T.toggleSelectedBg : T.cardBg,
-                    color: serviceType === mode ? T.gold : T.textPrimary,
-                    fontSize: 14,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  {SERVICE_MODE_LABELS[mode]}
-                </button>
-              ))}
+            <div
+              role="tablist"
+              style={{
+                display: 'flex',
+                background: '#F5F5F4',
+                border: `1px solid ${T.cardBorder}`,
+                borderRadius: 10,
+                padding: 4,
+                gap: 4,
+                flexWrap: isMobile && availableServiceModes.length > 3 ? 'wrap' : 'nowrap',
+              }}
+            >
+              {availableServiceModes.map((mode) => {
+                const active = serviceType === mode;
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setServiceType(mode)}
+                    style={{
+                      flex: '1 1 0',
+                      minWidth: 0,
+                      height: 38,
+                      border: 'none',
+                      borderRadius: 7,
+                      background: active ? T.cardBg : 'transparent',
+                      color: active ? T.textPrimary : T.textMuted,
+                      fontSize: 13,
+                      fontWeight: active ? 700 : 600,
+                      cursor: 'pointer',
+                      boxShadow: active ? '0 1px 3px rgba(28,25,23,0.10)' : 'none',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    {SERVICE_MODE_LABELS[mode]}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -1153,40 +1146,32 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                 <div style={{ fontSize: 14, color: T.textMuted, marginTop: 4, fontWeight: 500 }}>guests</div>
               </div>
 
-              {/* Stepper controls */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              {/* Stepper controls — simple − N + */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0,
+                  background: T.cardBg,
+                  border: `1px solid ${T.borderInput}`,
+                  borderRadius: 12,
+                  overflow: 'hidden',
+                  boxShadow: '0 1px 3px rgba(28,25,23,0.04)',
+                }}
+              >
                 <button
                   type="button"
-                  onClick={() => setHeadcount(Math.max(1, headcount - 5))}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#E7E5E4'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = T.cardBg; }}
-                  style={{
-                    width: 36, height: 36,
-                    border: `1px solid ${T.borderInput}`,
-                    borderRadius: 8,
-                    background: T.cardBg,
-                    fontSize: 11, fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: T.textMuted,
-                    transition: 'background 0.1s',
-                  }}
-                >
-                  −5
-                </button>
-                <button
-                  type="button"
+                  aria-label="Decrease headcount"
                   onClick={() => setHeadcount(Math.max(1, headcount - 1))}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#E7E5E4'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = T.cardBg; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#F5F5F4'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                   style={{
-                    width: 44, height: 44,
-                    border: `1px solid ${T.borderInput}`,
-                    borderRadius: 10,
-                    background: T.cardBg,
-                    fontSize: 22, fontWeight: 400,
+                    width: 52, height: 52,
+                    border: 'none',
+                    borderRight: `1px solid ${T.cardBorder}`,
+                    background: 'transparent',
+                    fontSize: 24, fontWeight: 500,
                     cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
                     color: T.textPrimary,
                     transition: 'background 0.1s',
                   }}
@@ -1198,56 +1183,39 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                   min="1"
                   value={headcount}
                   onChange={(e) => setHeadcount(Math.max(1, parseInt(e.target.value) || 1))}
+                  aria-label="Headcount"
                   style={{
-                    width: 64, height: 44,
-                    padding: '0 8px',
-                    border: `1px solid ${T.borderInput}`,
-                    borderRadius: 10,
-                    fontSize: 16, fontWeight: 700,
+                    width: 72, height: 52,
+                    padding: 0,
+                    border: 'none',
+                    fontSize: 18, fontWeight: 700,
                     color: T.textPrimary,
-                    background: T.cardBg,
+                    background: 'transparent',
                     textAlign: 'center' as const,
                     boxSizing: 'border-box' as const,
                     outline: 'none',
+                    appearance: 'textfield' as const,
+                    MozAppearance: 'textfield' as const,
                   }}
                 />
                 <button
                   type="button"
+                  aria-label="Increase headcount"
                   onClick={() => setHeadcount(headcount + 1)}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#E7E5E4'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = T.cardBg; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#F5F5F4'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                   style={{
-                    width: 44, height: 44,
-                    border: `1px solid ${T.borderInput}`,
-                    borderRadius: 10,
-                    background: T.cardBg,
-                    fontSize: 22, fontWeight: 400,
+                    width: 52, height: 52,
+                    border: 'none',
+                    borderLeft: `1px solid ${T.cardBorder}`,
+                    background: 'transparent',
+                    fontSize: 24, fontWeight: 500,
                     cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
                     color: T.textPrimary,
                     transition: 'background 0.1s',
                   }}
                 >
                   +
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setHeadcount(headcount + 5)}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#E7E5E4'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = T.cardBg; }}
-                  style={{
-                    width: 36, height: 36,
-                    border: `1px solid ${T.borderInput}`,
-                    borderRadius: 8,
-                    background: T.cardBg,
-                    fontSize: 11, fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: T.textMuted,
-                    transition: 'background 0.1s',
-                  }}
-                >
-                  +5
                 </button>
               </div>
             </div>
@@ -1306,6 +1274,24 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                     }
                   }}
                 >
+                  {pkg.imageUrl ? (
+                    <div style={{ marginBottom: 14 }}>
+                      <img
+                        src={pkg.imageUrl}
+                        alt={pkg.name}
+                        style={{
+                          display: 'block',
+                          width: '100%',
+                          maxHeight: 210,
+                          objectFit: 'cover',
+                          borderRadius: 10,
+                          border: `1px solid ${isSelected ? T.selectedBorder : T.cardBorder}`,
+                          background: '#FAFAF9',
+                        }}
+                      />
+                    </div>
+                  ) : null}
+
                   {/* Top row: checkbox + name + price */}
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
                     {/* Checkbox */}
@@ -1337,6 +1323,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                       background: isSelected ? 'rgba(212,168,83,0.08)' : 'transparent',
                       padding: '4px 10px', borderRadius: 8,
                       transition: 'background 0.15s',
+                      minWidth: 96,
                     }}>
                       <div>
                         <span style={{ fontSize: 22, fontWeight: 700, color: T.gold, lineHeight: 1 }}>
@@ -1344,6 +1331,18 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                         </span>
                       </div>
                       <div style={{ fontSize: 12, color: T.textMuted, marginTop: 1 }}>/person</div>
+                      <div style={{
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: isSelected ? T.textPrimary : T.textMuted,
+                        marginTop: 6,
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {headcount} × ={' '}
+                        <span style={{ color: T.textPrimary }}>
+                          ${((pkg.pricePerHead * headcount) / 100).toFixed(2)}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
@@ -1442,6 +1441,21 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                       }
                     }}
                   >
+                    {addOn.imageUrl ? (
+                      <img
+                        src={addOn.imageUrl}
+                        alt={addOn.name}
+                        style={{
+                          width: 64,
+                          height: 64,
+                          borderRadius: 10,
+                          objectFit: 'cover',
+                          border: `1px solid ${isSelected ? T.gold : T.cardBorder}`,
+                          background: '#FAFAF9',
+                          flexShrink: 0,
+                        }}
+                      />
+                    ) : null}
                     {/* Checkbox — gold when selected to differentiate from packages */}
                     <div style={{
                       width: 20, height: 20, borderRadius: 10, flexShrink: 0,
@@ -1830,42 +1844,72 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
           </div>
 
           <div style={{ padding: '20px 24px 24px' }}>
-            {/* Empty state */}
+            {/* Empty state — live preview + trust band */}
             {!hasPackages ? (
-              <div style={{
-                textAlign: 'center',
-                padding: '40px 16px',
-              }}>
+              <div>
                 <div style={{
-                  width: 56, height: 56, borderRadius: 28,
-                  background: '#F5F5F4',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  margin: '0 auto 16px',
-                  fontSize: 24,
+                  background: '#FAFAF9',
+                  border: `1px dashed ${T.cardBorder}`,
+                  borderRadius: 10,
+                  padding: '18px 16px',
+                  marginBottom: 16,
+                  textAlign: 'center',
                 }}>
-                  🍽️
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.textMuted, letterSpacing: '1px', textTransform: 'uppercase' }}>
+                    Headcount
+                  </div>
+                  <div style={{ fontSize: 32, fontWeight: 800, color: T.textPrimary, marginTop: 4, letterSpacing: '-0.02em' }}>
+                    {headcount} <span style={{ fontSize: 14, fontWeight: 600, color: T.textMuted }}>guests</span>
+                  </div>
+                  <p style={{ fontSize: 12, color: T.textMuted, margin: '8px 0 0', lineHeight: 1.5 }}>
+                    Pick a package below to see your live total
+                  </p>
                 </div>
-                <p style={{ color: T.textMuted, fontSize: 14, lineHeight: 1.6, margin: '0 0 24px' }}>
-                  Select a package and date<br />to see your summary
-                </p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 18 }}>
+                  {[
+                    { icon: '✓', title: 'No charge now', body: 'Confirm details before any payment' },
+                    { icon: '⚡', title: 'Fast response', body: `${selectedLocation?.name ?? 'The team'} reviews and replies quickly` },
+                    { icon: '🔒', title: 'Secure checkout', body: 'Stripe-powered if a deposit applies' },
+                  ].map((item) => (
+                    <div key={item.title} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                      <div style={{
+                        width: 24, height: 24, borderRadius: 6,
+                        background: '#F5F5F4',
+                        color: T.textPrimary,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 12, fontWeight: 700,
+                        flexShrink: 0,
+                      }}>
+                        {item.icon}
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: T.textPrimary }}>{item.title}</div>
+                        <div style={{ fontSize: 12, color: T.textMuted, lineHeight: 1.5, marginTop: 1 }}>{item.body}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
                 <button
                   type="button"
                   disabled
                   style={{
                     width: '100%', height: 52,
                     border: 'none', borderRadius: 10,
-                    background: T.textPlaceholder,
-                    color: '#FFFFFF', fontSize: 15, fontWeight: 600,
+                    background: '#F5F5F4',
+                    color: T.textMuted, fontSize: 14, fontWeight: 700,
                     cursor: 'not-allowed',
+                    letterSpacing: '0.02em',
                   }}
                 >
-                  Select a package first
+                  Select a package to continue
                 </button>
-                {selectedLocation && (
-                  <p style={{ fontSize: 11, color: T.textPlaceholder, textAlign: 'center', marginTop: 10, marginBottom: 0 }}>
-                    No charge now · $0 deposit sent by email after confirmation
-                  </p>
-                )}
+                <p style={{ fontSize: 11, color: T.textPlaceholder, textAlign: 'center', marginTop: 10, marginBottom: 0, lineHeight: 1.5 }}>
+                  {selectedLocation?.depositRequired
+                    ? 'No charge now · Deposit sent by email after confirmation'
+                    : 'No charge now · No deposit required'}
+                </p>
               </div>
             ) : (
               <>
@@ -1996,14 +2040,27 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                   ) : canSubmit ? (selectedLocation?.depositRequired ? 'Continue to Payment' : 'Place Order') : !eventDate ? 'Select a date' : 'Select a package'}
                 </button>
 
-                {/* Deposit notice */}
+                {/* Trust band */}
+                <div style={{
+                  marginTop: 14,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  gap: 8,
+                  fontSize: 11,
+                  color: T.textMuted,
+                  fontWeight: 600,
+                }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>✓ No charge now</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>🔒 Secure</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>⚡ Fast reply</span>
+                </div>
                 <p style={{
-                  fontSize: 11, color: T.textMuted, textAlign: 'center',
+                  fontSize: 11, color: T.textPlaceholder, textAlign: 'center',
                   marginTop: 10, marginBottom: 0, lineHeight: 1.4,
                 }}>
                   {selectedLocation?.depositRequired
-                    ? 'No charge now · Deposit sent by email after confirmation'
-                    : 'No charge now · $0 deposit sent by email after confirmation'}
+                    ? 'Deposit link sent by email after confirmation'
+                    : 'No deposit required · You\u2019ll get a confirmation email'}
                 </p>
 
                 {/* Recurring badge */}
@@ -2025,6 +2082,56 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
         {/* Spinner keyframe (injected once) */}
         <style dangerouslySetInnerHTML={{ __html: `@keyframes spin { to { transform: rotate(360deg); } }` }} />
       </div>
+
+      {/* Mobile sticky CTA */}
+      {isMobile ? (
+        <div
+          style={{
+            position: 'fixed',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 50,
+            background: 'rgba(255,255,255,0.96)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            borderTop: `1px solid ${T.cardBorder}`,
+            padding: '12px 16px calc(12px + env(safe-area-inset-bottom))',
+            boxShadow: '0 -8px 24px rgba(28,25,23,0.10)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '1px' }}>
+                Total
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: T.textPrimary, lineHeight: 1.1, letterSpacing: '-0.01em' }}>
+                ${(estimatedTotal / 100).toFixed(2)}
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={!canSubmit}
+              style={{
+                flex: '1 1 auto',
+                maxWidth: 220,
+                height: 48,
+                border: 'none',
+                borderRadius: 10,
+                background: canSubmit ? T.selectedBorder : '#D6D3D1',
+                color: '#FFFFFF',
+                fontSize: 15,
+                fontWeight: 700,
+                cursor: canSubmit ? 'pointer' : 'not-allowed',
+                whiteSpace: 'nowrap',
+                padding: '0 18px',
+              }}
+            >
+              {mobileCtaLabel}
+            </button>
+          </div>
+        </div>
+      ) : null}
     </form>
   );
 }
