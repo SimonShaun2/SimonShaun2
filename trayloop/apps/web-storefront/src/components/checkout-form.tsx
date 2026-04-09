@@ -1480,24 +1480,26 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                 Sign in
               </Link>
             )}
-            <button
-              type="button"
-              onClick={() =>
-                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
-              }
-              style={{
-                height: 40,
-                padding: '0 14px',
-                borderRadius: 14,
-                border: '1px solid rgba(26,22,18,0.08)',
-                background: '#FFFFFF',
-                color: INK,
-                fontSize: 13,
-                fontWeight: 900,
-              }}
-            >
-              Cart {itemsInCart > 0 ? `(${itemsInCart})` : ''}
-            </button>
+            {!isMobile ? (
+              <button
+                type="button"
+                onClick={() =>
+                  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+                }
+                style={{
+                  height: 40,
+                  padding: '0 14px',
+                  borderRadius: 14,
+                  border: '1px solid rgba(26,22,18,0.08)',
+                  background: '#FFFFFF',
+                  color: INK,
+                  fontSize: 13,
+                  fontWeight: 900,
+                }}
+              >
+                Cart {itemsInCart > 0 ? `(${itemsInCart})` : ''}
+              </button>
+            ) : null}
           </div>
         </div>
       </div>
@@ -1774,29 +1776,9 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                 </span>
               ) : null}
             </div>
-            {!isMobile && !stackDesktopControls ? (
-              <button
-                type="button"
-                onClick={() =>
-                  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
-                }
-                style={{
-                  height: 44,
-                  padding: '0 16px',
-                  borderRadius: 14,
-                  border: '1px solid rgba(26,22,18,0.08)',
-                  background: '#FFFFFF',
-                  color: INK,
-                  fontSize: 13,
-                  fontWeight: 900,
-                }}
-              >
-                Cart {itemsInCart > 0 ? `(${itemsInCart})` : ''}
-              </button>
-            ) : null}
           </div>
           {stackDesktopControls ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
               <div style={{ position: 'relative' }}>
                 <input
                   className="storefront-field"
@@ -1832,25 +1814,6 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                   </span>
                 ) : null}
               </div>
-              <button
-                type="button"
-                onClick={() =>
-                  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
-                }
-                style={{
-                  height: 44,
-                  padding: '0 16px',
-                  borderRadius: 14,
-                  border: '1px solid rgba(26,22,18,0.08)',
-                  background: '#FFFFFF',
-                  color: INK,
-                  fontSize: 13,
-                  fontWeight: 900,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                Cart {itemsInCart > 0 ? `(${itemsInCart})` : ''}
-              </button>
             </div>
           ) : null}
           {isMobile ? (
