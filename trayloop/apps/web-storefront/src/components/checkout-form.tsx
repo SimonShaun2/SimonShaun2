@@ -56,7 +56,7 @@ const SERVICE_MODE_LABELS: Record<StorefrontServiceMode, string> = {
   on_site: 'On-Site',
   food_truck: 'Food Truck',
 };
-const PAGE_MAX_WIDTH = 1320;
+const PAGE_MAX_WIDTH = 1260;
 const BRAND_FALLBACK = '#E85618';
 const INK = '#1A1612';
 const CREAM = '#F9F5EF';
@@ -625,17 +625,20 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
     email &&
     (serviceType !== 'delivery' || (address && city && state && zipCode)),
   );
-  const showDesktopSidebar = !isTablet;
-  const showDesktopCart = !isMobile;
+  const showDesktopSidebar = !isCompactDesktop;
+  const showDesktopCart = !isTablet;
   const showCategoryChips = isMobile;
   const showBottomCartBar = !showDesktopCart;
   const layoutColumns = isMobile
     ? '1fr'
     : showDesktopSidebar
-      ? '216px minmax(0, 1fr) 340px'
-      : 'minmax(0, 1fr) 320px';
+      ? '188px minmax(0, 1fr) 316px'
+      : showDesktopCart
+        ? 'minmax(0, 1fr) 304px'
+        : '1fr';
+  const stackDesktopControls = !isMobile && isCompactDesktop;
   const controlBarTop = isMobile ? 60 : 76;
-  const sidebarTop = isMobile ? 110 : 164;
+  const sidebarTop = isMobile ? 110 : stackDesktopControls ? 196 : 164;
 
   useEffect(() => {
     if (menuSections.length > 0)
@@ -1389,9 +1392,10 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
         background: '#FAF9F7',
         color: INK,
         fontFamily: 'var(--font-body), Inter, sans-serif',
+        overflowX: 'clip',
       }}
     >
-      <style>{`@keyframes storefrontPulse { 0% { transform: scale(1); opacity: .55; } 70% { transform: scale(1.45); opacity: .05; } 100% { transform: scale(1); opacity: .55; } } .storefront-pulse-dot { animation: storefrontPulse 1.8s infinite; } .storefront-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; } .storefront-scrollbar::-webkit-scrollbar-thumb { background: rgba(26,22,18,.16); border-radius: 999px; } .storefront-field { box-sizing: border-box; width: 100%; min-width: 0; }`}</style>
+      <style>{`@keyframes storefrontPulse { 0% { transform: scale(1); opacity: .55; } 70% { transform: scale(1.45); opacity: .05; } 100% { transform: scale(1); opacity: .55; } } .storefront-pulse-dot { animation: storefrontPulse 1.8s infinite; } .storefront-scrollbar { scrollbar-width: none; -ms-overflow-style: none; } .storefront-scrollbar::-webkit-scrollbar { display: none; } .storefront-field { box-sizing: border-box; width: 100%; min-width: 0; }`}</style>
       <div
         style={{
           position: 'sticky',
@@ -1628,7 +1632,11 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: isMobile ? '1fr' : '1.15fr 0.9fr 0.75fr minmax(260px,1.4fr) auto',
+              gridTemplateColumns: isMobile
+                ? '1fr'
+                : stackDesktopControls
+                  ? 'minmax(0,1.15fr) minmax(180px,0.95fr) minmax(140px,0.8fr)'
+                  : 'minmax(0,1.1fr) minmax(180px,0.9fr) minmax(140px,0.78fr) minmax(220px,1.25fr) auto',
               gap: 10,
               alignItems: 'center',
             }}
@@ -1747,7 +1755,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                   padding: '0 98px 0 14px',
                   fontSize: 12,
                 }}
-              />
+                />
               {address && serviceType === 'delivery' ? (
                 <span
                   style={{
@@ -1766,7 +1774,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                 </span>
               ) : null}
             </div>
-            {!isMobile ? (
+            {!isMobile && !stackDesktopControls ? (
               <button
                 type="button"
                 onClick={() =>
@@ -1787,6 +1795,64 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
               </button>
             ) : null}
           </div>
+          {stackDesktopControls ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto', gap: 10 }}>
+              <div style={{ position: 'relative' }}>
+                <input
+                  className="storefront-field"
+                  value={address}
+                  onChange={(event) => setAddress(event.target.value)}
+                  placeholder={serviceType === 'delivery' ? 'Address' : 'Optional delivery address'}
+                  style={{
+                    width: '100%',
+                    height: 44,
+                    boxSizing: 'border-box',
+                    borderRadius: 14,
+                    border: `1px solid ${BORDER}`,
+                    background: '#FFFFFF',
+                    padding: '0 98px 0 14px',
+                    fontSize: 12,
+                  }}
+                />
+                {address && serviceType === 'delivery' ? (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      right: 10,
+                      top: 8,
+                      borderRadius: 999,
+                      background: '#EAF8EF',
+                      color: '#166534',
+                      padding: '6px 9px',
+                      fontSize: 10,
+                      fontWeight: 800,
+                    }}
+                  >
+                    In zone
+                  </span>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+                }
+                style={{
+                  height: 44,
+                  padding: '0 16px',
+                  borderRadius: 14,
+                  border: '1px solid rgba(26,22,18,0.08)',
+                  background: '#FFFFFF',
+                  color: INK,
+                  fontSize: 13,
+                  fontWeight: 900,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Cart {itemsInCart > 0 ? `(${itemsInCart})` : ''}
+              </button>
+            </div>
+          ) : null}
           {isMobile ? (
             <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: 10 }}>
               <input
@@ -1824,6 +1890,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
           maxWidth: PAGE_MAX_WIDTH,
           margin: '0 auto',
           padding: isMobile ? '18px 14px 0' : isLaptop ? '20px 18px 0' : '26px 24px 0',
+          overflowX: 'clip',
         }}
       >
         {searchParams.get('checkout') && !error ? (
@@ -1865,8 +1932,9 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
           style={{
             display: 'grid',
             gridTemplateColumns: layoutColumns,
-            gap: isMobile ? 18 : 24,
+            gap: isMobile ? 18 : 20,
             alignItems: 'start',
+            minWidth: 0,
           }}
         >
           {showDesktopSidebar ? (
@@ -1927,7 +1995,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
               </div>
             </aside>
           ) : null}
-          <div style={{ minWidth: 0 }}>
+          <div style={{ minWidth: 0, overflow: 'hidden' }}>
             {showCategoryChips ? (
               <div
                 style={{
@@ -1971,7 +2039,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                   ref={(node) => {
                     sectionRefs.current[section.id] = node;
                   }}
-                  style={{ scrollMarginTop: isMobile ? 210 : 248 }}
+                  style={{ scrollMarginTop: isMobile ? 210 : 248, overflow: 'hidden' }}
                 >
                   <div
                     style={{
@@ -2072,10 +2140,12 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                       className="storefront-scrollbar"
                       style={{
                         display: 'flex',
-                        gap: 16,
+                        gap: isMobile ? 12 : 14,
                         overflowX: 'auto',
                         scrollSnapType: 'x mandatory',
+                        paddingRight: isMobile ? 18 : 28,
                         paddingBottom: 4,
+                        minWidth: 0,
                       }}
                     >
                     {section.packages.map((pkg) => {
@@ -2086,14 +2156,14 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                           key={pkg.id}
                           style={{
                             flex: '0 0 auto',
-                            width: isMobile ? 200 : 264,
-                            minHeight: isMobile ? 270 : 320,
+                            width: isMobile ? 184 : isLaptop ? 228 : 244,
+                            minHeight: isMobile ? 248 : isLaptop ? 292 : 304,
                             borderRadius: 24,
                             border: `1px solid ${BORDER}`,
                             background: '#FFFFFF',
                             overflow: 'hidden',
                             display: 'grid',
-                            gridTemplateRows: isMobile ? '118px 1fr' : '198px 1fr',
+                            gridTemplateRows: isMobile ? '108px 1fr' : isLaptop ? '170px 1fr' : '184px 1fr',
                             scrollSnapAlign: 'start',
                           }}
                         >
@@ -2110,9 +2180,9 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                           </div>
                           <div
                             style={{
-                              padding: isMobile ? 14 : 16,
+                              padding: isMobile ? 12 : 14,
                               display: 'grid',
-                              gap: 10,
+                              gap: 8,
                             }}
                           >
                             <div>
@@ -2124,7 +2194,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                                   flexWrap: 'wrap',
                                 }}
                               >
-                                <div style={{ fontSize: isMobile ? 17 : 19, fontWeight: 900, lineHeight: 1.1 }}>
+                                <div style={{ fontSize: isMobile ? 16 : 18, fontWeight: 900, lineHeight: 1.1 }}>
                                   {pkg.name}
                                 </div>
                                 {pkg.upsellFeatured ? (
@@ -2134,7 +2204,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                                       background: '#FFF7ED',
                                       color: '#C2410C',
                                       padding: '3px 7px',
-                                      fontSize: 9,
+                                      fontSize: 8,
                                       fontWeight: 900,
                                     }}
                                   >
@@ -2142,7 +2212,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                                   </span>
                                 ) : null}
                               </div>
-                              <div style={{ marginTop: 6, fontSize: 11, color: MUTED }}>
+                              <div style={{ marginTop: 6, fontSize: 10, color: MUTED }}>
                                 Serves {pkg.minimumHeadcount ?? headcount}
                                 {merchant.rating && merchant.reviewCount
                                   ? ` • ${merchant.rating.toFixed(1)}`
@@ -2152,7 +2222,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                                 <div
                                   style={{
                                     marginTop: 6,
-                                    fontSize: 12,
+                                    fontSize: 11,
                                     lineHeight: 1.45,
                                     color: MUTED,
                                     display: '-webkit-box',
@@ -2174,7 +2244,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                                 gap: 12,
                               }}
                             >
-                              <div style={{ fontSize: isMobile ? 18 : 20, fontWeight: 900 }}>
+                              <div style={{ fontSize: isMobile ? 16 : 18, fontWeight: 900 }}>
                                 {formatCurrencyAmount(price)}
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -2196,13 +2266,13 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                                   type="button"
                                   onClick={() => updatePackageQuantity(pkg.id, quantity + 1 || 1)}
                                   style={{
-                                    width: 38,
-                                    height: 38,
+                                    width: 34,
+                                    height: 34,
                                     borderRadius: 999,
                                     border: `2px solid ${INK}`,
                                     background: '#FFFFFF',
                                     color: INK,
-                                    fontSize: 20,
+                                    fontSize: 18,
                                     fontWeight: 900,
                                   }}
                                 >
@@ -2230,7 +2300,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                   ref={(node) => {
                     sectionRefs.current.extras = node;
                   }}
-                  style={{ scrollMarginTop: isMobile ? 210 : 248 }}
+                  style={{ scrollMarginTop: isMobile ? 210 : 248, overflow: 'hidden' }}
                 >
                   <div
                     style={{
@@ -2294,10 +2364,12 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                       className="storefront-scrollbar"
                       style={{
                         display: 'flex',
-                        gap: 16,
+                        gap: isMobile ? 12 : 14,
                         overflowX: 'auto',
                         scrollSnapType: 'x mandatory',
+                        paddingRight: isMobile ? 18 : 28,
                         paddingBottom: 4,
+                        minWidth: 0,
                       }}
                     >
                     {filteredAddOns.map((addOn) => {
@@ -2307,14 +2379,14 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                           key={addOn.id}
                           style={{
                             flex: '0 0 auto',
-                            width: isMobile ? 200 : 264,
-                            minHeight: isMobile ? 270 : 320,
+                            width: isMobile ? 184 : isLaptop ? 228 : 244,
+                            minHeight: isMobile ? 248 : isLaptop ? 292 : 304,
                             borderRadius: 24,
                             border: `1px solid ${BORDER}`,
                             background: '#FFFFFF',
                             overflow: 'hidden',
                             display: 'grid',
-                            gridTemplateRows: isMobile ? '118px 1fr' : '198px 1fr',
+                            gridTemplateRows: isMobile ? '108px 1fr' : isLaptop ? '170px 1fr' : '184px 1fr',
                             scrollSnapAlign: 'start',
                           }}
                         >
@@ -2329,14 +2401,14 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                               placeholderCardImage(addOn.name, brandColor)
                             )}
                           </div>
-                          <div style={{ minWidth: 0, display: 'grid', gap: 10, padding: isMobile ? 14 : 16 }}>
+                          <div style={{ minWidth: 0, display: 'grid', gap: 8, padding: isMobile ? 12 : 14 }}>
                             <div>
-                              <div style={{ fontSize: isMobile ? 17 : 19, fontWeight: 900 }}>{addOn.name}</div>
+                              <div style={{ fontSize: isMobile ? 16 : 18, fontWeight: 900 }}>{addOn.name}</div>
                               {addOn.description ? (
                                 <div
                                   style={{
                                     marginTop: 6,
-                                    fontSize: 12,
+                                    fontSize: 11,
                                     lineHeight: 1.45,
                                     color: MUTED,
                                     display: '-webkit-box',
@@ -2357,7 +2429,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                                 gap: 12,
                               }}
                             >
-                              <div style={{ fontSize: isMobile ? 18 : 20, fontWeight: 900 }}>
+                              <div style={{ fontSize: isMobile ? 16 : 18, fontWeight: 900 }}>
                                 {formatCurrencyAmount(addOn.price)}
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -2379,13 +2451,13 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                                   type="button"
                                   onClick={() => updateAddOnQuantity(addOn.id, quantity + 1 || 1)}
                                   style={{
-                                    width: 38,
-                                    height: 38,
+                                    width: 34,
+                                    height: 34,
                                     borderRadius: 999,
                                     border: `2px solid ${INK}`,
                                     background: '#FFFFFF',
                                     color: INK,
-                                    fontSize: 20,
+                                    fontSize: 18,
                                     fontWeight: 900,
                                   }}
                                 >
