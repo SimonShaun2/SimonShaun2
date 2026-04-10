@@ -1,7 +1,8 @@
 'use client';
 
 import type { CSSProperties } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
+import Script from 'next/script';
 import { trackEvent } from '@trayloop/analytics';
 
 /* ── Palette ── */
@@ -24,17 +25,50 @@ const tealDot: CSSProperties = {
   marginTop: 7,
 };
 
-// Replace with your Close scheduling link URL from app.close.com/settings/scheduler
-const CLOSE_SCHEDULING_URL = process.env.NEXT_PUBLIC_CLOSE_SCHEDULING_URL
-  || 'https://app.close.com/meeting/your-schedule-link/';
+const HUBSPOT_PORTAL_ID = process.env.NEXT_PUBLIC_HUBSPOT_PORTAL_ID ?? '';
+const HUBSPOT_FORM_ID = process.env.NEXT_PUBLIC_HUBSPOT_FORM_ID ?? '';
 
 export default function DemoPage() {
+  const formContainerRef = useRef<HTMLDivElement>(null);
+  const formCreatedRef = useRef(false);
+
+  const createForm = useCallback(() => {
+    if (
+      formCreatedRef.current
+      || !formContainerRef.current
+      || !HUBSPOT_PORTAL_ID
+      || !HUBSPOT_FORM_ID
+    ) return;
+    if (typeof window === 'undefined' || !(window as any).hbspt) return;
+
+    formCreatedRef.current = true;
+    (window as any).hbspt.forms.create({
+      portalId: HUBSPOT_PORTAL_ID,
+      formId: HUBSPOT_FORM_ID,
+      target: '#hubspot-demo-form',
+      onFormReady: () => {
+        trackEvent('marketing_demo_form_loaded', { placement: 'demo_page' });
+      },
+      onFormSubmitted: () => {
+        trackEvent('marketing_demo_form_submitted', { placement: 'demo_page' });
+      },
+    });
+  }, []);
+
   useEffect(() => {
     trackEvent('marketing_demo_page_viewed', { placement: 'demo_page' });
-  }, []);
+    // If HubSpot script already loaded (e.g. cached), create form immediately
+    createForm();
+  }, [createForm]);
 
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', minHeight: '100vh' }}>
+      <Script
+        src="https://js.hsforms.net/forms/v2.js"
+        strategy="afterInteractive"
+        onLoad={createForm}
+      />
+
       {/* ── Left panel ── */}
       <div
         style={{
@@ -138,7 +172,7 @@ export default function DemoPage() {
         </div>
       </div>
 
-      {/* ── Right panel: Close scheduling iframe ── */}
+      {/* ── Right panel: HubSpot demo form ── */}
       <div
         style={{
           flex: '1 1 500px',
@@ -159,7 +193,7 @@ export default function DemoPage() {
               textAlign: 'center',
             }}
           >
-            Pick a time that works for you
+            Request your free demo
           </h2>
           <p
             style={{
@@ -178,37 +212,31 @@ export default function DemoPage() {
               border: `1.5px solid ${C.creamDark}`,
               overflow: 'hidden',
               boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
+              padding: 32,
+              minHeight: 400,
             }}
           >
-            <iframe
-              src={CLOSE_SCHEDULING_URL}
-              title="Book a demo with TrayLoop"
-              width="100%"
-              height="720"
-              frameBorder="0"
-              style={{ display: 'block', border: 'none' }}
-              onLoad={() => trackEvent('marketing_demo_scheduler_loaded', { placement: 'demo_page' })}
-            />
+            <div id="hubspot-demo-form" ref={formContainerRef} />
+            {(!HUBSPOT_PORTAL_ID || !HUBSPOT_FORM_ID) && (
+              <p
+                style={{
+                  fontSize: 14,
+                  color: C.muted,
+                  textAlign: 'center',
+                  padding: 40,
+                }}
+              >
+                Demo form loading&hellip; If it doesn&apos;t appear,{' '}
+                <a
+                  href="mailto:hello@trayloophq.com"
+                  style={{ color: C.orange, textDecoration: 'none', fontWeight: 600 }}
+                >
+                  email us directly
+                </a>
+                .
+              </p>
+            )}
           </div>
-          <p
-            style={{
-              fontSize: 12,
-              color: C.muted,
-              lineHeight: 1.6,
-              textAlign: 'center',
-              marginTop: 16,
-            }}
-          >
-            Trouble loading?{' '}
-            <a
-              href={CLOSE_SCHEDULING_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: C.orange, textDecoration: 'none', fontWeight: 600 }}
-            >
-              Open scheduler in a new tab →
-            </a>
-          </p>
         </div>
       </div>
     </div>
