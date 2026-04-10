@@ -1147,48 +1147,6 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
       <div style={{ fontSize: 11, color: MUTED }}>Why this rec? Updated moments ago.</div>
     </div>
   ) : null;
-  const oftenAddedRow =
-    suggestedOftenAdded.length > 0 ? (
-      <div style={{ display: 'grid', gap: 10 }}>
-        <div
-          style={{
-            fontSize: 11,
-            fontWeight: 900,
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-            color: MUTED,
-          }}
-        >
-          Often added
-        </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {suggestedOftenAdded.map((addOn) => (
-            <button
-              key={addOn.id}
-              type="button"
-              onClick={() => updateAddOnQuantity(addOn.id, (selectedAddOnIds[addOn.id] ?? 0) + 1)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                height: 34,
-                borderRadius: 999,
-                border: `1px solid ${BORDER}`,
-                background: '#FFFFFF',
-                padding: '0 12px',
-                fontSize: 12,
-                fontWeight: 800,
-                color: INK,
-              }}
-            >
-              <span style={{ fontSize: 13 }}>+</span>
-              <span>{addOn.name}</span>
-              <span style={{ color: MUTED }}>{formatCurrencyAmount(addOn.price)}</span>
-            </button>
-          ))}
-        </div>
-    </div>
-  ) : null;
   const recurringCard =
     recurringPresets.length > 0 ? (
       <div
@@ -2369,7 +2327,6 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                   {!showDesktopCart && sectionIndex === 0 ? (
                     <div style={{ marginTop: 18, display: 'grid', gap: 12 }}>
                       {smartUpsellCard}
-                      {oftenAddedRow}
                       {recurringCard}
                     </div>
                   ) : null}
