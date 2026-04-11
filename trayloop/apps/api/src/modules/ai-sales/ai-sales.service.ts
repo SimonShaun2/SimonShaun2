@@ -13,6 +13,10 @@ import {
   generateCampaignMessage,
   isOpenAIEnabled,
 } from '../../lib/openai.js';
+import {
+  assertOrganizationFeatureAccess,
+  assertOrganizationHasAnyFeature,
+} from '../../lib/feature-access.js';
 import { ValidationError } from '../../lib/errors.js';
 import type {
   CreateCampaignInput,
@@ -445,6 +449,7 @@ async function sendCampaignEmails(
 }
 
 export async function getReactivationSummary(orgId: string) {
+  await assertOrganizationFeatureAccess(orgId, 'campaigns.reactivation');
   const [repeatProfiles, allProfiles] = await Promise.all([
     getRepeatCustomerProfiles(orgId),
     getAllCustomerProfiles(orgId),
@@ -458,6 +463,7 @@ export async function getReactivationSummary(orgId: string) {
 }
 
 export async function getReactivationTargets(orgId: string, query: ReactivationTargetsQuery) {
+  await assertOrganizationFeatureAccess(orgId, 'campaigns.reactivation');
   const profiles = await getCustomerProfilesForSegment(orgId, query.segment as Segment);
   const pageItems = paginate(profiles, query.page, query.pageSize);
 
@@ -473,6 +479,7 @@ export async function getReactivationTargets(orgId: string, query: ReactivationT
 }
 
 export async function getReorderOpportunities(orgId: string, query: ReorderOpportunitiesQuery) {
+  await assertOrganizationFeatureAccess(orgId, 'reorder.basic');
   const opportunities = await getReorderOpportunitiesForOrganization(orgId);
 
   return {
@@ -492,6 +499,15 @@ export async function generateMessageForTargets(
   orgId: string,
   input: GenerateCampaignMessageInput,
 ) {
+  await assertOrganizationFeatureAccess(
+    orgId,
+    input.channelIntent === 'sms_copy' ? 'campaigns.ai_sms' : 'campaigns.ai_email',
+  );
+
+  if (input.campaignKind === 'reactivation') {
+    await assertOrganizationFeatureAccess(orgId, 'campaigns.reactivation');
+  }
+
   if (!isOpenAIEnabled()) {
     throw new ValidationError('OpenAI is not configured yet. Add OPENAI_API_KEY to enable AI message generation.');
   }
@@ -576,6 +592,10 @@ export async function createCampaign(
   userId: string,
   input: CreateCampaignInput,
 ) {
+  await assertOrganizationFeatureAccess(
+    orgId,
+    input.channel === 'sms_copy' ? 'campaigns.ai_sms' : 'campaigns.ai_email',
+  );
   const selection = await loadSelectedTargets(orgId, input.segment, input.selectedCustomerIds);
   const estimatedRevenueCents = selection.targets.reduce(
     (total, target) => total + target.averageOrderValueCents,
@@ -706,6 +726,11 @@ async function getCampaignById(orgId: string, campaignId: string) {
 }
 
 export async function listCampaigns(orgId: string, query: ListCampaignsQuery) {
+  await assertOrganizationHasAnyFeature(orgId, [
+    'campaigns.ai_email',
+    'campaigns.ai_sms',
+    'campaigns.reactivation',
+  ]);
   const campaigns = await db
     .select({
       id: aiCampaigns.id,

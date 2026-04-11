@@ -82,7 +82,7 @@ function buildFeatureMap(currentPlan: PlanKey): ResolvedFeatureMap {
 export async function getOrganizationFeatureEntitlements(orgId: string): Promise<OrganizationFeatureEntitlements> {
   // PAS-1 keeps runtime behavior aligned with the current single-plan product until
   // the billing migration in PAS-2/PAS-4 wires real plan data into production reads.
-  const currentPlan = normalizePlanKey('pro');
+  const currentPlan = normalizePlanKey('growth');
   const billingCycle = normalizeBillingCycle('monthly');
 
   const rows = await db

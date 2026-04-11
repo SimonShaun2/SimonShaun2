@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { requireAuth } from '../../lib/middleware/auth.js';
+import { requireFeature } from '../../lib/feature-access.js';
 import { requireTenant } from '../../lib/middleware/tenant.js';
 import { validateBody, validateParams } from '../../lib/middleware/validate.js';
 import { customerIdParamsSchema, idParamsSchema } from '../../lib/params.js';
@@ -9,6 +10,7 @@ import * as service from './recurring-orders.service.js';
 export function registerRoutes(app: FastifyInstance) {
   app.addHook('preHandler', requireAuth);
   app.addHook('preHandler', requireTenant);
+  app.addHook('preHandler', requireFeature('orders.recurring_schedule'));
 
   app.get('/', async (request) => {
     const orders = await service.listByOrg(request.ctx.tenant!.organizationId);

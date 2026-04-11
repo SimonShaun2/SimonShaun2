@@ -14,6 +14,7 @@ import {
 import { db } from '@trayloop/database';
 import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
 import { generateRevenueInsights, isOpenAIEnabled } from '../../lib/openai.js';
+import { assertOrganizationFeatureAccess } from '../../lib/feature-access.js';
 import type { RevenueInsightEventInput, RevenueRange } from './revenue-intelligence.schema.js';
 
 const FINAL_ORDER_STATUSES = ['confirmed', 'completed'] as const;
@@ -739,6 +740,7 @@ export async function getRevenueIntelligenceReport(
   organizationId: string,
   rangeKey: RevenueRange = '30d',
 ) {
+  await assertOrganizationFeatureAccess(organizationId, 'analytics.advanced');
   return buildMerchantReport(organizationId, rangeKey);
 }
 
@@ -746,6 +748,7 @@ export async function getRevenueIntelligenceSummary(
   organizationId: string,
   rangeKey: RevenueRange = '30d',
 ) {
+  await assertOrganizationFeatureAccess(organizationId, 'analytics.advanced');
   const report = await buildMerchantReport(organizationId, rangeKey);
   return {
     range: report.range,
@@ -853,6 +856,7 @@ export async function trackRevenueInsightEvent(
   userId: string,
   input: RevenueInsightEventInput,
 ) {
+  await assertOrganizationFeatureAccess(organizationId, 'analytics.advanced');
   await db.insert(revenueInsightEvents).values({
     organizationId,
     userId,

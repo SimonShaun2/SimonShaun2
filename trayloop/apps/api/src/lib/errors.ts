@@ -3,6 +3,7 @@ export class AppError extends Error {
     public statusCode: number,
     message: string,
     public code: string = 'INTERNAL_ERROR',
+    public details?: Record<string, unknown>,
   ) {
     super(message);
     this.name = 'AppError';
@@ -30,6 +31,27 @@ export class UnauthorizedError extends AppError {
 export class ForbiddenError extends AppError {
   constructor(message = 'Forbidden') {
     super(403, message, 'FORBIDDEN');
+  }
+}
+
+export class FeatureNotIncludedError extends AppError {
+  constructor(input: {
+    featureKey: string;
+    currentPlan: string;
+    requiredPlan: string | null;
+    upgradeToPlan: string | null;
+  }) {
+    super(
+      403,
+      'This feature is not included in your current plan.',
+      'FEATURE_NOT_INCLUDED',
+      {
+        featureKey: input.featureKey,
+        currentPlan: input.currentPlan,
+        requiredPlan: input.requiredPlan,
+        upgradeToPlan: input.upgradeToPlan,
+      },
+    );
   }
 }
 

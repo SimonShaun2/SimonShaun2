@@ -11,6 +11,7 @@ export function errorHandler(error: FastifyError, request: FastifyRequest, reply
       error: {
         code: error.code,
         message: error.message,
+        ...(error.details ? { details: error.details } : {}),
         requestId,
       },
     });

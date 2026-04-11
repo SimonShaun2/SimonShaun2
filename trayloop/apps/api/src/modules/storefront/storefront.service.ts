@@ -17,6 +17,7 @@ import {
 } from '@trayloop/database';
 import { eq, and, desc, gte, lte, ne } from 'drizzle-orm';
 import { NotFoundError, ValidationError } from '../../lib/errors.js';
+import { assertOrganizationFeatureAccess } from '../../lib/feature-access.js';
 import { getStripe, isStripeEnabled } from '../../lib/stripe.js';
 import { buildUpsellRecommendations } from '../../lib/upsells.js';
 import { create as createOrder, createDepositCheckoutForOrder } from '../orders/orders.service.js';
@@ -647,6 +648,8 @@ export async function getStorefrontUpsellRecommendations(
   input: StorefrontUpsellRequestInput,
 ) {
   const storefront = await getStorefront(slug);
+  const org = await getStorefrontOrganization(slug);
+  await assertOrganizationFeatureAccess(org.id, 'upsells.basic');
   const locationExists = storefront.locations.some((location) => location.slug === input.locationId);
 
   if (!locationExists) {
@@ -700,6 +703,8 @@ export async function trackStorefrontUpsellEvent(
   if (!org) {
     throw new NotFoundError('Storefront');
   }
+
+  await assertOrganizationFeatureAccess(org.id, 'upsells.basic');
 
   const [validAddOn] = await db
     .select({ id: addOns.id })
@@ -778,6 +783,7 @@ export async function getStorefrontUpsellSocialProof(
   input: { addOnId: string; headcount: number },
 ) {
   const org = await getStorefrontOrganization(slug);
+  await assertOrganizationFeatureAccess(org.id, 'upsells.basic');
   const addOnRows = await getOrganizationAddOns(org.id);
   const addOn = addOnRows.find((row) => row.id === input.addOnId);
 
@@ -825,6 +831,7 @@ export async function getStorefrontUpsellSocialProof(
 
 export async function getStorefrontOftenAdded(slug: string) {
   const org = await getStorefrontOrganization(slug);
+  await assertOrganizationFeatureAccess(org.id, 'upsells.basic');
   const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
   const addOnRows = await getOrganizationAddOns(org.id);
 
