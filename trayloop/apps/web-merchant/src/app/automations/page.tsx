@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { automationsEnabled } from '../../lib/features';
+import LockedFeatureCard from '../../components/locked-feature-card';
+import { useFeatureAccess } from '../../components/plan-access-provider';
 import {
   evaluateAutomationRules,
   fetchAutomationOverview,
@@ -60,6 +62,16 @@ function toRunDraft(run: AutomationRun): RunDraft {
 }
 
 export default function AutomationsPage() {
+  const automationAccess = useFeatureAccess('campaigns.reactivation');
+  const [overview, setOverview] = useState<AutomationOverview | null>(null);
+  const [runs, setRuns] = useState<AutomationRun[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
+  const [busyAction, setBusyAction] = useState('');
+  const [ruleDrafts, setRuleDrafts] = useState<Record<string, RuleDraft>>({});
+  const [runDrafts, setRunDrafts] = useState<Record<string, RunDraft>>({});
+
   if (!automationsEnabled) {
     return (
       <div style={{ border: '1px solid #E7E5E4', borderRadius: 16, background: '#FFFFFF', padding: 24 }}>
@@ -76,14 +88,20 @@ export default function AutomationsPage() {
     );
   }
 
-  const [overview, setOverview] = useState<AutomationOverview | null>(null);
-  const [runs, setRuns] = useState<AutomationRun[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
-  const [busyAction, setBusyAction] = useState('');
-  const [ruleDrafts, setRuleDrafts] = useState<Record<string, RuleDraft>>({});
-  const [runDrafts, setRunDrafts] = useState<Record<string, RunDraft>>({});
+  if (!automationAccess.loading && !automationAccess.enabled) {
+    return (
+      <LockedFeatureCard
+        featureKey="campaigns.reactivation"
+        title="Operator autopilot is available on Growth"
+        description="Automation is where TrayLoop turns repeat customer outreach into a managed operating system. Upgrade when you want queued reactivation runs, approval-first sends, and autopilot campaign rules."
+        bullets={[
+          'Run approval-first reorder and reactivation campaigns',
+          'See pending approval queues before anything sends',
+          'Graduate your strongest rules into autopilot',
+        ]}
+      />
+    );
+  }
 
   async function load() {
     setLoading(true);
@@ -113,8 +131,12 @@ export default function AutomationsPage() {
       window.location.href = '/login';
       return;
     }
+    if (automationAccess.loading || !automationAccess.enabled) {
+      setLoading(false);
+      return;
+    }
     load();
-  }, []);
+  }, [automationAccess.enabled, automationAccess.loading]);
 
   const pendingRuns = useMemo(
     () => runs.filter((run) => run.status === 'pending_approval'),

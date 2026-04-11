@@ -6,6 +6,8 @@ import {
   trackRevenueInsightEvent,
   type MerchantRevenueIntelligenceSummary,
 } from '../lib/api';
+import LockedFeatureCard from './locked-feature-card';
+import { useFeatureAccess } from './plan-access-provider';
 
 function money(cents: number) {
   return `$${(cents / 100).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
@@ -23,6 +25,7 @@ const RANGE_OPTIONS = [
 ] as const;
 
 export default function RevenueIntelligencePanel() {
+  const analyticsAccess = useFeatureAccess('analytics.advanced');
   const [range, setRange] = useState<'7d' | '30d' | 'mtd' | 'prev_month'>('30d');
   const [data, setData] = useState<MerchantRevenueIntelligenceSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -30,6 +33,11 @@ export default function RevenueIntelligencePanel() {
   const hasTrackedShown = useRef(false);
 
   useEffect(() => {
+    if (analyticsAccess.loading || !analyticsAccess.enabled) {
+      setLoading(false);
+      return;
+    }
+
     let active = true;
     setLoading(true);
     setError('');
@@ -51,10 +59,10 @@ export default function RevenueIntelligencePanel() {
     return () => {
       active = false;
     };
-  }, [range]);
+  }, [analyticsAccess.enabled, analyticsAccess.loading, range]);
 
   useEffect(() => {
-    if (!data || hasTrackedShown.current) return;
+    if (!analyticsAccess.enabled || !data || hasTrackedShown.current) return;
     hasTrackedShown.current = true;
     trackRevenueInsightEvent({
       eventType: 'shown',
@@ -79,6 +87,24 @@ export default function RevenueIntelligencePanel() {
       metadata: { range },
     }).catch(() => {});
   };
+
+  if (!analyticsAccess.loading && !analyticsAccess.enabled) {
+    return (
+      <div style={{ marginBottom: 24 }}>
+        <LockedFeatureCard
+          compact
+          featureKey="analytics.advanced"
+          title="Advanced revenue intelligence unlocks on Growth"
+          description="Starter and Pro keep the operational basics. Growth adds AI insights, customer health, at-risk revenue signals, and deeper revenue analysis."
+          bullets={[
+            'Spot at-risk catering accounts before they churn',
+            'See repeat vs new revenue mix and customer health',
+            'Turn analytics into concrete next actions',
+          ]}
+        />
+      </div>
+    );
+  }
 
   return (
     <section

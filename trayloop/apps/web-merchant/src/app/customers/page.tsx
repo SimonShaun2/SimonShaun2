@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { apiFetch } from '../../lib/api';
+import LockedFeatureCard from '../../components/locked-feature-card';
+import { useFeatureAccess } from '../../components/plan-access-provider';
 import { hasMerchantSession } from '../../lib/session';
 import { useMobile } from '../../lib/use-mobile';
 
@@ -37,6 +39,7 @@ interface CustomerDetail {
 
 export default function CustomersPage() {
   const isMobile = useMobile();
+  const customerInsightsAccess = useFeatureAccess('customers.basic_insights');
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -46,8 +49,12 @@ export default function CustomersPage() {
 
   useEffect(() => {
     if (!hasMerchantSession()) { window.location.href = '/login'; return; }
+    if (customerInsightsAccess.loading || !customerInsightsAccess.enabled) {
+      setLoading(false);
+      return;
+    }
     fetchCustomers();
-  }, []);
+  }, [customerInsightsAccess.enabled, customerInsightsAccess.loading]);
 
   async function fetchCustomers() {
     try {
@@ -87,6 +94,21 @@ export default function CustomersPage() {
     if (days <= 30) return '#22C55E'; // green
     if (days <= 90) return '#F59E0B'; // amber
     return '#9CA3AF'; // gray
+  }
+
+  if (!customerInsightsAccess.loading && !customerInsightsAccess.enabled) {
+    return (
+      <LockedFeatureCard
+        featureKey="customers.basic_insights"
+        title="Customer insights unlock on Pro"
+        description="Pro gives merchants a clear view of repeat customers, total spend, and order recency so they can make better catering decisions."
+        bullets={[
+          'See repeat customers and ordering momentum',
+          'Review spend, recency, and order history in one place',
+          'Prepare for stronger reorder and retention workflows',
+        ]}
+      />
+    );
   }
 
   return (

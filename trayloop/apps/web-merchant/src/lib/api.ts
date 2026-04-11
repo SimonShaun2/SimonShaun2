@@ -1,3 +1,8 @@
+import type {
+  BillingCycleKey,
+  FeatureKey,
+  PlanKey,
+} from '@trayloop/types/src/plan-access';
 import { clearMerchantSession, ensureMerchantSession } from './session';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -49,6 +54,8 @@ export interface MerchantPaymentStatus {
 export interface MerchantBillingSubscription {
   organizationId: string;
   organizationName: string;
+  currentPlan: PlanKey;
+  billingCycle: BillingCycleKey;
   planName: string;
   priceCents: number;
   interval: string;
@@ -56,17 +63,7 @@ export interface MerchantBillingSubscription {
   canCheckout: boolean;
   canManage: boolean;
   trialDaysRemaining: number | null;
-  features: {
-    growthAdvisor: {
-      enabled: boolean;
-      source: string | null;
-      stripePriceId: string | null;
-      stripeSubscriptionItemId: string | null;
-      available: boolean;
-      priceCents: number;
-      interval: 'month';
-    };
-  };
+  features: MerchantFeatureEntitlements;
   subscription: null | {
     id: string;
     stripeCustomerId: string;
@@ -81,6 +78,46 @@ export interface MerchantBillingSubscription {
     createdAt: string | null;
     updatedAt: string | null;
   };
+}
+
+export interface MerchantFeatureAccessState {
+  key: FeatureKey | 'growth_advisor';
+  included: boolean;
+  enabled: boolean;
+  source: string | null;
+  requiredPlan: PlanKey | null;
+  upgradeToPlan: PlanKey | null;
+  stripePriceId: string | null;
+  stripeSubscriptionItemId: string | null;
+  available: boolean;
+  priceCents: number | null;
+  interval: string | null;
+}
+
+export interface MerchantFeatureEntitlements {
+  currentPlan: PlanKey;
+  billingCycle: BillingCycleKey;
+  includedFeatures: readonly FeatureKey[];
+  byKey: Record<FeatureKey, MerchantFeatureAccessState>;
+  growthAdvisor: MerchantFeatureAccessState;
+}
+
+export class ApiError extends Error {
+  code: string;
+  status: number;
+  details?: Record<string, unknown>;
+
+  constructor(message: string, input: { code?: string; status: number; details?: Record<string, unknown> }) {
+    super(message);
+    this.name = 'ApiError';
+    this.code = input.code ?? 'REQUEST_FAILED';
+    this.status = input.status;
+    this.details = input.details;
+  }
+}
+
+export function isFeatureNotIncludedError(error: unknown): error is ApiError {
+  return error instanceof ApiError && error.code === 'FEATURE_NOT_INCLUDED';
 }
 
 export interface MerchantOnboardingStatus {
@@ -476,7 +513,13 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
   }
 
   const json = await res.json();
-  if (!res.ok) throw new Error(json.error?.message ?? 'Request failed');
+  if (!res.ok) {
+    throw new ApiError(json.error?.message ?? 'Request failed', {
+      code: json.error?.code,
+      status: res.status,
+      details: json.error?.details,
+    });
+  }
   return json;
 }
 

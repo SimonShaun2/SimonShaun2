@@ -15,6 +15,8 @@ import {
   type AiSalesReactivationSummary,
   type AiSalesTarget,
 } from '../lib/api';
+import LockedFeatureCard from './locked-feature-card';
+import { useFeatureAccess } from './plan-access-provider';
 import { useMobile } from '../lib/use-mobile';
 
 type BuilderSegment = 'all' | 'frequent' | 'at_risk' | 'dormant';
@@ -86,6 +88,7 @@ function campaignStatusLabel(campaign: AiSalesCampaign) {
 
 export default function AiSalesPanel() {
   const isMobile = useMobile();
+  const campaignAccess = useFeatureAccess('campaigns.reactivation');
   const [summary, setSummary] = useState<AiSalesReactivationSummary | null>(null);
   const [campaigns, setCampaigns] = useState<AiSalesCampaign[]>([]);
   const [reorderOpportunities, setReorderOpportunities] = useState<AiSalesReorderOpportunity[]>([]);
@@ -106,13 +109,16 @@ export default function AiSalesPanel() {
   const [pendingSeedCustomerIds, setPendingSeedCustomerIds] = useState<string[] | null>(null);
 
   useEffect(() => {
+    if (campaignAccess.loading || !campaignAccess.enabled) {
+      return;
+    }
     void loadPanel();
-  }, []);
+  }, [campaignAccess.enabled, campaignAccess.loading]);
 
   useEffect(() => {
-    if (!isBuilderOpen) return;
+    if (campaignAccess.loading || !campaignAccess.enabled || !isBuilderOpen) return;
     void loadTargets(selectedSegment, pendingSeedCustomerIds);
-  }, [isBuilderOpen, selectedSegment, pendingSeedCustomerIds]);
+  }, [campaignAccess.enabled, campaignAccess.loading, isBuilderOpen, selectedSegment, pendingSeedCustomerIds]);
 
   const selectedTargets = useMemo(
     () => targets.filter((target) => selectedCustomerIds.includes(target.id)),
@@ -318,6 +324,24 @@ export default function AiSalesPanel() {
     return (
       <div style={panelStyle}>
         <div style={{ color: '#78716C', fontSize: 14 }}>Loading AI sales engine...</div>
+      </div>
+    );
+  }
+
+  if (!campaignAccess.loading && !campaignAccess.enabled) {
+    return (
+      <div style={{ marginBottom: 24 }}>
+        <LockedFeatureCard
+          compact
+          featureKey="campaigns.reactivation"
+          title="AI sales engine is available on Growth"
+          description="Unlock AI-powered reactivation campaigns, reorder reminders, and guided message generation once this merchant is ready for growth automation."
+          bullets={[
+            'Generate email and SMS campaign copy for repeat customers',
+            'Surface reorder-ready accounts before they lapse',
+            'Turn reactivation into an approval-first workflow',
+          ]}
+        />
       </div>
     );
   }

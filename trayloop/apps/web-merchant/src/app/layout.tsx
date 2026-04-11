@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import NavBar from '../components/nav-bar';
+import { MerchantAnalytics, MerchantSpeedInsights } from '../components/observability';
+import { PlanAccessProvider } from '../components/plan-access-provider';
 import { showStagingBanner } from '../lib/features';
 import { AnalyticsProvider } from '@trayloop/analytics';
-import { Analytics } from '@vercel/analytics/react';
-import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Bricolage_Grotesque, Fraunces, Inter } from 'next/font/google';
 
 const inter = Inter({
@@ -81,17 +81,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             Staging Environment
           </div>
         ) : null}
-        <div className="merchant-shell" style={{ display: 'flex', minHeight: '100vh' }}>
-          <NavBar />
-          <main className="merchant-main" style={{ flex: 1, minWidth: 0, padding: '28px 32px', maxWidth: 'calc(100vw - 236px)' }}>
-            <div className="merchant-main-inner" style={{ maxWidth: 1180 }}>
-              {children}
-            </div>
-          </main>
-        </div>
+        <PlanAccessProvider>
+          <div className="merchant-shell" style={{ display: 'flex', minHeight: '100vh' }}>
+            <NavBar />
+            <main className="merchant-main" style={{ flex: 1, minWidth: 0, padding: '28px 32px', maxWidth: 'calc(100vw - 236px)' }}>
+              <div className="merchant-main-inner" style={{ maxWidth: 1180 }}>
+                {children}
+              </div>
+            </main>
+          </div>
+        </PlanAccessProvider>
         <AnalyticsProvider appName="merchant" />
-        <Analytics />
-        <SpeedInsights />
+        <MerchantAnalytics />
+        <MerchantSpeedInsights />
       </body>
     </html>
   );

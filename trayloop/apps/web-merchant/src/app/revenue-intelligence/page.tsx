@@ -6,6 +6,8 @@ import {
   trackRevenueInsightEvent,
   type MerchantRevenueIntelligenceReport,
 } from '../../lib/api';
+import LockedFeatureCard from '../../components/locked-feature-card';
+import { useFeatureAccess } from '../../components/plan-access-provider';
 
 const RANGE_OPTIONS = [
   { value: '7d', label: 'Last 7 days' },
@@ -23,12 +25,18 @@ function pct(value: number) {
 }
 
 export default function RevenueIntelligencePage() {
+  const analyticsAccess = useFeatureAccess('analytics.advanced');
   const [range, setRange] = useState<'7d' | '30d' | 'mtd' | 'prev_month'>('30d');
   const [data, setData] = useState<MerchantRevenueIntelligenceReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (analyticsAccess.loading || !analyticsAccess.enabled) {
+      setLoading(false);
+      return;
+    }
+
     let active = true;
     setLoading(true);
     setError('');
@@ -57,12 +65,27 @@ export default function RevenueIntelligencePage() {
     return () => {
       active = false;
     };
-  }, [range]);
+  }, [analyticsAccess.enabled, analyticsAccess.loading, range]);
 
   const maxTrendRevenue = useMemo(() => {
     if (!data?.trends?.length) return 1;
     return Math.max(...data.trends.map((point) => point.totalRevenueCents), 1);
   }, [data]);
+
+  if (!analyticsAccess.loading && !analyticsAccess.enabled) {
+    return (
+      <LockedFeatureCard
+        featureKey="analytics.advanced"
+        title="Catering Revenue Report unlocks on Growth"
+        description="Growth turns reporting into an action engine with AI insights, customer health, revenue mix, and at-risk opportunity tracking."
+        bullets={[
+          'See at-risk customers and dormant revenue clearly',
+          'Track repeat vs new revenue mix over time',
+          'Surface next-best growth actions from real data',
+        ]}
+      />
+    );
+  }
 
   return (
     <div>

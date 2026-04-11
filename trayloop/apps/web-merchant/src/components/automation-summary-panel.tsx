@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { evaluateAutomationRules, fetchAutomationOverview, type AutomationOverview } from '../lib/api';
+import LockedFeatureCard from './locked-feature-card';
+import { useFeatureAccess } from './plan-access-provider';
 
 function money(cents: number) {
   return `$${(cents / 100).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 }
 
 export default function AutomationSummaryPanel() {
+  const automationAccess = useFeatureAccess('campaigns.reactivation');
   const [data, setData] = useState<AutomationOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -27,8 +30,12 @@ export default function AutomationSummaryPanel() {
   }
 
   useEffect(() => {
+    if (automationAccess.loading || !automationAccess.enabled) {
+      setLoading(false);
+      return;
+    }
     load();
-  }, []);
+  }, [automationAccess.enabled, automationAccess.loading]);
 
   async function handleEvaluate() {
     setBusy(true);
@@ -41,6 +48,24 @@ export default function AutomationSummaryPanel() {
     } finally {
       setBusy(false);
     }
+  }
+
+  if (!automationAccess.loading && !automationAccess.enabled) {
+    return (
+      <div style={{ marginBottom: 20 }}>
+        <LockedFeatureCard
+          compact
+          featureKey="campaigns.reactivation"
+          title="Automation is part of the Growth plan"
+          description="Autopilot campaign approvals, queued reactivation runs, and repeat-order automation live behind the Growth tier."
+          bullets={[
+            'Queue reactivation campaigns for review',
+            'Graduate proven flows into autopilot',
+            'Track approval rate and revenue influenced',
+          ]}
+        />
+      </div>
+    );
   }
 
   return (

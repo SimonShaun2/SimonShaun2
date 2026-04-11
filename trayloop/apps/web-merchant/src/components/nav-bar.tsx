@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { PLAN_DEFINITIONS, type FeatureKey } from '@trayloop/types/src/plan-access';
 import NotificationBell from './notification-bell';
 import { clearMerchantSession, hasMerchantSession } from '../lib/session';
-import { apiFetch, fetchBillingSubscription, fetchStorefrontContext, type MerchantStorefrontContext } from '../lib/api';
+import { apiFetch, fetchStorefrontContext, type MerchantStorefrontContext } from '../lib/api';
 import { automationsEnabled, growthAdvisorEnabled } from '../lib/features';
+import { usePlanAccess } from './plan-access-provider';
 import { useMobile } from '../lib/use-mobile';
 
 const NAV_ITEMS = [
@@ -13,10 +15,10 @@ const NAV_ITEMS = [
   { href: '/billing', label: 'Billing', section: 'workspace' },
   { href: '/onboarding', label: 'Launch Setup', section: 'workspace' },
   { href: '/follow-ups', label: 'Follow-Ups', section: 'workspace' },
-  { href: '/automations', label: 'Automations', section: 'workspace' },
+  { href: '/automations', label: 'Automations', section: 'workspace', featureKey: 'campaigns.reactivation' as FeatureKey },
   { href: '/growth-advisor', label: 'Growth Advisor', section: 'workspace', premium: true },
-  { href: '/revenue-intelligence', label: 'Revenue', section: 'workspace' },
-  { href: '/customers', label: 'Customers', section: 'workspace' },
+  { href: '/revenue-intelligence', label: 'Revenue', section: 'workspace', featureKey: 'analytics.advanced' as FeatureKey },
+  { href: '/customers', label: 'Customers', section: 'workspace', featureKey: 'customers.basic_insights' as FeatureKey },
   { href: '/catalog', label: 'Offerings', section: 'workspace' },
   { href: '/storefront/customize', label: 'Storefront', section: 'configure' },
   { href: '/settings', label: 'Settings', section: 'configure' },
@@ -29,11 +31,12 @@ export default function NavBar() {
     || pathname === '/reset-password'
     || pathname === '/support-access';
   const isMobile = useMobile();
+  const { billing, hasFeature, getUpgradePlan } = usePlanAccess();
   const [storefrontUrl, setStorefrontUrl] = useState<string | null>(null);
   const [signedIn, setSignedIn] = useState(false);
   const [orgName, setOrgName] = useState<string | null>(null);
   const [defaultLocationName, setDefaultLocationName] = useState<string | null>(null);
-  const [hasGrowthAdvisorAccess, setHasGrowthAdvisorAccess] = useState(false);
+  const hasGrowthAdvisorAccess = Boolean(billing?.features?.growthAdvisor?.enabled);
 
   const visibleNavItems = NAV_ITEMS.filter((item) => {
     if (item.href === '/automations' && !automationsEnabled) return false;
@@ -50,15 +53,13 @@ export default function NavBar() {
     setOrgName(storedOrgName);
     setStorefrontUrl(null);
     setDefaultLocationName(null);
-    setHasGrowthAdvisorAccess(false);
 
     if (signedIn) {
       Promise.all([
         apiFetch('/api/organizations/current').catch(() => null),
         fetchStorefrontContext().catch(() => null),
-        fetchBillingSubscription().catch(() => null),
       ])
-        .then(([orgRes, storefrontContext, billing]) => {
+        .then(([orgRes, storefrontContext]) => {
           if (orgRes?.data?.name) {
             localStorage.setItem('orgName', orgRes.data.name);
             setOrgName(orgRes.data.name);
@@ -77,12 +78,65 @@ export default function NavBar() {
             setStorefrontUrl(null);
             setDefaultLocationName(null);
           }
-
-          setHasGrowthAdvisorAccess(Boolean(billing?.features?.growthAdvisor?.enabled));
         })
         .catch(() => {});
     }
   }, [isAuthPage, pathname]);
+
+  function renderLockedBadge(item: (typeof NAV_ITEMS)[number]) {
+    if (item.href === '/growth-advisor' && !hasGrowthAdvisorAccess) {
+      return (
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: 999,
+            background: '#D4A853',
+            color: '#1C1917',
+            padding: '2px 7px',
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase',
+            flexShrink: 0,
+          }}
+        >
+          Add-on
+        </span>
+      );
+    }
+
+    if (!item.featureKey || hasFeature(item.featureKey)) {
+      return null;
+    }
+
+    const upgradePlan = getUpgradePlan(item.featureKey);
+    if (!upgradePlan) {
+      return null;
+    }
+
+    return (
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: 999,
+          background: '#44403C',
+          color: '#FAFAF9',
+          padding: '2px 7px',
+          fontSize: 10,
+          fontWeight: 800,
+          letterSpacing: '0.04em',
+          textTransform: 'uppercase',
+          flexShrink: 0,
+        }}
+      >
+        {PLAN_DEFINITIONS[upgradePlan].label}
+      </span>
+    );
+  }
 
   function handleSignOut() {
     clearMerchantSession();
@@ -205,25 +259,7 @@ export default function NavBar() {
                 }}
               >
                 <span>{item.label}</span>
-                {item.href === '/growth-advisor' && !hasGrowthAdvisorAccess ? (
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderRadius: 999,
-                      background: '#D4A853',
-                      color: '#1C1917',
-                      padding: '2px 7px',
-                      fontSize: 10,
-                      fontWeight: 800,
-                      letterSpacing: '0.04em',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    Add-on
-                  </span>
-                ) : null}
+                {renderLockedBadge(item)}
               </a>
             );
           })}
@@ -364,29 +400,10 @@ export default function NavBar() {
                       background: isActive ? '#D4A853' : '#44403C',
                       display: 'inline-block',
                       flexShrink: 0,
-                      }}
+                  }}
                     />
                   <span style={{ flex: 1 }}>{item.label}</span>
-                  {item.href === '/growth-advisor' && !hasGrowthAdvisorAccess ? (
-                    <span
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderRadius: 999,
-                        background: '#D4A853',
-                        color: '#1C1917',
-                        padding: '2px 7px',
-                        fontSize: 10,
-                        fontWeight: 800,
-                        letterSpacing: '0.04em',
-                        textTransform: 'uppercase',
-                        flexShrink: 0,
-                      }}
-                    >
-                      Add-on
-                    </span>
-                  ) : null}
+                  {renderLockedBadge(item)}
                 </a>
               );
             })}

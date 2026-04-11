@@ -257,7 +257,7 @@ function MerchantOnboardingPageContent() {
                 <div>
                   <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 6 }}>
                     <div style={{ fontSize: 15, fontWeight: 700, color: '#1C1917' }}>Add Growth Advisor</div>
-                    <Pill bg="#1C1917" color="#FAFAF9">{`+$${(growthAdvisorOffer.priceCents / 100).toFixed(0)}/${growthAdvisorOffer.interval}`}</Pill>
+                    <Pill bg="#1C1917" color="#FAFAF9">{`+$${((growthAdvisorOffer.priceCents ?? 0) / 100).toFixed(0)}/${growthAdvisorOffer.interval}`}</Pill>
                   </div>
                   <div style={{ fontSize: 13, color: '#57534E', lineHeight: 1.6 }}>
                     Attach the premium growth plan add-on during onboarding so the merchant workspace unlocks it immediately after billing syncs.
