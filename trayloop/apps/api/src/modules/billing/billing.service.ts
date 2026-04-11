@@ -243,6 +243,8 @@ async function buildSubscriptionResponse(record: Awaited<ReturnType<typeof getBi
   return {
     organizationId: record.organizationId,
     organizationName: record.organizationName,
+    currentPlan: features.currentPlan,
+    billingCycle: features.billingCycle,
     planName: PLAN_NAME,
     priceCents: PLAN_AMOUNT_CENTS,
     interval: PLAN_INTERVAL,

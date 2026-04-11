@@ -1,6 +1,6 @@
 import { pgTable, uuid, varchar, text, timestamp, boolean } from 'drizzle-orm/pg-core';
 import { users } from './users.js';
-import { memberRoleEnum, memberStatusEnum } from './enums.js';
+import { memberRoleEnum, memberStatusEnum, organizationPlanEnum } from './enums.js';
 
 export const organizations = pgTable('organizations', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -12,6 +12,7 @@ export const organizations = pgTable('organizations', {
   logoUrl: text('logo_url'),
   brandColor: varchar('brand_color', { length: 7 }),
   displayFont: text('display_font'),
+  currentPlan: organizationPlanEnum('current_plan').notNull().default('pro'),
   ownerId: uuid('owner_id').notNull().references(() => users.id),
   stripeAccountId: text('stripe_account_id'),
   stripeChargesEnabled: boolean('stripe_charges_enabled').notNull().default(false),

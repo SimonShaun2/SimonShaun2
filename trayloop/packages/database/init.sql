@@ -40,9 +40,11 @@ DROP TABLE IF EXISTS users CASCADE;
 DROP TYPE IF EXISTS user_role CASCADE;
 DROP TYPE IF EXISTS member_role CASCADE;
 DROP TYPE IF EXISTS member_status CASCADE;
+DROP TYPE IF EXISTS organization_plan CASCADE;
 DROP TYPE IF EXISTS order_status CASCADE;
 DROP TYPE IF EXISTS service_mode CASCADE;
 DROP TYPE IF EXISTS subscription_status CASCADE;
+DROP TYPE IF EXISTS billing_cycle CASCADE;
 DROP TYPE IF EXISTS payment_status CASCADE;
 DROP TYPE IF EXISTS payment_method CASCADE;
 DROP TYPE IF EXISTS deposit_status CASCADE;
@@ -61,9 +63,11 @@ DROP TYPE IF EXISTS organization_feature_key CASCADE;
 CREATE TYPE user_role AS ENUM ('customer', 'merchant', 'admin');
 CREATE TYPE member_role AS ENUM ('owner', 'admin', 'manager', 'staff');
 CREATE TYPE member_status AS ENUM ('invited', 'active', 'suspended', 'removed');
+CREATE TYPE organization_plan AS ENUM ('starter', 'pro', 'growth');
 CREATE TYPE order_status AS ENUM ('submitted', 'awaiting_deposit', 'confirmed', 'completed', 'cancelled');
 CREATE TYPE service_mode AS ENUM ('delivery', 'pickup', 'full_service', 'on_site', 'food_truck');
 CREATE TYPE subscription_status AS ENUM ('trialing', 'active', 'past_due', 'canceled', 'unpaid');
+CREATE TYPE billing_cycle AS ENUM ('monthly', 'annual');
 CREATE TYPE payment_status AS ENUM ('pending', 'processing', 'succeeded', 'failed', 'refunded', 'partially_refunded');
 CREATE TYPE payment_method AS ENUM ('card', 'ach', 'cash', 'check', 'other');
 CREATE TYPE deposit_status AS ENUM ('pending', 'paid', 'refunded');
@@ -74,7 +78,31 @@ CREATE TYPE package_pricing AS ENUM ('per_head', 'flat');
 CREATE TYPE recurrence_interval AS ENUM ('weekly', 'biweekly', 'monthly', 'quarterly');
 CREATE TYPE follow_up_status AS ENUM ('pending', 'completed');
 CREATE TYPE audit_action AS ENUM ('create', 'update', 'delete', 'login', 'logout', 'status_change');
-CREATE TYPE organization_feature_key AS ENUM ('growth_advisor');
+CREATE TYPE organization_feature_key AS ENUM (
+  'storefront.basic',
+  'orders.basic_intake',
+  'orders.future_schedule_basic',
+  'orders.recurring_schedule',
+  'orders.discount_rules',
+  'deposits.enabled',
+  'reporting.basic',
+  'reporting.advanced',
+  'customers.basic_insights',
+  'customers.segmentation',
+  'templates.events',
+  'reorder.basic',
+  'upsells.basic',
+  'upsells.ai',
+  'campaigns.ai_email',
+  'campaigns.ai_sms',
+  'campaigns.reactivation',
+  'ai.lead_scoring',
+  'analytics.advanced',
+  'analytics.at_risk_customers',
+  'analytics.customer_ltv',
+  'growth.corporate_insights',
+  'growth_advisor'
+);
 
 -- =============================================================================
 -- CREATE TABLES (dependency order)
@@ -123,6 +151,7 @@ CREATE TABLE IF NOT EXISTS organizations (
   logo_url TEXT,
   brand_color VARCHAR(7),
   display_font TEXT,
+  current_plan organization_plan NOT NULL DEFAULT 'pro',
   owner_id UUID NOT NULL REFERENCES users(id),
   stripe_account_id TEXT,
   stripe_charges_enabled BOOLEAN NOT NULL DEFAULT false,
@@ -143,6 +172,8 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   stripe_customer_id TEXT NOT NULL UNIQUE,
   stripe_subscription_id TEXT UNIQUE,
   stripe_price_id TEXT,
+  plan organization_plan NOT NULL DEFAULT 'pro',
+  billing_cycle billing_cycle NOT NULL DEFAULT 'monthly',
   status subscription_status NOT NULL DEFAULT 'trialing',
   trial_start TIMESTAMPTZ,
   trial_end TIMESTAMPTZ,
