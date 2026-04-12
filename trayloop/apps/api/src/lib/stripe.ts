@@ -7,7 +7,7 @@ let stripeClient: Stripe | null = null;
 
 export interface StripeConfig {
   secretKey: string;
-  publishableKey: string;
+  publishableKey: string | null;
   webhookSecret: string;
   starterPriceId: string | null;
   proPriceId: string | null;
@@ -53,7 +53,7 @@ function loadConfig(): StripeConfig | null {
   };
   const subscriptionTrialDays = Number.parseInt(process.env.STRIPE_SUBSCRIPTION_TRIAL_DAYS ?? '0', 10);
 
-  if (!secretKey || !publishableKey || !webhookSecret) {
+  if (!secretKey || !webhookSecret) {
     return null;
   }
 
@@ -64,7 +64,7 @@ function loadConfig(): StripeConfig | null {
 
   return {
     secretKey,
-    publishableKey,
+    publishableKey: publishableKey ?? null,
     webhookSecret,
     starterPriceId,
     proPriceId,
