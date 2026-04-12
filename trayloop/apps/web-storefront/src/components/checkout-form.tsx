@@ -33,7 +33,7 @@ interface Props {
   initialLocationSlug?: string | null;
 }
 type StorefrontServiceMode = OrderSubmission['serviceType'];
-type RecurringPresetId = 'twice_weekly' | 'weekday_weekly' | 'weekly' | 'biweekly';
+type RecurringPresetId = 'weekly' | 'biweekly' | 'monthly';
 type DisplayFontKey = 'bricolage' | 'fraunces' | 'inter';
 interface MenuSection {
   id: string;
@@ -60,12 +60,14 @@ const SERVICE_MODE_LABELS: Record<StorefrontServiceMode, string> = {
   on_site: 'On-Site',
   food_truck: 'Food Truck',
 };
-const PAGE_MAX_WIDTH = 1260;
+const PAGE_MAX_WIDTH = 1180;
 const BRAND_FALLBACK = '#E85618';
 const INK = '#1A1612';
 const CREAM = '#F9F5EF';
 const BORDER = '#E7E5E4';
 const MUTED = '#78716C';
+const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const WEEKDAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 function clampHeadcount(value: number) {
   return Math.max(1, Math.min(1000, value));
@@ -105,49 +107,90 @@ function getInitialDate() {
 function getInitialTime() {
   return '11:30';
 }
-function getRecurringPresets(todayIndex: number): RecurringPreset[] {
-  const weekdayNames = [
-    'Sunday',
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-  ];
-  const dayName = weekdayNames[todayIndex];
-  if (todayIndex === 2 || todayIndex === 4) {
-    return [
-      {
-        id: 'twice_weekly',
-        label: 'Every Tuesday & Thursday',
-        deliveriesPerMonth: 8,
-        apiInterval: 'weekly',
-      },
-      { id: 'weekly', label: 'Repeat in 1 week', deliveriesPerMonth: 4, apiInterval: 'weekly' },
-      {
-        id: 'biweekly',
-        label: `Every other ${dayName}`,
-        deliveriesPerMonth: 2,
-        apiInterval: 'biweekly',
-      },
-    ];
+function getWeekdayIndex(dateString: string) {
+  const date = new Date(`${dateString}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return new Date().getDay();
+  return date.getDay();
+}
+function getAvailableTimeOptions() {
+  const options: Array<{ value: string; label: string }> = [];
+  for (let hour = 6; hour <= 22; hour += 1) {
+    for (let minute = 0; minute < 60; minute += 15) {
+      const value = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+      options.push({ value, label: formatDisplayTime(value) });
+    }
   }
+  return options;
+}
+function startOfMonth(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+function addMonths(date: Date, offset: number) {
+  return new Date(date.getFullYear(), date.getMonth() + offset, 1);
+}
+function buildCalendarDays(dateString: string) {
+  const selectedDate = new Date(`${dateString}T12:00:00`);
+  const monthStart = startOfMonth(Number.isNaN(selectedDate.getTime()) ? new Date() : selectedDate);
+  const firstWeekday = monthStart.getDay();
+  const gridStart = new Date(monthStart);
+  gridStart.setDate(monthStart.getDate() - firstWeekday);
+
+  return Array.from({ length: 35 }, (_, index) => {
+    const day = new Date(gridStart);
+    day.setDate(gridStart.getDate() + index);
+    return {
+      key: day.toISOString(),
+      date: day,
+      value: formatDateInput(day),
+      isCurrentMonth: day.getMonth() === monthStart.getMonth(),
+    };
+  });
+}
+function getRecurringPresets(): RecurringPreset[] {
   return [
-    {
-      id: 'weekday_weekly',
-      label: `Every ${dayName}`,
-      deliveriesPerMonth: 4,
-      apiInterval: 'weekly',
-    },
-    { id: 'weekly', label: 'Repeat in 1 week', deliveriesPerMonth: 4, apiInterval: 'weekly' },
+    { id: 'weekly', label: 'Repeat every week', deliveriesPerMonth: 4, apiInterval: 'weekly' },
     {
       id: 'biweekly',
-      label: `Every other ${dayName}`,
+      label: 'Repeat every 2 weeks',
       deliveriesPerMonth: 2,
       apiInterval: 'biweekly',
     },
+    { id: 'monthly', label: 'Repeat every month', deliveriesPerMonth: 1, apiInterval: 'monthly' },
   ];
+}
+function getWeekdayName(dateString: string) {
+  const date = new Date(`${dateString}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return undefined;
+  return date.toLocaleDateString('en-US', { weekday: 'long' });
+}
+function buildUpcomingRecurringDates(startDate: string, preset: RecurringPreset, weekdays: number[]) {
+  const start = new Date(`${startDate}T12:00:00`);
+  if (Number.isNaN(start.getTime())) return [] as Array<{ date: Date }>;
+  if (preset.apiInterval === 'monthly') {
+    return Array.from({ length: 3 }, (_, index) => {
+      const next = new Date(start);
+      next.setMonth(start.getMonth() + index);
+      return { date: next };
+    });
+  }
+
+  const activeWeekdays = weekdays.length > 0 ? [...weekdays].sort((a, b) => a - b) : [start.getDay()];
+  const deliveries: Array<{ date: Date }> = [];
+  const cursor = new Date(start);
+
+  while (deliveries.length < 3) {
+    const diffDays = Math.floor((cursor.getTime() - start.getTime()) / 86_400_000);
+    const weekOffset = Math.floor(diffDays / 7);
+    const intervalMatches = preset.apiInterval === 'weekly' ? true : weekOffset % 2 === 0;
+
+    if (cursor >= start && activeWeekdays.includes(cursor.getDay()) && intervalMatches) {
+      deliveries.push({ date: new Date(cursor) });
+    }
+
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return deliveries;
 }
 function getDisplayFontFamily(displayFont: DisplayFontKey | null | undefined) {
   if (displayFont === 'fraunces') return 'var(--font-display-fraunces), Georgia, serif';
@@ -528,6 +571,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
   const searchParams = useSearchParams();
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const recurringCalendarRef = useRef<HTMLDivElement | null>(null);
 
   const allPackages = useMemo(
     () =>
@@ -543,10 +587,12 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
   const [eventDate, setEventDate] = useState(getInitialDate());
   const [eventTime, setEventTime] = useState(getInitialTime());
   const [headcount, setHeadcount] = useState(10);
+  const [headcountInput, setHeadcountInput] = useState('10');
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('');
   const [selectedPkgs, setSelectedPkgs] = useState<Record<string, number>>({});
   const [selectedAddOnIds, setSelectedAddOnIds] = useState<Record<string, number>>({});
+  const [checkoutStep, setCheckoutStep] = useState<'menu' | 'details'>('menu');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -570,10 +616,16 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
   const [oftenAdded, setOftenAdded] = useState<StorefrontAddOn[]>([]);
   const [socialProof, setSocialProof] = useState<StorefrontUpsellSocialProof | null>(null);
   const [itemModal, setItemModal] = useState<ItemModalState>(null);
-  const recurringPresets = useMemo(() => getRecurringPresets(new Date().getDay()), []);
+  const recurringPresets = useMemo(() => getRecurringPresets(), []);
+  const availableTimeOptions = useMemo(() => getAvailableTimeOptions(), []);
   const [recurringEnabled, setRecurringEnabled] = useState(false);
   const [recurringPreset, setRecurringPreset] = useState<RecurringPresetId>(
     recurringPresets[0]?.id ?? 'weekly',
+  );
+  const [recurringWeekdays, setRecurringWeekdays] = useState<number[]>([getWeekdayIndex(getInitialDate())]);
+  const [recurringCalendarOpen, setRecurringCalendarOpen] = useState(false);
+  const [recurringCalendarMonth, setRecurringCalendarMonth] = useState(() =>
+    startOfMonth(new Date(`${getInitialDate()}T12:00:00`)),
   );
   const [returnedPaymentStatus, setReturnedPaymentStatus] =
     useState<PublicOrderPaymentStatus | null>(null);
@@ -593,6 +645,9 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
   const displayFontFamily = getDisplayFontFamily(
     (merchant.displayFont ?? 'bricolage') as DisplayFontKey,
   );
+  const currentPlan = merchant.currentPlan ?? 'starter';
+  const recurringFeatureAvailable = currentPlan === 'pro' || currentPlan === 'growth';
+  const recurringActive = recurringFeatureAvailable && recurringEnabled;
   const availableServiceModes = useMemo<StorefrontServiceMode[]>(() => {
     const next = new Set<StorefrontServiceMode>();
     if (selectedLocation?.deliveryEnabled) next.add('delivery');
@@ -648,14 +703,14 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
     selectedAddOnList.reduce((sum, item) => sum + item.total, 0);
   const recurringDeliveryCount =
     recurringPresets.find((preset) => preset.id === recurringPreset)?.deliveriesPerMonth ?? 4;
-  const recurringDiscountCents = recurringEnabled ? Math.round(subtotalCents * 0.05) : 0;
+  const recurringDiscountCents = recurringActive ? Math.round(subtotalCents * 0.05) : 0;
   const coordinationFeeCents = subtotalCents > 0 ? Math.round(subtotalCents * 0.035) : 0;
   const displayTotalCents = Math.max(
     subtotalCents + coordinationFeeCents - recurringDiscountCents,
     0,
   );
   const projectedRecurringSavingsThreeMonths =
-    (recurringEnabled ? recurringDiscountCents : Math.round(subtotalCents * 0.05)) *
+    (recurringActive ? recurringDiscountCents : Math.round(subtotalCents * 0.05)) *
     recurringDeliveryCount *
     3;
   const recurringBars = [1, 2, 3].map((index) => ({
@@ -667,6 +722,10 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
     selectedAddOnList.reduce((sum, item) => sum + item.quantity, 0);
   const recurringPresetDetails =
     recurringPresets.find((preset) => preset.id === recurringPreset) ?? recurringPresets[0];
+  const recurringCalendarDays = useMemo(
+    () => buildCalendarDays(formatDateInput(recurringCalendarMonth)),
+    [recurringCalendarMonth],
+  );
   const suggestedOftenAdded = useMemo(
     () => oftenAdded.filter((addOn) => (selectedAddOnIds[addOn.id] ?? 0) === 0).slice(0, 3),
     [oftenAdded, selectedAddOnIds],
@@ -711,32 +770,76 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
   ];
   const merchantContact = merchant.phone || selectedLocation?.phone || null;
   const deliverySummary =
+    serviceType === 'pickup'
+      ? [selectedLocation.name, selectedLocation.address, selectedLocation.city, selectedLocation.state]
+          .filter(Boolean)
+          .join(', ')
+      : buildAddressSummary(address, city, state, zipCode) || 'Add the event location on the checkout step.';
+  const requiresEventAddress = serviceType !== 'pickup';
+  const eventLocationLabel =
     serviceType === 'delivery'
-      ? buildAddressSummary(address, city, state, zipCode) ||
-        'Add a delivery address to validate the zone.'
-      : `Pickup or service at ${selectedLocation.name}`;
+      ? 'Delivery address'
+      : serviceType === 'food_truck'
+        ? 'Food truck location'
+        : 'Event location';
+  const canProceedToCheckout = Boolean(selectedLocation && itemsInCart > 0);
   const canSubmit = Boolean(
     selectedLocation &&
     itemsInCart > 0 &&
     firstName &&
     lastName &&
     email &&
-    (serviceType !== 'delivery' || (address && city && state && zipCode)),
+    (!requiresEventAddress || (address && city && state && zipCode)),
   );
-  const showDesktopSidebar = !isCompactDesktop;
+  const showDesktopSidebar = false;
   const showDesktopCart = !isTablet;
-  const showCategoryChips = isMobile;
+  const showCategoryChips = true;
   const showBottomCartBar = !showDesktopCart;
   const layoutColumns = isMobile
     ? '1fr'
-    : showDesktopSidebar
-      ? '188px minmax(0, 1fr) 316px'
-      : showDesktopCart
-        ? 'minmax(0, 1fr) 304px'
-        : '1fr';
+    : showDesktopCart
+      ? 'minmax(0, 1fr) 320px'
+      : '1fr';
   const stackDesktopControls = !isMobile && isCompactDesktop;
   const controlBarTop = isMobile ? 60 : 76;
-  const sidebarTop = isMobile ? 110 : stackDesktopControls ? 196 : 164;
+  const sidebarTop = isMobile ? 110 : stackDesktopControls ? 188 : 154;
+  const showBrowseSidebar = checkoutStep === 'menu' && showDesktopSidebar;
+  const activeLayoutColumns =
+    checkoutStep === 'details'
+      ? showDesktopCart
+        ? 'minmax(0, 1fr) 320px'
+        : '1fr'
+      : layoutColumns;
+  const stepLabel = checkoutStep === 'menu' ? 'Step 1 of 2' : 'Step 2 of 2';
+  const stepTitle = checkoutStep === 'menu' ? 'Build your order' : 'Review and place your order';
+  const stepSubtitle =
+    checkoutStep === 'menu'
+      ? 'Browse the menu, add items, and head to checkout when the order feels right.'
+      : 'Finalize the schedule, recurring plan, recommendations, and event details before submitting.';
+
+  useEffect(() => {
+    setHeadcountInput(String(headcount));
+  }, [headcount]);
+
+  useEffect(() => {
+    if (!recurringFeatureAvailable && recurringEnabled) {
+      setRecurringEnabled(false);
+    }
+  }, [recurringEnabled, recurringFeatureAvailable]);
+
+  useEffect(() => {
+    if (recurringPreset === 'monthly') return;
+    if (recurringWeekdays.length === 0) {
+      setRecurringWeekdays([getWeekdayIndex(eventDate)]);
+    }
+  }, [eventDate, recurringPreset, recurringWeekdays.length]);
+
+  useEffect(() => {
+    const selectedDate = new Date(`${eventDate}T12:00:00`);
+    if (!Number.isNaN(selectedDate.getTime())) {
+      setRecurringCalendarMonth(startOfMonth(selectedDate));
+    }
+  }, [eventDate]);
 
   useEffect(() => {
     if (menuSections.length > 0)
@@ -747,6 +850,29 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
   useEffect(() => {
     if (!availableServiceModes.includes(serviceType)) setServiceType(availableServiceModes[0]);
   }, [availableServiceModes, serviceType]);
+  useEffect(() => {
+    if (!recurringCalendarOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (
+        recurringCalendarRef.current &&
+        !recurringCalendarRef.current.contains(event.target as Node)
+      ) {
+        setRecurringCalendarOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setRecurringCalendarOpen(false);
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [recurringCalendarOpen]);
   useEffect(() => {
     if (!selectedLocationSlug || !pathname) return;
     if (searchParams.get('location') === selectedLocationSlug) return;
@@ -983,18 +1109,10 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
     }
   }, [merchant.slug, searchParams]);
   const upcomingDeliveries = useMemo(() => {
-    const deliveries: Array<{ date: Date }> = [];
-    const start = new Date(`${eventDate}T12:00:00`);
-    if (Number.isNaN(start.getTime())) return deliveries;
-    const stepDays =
-      recurringPreset === 'twice_weekly' ? 3 : recurringPreset === 'biweekly' ? 14 : 7;
-    for (let index = 0; index < 3; index += 1) {
-      const next = new Date(start);
-      next.setDate(start.getDate() + stepDays * index);
-      deliveries.push({ date: next });
-    }
-    return deliveries;
-  }, [eventDate, recurringPreset]);
+    const selectedPreset =
+      recurringPresets.find((preset) => preset.id === recurringPreset) ?? recurringPresets[0];
+    return buildUpcomingRecurringDates(eventDate, selectedPreset, recurringWeekdays);
+  }, [eventDate, recurringPreset, recurringPresets, recurringWeekdays]);
 
   const smartUpsellCard = fallbackUpsell ? (
     <div
@@ -1147,50 +1265,8 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
       <div style={{ fontSize: 11, color: MUTED }}>Why this rec? Updated moments ago.</div>
     </div>
   ) : null;
-  const oftenAddedRow =
-    suggestedOftenAdded.length > 0 ? (
-      <div style={{ display: 'grid', gap: 10 }}>
-        <div
-          style={{
-            fontSize: 11,
-            fontWeight: 900,
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-            color: MUTED,
-          }}
-        >
-          Often added
-        </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {suggestedOftenAdded.map((addOn) => (
-            <button
-              key={addOn.id}
-              type="button"
-              onClick={() => updateAddOnQuantity(addOn.id, (selectedAddOnIds[addOn.id] ?? 0) + 1)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                height: 34,
-                borderRadius: 999,
-                border: `1px solid ${BORDER}`,
-                background: '#FFFFFF',
-                padding: '0 12px',
-                fontSize: 12,
-                fontWeight: 800,
-                color: INK,
-              }}
-            >
-              <span style={{ fontSize: 13 }}>+</span>
-              <span>{addOn.name}</span>
-              <span style={{ color: MUTED }}>{formatCurrencyAmount(addOn.price)}</span>
-            </button>
-          ))}
-        </div>
-    </div>
-  ) : null;
   const recurringCard =
-    recurringPresets.length > 0 ? (
+    recurringFeatureAvailable && recurringPresets.length > 0 ? (
       <div
         style={{
           borderRadius: 24,
@@ -1227,7 +1303,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
             </div>
             <div>
               <div style={{ fontSize: 15, fontWeight: 900 }}>
-                Recurring is {recurringEnabled ? 'on' : 'available'}
+                Recurring is {recurringActive ? 'on' : 'available'}
               </div>
               <div style={{ fontSize: 12, color: MUTED }}>Save 5% on repeat catering</div>
             </div>
@@ -1339,19 +1415,283 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
             );
           })}
         </div>
+        <div style={{ fontSize: 11, color: MUTED }}>
+          Choose your repeat cadence, then pick a start date and time. The next 3 deliveries update below.
+        </div>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1fr) minmax(170px, 0.8fr)',
+            gap: 10,
+          }}
+        >
+          <div style={{ display: 'grid', gap: 6, position: 'relative' }}>
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                color: MUTED,
+              }}
+            >
+              Repeat starting
+            </span>
+            <button
+              type="button"
+              onClick={() => setRecurringCalendarOpen((current) => !current)}
+              style={{
+                height: 42,
+                borderRadius: 14,
+                border: `1px solid ${BORDER}`,
+                padding: '0 12px',
+                background: '#FFFFFF',
+                fontSize: 12,
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+                textAlign: 'left',
+                cursor: 'pointer',
+              }}
+            >
+              <span>{formatDisplayDate(eventDate)}</span>
+              <span style={{ color: MUTED, fontSize: 16, lineHeight: 1 }}>▾</span>
+            </button>
+            {recurringCalendarOpen ? (
+              <div
+                ref={recurringCalendarRef}
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 8px)',
+                  left: 0,
+                  zIndex: 30,
+                  width: isMobile ? '100%' : 286,
+                  borderRadius: 18,
+                  border: `1px solid ${BORDER}`,
+                  background: '#FFFFFF',
+                  boxShadow: '0 18px 40px rgba(26,22,18,0.12)',
+                  padding: 14,
+                  display: 'grid',
+                  gap: 12,
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setRecurringCalendarMonth((current) => addMonths(current, -1))}
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 999,
+                      border: `1px solid ${BORDER}`,
+                      background: '#FFFFFF',
+                      fontSize: 16,
+                      fontWeight: 900,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    ‹
+                  </button>
+                  <div style={{ fontSize: 13, fontWeight: 900 }}>
+                    {recurringCalendarMonth.toLocaleDateString('en-US', {
+                      month: 'long',
+                      year: 'numeric',
+                    })}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setRecurringCalendarMonth((current) => addMonths(current, 1))}
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 999,
+                      border: `1px solid ${BORDER}`,
+                      background: '#FFFFFF',
+                      fontSize: 16,
+                      fontWeight: 900,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    ›
+                  </button>
+                </div>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+                    gap: 6,
+                    textAlign: 'center',
+                    fontSize: 10,
+                    fontWeight: 800,
+                    color: MUTED,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                  }}
+                >
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((label) => (
+                    <span key={label}>{label}</span>
+                  ))}
+                </div>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+                    gap: 6,
+                  }}
+                >
+                  {recurringCalendarDays.map((day) => {
+                    const active = eventDate === day.value;
+                    return (
+                      <button
+                        key={day.key}
+                        type="button"
+                        onClick={() => {
+                          setRecurringEnabled(true);
+                          setEventDate(day.value);
+                          setRecurringCalendarOpen(false);
+                        }}
+                        style={{
+                          height: 34,
+                          borderRadius: 12,
+                          border: active ? 'none' : `1px solid ${BORDER}`,
+                          background: active ? '#E85618' : '#FFFFFF',
+                          color: active ? '#FFFFFF' : day.isCurrentMonth ? INK : '#A8A29E',
+                          fontSize: 12,
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {day.date.getDate()}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+          </div>
+          <label style={{ display: 'grid', gap: 6 }}>
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                color: MUTED,
+              }}
+            >
+              At time
+            </span>
+            <select
+              className="storefront-field"
+              value={eventTime}
+              onChange={(event) => {
+                setRecurringEnabled(true);
+                setEventTime(event.target.value);
+              }}
+              style={{
+                height: 42,
+                borderRadius: 14,
+                border: `1px solid ${BORDER}`,
+                padding: '0 12px',
+                background: '#FFFFFF',
+                fontSize: 12,
+                fontWeight: 700,
+              }}
+            >
+              {availableTimeOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        {recurringPreset !== 'monthly' ? (
+          <div style={{ display: 'grid', gap: 8 }}>
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                color: MUTED,
+              }}
+            >
+              Delivery days
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {WEEKDAY_SHORT.map((label, index) => {
+                const active = recurringWeekdays.includes(index);
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => {
+                      setRecurringEnabled(true);
+                      setRecurringWeekdays((current) => {
+                        if (active) {
+                          return current.length > 1 ? current.filter((day) => day !== index) : current;
+                        }
+                        return [...current, index].sort((a, b) => a - b);
+                      });
+                    }}
+                    style={{
+                      height: 34,
+                      borderRadius: 999,
+                      border: active ? 'none' : `1px solid ${BORDER}`,
+                      background: active ? '#1C1917' : '#FFFFFF',
+                      color: active ? '#FFFFFF' : INK,
+                      padding: '0 12px',
+                      fontSize: 11,
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                    }}
+                    title={WEEKDAY_LABELS[index]}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <div style={{ fontSize: 11, color: MUTED }}>
+            Monthly repeats use the selected calendar date each month.
+          </div>
+        )}
         <div style={{ display: 'grid', gap: 8 }}>
           {upcomingDeliveries.map((delivery, index) => (
-            <div
+            <button
               key={delivery.date.toISOString()}
+              type="button"
+              onClick={() => {
+                setRecurringEnabled(true);
+                setEventDate(formatDateInput(delivery.date));
+              }}
               style={{
                 borderRadius: 14,
-                background: '#FFFFFF',
-                border: `1px solid ${BORDER}`,
+                background: eventDate === formatDateInput(delivery.date) ? '#FFF7ED' : '#FFFFFF',
+                border:
+                  eventDate === formatDateInput(delivery.date)
+                    ? '1px solid #FDBA74'
+                    : `1px solid ${BORDER}`,
                 padding: '10px 12px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 gap: 12,
+                width: '100%',
+                textAlign: 'left',
+                cursor: 'pointer',
               }}
             >
               <div>
@@ -1378,15 +1718,39 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                   TODAY
                 </span>
               ) : null}
-            </div>
+            </button>
           ))}
         </div>
         <div style={{ fontSize: 11, color: MUTED }}>
           ✓ Skip any week · ✓ Edit anytime · ✓ Cancel anytime
         </div>
-        {recurringEnabled ? (
-          <div style={{ fontSize: 11, fontWeight: 800, color: '#C2410C' }}>
-            Recurring plan: {recurringPresetDetails?.label ?? 'Repeat weekly'}
+        {recurringActive ? (
+          <div style={{ display: 'grid', gap: 6 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: '#C2410C' }}>
+              Recurring plan: {recurringPresetDetails?.label ?? 'Repeat weekly'}
+            </div>
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                width: 'fit-content',
+                borderRadius: 999,
+                background: '#FFF7ED',
+                border: '1px solid #FB923C',
+                color: '#9A3412',
+                padding: '7px 12px',
+                fontSize: 11,
+                fontWeight: 800,
+              }}
+            >
+              Selected start: {formatDisplayDate(eventDate)} at {formatDisplayTime(eventTime)}
+            </div>
+            {recurringPreset !== 'monthly' ? (
+              <div style={{ fontSize: 11, color: MUTED }}>
+                Delivery days: {recurringWeekdays.map((day) => WEEKDAY_LABELS[day]).join(', ')}
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -1422,12 +1786,18 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
       },
       notes: notes || undefined,
       deliveryAddress:
-        serviceType === 'delivery' ? { address, city, state, zipCode, country: 'US' } : undefined,
-      recurring: recurringEnabled
+        requiresEventAddress && address && city && state && zipCode
+          ? { address, city, state, zipCode, country: 'US' }
+          : undefined,
+      recurring: recurringActive
         ? {
             interval:
               recurringPresets.find((preset) => preset.id === recurringPreset)?.apiInterval ??
               'weekly',
+            preferredDay:
+              recurringPreset === 'monthly'
+                ? getWeekdayName(eventDate)
+                : recurringWeekdays.join(','),
             preferredTime: eventTime,
           }
         : undefined,
@@ -1602,9 +1972,14 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
             {!isMobile ? (
               <button
                 type="button"
-                onClick={() =>
-                  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
-                }
+                onClick={() => {
+                  if (itemsInCart > 0) {
+                    setCheckoutStep('details');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    return;
+                  }
+                  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                }}
                 style={{
                   height: 40,
                   padding: '0 14px',
@@ -1626,33 +2001,33 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
         style={{
           maxWidth: PAGE_MAX_WIDTH,
           margin: '0 auto',
-          padding: isMobile ? '12px 14px 0' : '12px 24px 0',
+          padding: isMobile ? '8px 14px 0' : '8px 24px 0',
         }}
       >
         <div
           style={{
-            borderRadius: isMobile ? 18 : 22,
+            borderRadius: isMobile ? 14 : 18,
             background: `linear-gradient(135deg, ${brandColor} 0%, ${INK} 100%)`,
             color: '#FFFFFF',
-            padding: isMobile ? '12px 14px' : '14px 18px',
+            padding: isMobile ? '9px 14px' : '10px 16px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: 14,
           }}
         >
-          <div>
-            <div
-              style={{
-                fontFamily: displayFontFamily,
-                fontSize: isMobile ? 18 : 22,
-                fontWeight: 900,
-                lineHeight: 1,
-              }}
+            <div>
+              <div
+                style={{
+                  fontFamily: displayFontFamily,
+                  fontSize: isMobile ? 17 : 18,
+                  fontWeight: 900,
+                  lineHeight: 1,
+                }}
             >
               {merchant.name}
             </div>
-            <div style={{ marginTop: 6, fontSize: 12, color: 'rgba(255,255,255,0.82)' }}>
+            <div style={{ marginTop: 3, fontSize: 10, color: 'rgba(255,255,255,0.82)' }}>
               {merchant.tagline || merchant.description || 'Catering & events, direct from the merchant.'}
             </div>
           </div>
@@ -1662,8 +2037,8 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
               borderRadius: 999,
               background: '#EAF8EF',
               color: '#166534',
-              padding: '6px 10px',
-              fontSize: 11,
+              padding: '5px 10px',
+              fontSize: 10,
               fontWeight: 900,
             }}
           >
@@ -1686,15 +2061,15 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
           style={{
             maxWidth: PAGE_MAX_WIDTH,
             margin: '0 auto',
-            padding: isMobile ? '8px 14px' : '0 24px',
+            padding: isMobile ? '6px 14px' : '0 24px',
           }}
         >
           <div
             style={{
-              minHeight: isMobile ? 40 : 50,
+              minHeight: isMobile ? 38 : 44,
               display: 'flex',
               alignItems: 'center',
-              gap: isMobile ? 12 : 18,
+              gap: isMobile ? 10 : 14,
               overflowX: 'auto',
             }}
             className="storefront-scrollbar"
@@ -1703,7 +2078,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
               <div key={item.label} style={{ minWidth: 'fit-content', display: 'grid', gap: 2 }}>
                 <span
                   style={{
-                    fontSize: 9,
+                    fontSize: 8,
                     textTransform: 'uppercase',
                     letterSpacing: '0.08em',
                     fontWeight: 800,
@@ -1712,7 +2087,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                 >
                   {item.label}
                 </span>
-                <span style={{ fontSize: 12, fontWeight: 800 }}>{item.value}</span>
+                <span style={{ fontSize: 11, fontWeight: 800 }}>{item.value}</span>
               </div>
             ))}
             <div
@@ -1722,8 +2097,8 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                 borderRadius: 999,
                 background: `${brandColor}18`,
                 color: brandColor,
-                padding: '7px 10px',
-                fontSize: 11,
+                padding: '6px 10px',
+                fontSize: 10,
                 fontWeight: 900,
               }}
             >
@@ -1755,9 +2130,9 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
               display: 'grid',
               gridTemplateColumns: isMobile
                 ? '1fr'
-                : stackDesktopControls
-                  ? 'minmax(0,1.15fr) minmax(180px,0.95fr) minmax(140px,0.8fr)'
-                  : 'minmax(0,1.1fr) minmax(180px,0.9fr) minmax(140px,0.78fr) minmax(220px,1.25fr) auto',
+                : isCompactDesktop
+                  ? 'minmax(0,1fr) minmax(170px,0.8fr) minmax(132px,0.7fr) minmax(148px,0.78fr)'
+                  : 'minmax(0,1.15fr) minmax(190px,0.85fr) minmax(138px,0.72fr) minmax(156px,0.8fr)',
               gap: 10,
               alignItems: 'center',
             }}
@@ -1794,25 +2169,45 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                 );
               })}
             </div>
-            <div
-              style={{
-                height: 44,
-                borderRadius: 14,
-                border: `1px solid ${BORDER}`,
-                background: '#FFFFFF',
-                padding: '0 14px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                fontSize: 12,
-                fontWeight: 700,
-              }}
-            >
-              <span>
-                {formatDisplayDate(eventDate)}, {formatDisplayTime(eventTime)}
-              </span>
-              <span style={{ color: MUTED }}>v</span>
-            </div>
+            {!isMobile ? (
+              <input
+                className="storefront-field"
+                type="date"
+                value={eventDate}
+                onChange={(event) => setEventDate(event.target.value)}
+                style={{
+                  height: 44,
+                  borderRadius: 14,
+                  border: `1px solid ${BORDER}`,
+                  padding: '0 14px',
+                  background: '#FFFFFF',
+                  fontSize: 12,
+                  fontWeight: 700,
+                }}
+              />
+            ) : null}
+            {!isMobile ? (
+              <select
+                className="storefront-field"
+                value={eventTime}
+                onChange={(event) => setEventTime(event.target.value)}
+                style={{
+                  height: 44,
+                  borderRadius: 14,
+                  border: `1px solid ${BORDER}`,
+                  padding: '0 14px',
+                  background: '#FFFFFF',
+                  fontSize: 12,
+                  fontWeight: 700,
+                }}
+              >
+                {availableTimeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            ) : null}
             <div
               style={{
                 height: 44,
@@ -1828,7 +2223,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
             >
               <button
                 type="button"
-                onClick={() => setHeadcount((current) => clampHeadcount(current - 5))}
+                onClick={() => setHeadcount((current) => clampHeadcount(current - 1))}
                 style={{
                   width: 26,
                   height: 26,
@@ -1839,12 +2234,42 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
               >
                 -
               </button>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 13, fontWeight: 900 }}>{headcount} guests</div>
-              </div>
+              <div style={{ textAlign: 'center', minWidth: 84 }}>
+                <input
+                  value={headcountInput}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  onChange={(event) => {
+                    const next = event.target.value.replace(/\D/g, '');
+                    setHeadcountInput(next);
+                    if (!next) return;
+                    setHeadcount(clampHeadcount(Number(next)));
+                  }}
+                  onBlur={() => {
+                    if (!headcountInput) {
+                      setHeadcount(1);
+                      setHeadcountInput('1');
+                      return;
+                    }
+                    const normalized = clampHeadcount(Number(headcountInput));
+                    setHeadcount(normalized);
+                    setHeadcountInput(String(normalized));
+                  }}
+                  style={{
+                    width: '100%',
+                    border: 'none',
+                    background: 'transparent',
+                    textAlign: 'center',
+                    fontSize: 13,
+                    fontWeight: 900,
+                    color: INK,
+                    outline: 'none',
+                  }}
+                />
+                </div>
               <button
                 type="button"
-                onClick={() => setHeadcount((current) => clampHeadcount(current + 5))}
+                onClick={() => setHeadcount((current) => clampHeadcount(current + 1))}
                 style={{
                   width: 26,
                   height: 26,
@@ -1854,87 +2279,9 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                 }}
               >
                 +
-              </button>
-            </div>
-            {!stackDesktopControls ? (
-              <div style={{ position: 'relative' }}>
-                <input
-                  className="storefront-field"
-                  value={address}
-                  onChange={(event) => setAddress(event.target.value)}
-                  placeholder={
-                    serviceType === 'delivery' ? 'Address' : 'Optional delivery address'
-                  }
-                  style={{
-                    width: '100%',
-                    height: 44,
-                    boxSizing: 'border-box',
-                    borderRadius: 14,
-                    border: `1px solid ${BORDER}`,
-                    background: '#FFFFFF',
-                    padding: '0 98px 0 14px',
-                    fontSize: 12,
-                  }}
-                />
-                {address && serviceType === 'delivery' ? (
-                  <span
-                    style={{
-                      position: 'absolute',
-                      right: 10,
-                      top: 8,
-                      borderRadius: 999,
-                      background: '#EAF8EF',
-                      color: '#166534',
-                      padding: '6px 9px',
-                      fontSize: 10,
-                      fontWeight: 800,
-                    }}
-                  >
-                    In zone
-                  </span>
-                ) : null}
+                </button>
               </div>
-            ) : null}
           </div>
-          {stackDesktopControls ? (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
-              <div style={{ position: 'relative' }}>
-                <input
-                  className="storefront-field"
-                  value={address}
-                  onChange={(event) => setAddress(event.target.value)}
-                  placeholder={serviceType === 'delivery' ? 'Address' : 'Optional delivery address'}
-                  style={{
-                    width: '100%',
-                    height: 44,
-                    boxSizing: 'border-box',
-                    borderRadius: 14,
-                    border: `1px solid ${BORDER}`,
-                    background: '#FFFFFF',
-                    padding: '0 98px 0 14px',
-                    fontSize: 12,
-                  }}
-                />
-                {address && serviceType === 'delivery' ? (
-                  <span
-                    style={{
-                      position: 'absolute',
-                      right: 10,
-                      top: 8,
-                      borderRadius: 999,
-                      background: '#EAF8EF',
-                      color: '#166534',
-                      padding: '6px 9px',
-                      fontSize: 10,
-                      fontWeight: 800,
-                    }}
-                  >
-                    In zone
-                  </span>
-                ) : null}
-              </div>
-            </div>
-          ) : null}
           {isMobile ? (
             <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: 10 }}>
               <input
@@ -1950,9 +2297,8 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                   background: '#FFFFFF',
                 }}
               />
-              <input
+              <select
                 className="storefront-field"
-                type="time"
                 value={eventTime}
                 onChange={(event) => setEventTime(event.target.value)}
                 style={{
@@ -1962,7 +2308,13 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                   padding: '0 12px',
                   background: '#FFFFFF',
                 }}
-              />
+              >
+                {availableTimeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </div>
           ) : null}
         </div>
@@ -2012,14 +2364,92 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
         ) : null}
         <div
           style={{
+            marginBottom: isMobile ? 16 : 18,
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            gap: 16,
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ display: 'grid', gap: 6 }}>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 900,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color: brandColor,
+              }}
+            >
+              {stepLabel}
+            </div>
+            <h1
+              style={{
+                margin: 0,
+                fontFamily: displayFontFamily,
+                fontSize: isMobile ? 28 : 34,
+                lineHeight: 0.98,
+              }}
+            >
+              {stepTitle}
+            </h1>
+            <p style={{ margin: 0, maxWidth: 560, fontSize: 13, lineHeight: 1.6, color: MUTED }}>
+              {stepSubtitle}
+            </p>
+          </div>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '8px 10px',
+              borderRadius: 999,
+              border: `1px solid ${BORDER}`,
+              background: '#FFFFFF',
+            }}
+          >
+            {(['menu', 'details'] as const).map((step, index) => {
+              const active = checkoutStep === step;
+              const complete = checkoutStep === 'details' && step === 'menu';
+              return (
+                <div
+                  key={step}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
+                >
+                  <div
+                    style={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: 999,
+                      display: 'grid',
+                      placeItems: 'center',
+                      background: active || complete ? INK : '#F5F5F4',
+                      color: active || complete ? '#FFFFFF' : MUTED,
+                      fontSize: 11,
+                      fontWeight: 900,
+                    }}
+                  >
+                    {index + 1}
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: active ? 900 : 700, color: INK }}>
+                    {step === 'menu' ? 'Menu' : 'Checkout'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div
+          style={{
             display: 'grid',
-            gridTemplateColumns: layoutColumns,
+            gridTemplateColumns: activeLayoutColumns,
             gap: isMobile ? 18 : 20,
             alignItems: 'start',
             minWidth: 0,
           }}
         >
-          {showDesktopSidebar ? (
+          {showBrowseSidebar ? (
             <aside style={{ position: 'sticky', top: sidebarTop, display: 'grid', gap: 18 }}>
               <div
                 style={{
@@ -2115,7 +2545,8 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
               </div>
             ) : null}
             <div style={{ display: 'grid', gap: isMobile ? 28 : 40 }}>
-              {menuSections.map((section, sectionIndex) => (
+              {checkoutStep === 'menu'
+                ? menuSections.map((section) => (
                 <section
                   key={section.id}
                   ref={(node) => {
@@ -2239,14 +2670,14 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                           onClick={() => setItemModal({ type: 'package', id: pkg.id })}
                           style={{
                             flex: '0 0 auto',
-                            width: isMobile ? 184 : isLaptop ? 228 : 244,
-                            minHeight: isMobile ? 248 : isLaptop ? 292 : 304,
-                            borderRadius: 24,
+                            width: isMobile ? 184 : isLaptop ? 216 : 224,
+                            minHeight: isMobile ? 232 : isLaptop ? 252 : 260,
+                            borderRadius: 22,
                             border: `1px solid ${BORDER}`,
                             background: '#FFFFFF',
                             overflow: 'hidden',
                             display: 'grid',
-                            gridTemplateRows: isMobile ? '108px 1fr' : isLaptop ? '170px 1fr' : '184px 1fr',
+                            gridTemplateRows: isMobile ? '108px 1fr' : isLaptop ? '148px 1fr' : '154px 1fr',
                             scrollSnapAlign: 'start',
                             cursor: 'pointer',
                           }}
@@ -2266,7 +2697,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                             style={{
                               padding: isMobile ? 12 : 14,
                               display: 'grid',
-                              gap: 8,
+                              gap: 6,
                             }}
                           >
                             <div>
@@ -2302,22 +2733,6 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                                   ? ` • ${merchant.rating.toFixed(1)}`
                                   : ''}
                               </div>
-                              {pkg.description ? (
-                                <div
-                                  style={{
-                                    marginTop: 6,
-                                    fontSize: 10,
-                                    lineHeight: 1.45,
-                                    color: MUTED,
-                                    display: '-webkit-box',
-                                    WebkitLineClamp: 1,
-                                    WebkitBoxOrient: 'vertical',
-                                    overflow: 'hidden',
-                                  }}
-                                >
-                                  {pkg.description}
-                                </div>
-                              ) : null}
                             </div>
                             <div
                               style={{
@@ -2366,16 +2781,10 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                     })}
                     </div>
                   </div>
-                  {!showDesktopCart && sectionIndex === 0 ? (
-                    <div style={{ marginTop: 18, display: 'grid', gap: 12 }}>
-                      {smartUpsellCard}
-                      {oftenAddedRow}
-                      {recurringCard}
-                    </div>
-                  ) : null}
                 </section>
-              ))}
-              {filteredAddOns.length > 0 ? (
+                  ))
+                : null}
+              {checkoutStep === 'menu' && filteredAddOns.length > 0 ? (
                 <section
                   ref={(node) => {
                     sectionRefs.current.extras = node;
@@ -2460,14 +2869,14 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                           onClick={() => setItemModal({ type: 'addon', id: addOn.id })}
                           style={{
                             flex: '0 0 auto',
-                            width: isMobile ? 184 : isLaptop ? 228 : 244,
-                            minHeight: isMobile ? 248 : isLaptop ? 292 : 304,
-                            borderRadius: 24,
+                            width: isMobile ? 184 : isLaptop ? 216 : 224,
+                            minHeight: isMobile ? 232 : isLaptop ? 252 : 260,
+                            borderRadius: 22,
                             border: `1px solid ${BORDER}`,
                             background: '#FFFFFF',
                             overflow: 'hidden',
                             display: 'grid',
-                            gridTemplateRows: isMobile ? '108px 1fr' : isLaptop ? '170px 1fr' : '184px 1fr',
+                            gridTemplateRows: isMobile ? '108px 1fr' : isLaptop ? '148px 1fr' : '154px 1fr',
                             scrollSnapAlign: 'start',
                             cursor: 'pointer',
                           }}
@@ -2483,25 +2892,10 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                               placeholderCardImage(addOn.name, brandColor)
                             )}
                           </div>
-                          <div style={{ minWidth: 0, display: 'grid', gap: 8, padding: isMobile ? 12 : 14 }}>
+                          <div style={{ minWidth: 0, display: 'grid', gap: 6, padding: isMobile ? 12 : 14 }}>
                             <div>
                               <div style={{ fontSize: isMobile ? 16 : 18, fontWeight: 900 }}>{addOn.name}</div>
-                              {addOn.description ? (
-                                <div
-                                  style={{
-                                    marginTop: 6,
-                                    fontSize: 10,
-                                    lineHeight: 1.45,
-                                    color: MUTED,
-                                    display: '-webkit-box',
-                                    WebkitLineClamp: 1,
-                                    WebkitBoxOrient: 'vertical',
-                                    overflow: 'hidden',
-                                  }}
-                                >
-                                  {addOn.description}
-                                </div>
-                              ) : null}
+                              <div style={{ marginTop: 6, fontSize: 10, color: MUTED }}>Add-on</div>
                             </div>
                             <div
                               style={{
@@ -2551,97 +2945,220 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                   </div>
                 </section>
               ) : null}
-              <section
-                style={{
-                  borderRadius: 24,
-                  border: `1px solid ${BORDER}`,
-                  background: '#FFFFFF',
-                  padding: isMobile ? 18 : 22,
-                }}
-              >
-                <div style={{ display: 'grid', gap: 6 }}>
-                  <h2
+              {checkoutStep === 'details' ? (
+                <>
+                  <section
                     style={{
-                      margin: 0,
-                      fontFamily: displayFontFamily,
-                      fontSize: isMobile ? 24 : 28,
-                      lineHeight: 1,
+                      borderRadius: 24,
+                      border: `1px solid ${BORDER}`,
+                      background: '#FFFFFF',
+                      padding: isMobile ? 18 : 22,
+                      display: 'grid',
+                      gap: 16,
                     }}
                   >
-                    Tell us about your event
-                  </h2>
-                  <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6, color: MUTED }}>
-                    These details stay inside the cart so the merchant can confirm timing, delivery,
-                    and any recurring schedule.
-                  </p>
-                </div>
-                <div
-                  style={{
-                    marginTop: 18,
-                    display: 'grid',
-                    gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0, 1fr))',
-                    gap: 12,
-                  }}
-                >
-                  <input
-                    className="storefront-field"
-                    value={firstName}
-                    onChange={(event) => setFirstName(event.target.value)}
-                    placeholder="First name"
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 12,
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <div style={{ display: 'grid', gap: 6 }}>
+                        <h2
+                          style={{
+                            margin: 0,
+                            fontFamily: displayFontFamily,
+                            fontSize: isMobile ? 24 : 28,
+                            lineHeight: 1,
+                          }}
+                        >
+                          Complete your order
+                        </h2>
+                        <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6, color: MUTED }}>
+                          Confirm the event details and contact info on this step, then place the
+                          order from the checkout panel.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCheckoutStep('menu');
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        style={{
+                          height: 40,
+                          padding: '0 14px',
+                          borderRadius: 14,
+                          border: `1px solid ${BORDER}`,
+                          background: '#FFFFFF',
+                          color: INK,
+                          fontSize: 12,
+                          fontWeight: 800,
+                        }}
+                      >
+                        Back to menu
+                      </button>
+                    </div>
+                    <div
+                      style={{
+                        borderRadius: 18,
+                        border: `1px solid ${BORDER}`,
+                        background: CREAM,
+                        padding: 16,
+                        display: 'grid',
+                        gap: 10,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 900,
+                          letterSpacing: '0.08em',
+                          textTransform: 'uppercase',
+                          color: MUTED,
+                        }}
+                      >
+                        Order summary
+                      </div>
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0, 1fr))',
+                          gap: 10,
+                          fontSize: 13,
+                        }}
+                      >
+                        <div>
+                          <strong>Service:</strong> {SERVICE_MODE_LABELS[serviceType]}
+                        </div>
+                        <div>
+                          <strong>When:</strong> {formatDisplayDate(eventDate)} ·{' '}
+                          {formatDisplayTime(eventTime)}
+                        </div>
+                        <div>
+                          <strong>Guests:</strong> {headcount}
+                        </div>
+                        <div>
+                          <strong>
+                            {serviceType === 'pickup' ? 'Pickup location:' : `${eventLocationLabel}:`}
+                          </strong>{' '}
+                          {deliverySummary}
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                  <div style={{ display: 'grid', gap: 12 }}>
+                    {recurringCard}
+                    {smartUpsellCard}
+                  </div>
+                  {!showDesktopCart ? (
+                    <div style={{ display: 'grid', gap: 12 }}>
+                      <div
+                        style={{
+                          borderRadius: 18,
+                          border: `1px solid ${BORDER}`,
+                          background: '#FFFFFF',
+                          padding: 14,
+                          display: 'grid',
+                          gap: 10,
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 900,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.08em',
+                            color: MUTED,
+                          }}
+                        >
+                          Your order
+                        </div>
+                        {selectedPkgList.map((item) => (
+                          <div
+                            key={`mobile-summary-${item.packageId}`}
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: 'minmax(0,1fr) auto',
+                              gap: 12,
+                              alignItems: 'center',
+                            }}
+                          >
+                            <div>
+                              <div style={{ fontSize: 13, fontWeight: 800 }}>{item.name}</div>
+                              <div style={{ marginTop: 4, fontSize: 11, color: MUTED }}>
+                                {item.quantity} x package
+                              </div>
+                            </div>
+                            <div style={{ fontSize: 13, fontWeight: 900 }}>
+                              {formatCurrencyAmount(item.total)}
+                            </div>
+                          </div>
+                        ))}
+                        {selectedAddOnList.map((item) => (
+                          <div
+                            key={`mobile-summary-addon-${item.addOnId}`}
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: 'minmax(0,1fr) auto',
+                              gap: 12,
+                              alignItems: 'center',
+                            }}
+                          >
+                            <div>
+                              <div style={{ fontSize: 13, fontWeight: 800 }}>{item.name}</div>
+                              <div style={{ marginTop: 4, fontSize: 11, color: MUTED }}>
+                                {item.quantity} x add-on
+                              </div>
+                            </div>
+                            <div style={{ fontSize: 13, fontWeight: 900 }}>
+                              {formatCurrencyAmount(item.total)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  <section
                     style={{
-                      height: 46,
-                      borderRadius: 14,
+                      borderRadius: 24,
                       border: `1px solid ${BORDER}`,
-                      padding: '0 14px',
-                      fontSize: 13,
+                      background: '#FFFFFF',
+                      padding: isMobile ? 18 : 22,
                     }}
-                  />
-                  <input
-                    className="storefront-field"
-                    value={lastName}
-                    onChange={(event) => setLastName(event.target.value)}
-                    placeholder="Last name"
-                    style={{
-                      height: 46,
-                      borderRadius: 14,
-                      border: `1px solid ${BORDER}`,
-                      padding: '0 14px',
-                      fontSize: 13,
-                    }}
-                  />
-                  <input
-                    className="storefront-field"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    placeholder="Email"
-                    style={{
-                      height: 46,
-                      borderRadius: 14,
-                      border: `1px solid ${BORDER}`,
-                      padding: '0 14px',
-                      fontSize: 13,
-                    }}
-                  />
-                  <input
-                    className="storefront-field"
-                    value={phone}
-                    onChange={(event) => setPhone(event.target.value)}
-                    placeholder="Phone"
-                    style={{
-                      height: 46,
-                      borderRadius: 14,
-                      border: `1px solid ${BORDER}`,
-                      padding: '0 14px',
-                      fontSize: 13,
-                    }}
-                  />
-                  {serviceType === 'delivery' ? (
-                    <>
+                  >
+                    <div style={{ display: 'grid', gap: 6 }}>
+                      <h2
+                        style={{
+                          margin: 0,
+                          fontFamily: displayFontFamily,
+                          fontSize: isMobile ? 24 : 28,
+                          lineHeight: 1,
+                        }}
+                      >
+                        Tell us about your event
+                      </h2>
+                      <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6, color: MUTED }}>
+                        These details stay inside the cart so the merchant can confirm timing,
+                        location, and any recurring schedule.
+                      </p>
+                    </div>
+                    <div
+                      style={{
+                        marginTop: 18,
+                        display: 'grid',
+                        gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0, 1fr))',
+                        gap: 12,
+                      }}
+                    >
                       <input
                         className="storefront-field"
-                        value={city}
-                        onChange={(event) => setCity(event.target.value)}
-                        placeholder="City"
+                        value={firstName}
+                        onChange={(event) => setFirstName(event.target.value)}
+                        placeholder="First name"
                         style={{
                           height: 46,
                           borderRadius: 14,
@@ -2650,73 +3167,157 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                           fontSize: 13,
                         }}
                       />
-                      <div
+                      <input
+                        className="storefront-field"
+                        value={lastName}
+                        onChange={(event) => setLastName(event.target.value)}
+                        placeholder="Last name"
                         style={{
-                          display: 'grid',
-                          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                          gap: 12,
+                          height: 46,
+                          borderRadius: 14,
+                          border: `1px solid ${BORDER}`,
+                          padding: '0 14px',
+                          fontSize: 13,
                         }}
-                      >
-                        <input
-                          className="storefront-field"
-                          value={state}
-                          onChange={(event) => setState(event.target.value)}
-                          placeholder="State"
+                      />
+                      <input
+                        className="storefront-field"
+                        value={email}
+                        onChange={(event) => setEmail(event.target.value)}
+                        placeholder="Email"
+                        style={{
+                          height: 46,
+                          borderRadius: 14,
+                          border: `1px solid ${BORDER}`,
+                          padding: '0 14px',
+                          fontSize: 13,
+                        }}
+                      />
+                      <input
+                        className="storefront-field"
+                        value={phone}
+                        onChange={(event) => setPhone(event.target.value)}
+                        placeholder="Phone"
+                        style={{
+                          height: 46,
+                          borderRadius: 14,
+                          border: `1px solid ${BORDER}`,
+                          padding: '0 14px',
+                          fontSize: 13,
+                        }}
+                      />
+                      {requiresEventAddress ? (
+                        <>
+                          <input
+                            className="storefront-field"
+                            value={address}
+                            onChange={(event) => setAddress(event.target.value)}
+                            placeholder={eventLocationLabel}
+                            style={{
+                              height: 46,
+                              borderRadius: 14,
+                              border: `1px solid ${BORDER}`,
+                              padding: '0 14px',
+                              fontSize: 13,
+                              gridColumn: isMobile ? 'auto' : '1 / span 2',
+                            }}
+                          />
+                          <input
+                            className="storefront-field"
+                            value={city}
+                            onChange={(event) => setCity(event.target.value)}
+                            placeholder="City"
+                            style={{
+                              height: 46,
+                              borderRadius: 14,
+                              border: `1px solid ${BORDER}`,
+                              padding: '0 14px',
+                              fontSize: 13,
+                            }}
+                          />
+                          <div
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                              gap: 12,
+                            }}
+                          >
+                            <input
+                              className="storefront-field"
+                              value={state}
+                              onChange={(event) => setState(event.target.value)}
+                              placeholder="State"
+                              style={{
+                                height: 46,
+                                borderRadius: 14,
+                                border: `1px solid ${BORDER}`,
+                                padding: '0 14px',
+                                fontSize: 13,
+                              }}
+                            />
+                            <input
+                              className="storefront-field"
+                              value={zipCode}
+                              onChange={(event) => setZipCode(event.target.value)}
+                              placeholder="Zip"
+                              style={{
+                                height: 46,
+                                borderRadius: 14,
+                                border: `1px solid ${BORDER}`,
+                                padding: '0 14px',
+                                fontSize: 13,
+                              }}
+                            />
+                          </div>
+                        </>
+                      ) : (
+                        <div
                           style={{
-                            height: 46,
                             borderRadius: 14,
                             border: `1px solid ${BORDER}`,
-                            padding: '0 14px',
+                            background: CREAM,
+                            padding: '12px 14px',
                             fontSize: 13,
+                            color: MUTED,
+                            gridColumn: isMobile ? 'auto' : '1 / span 2',
                           }}
-                        />
-                        <input
-                          className="storefront-field"
-                          value={zipCode}
-                          onChange={(event) => setZipCode(event.target.value)}
-                          placeholder="Zip"
-                          style={{
-                            height: 46,
-                            borderRadius: 14,
-                            border: `1px solid ${BORDER}`,
-                            padding: '0 14px',
-                            fontSize: 13,
-                          }}
-                        />
-                      </div>
-                    </>
-                  ) : null}
-                  <input
-                    className="storefront-field"
-                    value={companyName}
-                    onChange={(event) => setCompanyName(event.target.value)}
-                    placeholder="Company / event name (optional)"
-                    style={{
-                      height: 46,
-                      borderRadius: 14,
-                      border: `1px solid ${BORDER}`,
-                      padding: '0 14px',
-                      fontSize: 13,
-                      gridColumn: isMobile ? 'auto' : '1 / span 2',
-                    }}
-                  />
-                  <textarea
-                    className="storefront-field"
-                    value={notes}
-                    onChange={(event) => setNotes(event.target.value)}
-                    placeholder="Any setup notes, delivery instructions, or dietary questions?"
-                    style={{
-                      minHeight: 112,
-                      borderRadius: 16,
-                      border: `1px solid ${BORDER}`,
-                      padding: '14px',
-                      fontSize: 13,
-                      resize: 'vertical',
-                      gridColumn: isMobile ? 'auto' : '1 / span 2',
-                    }}
-                  />
-                </div>
-              </section>
+                        >
+                          Pickup will happen at {deliverySummary}.
+                        </div>
+                      )}
+                      <input
+                        className="storefront-field"
+                        value={companyName}
+                        onChange={(event) => setCompanyName(event.target.value)}
+                        placeholder="Company / event name (optional)"
+                        style={{
+                          height: 46,
+                          borderRadius: 14,
+                          border: `1px solid ${BORDER}`,
+                          padding: '0 14px',
+                          fontSize: 13,
+                          gridColumn: isMobile ? 'auto' : '1 / span 2',
+                        }}
+                      />
+                      <textarea
+                        className="storefront-field"
+                        value={notes}
+                        onChange={(event) => setNotes(event.target.value)}
+                        placeholder="Any setup notes, delivery instructions, or dietary questions?"
+                        style={{
+                          minHeight: 112,
+                          borderRadius: 16,
+                          border: `1px solid ${BORDER}`,
+                          padding: '14px',
+                          fontSize: 13,
+                          resize: 'vertical',
+                          gridColumn: isMobile ? 'auto' : '1 / span 2',
+                        }}
+                      />
+                    </div>
+                  </section>
+                </>
+              ) : null}
             </div>
           </div>
           {showDesktopCart ? (
@@ -2733,7 +3334,10 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
-                  maxHeight: `calc(100vh - ${sidebarTop + 20}px)`,
+                  maxHeight:
+                    checkoutStep === 'details'
+                      ? 'none'
+                      : `calc(100vh - ${sidebarTop + 20}px)`,
                   borderRadius: 26,
                   overflow: 'hidden',
                   border: `1px solid ${BORDER}`,
@@ -2778,18 +3382,44 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                 </div>
                 <div
                   style={{
-                    flex: 1,
+                    flex: checkoutStep === 'details' ? '0 0 auto' : 1,
                     minHeight: 0,
-                    overflowY: 'auto',
-                    overscrollBehavior: 'contain',
+                    overflowY: checkoutStep === 'details' ? 'visible' : 'auto',
+                    overscrollBehavior: checkoutStep === 'details' ? 'auto' : 'contain',
                     padding: isTablet ? 16 : 18,
                     display: 'grid',
                     gap: 14,
                   }}
                   className="storefront-scrollbar"
                 >
-                  {recurringCard}
-                  {smartUpsellCard}
+                  {checkoutStep === 'menu' ? (
+                    <div
+                      style={{
+                        borderRadius: 18,
+                        border: `1px solid ${BORDER}`,
+                        background: CREAM,
+                        padding: 14,
+                        display: 'grid',
+                        gap: 8,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 900,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.08em',
+                          color: brandColor,
+                        }}
+                      >
+                        Next up
+                      </div>
+                      <div style={{ fontSize: 13, lineHeight: 1.6, color: INK }}>
+                        Review recurring savings, smart recommendations, and event details on the
+                        checkout step after the cart is built.
+                      </div>
+                    </div>
+                  ) : null}
                   <div style={{ display: 'grid', gap: 10 }}>
                     {selectedPkgList.length === 0 && selectedAddOnList.length === 0 ? (
                       <div
@@ -2802,10 +3432,10 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                           color: MUTED,
                         }}
                       >
-                        Add a package to start building the order. The cart updates totals, smart
-                        upsells, and recurring savings live.
-                      </div>
-                    ) : (
+                          Add a package to start building the order. You’ll review recurring
+                          savings and final recommendations on the checkout step.
+                        </div>
+                      ) : (
                       <>
                         {selectedPkgList.map((item) => (
                           <div
@@ -2878,6 +3508,67 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                       </>
                     )}
                   </div>
+                  {checkoutStep === 'menu' ? (
+                    <div
+                      style={{
+                        borderRadius: 18,
+                        border: `1px solid ${BORDER}`,
+                        background: CREAM,
+                        padding: 14,
+                        display: 'grid',
+                        gap: 8,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 900,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.08em',
+                          color: '#C2410C',
+                        }}
+                      >
+                        Checkout step preview
+                      </div>
+                      <div style={{ fontSize: 13, lineHeight: 1.6, color: INK }}>
+                        We’ll surface recurring savings, smart upsells, and the full checkout form
+                        on the next step after the cart is built.
+                      </div>
+                    </div>
+                  ) : null}
+                  {checkoutStep === 'details' ? (
+                    <div
+                      style={{
+                        borderRadius: 18,
+                        border: `1px solid ${BORDER}`,
+                        background: CREAM,
+                        padding: 14,
+                        display: 'grid',
+                        gap: 8,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 900,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.08em',
+                          color: MUTED,
+                        }}
+                      >
+                        Checkout details
+                      </div>
+                      <div style={{ fontSize: 12, lineHeight: 1.6, color: INK }}>
+                        {formatDisplayDate(eventDate)} · {formatDisplayTime(eventTime)}
+                      </div>
+                      <div style={{ fontSize: 12, lineHeight: 1.6, color: INK }}>
+                        {SERVICE_MODE_LABELS[serviceType]} · {headcount} guests
+                      </div>
+                      <div style={{ fontSize: 12, lineHeight: 1.6, color: MUTED }}>
+                        {deliverySummary}
+                      </div>
+                    </div>
+                  ) : null}
                   <div
                     style={{
                       borderTop: `1px solid ${BORDER}`,
@@ -2890,7 +3581,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                     <Row
                       label="Recurring discount"
                       value={
-                        recurringEnabled ? `-${formatCurrencyAmount(recurringDiscountCents)}` : '-'
+                  recurringActive ? `-${formatCurrencyAmount(recurringDiscountCents)}` : '-'
                       }
                       valueColor="#E85618"
                     />
@@ -2933,20 +3624,64 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                     </div>
                   </div>
                   <button
-                    type="submit"
-                    disabled={!canSubmit || submitting}
+                    type={checkoutStep === 'details' ? 'submit' : 'button'}
+                    onClick={
+                      checkoutStep === 'menu'
+                        ? () => {
+                            if (!canProceedToCheckout) return;
+                            setCheckoutStep('details');
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }
+                        : undefined
+                    }
+                    disabled={
+                      checkoutStep === 'details'
+                        ? !canSubmit || submitting
+                        : !canProceedToCheckout
+                    }
                     style={{
                       height: 50,
                       borderRadius: 16,
                       border: 'none',
-                      background: canSubmit && !submitting ? '#E85618' : '#FDBA74',
+                      background:
+                        checkoutStep === 'details'
+                          ? canSubmit && !submitting
+                            ? '#E85618'
+                            : '#FDBA74'
+                          : canProceedToCheckout
+                            ? '#E85618'
+                            : '#FDBA74',
                       color: '#FFFFFF',
                       fontSize: 15,
                       fontWeight: 900,
                     }}
                   >
-                    {submitting ? 'Preparing order...' : 'Place Order ->'}
+                    {checkoutStep === 'details'
+                      ? submitting
+                        ? 'Preparing order...'
+                        : 'Place Order ->'
+                      : 'Continue to checkout ->'}
                   </button>
+                  {checkoutStep === 'details' ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCheckoutStep('menu');
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      style={{
+                        height: 42,
+                        borderRadius: 14,
+                        border: `1px solid ${BORDER}`,
+                        background: '#FFFFFF',
+                        color: INK,
+                        fontSize: 12,
+                        fontWeight: 800,
+                      }}
+                    >
+                      Back to menu
+                    </button>
+                  ) : null}
                   <div
                     style={{
                       display: 'flex',
@@ -3030,7 +3765,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                   {formatCurrencyAmount(displayTotalCents)}
                 </div>
               </div>
-              {recurringEnabled ? (
+                  {recurringActive ? (
                 <div
                   style={{ fontSize: 11, fontWeight: 800, color: '#FCD34D', textAlign: 'right' }}
                 >
@@ -3039,19 +3774,41 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
               ) : null}
             </div>
             <button
-              type="submit"
-              disabled={!canSubmit || submitting}
+              type={checkoutStep === 'details' ? 'submit' : 'button'}
+              onClick={
+                checkoutStep === 'menu'
+                  ? () => {
+                      if (!canProceedToCheckout) return;
+                      setCheckoutStep('details');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
+                  : undefined
+              }
+              disabled={
+                checkoutStep === 'details' ? !canSubmit || submitting : !canProceedToCheckout
+              }
               style={{
                 height: 48,
                 borderRadius: 16,
                 border: 'none',
-                background: canSubmit && !submitting ? '#E85618' : '#FDBA74',
+                background:
+                  checkoutStep === 'details'
+                    ? canSubmit && !submitting
+                      ? '#E85618'
+                      : '#FDBA74'
+                    : canProceedToCheckout
+                      ? '#E85618'
+                      : '#FDBA74',
                 color: '#FFFFFF',
                 fontSize: 15,
                 fontWeight: 900,
               }}
             >
-              {submitting ? 'Preparing order...' : 'Place Order ->'}
+              {checkoutStep === 'details'
+                ? submitting
+                  ? 'Preparing order...'
+                  : 'Place Order ->'
+                : 'Continue to checkout ->'}
             </button>
           </div>
         </div>

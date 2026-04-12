@@ -13,6 +13,7 @@ import {
 } from '@trayloop/database';
 import { eq, and, gte, lte, desc, sql } from 'drizzle-orm';
 import { ValidationError, NotFoundError } from '../../lib/errors.js';
+import { assertOrganizationFeatureAccess } from '../../lib/feature-access.js';
 import { calculatePricing } from '../../lib/pricing.js';
 import { recordOrderEvent, getOrderTimeline } from '../../lib/order-events.js';
 import { getStripe, isStripeEnabled } from '../../lib/stripe.js';
@@ -1122,6 +1123,10 @@ function validateLeadTime(
 // --- Create Order ---
 
 export async function create(orgId: string, input: CreateOrderInput, eventBus: EventBus, customerUserId?: string) {
+  if (input.recurring) {
+    await assertOrganizationFeatureAccess(orgId, 'orders.recurring_schedule');
+  }
+
   const eventDate = new Date(input.eventDate);
 
   // 1. Validate location ownership, active status, and fetch settings

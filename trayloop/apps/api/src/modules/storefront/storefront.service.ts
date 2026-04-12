@@ -18,6 +18,7 @@ import {
 import { eq, and, desc, gte, lte, ne } from 'drizzle-orm';
 import { NotFoundError, ValidationError } from '../../lib/errors.js';
 import { assertOrganizationFeatureAccess } from '../../lib/feature-access.js';
+import { getOrganizationFeatureEntitlements } from '../../lib/organization-features.js';
 import { getStripe, isStripeEnabled } from '../../lib/stripe.js';
 import { buildUpsellRecommendations } from '../../lib/upsells.js';
 import { create as createOrder, createDepositCheckoutForOrder } from '../orders/orders.service.js';
@@ -204,6 +205,7 @@ export async function getStorefront(slug: string) {
   }
 
   const orgId = org.id;
+  const entitlements = await getOrganizationFeatureEntitlements(orgId);
 
   // 2. Fetch locations with explicit columns (avoids schema drift issues)
   const locationRows = await db
@@ -270,6 +272,7 @@ export async function getStorefront(slug: string) {
         description: org.description,
         website: org.website,
         phone: org.phone,
+        currentPlan: entitlements.currentPlan,
         logoUrl: org.logoUrl,
         brandColor: org.brandColor,
         displayFont: org.displayFont,
@@ -442,6 +445,7 @@ export async function getStorefront(slug: string) {
       description: org.description,
       website: org.website,
       phone: org.phone,
+      currentPlan: entitlements.currentPlan,
       logoUrl: org.logoUrl,
       brandColor: org.brandColor,
       displayFont: org.displayFont,
