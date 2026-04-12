@@ -616,6 +616,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
   const [oftenAdded, setOftenAdded] = useState<StorefrontAddOn[]>([]);
   const [socialProof, setSocialProof] = useState<StorefrontUpsellSocialProof | null>(null);
   const [itemModal, setItemModal] = useState<ItemModalState>(null);
+  const [modalDraftQuantity, setModalDraftQuantity] = useState(1);
   const recurringPresets = useMemo(() => getRecurringPresets(), []);
   const availableTimeOptions = useMemo(() => getAvailableTimeOptions(), []);
   const [recurringEnabled, setRecurringEnabled] = useState(false);
@@ -985,9 +986,19 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setItemModal(null);
     };
+    const nextQuantity =
+      itemModal.type === 'package'
+        ? selectedPkgs[itemModal.id] ?? 1
+        : selectedAddOnIds[itemModal.id] ?? 1;
+    setModalDraftQuantity(Math.max(nextQuantity, 1));
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', handleEscape);
-    return () => window.removeEventListener('keydown', handleEscape);
-  }, [itemModal]);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [itemModal, selectedAddOnIds, selectedPkgs]);
   useEffect(() => {
     if (!primaryUpsell) return;
     const trackingKey = `${primaryUpsell.addOnId}:${headcount}:${selectedLocationSlug}`;
@@ -1095,6 +1106,11 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
     merchant.slug,
     upsellSessionKey,
   ]);
+  const commitModalSelection = useCallback(() => {
+    if (modalPackage) updatePackageQuantity(modalPackage.id, modalDraftQuantity);
+    if (modalAddOn) updateAddOnQuantity(modalAddOn.id, modalDraftQuantity);
+    setItemModal(null);
+  }, [modalAddOn, modalDraftQuantity, modalPackage, updateAddOnQuantity, updatePackageQuantity]);
   const handleRetryCheckout = useCallback(async () => {
     const returnedOrderId = searchParams.get('orderId');
     if (!returnedOrderId) return;
@@ -1149,7 +1165,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
             className="storefront-pulse-dot"
             style={{ width: 8, height: 8, borderRadius: 999, background: '#7C3AED' }}
           />
-          Live - AI recommendation
+          Live AI recommendation
         </div>
         <span
           style={{
@@ -1259,7 +1275,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
             fontWeight: 900,
           }}
         >
-          Add to order
+          Add to this order
         </button>
       </div>
       <div style={{ fontSize: 11, color: MUTED }}>Why this rec? Updated moments ago.</div>
@@ -3021,12 +3037,15 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                           color: MUTED,
                         }}
                       >
-                        Order summary
+                        Review lane
+                      </div>
+                      <div style={{ fontSize: 13, lineHeight: 1.6, color: MUTED }}>
+                        Finalize timing, location, and contact details here. The right rail stays focused on totals and placement.
                       </div>
                       <div
                         style={{
                           display: 'grid',
-                          gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0, 1fr))',
+                          gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, minmax(0, 1fr))',
                           gap: 10,
                           fontSize: 13,
                         }}
@@ -3830,14 +3849,15 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
             onClick={(event) => event.stopPropagation()}
             style={{
               width: '100%',
-              maxWidth: isMobile ? 420 : 760,
-              maxHeight: '84vh',
-              overflowY: 'auto',
+              maxWidth: isMobile ? 420 : 920,
+              maxHeight: '86vh',
+              overflow: 'hidden',
               borderRadius: isMobile ? 24 : 28,
               background: '#FFFFFF',
               boxShadow: '0 30px 80px rgba(26,22,18,0.28)',
+              display: 'grid',
+              gridTemplateRows: 'minmax(0, 1fr) auto',
             }}
-            className="storefront-scrollbar"
           >
             {(() => {
               const activePackage = modalPackage;
@@ -3854,15 +3874,36 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                   : activeAddOn
                     ? selectedAddOnIds[activeAddOn.id] ?? 0
                     : 0;
-              const activePrice = activePackage
-                ? activePackage.pricePerHead * headcount
+              const unitPrice = activePackage
+                ? activePackage.pricePerHead
                 : activeAddOn
                   ? activeAddOn.price
                   : 0;
+              const activePrice = activePackage ? unitPrice * headcount : unitPrice;
+              const modalTotal = activePrice * modalDraftQuantity;
+              const modalBadge = activePackage ? 'Package' : 'Add-on';
+              const modalMeta = activePackage
+                ? [`Built for ${headcount} guests`, `Serves ${activePackage.minimumHeadcount ?? headcount}`]
+                : ['Quick add-on', 'Adds straight to this order'];
               return (
                 <>
-                  <div style={{ position: 'relative' }}>
-                    <div style={{ height: isMobile ? 220 : 300, background: activeImage ? '#F5F5F4' : undefined }}>
+                  <div
+                    className="storefront-scrollbar"
+                    style={{
+                      overflowY: 'auto',
+                      display: 'grid',
+                      gap: 0,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1.05fr) minmax(320px, 0.95fr)',
+                        minHeight: isMobile ? undefined : 360,
+                      }}
+                    >
+                    <div style={{ position: 'relative', minHeight: isMobile ? 220 : 360 }}>
+                    <div style={{ height: '100%', background: activeImage ? '#F5F5F4' : undefined }}>
                       {activeImage ? (
                         <img
                           src={activeImage}
@@ -3872,6 +3913,22 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                       ) : (
                         placeholderCardImage(activeName, brandColor)
                       )}
+                    </div>
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 18,
+                        left: 18,
+                        borderRadius: 999,
+                        background: 'rgba(255,255,255,0.94)',
+                        padding: '7px 12px',
+                        fontSize: 10,
+                        fontWeight: 900,
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      {modalBadge}
                     </div>
                     <button
                       type="button"
@@ -3886,33 +3943,62 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                         border: 'none',
                         background: 'rgba(255,255,255,0.96)',
                         color: INK,
-                        fontSize: 22,
+                        fontSize: 0,
                         lineHeight: 1,
+                        fontWeight: 900,
+                        display: 'grid',
+                        placeItems: 'center',
+                        cursor: 'pointer',
                       }}
                     >
+                      <span style={{ fontSize: 18, lineHeight: 1, color: INK }}>x</span>
                       ×
                     </button>
                   </div>
-                  <div style={{ padding: isMobile ? 18 : 24, display: 'grid', gap: 18 }}>
-                    <div style={{ display: 'grid', gap: 8 }}>
+                  <div style={{ padding: isMobile ? 18 : 24, display: 'grid', gap: 18, alignContent: 'start' }}>
+                    <div style={{ display: 'grid', gap: 12 }}>
                       <div
                         style={{
                           fontFamily: displayFontFamily,
-                          fontSize: isMobile ? 28 : 34,
-                          lineHeight: 1,
+                          fontSize: isMobile ? 28 : 36,
+                          lineHeight: 0.95,
                           fontWeight: 900,
                         }}
                       >
                         {activeName}
                       </div>
-                      <div style={{ fontSize: 15, lineHeight: 1.7, color: MUTED }}>{activeDescription}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                        {modalMeta.map((label) => (
+                          <span
+                            key={label}
+                            style={{
+                              borderRadius: 999,
+                              background: '#F5F5F4',
+                              color: INK,
+                              padding: '6px 10px',
+                              fontSize: 11,
+                              fontWeight: 800,
+                            }}
+                          >
+                            {label}
+                          </span>
+                        ))}
+                      </div>
+                      <div style={{ fontSize: 14, lineHeight: 1.7, color: MUTED }}>{activeDescription}</div>
+                      <div style={{ display: 'grid', gap: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 24, fontWeight: 900 }}>{formatCurrencyAmount(activePrice)}</span>
                         {activePackage ? (
                           <span style={{ fontSize: 12, fontWeight: 800, color: MUTED }}>
-                            Serves {activePackage.minimumHeadcount ?? headcount}
+                            {formatCurrencyAmount(unitPrice)} per guest
                           </span>
                         ) : null}
+                      </div>
+                      <div style={{ fontSize: 12, color: MUTED }}>
+                        {activePackage
+                          ? 'Adjust quantity here, then add the full package when you are ready.'
+                          : 'Add this extra to the order without leaving the menu.'}
+                      </div>
                       </div>
                     </div>
                     {modalSuggestedAddOns.length > 0 ? (
@@ -3960,78 +4046,124 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                               <div style={{ minWidth: 0 }}>
                                 <div style={{ fontSize: 15, fontWeight: 800 }}>{addOn.name}</div>
                                 <div style={{ marginTop: 3, fontSize: 12, color: MUTED }}>
-                                  {formatCurrencyAmount(addOn.price)}
+                                  {formatCurrencyAmount(addOn.price)} - quick add-on for this order
                                 </div>
                               </div>
                               <button
                                 type="button"
                                 onClick={() => updateAddOnQuantity(addOn.id, (selectedAddOnIds[addOn.id] ?? 0) + 1)}
                                 style={{
-                                  width: 38,
                                   height: 38,
                                   borderRadius: 999,
                                   border: `1px solid ${BORDER}`,
                                   background: '#FFFFFF',
                                   color: INK,
-                                  fontSize: 20,
+                                  fontSize: 12,
+                                  fontWeight: 900,
                                   lineHeight: 1,
+                                  padding: '0 12px',
+                                  cursor: 'pointer',
                                 }}
                               >
-                                +
+                                Add {formatCurrencyAmount(addOn.price)}
                               </button>
                             </div>
                           ))}
                         </div>
                       </div>
                     ) : null}
+                  </div>
+                  </div>
+                  <div
+                    style={{
+                      background: '#FFFFFF',
+                      padding: isMobile ? 16 : 18,
+                      display: 'grid',
+                      gap: 12,
+                      borderTop: `1px solid ${BORDER}`,
+                      boxShadow: '0 -10px 30px rgba(26,22,18,0.06)',
+                    }}
+                  >
                     <div
                       style={{
-                        position: 'sticky',
-                        bottom: 0,
-                        background: '#FFFFFF',
-                        paddingTop: 8,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         gap: 12,
-                        borderTop: `1px solid ${BORDER}`,
+                        flexWrap: 'wrap',
                       }}
                     >
                       <QuantityStepper
-                        quantity={activeQuantity || 1}
-                        onDecrease={() => {
-                          if (activePackage) updatePackageQuantity(activePackage.id, Math.max(activeQuantity - 1, 0));
-                          if (activeAddOn) updateAddOnQuantity(activeAddOn.id, Math.max(activeQuantity - 1, 0));
-                        }}
-                        onIncrease={() => {
-                          if (activePackage) updatePackageQuantity(activePackage.id, (activeQuantity || 0) + 1);
-                          if (activeAddOn) updateAddOnQuantity(activeAddOn.id, (activeQuantity || 0) + 1);
-                        }}
+                        quantity={modalDraftQuantity}
+                        onDecrease={() => setModalDraftQuantity((current) => Math.max(current - 1, 1))}
+                        onIncrease={() => setModalDraftQuantity((current) => current + 1)}
                       />
+                      <div style={{ fontSize: 11, color: MUTED }}>
+                        {activeQuantity > 0
+                          ? `${activeQuantity} already in your order`
+                          : 'Not in your order yet'}
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns:
+                          isMobile && activeQuantity === 0
+                            ? 'minmax(0, 1fr) auto'
+                            : isMobile
+                              ? 'minmax(0, 1fr)'
+                              : activeQuantity > 0
+                                ? 'auto minmax(0, 1fr) auto'
+                                : 'minmax(0, 1fr) auto',
+                        gap: 12,
+                        alignItems: 'center',
+                      }}
+                    >
+                      {activeQuantity > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (activePackage) updatePackageQuantity(activePackage.id, 0);
+                            if (activeAddOn) updateAddOnQuantity(activeAddOn.id, 0);
+                            setItemModal(null);
+                          }}
+                          style={{
+                            height: 48,
+                            borderRadius: 16,
+                            border: `1px solid ${BORDER}`,
+                            background: '#FFFFFF',
+                            color: INK,
+                            fontSize: 14,
+                            fontWeight: 800,
+                            padding: '0 16px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Remove
+                        </button>
+                      ) : null}
                       <button
                         type="button"
-                        onClick={() => {
-                          if (activePackage) updatePackageQuantity(activePackage.id, Math.max(activeQuantity, 1));
-                          if (activeAddOn) updateAddOnQuantity(activeAddOn.id, Math.max(activeQuantity, 1));
-                          setItemModal(null);
-                        }}
+                        onClick={commitModalSelection}
                         style={{
-                          flex: 1,
-                          height: 48,
+                          height: 50,
                           borderRadius: 16,
                           border: 'none',
                           background: brandColor,
                           color: '#FFFFFF',
                           fontSize: 15,
                           fontWeight: 900,
+                          padding: '0 18px',
+                          cursor: 'pointer',
                         }}
                       >
                         {activeQuantity > 0 ? 'Update item' : 'Add item'}
                       </button>
-                      <div style={{ fontSize: 20, fontWeight: 900, whiteSpace: 'nowrap' }}>
-                        {formatCurrencyAmount(activePrice * Math.max(activeQuantity || 1, 1) / (activePackage ? 1 : 1))}
+                      <div style={{ fontSize: 22, fontWeight: 900, whiteSpace: 'nowrap', textAlign: 'right' }}>
+                        {formatCurrencyAmount(modalTotal)}
                       </div>
                     </div>
+                  </div>
                   </div>
                 </>
               );
