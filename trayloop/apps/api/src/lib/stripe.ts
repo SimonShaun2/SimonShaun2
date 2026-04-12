@@ -17,14 +17,37 @@ export interface StripeConfig {
 
 export type StripeMode = 'test' | 'live' | 'disabled';
 
+function getFirstDefinedEnv(...names: string[]) {
+  for (const name of names) {
+    const value = process.env[name];
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
 function loadConfig(): StripeConfig | null {
   const secretKey = process.env.STRIPE_SECRET_KEY;
   const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  const starterPriceId = process.env.STRIPE_STARTER_PRICE_ID ?? process.env.STRIPE_PRICE_ID ?? null;
-  const proPriceId = process.env.STRIPE_PRO_PRICE_ID ?? null;
-  const growthPriceId = process.env.STRIPE_GROWTH_PRICE_ID ?? null;
-  const growthAdvisorPriceId = process.env.STRIPE_GROWTH_ADVISOR_PRICE_ID ?? null;
+  const starterPriceId = getFirstDefinedEnv(
+    'STRIPE_LAUNCH_PRICE_ID',
+    'STRIPE_STARTER_PRICE_ID',
+    'STRIPE_PRICE_ID',
+  );
+  const proPriceId = getFirstDefinedEnv(
+    'STRIPE_MOMENTUM_PRICE_ID',
+    'STRIPE_Momentum_PRICE_ID',
+    'STRIPE_PRO_PRICE_ID',
+  );
+  const growthPriceId = getFirstDefinedEnv(
+    'STRIPE_ENGINE_PRICE_ID',
+    'STRIPE_ENGINE_PRICE',
+    'STRIPE_GROWTH_PRICE_ID',
+  );
+  const growthAdvisorPriceId = getFirstDefinedEnv('STRIPE_GROWTH_ADVISOR_PRICE_ID');
   const subscriptionTrialDays = Number.parseInt(process.env.STRIPE_SUBSCRIPTION_TRIAL_DAYS ?? '0', 10);
 
   if (!secretKey || !publishableKey || !webhookSecret) {
@@ -129,10 +152,10 @@ export function getSubscriptionPriceId(plan: PlanKey, billingCycle: BillingCycle
   if (!configured) {
     const envName =
       plan === 'starter'
-        ? 'STRIPE_STARTER_PRICE_ID'
+        ? 'STRIPE_LAUNCH_PRICE_ID'
         : plan === 'pro'
-          ? 'STRIPE_PRO_PRICE_ID'
-          : 'STRIPE_GROWTH_PRICE_ID';
+          ? 'STRIPE_MOMENTUM_PRICE_ID'
+          : 'STRIPE_ENGINE_PRICE_ID';
     throw new Error(`Stripe subscription price is not configured for ${plan}. Set ${envName}.`);
   }
 
