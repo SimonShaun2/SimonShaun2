@@ -2159,7 +2159,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                 fontWeight: 900,
               }}
             >
-              TrayLoop - No marketplace fees
+              TrayLoop
             </div>
           </div>
         </div>

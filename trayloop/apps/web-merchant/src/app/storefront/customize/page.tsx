@@ -69,7 +69,7 @@ function BrandPreview({
     FONT_OPTIONS.find((option) => option.value === displayFont) ?? FONT_OPTIONS[0];
   const heroHeadline =
     organization?.description || 'Direct catering that feels premium before the first call.';
-  const helperMeta = [organization?.website, organization?.phone, 'No marketplace fees']
+  const helperMeta = [organization?.website, organization?.phone]
     .filter(Boolean)
     .join(' · ');
 

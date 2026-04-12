@@ -1,4 +1,4 @@
-import { db, organizationFeatures, organizations, subscriptions } from '@trayloop/database';
+import { db, organizationFeatures, subscriptions } from '@trayloop/database';
 import {
   FEATURE_KEYS,
   PLAN_DEFINITIONS,
@@ -23,7 +23,7 @@ import {
   normalizePlanKey,
   resolveUpgradePlan,
 } from './plan-access.js';
-import { getConfiguredSharedEntitlementPriceIds } from './stripe.js';
+import { getConfiguredSharedEntitlementPriceIds, getPlanForStripePriceId } from './stripe.js';
 
 export const GROWTH_ADVISOR_FEATURE_KEY = 'growth_advisor' as const;
 
@@ -93,17 +93,14 @@ function buildFeatureMap(currentPlan: PlanKey): ResolvedFeatureMap {
 async function getOrganizationPlanState(orgId: string) {
   const [record] = await db
     .select({
-      organizationPlan: organizations.currentPlan,
-      subscriptionPlan: subscriptions.plan,
-      subscriptionBillingCycle: subscriptions.billingCycle,
+      stripePriceId: subscriptions.stripePriceId,
     })
-    .from(organizations)
-    .leftJoin(subscriptions, eq(subscriptions.organizationId, organizations.id))
-    .where(eq(organizations.id, orgId))
+    .from(subscriptions)
+    .where(eq(subscriptions.organizationId, orgId))
     .limit(1);
 
-  const currentPlan = normalizePlanKey(record?.subscriptionPlan ?? record?.organizationPlan);
-  const billingCycle = normalizeBillingCycle(record?.subscriptionBillingCycle ?? 'monthly');
+  const currentPlan = normalizePlanKey(getPlanForStripePriceId(record?.stripePriceId) ?? 'starter');
+  const billingCycle = normalizeBillingCycle('monthly');
 
   return {
     currentPlan,

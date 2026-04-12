@@ -133,14 +133,13 @@ function getSharedEntitlementLineItems(sharedEntitlementKeys: SharedEntitlementK
 }
 
 function resolvePersistedPlan(input: {
-  organizationPlan: string | null | undefined;
-  subscriptionPlan: string | null | undefined;
+  stripePriceId: string | null | undefined;
 }) {
-  return (input.subscriptionPlan ?? input.organizationPlan ?? 'starter') as PlanKey;
+  return getPlanForStripePriceId(input.stripePriceId) ?? 'starter';
 }
 
-function resolvePersistedBillingCycle(value: string | null | undefined): BillingCycleKey {
-  return value === 'annual' ? 'annual' : 'monthly';
+function resolvePersistedBillingCycle(): BillingCycleKey {
+  return 'monthly';
 }
 
 function getBasePlanItem(subscription: Pick<Stripe.Subscription, 'items'>) {
@@ -205,15 +204,12 @@ async function getBillingRecord(orgId: string) {
       organizationId: organizations.id,
       organizationName: organizations.name,
       organizationSlug: organizations.slug,
-      organizationPlan: organizations.currentPlan,
       ownerEmail: users.email,
       ownerName: users.name,
       subscriptionId: subscriptions.id,
       stripeCustomerId: subscriptions.stripeCustomerId,
       stripeSubscriptionId: subscriptions.stripeSubscriptionId,
       stripePriceId: subscriptions.stripePriceId,
-      subscriptionPlan: subscriptions.plan,
-      billingCycle: subscriptions.billingCycle,
       status: subscriptions.status,
       trialStart: subscriptions.trialStart,
       trialEnd: subscriptions.trialEnd,
@@ -257,8 +253,6 @@ async function syncSubscriptionSnapshot(
       stripeCustomerId,
       stripeSubscriptionId: subscription.id,
       stripePriceId: resolvedPlan.basePlanPriceId,
-      plan: resolvedPlan.plan,
-      billingCycle: resolvedPlan.billingCycle,
       status: normalizeSubscriptionStatus(subscription.status),
       trialStart: safeDate(subscription.trial_start),
       trialEnd: safeDate(subscription.trial_end),
@@ -273,8 +267,6 @@ async function syncSubscriptionSnapshot(
         stripeCustomerId,
         stripeSubscriptionId: subscription.id,
         stripePriceId: resolvedPlan.basePlanPriceId,
-        plan: resolvedPlan.plan,
-        billingCycle: resolvedPlan.billingCycle,
         status: normalizeSubscriptionStatus(subscription.status),
         trialStart: safeDate(subscription.trial_start),
         trialEnd: safeDate(subscription.trial_end),
@@ -284,14 +276,6 @@ async function syncSubscriptionSnapshot(
         updatedAt: new Date(),
       },
     });
-
-  await db
-    .update(organizations)
-    .set({
-      currentPlan: resolvedPlan.plan,
-      updatedAt: new Date(),
-    })
-    .where(eq(organizations.id, orgId));
 
   await syncSubscriptionFeatureEntitlements(orgId, subscription);
 }
@@ -321,11 +305,8 @@ async function syncSubscriptionFromStripe(record: Awaited<ReturnType<typeof getB
       record.organizationId,
       record.stripeCustomerId,
       subscription,
-      resolvePersistedPlan({
-        organizationPlan: record.organizationPlan,
-        subscriptionPlan: record.subscriptionPlan,
-      }),
-      resolvePersistedBillingCycle(record.billingCycle),
+      resolvePersistedPlan({ stripePriceId: record.stripePriceId }),
+      resolvePersistedBillingCycle(),
     );
 
     logger.info('Subscription snapshot refreshed from Stripe on read', {
@@ -374,11 +355,8 @@ async function buildSubscriptionResponse(record: Awaited<ReturnType<typeof getBi
           stripeCustomerId: record.stripeCustomerId,
           stripeSubscriptionId: record.stripeSubscriptionId,
           stripePriceId: record.stripePriceId,
-          plan: resolvePersistedPlan({
-            organizationPlan: record.organizationPlan,
-            subscriptionPlan: record.subscriptionPlan,
-          }),
-          billingCycle: resolvePersistedBillingCycle(record.billingCycle),
+          plan: resolvePersistedPlan({ stripePriceId: record.stripePriceId }),
+          billingCycle: resolvePersistedBillingCycle(),
           status: record.status,
           trialStart: formatIso(record.trialStart),
           trialEnd: formatIso(record.trialEnd),
@@ -441,11 +419,8 @@ async function updateBasePlanOnExistingSubscription(
   sharedEntitlementKeys: SharedEntitlementKey[],
 ) {
   const subscription = await getStripeSubscriptionForRecord(record);
-  const fallbackPlan = resolvePersistedPlan({
-    organizationPlan: record.organizationPlan,
-    subscriptionPlan: record.subscriptionPlan,
-  });
-  const fallbackCycle = resolvePersistedBillingCycle(record.billingCycle);
+  const fallbackPlan = resolvePersistedPlan({ stripePriceId: record.stripePriceId });
+  const fallbackCycle = resolvePersistedBillingCycle();
   const resolvedCurrent = resolvePlanStateFromSubscription(subscription, fallbackPlan, fallbackCycle);
   const targetPriceId = getSubscriptionPriceId(targetPlan, resolvedCurrent.billingCycle);
   const configuredSharedEntitlementPriceIds = getConfiguredSharedEntitlementPriceIds();
@@ -535,11 +510,8 @@ export async function createCheckoutSession(orgId: string, input: BillingCheckou
   }
 
   const record = await getBillingRecord(orgId);
-  const persistedPlan = resolvePersistedPlan({
-    organizationPlan: record.organizationPlan,
-    subscriptionPlan: record.subscriptionPlan,
-  });
-  const billingCycle = resolvePersistedBillingCycle(record.billingCycle);
+  const persistedPlan = resolvePersistedPlan({ stripePriceId: record.stripePriceId });
+  const billingCycle = resolvePersistedBillingCycle();
   const targetPlan = input.plan ?? persistedPlan;
   const priceId = getSubscriptionPriceId(targetPlan, billingCycle);
   const sharedEntitlementKeys = resolveCheckoutSharedEntitlements(input);
@@ -617,8 +589,6 @@ export async function createCheckoutSession(orgId: string, input: BillingCheckou
       organizationId: record.organizationId,
       stripeCustomerId,
       stripePriceId: priceId,
-      plan: targetPlan,
-      billingCycle,
       status: 'unpaid',
       updatedAt: new Date(),
     })
@@ -627,19 +597,9 @@ export async function createCheckoutSession(orgId: string, input: BillingCheckou
       set: {
         stripeCustomerId,
         stripePriceId: priceId,
-        plan: targetPlan,
-        billingCycle,
         updatedAt: new Date(),
       },
     });
-
-  await db
-    .update(organizations)
-    .set({
-      currentPlan: targetPlan,
-      updatedAt: new Date(),
-    })
-    .where(eq(organizations.id, record.organizationId));
 
   return {
     url: session.url,

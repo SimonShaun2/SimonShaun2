@@ -108,7 +108,6 @@ export async function registerMerchantWorkspace(input: MerchantWorkspaceRegister
         name: input.organizationName,
         slug: input.organizationSlug,
         phone: input.phone || null,
-        currentPlan: input.selectedPlan,
         ownerId: user.id,
       })
       .returning({
@@ -139,6 +138,7 @@ export async function registerMerchantWorkspace(input: MerchantWorkspaceRegister
   return {
     user: result.user,
     organization: result.organization,
+    selectedPlan: input.selectedPlan,
     token,
   };
 }

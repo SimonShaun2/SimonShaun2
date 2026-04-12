@@ -22,7 +22,7 @@ interface OrgDto {
   updatedAt: Date;
 }
 
-function toDto(org: typeof organizations.$inferSelect): OrgDto {
+function toDto(org: OrgDto): OrgDto {
   return {
     id: org.id,
     name: org.name,
@@ -38,6 +38,21 @@ function toDto(org: typeof organizations.$inferSelect): OrgDto {
     updatedAt: org.updatedAt,
   };
 }
+
+const organizationSelectShape = {
+  id: organizations.id,
+  name: organizations.name,
+  slug: organizations.slug,
+  description: organizations.description,
+  website: organizations.website,
+  phone: organizations.phone,
+  logoUrl: organizations.logoUrl,
+  brandColor: organizations.brandColor,
+  displayFont: organizations.displayFont,
+  isActive: organizations.isActive,
+  createdAt: organizations.createdAt,
+  updatedAt: organizations.updatedAt,
+} as const;
 
 function getStorefrontBaseUrl() {
   const configured = process.env.STOREFRONT_URL?.replace(/\/+$/, '');
@@ -91,7 +106,7 @@ export async function create(userId: string, input: CreateOrganizationInput) {
       ...input,
       ownerId: userId,
     })
-    .returning();
+    .returning(organizationSelectShape);
 
   await db.insert(organizationMemberships).values({
     userId,
@@ -106,7 +121,7 @@ export async function create(userId: string, input: CreateOrganizationInput) {
 
 export async function getById(id: string) {
   const [org] = await db
-    .select()
+    .select(organizationSelectShape)
     .from(organizations)
     .where(eq(organizations.id, id))
     .limit(1);
@@ -135,7 +150,7 @@ export async function update(id: string, input: UpdateOrganizationInput) {
     .update(organizations)
     .set({ ...input, updatedAt: new Date() })
     .where(eq(organizations.id, id))
-    .returning();
+    .returning(organizationSelectShape);
 
   if (!updated) {
     throw new NotFoundError('Organization');

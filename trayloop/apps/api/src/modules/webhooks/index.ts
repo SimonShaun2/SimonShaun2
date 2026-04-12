@@ -215,13 +215,16 @@ async function upsertSubscriptionSnapshot(
     return null;
   }
 
-  const [existingOrganization] = await db
-    .select({ currentPlan: organizations.currentPlan })
-    .from(organizations)
-    .where(eq(organizations.id, organizationId))
+  const [existingSubscription] = await db
+    .select({ stripePriceId: subscriptions.stripePriceId })
+    .from(subscriptions)
+    .where(eq(subscriptions.organizationId, organizationId))
     .limit(1);
 
-  const resolvedPlan = resolveSubscriptionPlan(subscription, existingOrganization?.currentPlan ?? 'starter');
+  const resolvedPlan = resolveSubscriptionPlan(
+    subscription,
+    getPlanForStripePriceId(existingSubscription?.stripePriceId) ?? 'starter',
+  );
   const primaryItem = resolvedPlan.primaryItem;
   const status = overrideStatus ?? normalizeSubscriptionStatus(subscription.status);
 
@@ -239,8 +242,6 @@ async function upsertSubscriptionSnapshot(
       stripeCustomerId,
       stripeSubscriptionId: subscription.id,
       stripePriceId: resolvedPlan.stripePriceId,
-      plan: resolvedPlan.plan,
-      billingCycle: resolvedPlan.billingCycle,
       status,
       trialStart: safeDate(subscription.trial_start),
       trialEnd: safeDate(subscription.trial_end),
@@ -255,8 +256,6 @@ async function upsertSubscriptionSnapshot(
         stripeCustomerId,
         stripeSubscriptionId: subscription.id,
         stripePriceId: resolvedPlan.stripePriceId,
-        plan: resolvedPlan.plan,
-        billingCycle: resolvedPlan.billingCycle,
         status,
         trialStart: safeDate(subscription.trial_start),
         trialEnd: safeDate(subscription.trial_end),
@@ -273,14 +272,6 @@ async function upsertSubscriptionSnapshot(
       stripeSubscriptionId: subscriptions.stripeSubscriptionId,
       status: subscriptions.status,
     });
-
-  await db
-    .update(organizations)
-    .set({
-      currentPlan: resolvedPlan.plan,
-      updatedAt: new Date(),
-    })
-    .where(eq(organizations.id, organizationId));
 
   await syncSubscriptionFeatureEntitlements(organizationId, subscription);
 
