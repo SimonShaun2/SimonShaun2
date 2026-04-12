@@ -99,6 +99,14 @@ function formatDisplayTime(time: string) {
   date.setHours(Number(hours), Number(minutes), 0, 0);
   return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
+function hexToSoftBackground(hex: string) {
+  const normalized = hex.replace('#', '').trim();
+  if (normalized.length !== 6) return 'rgba(232, 86, 24, 0.12)';
+  const red = Number.parseInt(normalized.slice(0, 2), 16);
+  const green = Number.parseInt(normalized.slice(2, 4), 16);
+  const blue = Number.parseInt(normalized.slice(4, 6), 16);
+  return `rgba(${red}, ${green}, ${blue}, 0.12)`;
+}
 function getInitialDate() {
   const next = new Date();
   next.setDate(next.getDate() + 2);
@@ -199,6 +207,37 @@ function getDisplayFontFamily(displayFont: DisplayFontKey | null | undefined) {
 }
 function buildAddressSummary(address: string, city: string, state: string, zipCode: string) {
   return [address, city, state, zipCode].filter(Boolean).join(', ');
+}
+function getPackageSubline(pkg: StorefrontPackage) {
+  const includeCount = pkg.includes.length;
+  if (includeCount === 0) return pkg.description ?? 'Built for premium catering orders.';
+  const previewItems = pkg.includes
+    .slice(0, 3)
+    .map((item) => item.name)
+    .join(' · ');
+  return includeCount > 3 ? `${previewItems} + more` : previewItems;
+}
+function pickFeaturedPackage(sections: MenuSection[], headcount: number) {
+  const packages = sections.flatMap((section) => section.packages);
+  return (
+    packages.find((pkg) => pkg.upsellFeatured) ??
+    packages.find((pkg) => {
+      const minimum = pkg.minimumHeadcount ?? 1;
+      const maximum = pkg.maximumHeadcount ?? 1000;
+      return headcount >= minimum && headcount <= maximum;
+    }) ??
+    packages[0] ??
+    null
+  );
+}
+function getRecommendedAddOns(addOns: StorefrontAddOn[]) {
+  return [...addOns]
+    .sort((a, b) => {
+      const featuredDiff = Number(Boolean(b.upsellFeatured)) - Number(Boolean(a.upsellFeatured));
+      if (featuredDiff !== 0) return featuredDiff;
+      return (b.upsellPriority ?? 0) - (a.upsellPriority ?? 0);
+    })
+    .slice(0, 3);
 }
 function buildSections(data: StorefrontData['menu'], query: string): MenuSection[] {
   const q = query.trim().toLowerCase();
@@ -669,6 +708,8 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
       ),
     [allAddOns, searchTerm],
   );
+  const featuredPackage = useMemo(() => pickFeaturedPackage(menuSections, headcount), [headcount, menuSections]);
+  const recommendedAddOns = useMemo(() => getRecommendedAddOns(allAddOns), [allAddOns]);
   const primaryUpsell = upsellRecommendations[0] ?? null;
   const modalPackage =
     itemModal?.type === 'package'
@@ -2560,6 +2601,107 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                 })}
               </div>
             ) : null}
+            {checkoutStep === 'menu' && featuredPackage ? (
+              <section
+                style={{
+                  marginBottom: 18,
+                  borderRadius: 28,
+                  border: `1px solid ${BORDER}`,
+                  background: '#FFFFFF',
+                  overflow: 'hidden',
+                  boxShadow: '0 20px 40px rgba(26,22,18,0.06)',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1.1fr) 280px',
+                    gap: 0,
+                  }}
+                >
+                  <div style={{ padding: isMobile ? 18 : 24, display: 'grid', gap: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{ borderRadius: 999, background: hexToSoftBackground(brandColor), color: brandColor, padding: '6px 10px', fontSize: 11, fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                        Featured for this event
+                      </span>
+                      <span style={{ borderRadius: 999, background: '#F5F5F4', color: MUTED, padding: '6px 10px', fontSize: 11, fontWeight: 800 }}>
+                        Best for {headcount} guests
+                      </span>
+                    </div>
+                    <div style={{ fontFamily: displayFontFamily, fontSize: isMobile ? 30 : 36, lineHeight: 0.96, fontWeight: 900, color: INK }}>
+                      {featuredPackage.name}
+                    </div>
+                    <div style={{ fontSize: 14, lineHeight: 1.7, color: MUTED, maxWidth: 560 }}>
+                      {featuredPackage.description || getPackageSubline(featuredPackage)}
+                    </div>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                      <span style={{ borderRadius: 999, background: '#FFF7ED', color: '#C2410C', padding: '6px 10px', fontSize: 11, fontWeight: 900 }}>
+                        Serves {featuredPackage.minimumHeadcount ?? headcount}
+                      </span>
+                      {featuredPackage.maximumHeadcount ? (
+                        <span style={{ borderRadius: 999, background: '#F5F5F4', color: INK, padding: '6px 10px', fontSize: 11, fontWeight: 800 }}>
+                          Up to {featuredPackage.maximumHeadcount} guests
+                        </span>
+                      ) : null}
+                      {featuredPackage.includes.length > 0 ? (
+                        <span style={{ borderRadius: 999, background: '#F5F5F4', color: INK, padding: '6px 10px', fontSize: 11, fontWeight: 800 }}>
+                          {featuredPackage.includes.length} inclusions
+                        </span>
+                      ) : null}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginTop: 4 }}>
+                      <div>
+                        <div style={{ fontSize: 28, fontWeight: 900, color: INK }}>
+                          {formatCurrencyAmount(featuredPackage.pricePerHead * headcount)}
+                        </div>
+                        <div style={{ fontSize: 12, color: MUTED }}>
+                          {formatCurrencyAmount(featuredPackage.pricePerHead)} per guest
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={() => setItemModal({ type: 'package', id: featuredPackage.id })}
+                          style={{ height: 44, borderRadius: 14, border: `1px solid ${BORDER}`, background: '#FFFFFF', color: INK, padding: '0 16px', fontSize: 13, fontWeight: 800 }}
+                        >
+                          Open details
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updatePackageQuantity(featuredPackage.id, (selectedPkgs[featuredPackage.id] ?? 0) + 1)}
+                          style={{ height: 44, borderRadius: 14, border: 'none', background: brandColor, color: '#FFFFFF', padding: '0 16px', fontSize: 13, fontWeight: 900 }}
+                        >
+                          Add featured package
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ padding: isMobile ? 18 : 24, background: '#FCFBF8', borderLeft: isMobile ? 'none' : `1px solid ${BORDER}`, display: 'grid', gap: 12 }}>
+                    <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase', color: MUTED }}>
+                      Recommended extras
+                    </div>
+                    {recommendedAddOns.map((addOn) => (
+                      <div key={addOn.id} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto', gap: 12, alignItems: 'center', padding: '12px 0', borderBottom: `1px solid ${BORDER}` }}>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 800, color: INK }}>{addOn.name}</div>
+                          <div style={{ marginTop: 4, fontSize: 12, color: MUTED, lineHeight: 1.5 }}>
+                            {addOn.description || 'An easy add-on to increase value without slowing checkout.'}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => updateAddOnQuantity(addOn.id, (selectedAddOnIds[addOn.id] ?? 0) + 1)}
+                          style={{ height: 38, borderRadius: 999, border: `1px solid ${BORDER}`, background: '#FFFFFF', padding: '0 12px', fontSize: 12, fontWeight: 900, color: INK }}
+                        >
+                          Add {formatCurrencyAmount(addOn.price)}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            ) : null}
             <div style={{ display: 'grid', gap: isMobile ? 28 : 40 }}>
               {checkoutStep === 'menu'
                 ? menuSections.map((section) => (
@@ -4001,6 +4143,37 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
                       </div>
                       </div>
                     </div>
+                    {activePackage?.includes.length ? (
+                      <div
+                        style={{
+                          borderTop: `1px solid ${BORDER}`,
+                          paddingTop: 18,
+                          display: 'grid',
+                          gap: 12,
+                        }}
+                      >
+                        <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase', color: MUTED }}>
+                          Included in this package
+                        </div>
+                        <div style={{ display: 'grid', gap: 10 }}>
+                          {activePackage.includes.slice(0, 4).map((item) => (
+                            <div key={item.name} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                              <div style={{ width: 22, height: 22, borderRadius: 999, background: '#F5F5F4', color: INK, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, flexShrink: 0 }}>
+                                +
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 14, fontWeight: 800, color: INK }}>{item.name}</div>
+                                {item.description ? (
+                                  <div style={{ marginTop: 3, fontSize: 12, color: MUTED, lineHeight: 1.55 }}>
+                                    {item.description}
+                                  </div>
+                                ) : null}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
                     {modalSuggestedAddOns.length > 0 ? (
                       <div
                         style={{

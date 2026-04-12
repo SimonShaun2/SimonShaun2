@@ -122,6 +122,50 @@ export default function AdminDashboard() {
 
       <div
         style={{
+          border: '1px solid #E7E5E4',
+          borderRadius: 16,
+          background: '#FFFFFF',
+          padding: '16px 18px',
+          marginBottom: 20,
+          display: 'flex',
+          justifyContent: 'space-between',
+          gap: 16,
+          alignItems: 'center',
+          flexWrap: 'wrap',
+        }}
+      >
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#D4A853' }}>
+            Operator desk
+          </div>
+          <div style={{ marginTop: 6, fontSize: 18, fontWeight: 800, color: '#1C1917' }}>
+            Open merchant support workspaces from one place
+          </div>
+          <div style={{ marginTop: 4, fontSize: 13, color: '#57534E', lineHeight: 1.6 }}>
+            Jump straight into menu edits, launch setup, and storefront review without hunting through separate tools.
+          </div>
+        </div>
+        <a
+          href="/organizations"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '10px 14px',
+            borderRadius: 12,
+            background: '#1C1917',
+            color: '#FAFAF9',
+            fontSize: 13,
+            fontWeight: 700,
+            textDecoration: 'none',
+          }}
+        >
+          Open support desk
+        </a>
+      </div>
+
+      <div
+        style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
           gap: 14,

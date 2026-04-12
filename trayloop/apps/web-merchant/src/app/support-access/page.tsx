@@ -5,17 +5,17 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { createSupportSession } from '../../lib/api';
 import { markMerchantSession } from '../../lib/session';
 
-const SAFE_TARGETS = new Set(['/', '/catalog', '/onboarding', '/settings', '/customers', '/orders']);
+const SAFE_TARGETS = new Set(['/', '/catalog', '/launch', '/onboarding', '/settings', '/customers', '/orders']);
 const ADMIN_APP_URL = process.env.NEXT_PUBLIC_ADMIN_URL || 'https://master.trayloophq.com';
 
 function sanitizeTarget(target: string | null) {
   if (!target || !target.startsWith('/')) {
-    return '/onboarding';
+  return '/launch';
   }
 
   const [pathname] = target.split('?');
   if (!pathname || !SAFE_TARGETS.has(pathname)) {
-    return '/onboarding';
+    return '/launch';
   }
 
   return target;
@@ -31,6 +31,16 @@ function SupportAccessBody() {
   const fallbackOrgSlug = searchParams.get('orgSlug');
   const fallbackOrgName = searchParams.get('orgName');
   const target = useMemo(() => sanitizeTarget(searchParams.get('target')), [searchParams]);
+  const targetLabel =
+    target === '/catalog'
+      ? 'Menu Editor'
+      : target === '/settings'
+        ? 'Settings'
+        : target === '/customers'
+          ? 'Customers'
+          : target === '/orders'
+            ? 'Orders'
+            : 'Launch Center';
 
   useEffect(() => {
     if (!orgId) {
@@ -99,6 +109,23 @@ function SupportAccessBody() {
           TrayLoop is creating a scoped support session so your onboarding team can update this merchant&apos;s setup,
           menu, and storefront without changing permanent account ownership.
         </p>
+
+        <div style={{ marginTop: 18, display: 'grid', gap: 10 }}>
+          <div style={{ border: '1px solid #E7E5E4', borderRadius: 14, background: '#FCFBF8', padding: '12px 14px' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#78716C' }}>
+              Merchant
+            </div>
+            <div style={{ marginTop: 6, fontSize: 16, fontWeight: 800, color: '#1C1917' }}>{fallbackOrgName || 'Merchant workspace'}</div>
+            <div style={{ marginTop: 4, fontSize: 12, color: '#78716C' }}>
+              {fallbackOrgSlug ? `${fallbackOrgSlug} · ` : ''}Targeting {targetLabel}
+            </div>
+          </div>
+          <div style={{ border: '1px solid #E7E5E4', borderRadius: 14, background: '#FFFFFF', padding: '12px 14px' }}>
+            <div style={{ fontSize: 12, color: '#57534E', lineHeight: 1.6 }}>
+              We keep this handoff scoped so support can move quickly without taking over the merchant&apos;s permanent account ownership or login flow.
+            </div>
+          </div>
+        </div>
 
         <div
           style={{

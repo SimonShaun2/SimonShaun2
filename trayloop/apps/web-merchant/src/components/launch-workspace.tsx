@@ -1,0 +1,798 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useMobile } from '../lib/use-mobile';
+import LaunchApprovalCard from './launch-approval-card';
+import {
+  createBillingCheckout,
+  createBillingPortal,
+  createPaymentOnboardingLink,
+  fetchOnboardingStatus,
+  syncPaymentStatus,
+  type MerchantOnboardingStatus,
+} from '../lib/api';
+import { growthAdvisorEnabled } from '../lib/features';
+
+const GROWTH_ADVISOR_SELECTION_KEY = 'trayloop-growth-advisor-selected';
+
+type BannerTone = 'success' | 'warning' | 'error';
+
+function badgeConfig(status: MerchantOnboardingStatus['paymentStatus']['status']) {
+  switch (status) {
+    case 'ready':
+      return { label: 'Ready', bg: '#DCFCE7', color: '#166534' };
+    case 'action_required':
+      return { label: 'Action Required', bg: '#FEE2E2', color: '#B91C1C' };
+    case 'in_progress':
+      return { label: 'In Progress', bg: '#FFF7ED', color: '#C2410C' };
+    default:
+      return { label: 'Not Started', bg: '#FEF3C7', color: '#92400E' };
+  }
+}
+
+function billingConfig(status: MerchantOnboardingStatus['billing']['state']) {
+  switch (status) {
+    case 'active':
+      return { label: 'Active', bg: '#DCFCE7', color: '#166534' };
+    case 'trialing':
+      return { label: 'Intro Period', bg: '#FEF3C7', color: '#92400E' };
+    case 'past_due':
+      return { label: 'Past Due', bg: '#FEE2E2', color: '#B91C1C' };
+    case 'unpaid':
+      return { label: 'Unpaid', bg: '#FEE2E2', color: '#B91C1C' };
+    case 'canceled':
+      return { label: 'Canceled', bg: '#F3F4F6', color: '#57534E' };
+    default:
+      return { label: 'Not Started', bg: '#F3F4F6', color: '#57534E' };
+  }
+}
+
+function billingDetail(data: MerchantOnboardingStatus) {
+  switch (data.billing.state) {
+    case 'trialing':
+      return data.billing.trialDaysRemaining != null
+        ? `${data.billing.trialDaysRemaining} day${data.billing.trialDaysRemaining === 1 ? '' : 's'} left in your legacy intro period.`
+        : 'A legacy intro period is still active for this workspace.';
+    case 'active':
+      return data.billing.subscription?.currentPeriodEnd
+        ? `Next billing on ${new Date(data.billing.subscription.currentPeriodEnd).toLocaleDateString()}.`
+        : 'TrayLoop Pro is active.';
+    case 'past_due':
+      return 'Your subscription needs a payment method update to stay healthy.';
+    case 'unpaid':
+      return 'Stripe marked the subscription unpaid. Open billing to resolve it.';
+    case 'canceled':
+      return 'Resubscribe to reactivate TrayLoop Pro for this workspace.';
+    default:
+      return 'Billing setup must be completed during signup before launch setup can continue.';
+  }
+}
+
+function getLaunchSignalCards(data: MerchantOnboardingStatus) {
+  const activePackages = data.setup.steps.offering.count ?? 0;
+  const locations = data.storefront.locations.length;
+  const brandReady = Boolean(data.storefront.organization.name) && Boolean(data.storefront.organization.slug);
+
+  return [
+    {
+      label: 'Billing health',
+      value: data.billing.state === 'active' ? 'Healthy' : 'Needs action',
+      detail: billingDetail(data),
+      tone: data.billing.state === 'active' ? '#166534' : '#9A3412',
+      bg: data.billing.state === 'active' ? '#F0FDF4' : '#FFF7ED',
+    },
+    {
+      label: 'Payout flow',
+      value: data.paymentStatus.status === 'ready' ? 'Connected' : 'Incomplete',
+      detail:
+        data.paymentStatus.status === 'ready'
+          ? 'Deposits and payouts are wired for live checkout.'
+          : 'Stripe still needs attention before money can move cleanly.',
+      tone: data.paymentStatus.status === 'ready' ? '#166534' : '#9A3412',
+      bg: data.paymentStatus.status === 'ready' ? '#F0FDF4' : '#FFF7ED',
+    },
+    {
+      label: 'Offer quality',
+      value:
+        activePackages > 0
+          ? `${activePackages} live package${activePackages === 1 ? '' : 's'}`
+          : 'No live packages',
+      detail:
+        activePackages > 0
+          ? 'Customers have something to order right now.'
+          : 'A storefront without orderable packages will stall conversion immediately.',
+      tone: activePackages > 0 ? '#166534' : '#9A3412',
+      bg: activePackages > 0 ? '#F0FDF4' : '#FFF7ED',
+    },
+    {
+      label: 'Storefront polish',
+      value: brandReady ? 'Branded' : 'Needs polish',
+      detail:
+        brandReady && locations > 0
+          ? `${locations} live location${locations === 1 ? '' : 's'} and storefront identity are in place.`
+          : 'Branding and operating details still need a final pass before launch feels premium.',
+      tone: brandReady && locations > 0 ? '#166534' : '#9A3412',
+      bg: brandReady && locations > 0 ? '#F0FDF4' : '#FFF7ED',
+    },
+  ];
+}
+
+function getBlockerGuidance(data: MerchantOnboardingStatus) {
+  const guidance: Array<{ title: string; detail: string; href: string; cta: string }> = [];
+
+  if (data.billing.state !== 'active') {
+    guidance.push({
+      title: 'Billing is still blocking launch',
+      detail:
+        'Complete or repair the base subscription so the workspace has a healthy billing state before merchants go live.',
+      href: '/billing',
+      cta: 'Fix billing',
+    });
+  }
+
+  if (data.paymentStatus.status !== 'ready') {
+    guidance.push({
+      title: 'Stripe payouts still need action',
+      detail:
+        'Customer money flow should be confirmed before the storefront is shared broadly.',
+      href: '/launch',
+      cta: 'Open payouts checklist',
+    });
+  }
+
+  if ((data.setup.steps.offering.count ?? 0) === 0) {
+    guidance.push({
+      title: 'There is nothing orderable yet',
+      detail:
+        'At least one polished package should be live before the storefront link leaves your hands.',
+      href: '/catalog',
+      cta: 'Open offerings',
+    });
+  }
+
+  if (data.storefront.locations.length === 0) {
+    guidance.push({
+      title: 'Operations are missing from the storefront',
+      detail:
+        'Locations, lead times, and service settings need to exist so checkout does not feel unfinished.',
+      href: '/settings#operations',
+      cta: 'Edit operations',
+    });
+  }
+
+  if (!data.storefront.organization.name) {
+    guidance.push({
+      title: 'Brand Studio still needs a pass',
+      detail:
+        'Branding is part of launch confidence. A customer should feel like they landed on a real merchant experience.',
+      href: '/storefront/customize',
+      cta: 'Open Brand Studio',
+    });
+  }
+
+  return guidance.slice(0, 3);
+}
+
+function Banner({ tone, text }: { tone: BannerTone; text: string }) {
+  const palette =
+    tone === 'success'
+      ? { bg: '#F0FDF4', border: '#BBF7D0', color: '#166534' }
+      : tone === 'warning'
+        ? { bg: '#FFFBEB', border: '#FDE68A', color: '#92400E' }
+        : { bg: '#FEF2F2', border: '#FECACA', color: '#DC2626' };
+
+  return (
+    <div style={{ background: palette.bg, border: `1px solid ${palette.border}`, color: palette.color, borderRadius: 12, padding: '12px 16px', marginBottom: 18, fontSize: 14, fontWeight: 600 }}>
+      {text}
+    </div>
+  );
+}
+
+function SummaryCard({
+  label,
+  value,
+  sub,
+  accent,
+}: {
+  label: string;
+  value: string;
+  sub: string;
+  accent?: boolean;
+}) {
+  return (
+    <div style={{ border: '1px solid #E7E5E4', borderRadius: 14, padding: '18px 20px', background: accent ? '#292524' : '#FFFFFF' }}>
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: accent ? '#D4A853' : '#78716C', marginBottom: 8 }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 26, fontWeight: 700, color: accent ? '#FAFAF9' : '#1C1917' }}>{value}</div>
+      <div style={{ fontSize: 12, color: accent ? '#D6D3D1' : '#78716C', marginTop: 4, lineHeight: 1.5 }}>{sub}</div>
+    </div>
+  );
+}
+
+function SectionCard({
+  title,
+  subtitle,
+  badge,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  badge?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section style={{ border: '1px solid #E7E5E4', borderRadius: 14, background: '#FFFFFF', padding: 22 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 16, flexWrap: 'wrap' }}>
+        <div>
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: '#1C1917' }}>{title}</h2>
+          <p style={{ fontSize: 13, color: '#78716C', margin: '6px 0 0', lineHeight: 1.6 }}>{subtitle}</p>
+        </div>
+        {badge ? <Pill bg="#F5F5F4" color="#57534E">{badge}</Pill> : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function ChecklistRow({
+  done,
+  title,
+  description,
+  href,
+  cta,
+}: {
+  done: boolean;
+  title: string;
+  description: string;
+  href: string;
+  cta: string;
+}) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, padding: '14px 0', borderBottom: '1px solid #F5F5F4', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, minWidth: 240, flex: 1 }}>
+        <div style={{ width: 26, height: 26, borderRadius: 999, background: done ? '#DCFCE7' : '#F5F5F4', color: done ? '#166534' : '#78716C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
+          {done ? 'OK' : '...'}
+        </div>
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#1C1917' }}>{title}</div>
+          <div style={{ fontSize: 13, color: '#78716C', marginTop: 4, lineHeight: 1.6 }}>{description}</div>
+        </div>
+      </div>
+      <a href={href} style={secondaryButtonStyle}>{cta}</a>
+    </div>
+  );
+}
+
+function Pill({ children, bg, color }: { children: React.ReactNode; bg: string; color: string }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 10px', borderRadius: 999, background: bg, color, fontSize: 12, fontWeight: 700 }}>
+      {children}
+    </span>
+  );
+}
+
+function Header({
+  title,
+  subtitle,
+  right,
+}: {
+  title: string;
+  subtitle: string;
+  right?: React.ReactNode;
+}) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
+      <div>
+        <h1 style={headingStyle}>{title}</h1>
+        <p style={{ margin: '6px 0 0', color: '#78716C', fontSize: 14, maxWidth: 720 }}>{subtitle}</p>
+      </div>
+      {right}
+    </div>
+  );
+}
+
+const headingStyle: React.CSSProperties = {
+  fontSize: 28,
+  fontWeight: 700,
+  color: '#1C1917',
+  margin: 0,
+};
+
+const bodyStyle: React.CSSProperties = {
+  fontSize: 14,
+  color: '#57534E',
+  margin: 0,
+  lineHeight: 1.7,
+};
+
+const noteStyle: React.CSSProperties = {
+  background: '#FFFBEB',
+  border: '1px solid #FDE68A',
+  borderRadius: 12,
+  padding: '12px 14px',
+  fontSize: 13,
+  color: '#78350F',
+  lineHeight: 1.6,
+};
+
+const primaryButtonStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  textDecoration: 'none',
+  padding: '10px 14px',
+  borderRadius: 10,
+  border: 'none',
+  background: '#1C1917',
+  color: '#FFFFFF',
+  fontSize: 13,
+  fontWeight: 700,
+  cursor: 'pointer',
+};
+
+const secondaryButtonStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  textDecoration: 'none',
+  padding: '10px 14px',
+  borderRadius: 10,
+  border: '1px solid #D6D3D1',
+  background: '#FFFFFF',
+  color: '#57534E',
+  fontSize: 13,
+  fontWeight: 600,
+  cursor: 'pointer',
+};
+
+export default function LaunchWorkspace() {
+  const searchParams = useSearchParams();
+  const isMobile = useMobile(900);
+  const stripeState = searchParams.get('stripe');
+  const billingStateParam = searchParams.get('billing');
+  const welcomeState = searchParams.get('welcome');
+  const [data, setData] = useState<MerchantOnboardingStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [banner, setBanner] = useState<{ tone: BannerTone; text: string } | null>(null);
+  const [paymentAction, setPaymentAction] = useState<'connect' | 'refresh' | null>(null);
+  const [billingAction, setBillingAction] = useState<'checkout' | 'portal' | null>(null);
+  const [billingRedirectStarted, setBillingRedirectStarted] = useState(false);
+  const [includeGrowthAdvisor, setIncludeGrowthAdvisor] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    setIncludeGrowthAdvisor(window.localStorage.getItem(GROWTH_ADVISOR_SELECTION_KEY) === 'true');
+  }, []);
+
+  useEffect(() => {
+    void loadOnboarding();
+  }, []);
+
+  useEffect(() => {
+    if (welcomeState === '1') {
+      setBanner({ tone: 'success', text: 'Your merchant workspace is ready. Finish secure checkout to activate the live TrayLoop Pro subscription for this location.' });
+      void loadOnboarding(false);
+      return;
+    }
+
+    if (stripeState === 'complete') {
+      setBanner({ tone: 'success', text: 'Stripe onboarding returned to TrayLoop. We refreshed your payout status.' });
+      void handleRefreshPayments();
+      return;
+    }
+
+    if (stripeState === 'refresh') {
+      setBanner({ tone: 'warning', text: 'Stripe asked for another onboarding pass. Review the requirements and continue below.' });
+      void handleRefreshPayments();
+      return;
+    }
+
+    if (billingStateParam === 'success') {
+      setBanner({ tone: 'success', text: 'Stripe checkout completed. Your TrayLoop Pro subscription will sync in a moment.' });
+      void loadOnboarding(false);
+      return;
+    }
+
+    if (billingStateParam === 'cancel') {
+      setBanner({ tone: 'warning', text: 'Signup is still waiting on secure checkout. Complete billing to activate this merchant workspace.' });
+      void loadOnboarding(false);
+      return;
+    }
+
+    if (billingStateParam === 'required') {
+      setBanner({ tone: 'warning', text: 'Your workspace was created, but secure checkout did not open automatically. Continue below to finish signup.' });
+      void loadOnboarding(false);
+    }
+  }, [billingStateParam, stripeState, welcomeState]);
+
+  useEffect(() => {
+    if (!data || data.billing.state !== 'not_started' || billingRedirectStarted || billingAction !== null) {
+      return;
+    }
+
+    if (growthAdvisorEnabled) {
+      return;
+    }
+
+    if (billingStateParam === 'cancel') {
+      return;
+    }
+
+    setBillingRedirectStarted(true);
+    void handleStartSubscription();
+  }, [billingAction, billingRedirectStarted, billingStateParam, data]);
+
+  async function loadOnboarding(showLoader = true) {
+    if (showLoader) {
+      setLoading(true);
+    }
+    setError('');
+
+    try {
+      const next = await fetchOnboardingStatus();
+      setData(next);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load onboarding');
+    } finally {
+      if (showLoader) {
+        setLoading(false);
+      }
+    }
+  }
+
+  async function handleStartPayments() {
+    setPaymentAction('connect');
+    setError('');
+    try {
+      const result = await createPaymentOnboardingLink({
+        returnUrl: `${window.location.origin}/onboarding`,
+        refreshUrl: `${window.location.origin}/onboarding`,
+      });
+      window.location.href = result.url;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to open Stripe onboarding');
+      setPaymentAction(null);
+    }
+  }
+
+  async function handleRefreshPayments() {
+    setPaymentAction('refresh');
+    setError('');
+    try {
+      await syncPaymentStatus();
+      await loadOnboarding(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to refresh Stripe status');
+    } finally {
+      setPaymentAction(null);
+    }
+  }
+
+  async function handleStartSubscription() {
+    setBillingAction('checkout');
+    setError('');
+    try {
+      const result = await createBillingCheckout({
+        successUrl: `${window.location.origin}/launch?billing=success`,
+        cancelUrl: `${window.location.origin}/launch?billing=cancel`,
+        includeGrowthAdvisor: growthAdvisorEnabled && includeGrowthAdvisor,
+      });
+      window.location.href = result.url;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to start TrayLoop Pro checkout');
+    } finally {
+      setBillingAction(null);
+    }
+  }
+
+  async function handleManageBilling() {
+    setBillingAction('portal');
+    setError('');
+    try {
+      const result = await createBillingPortal({
+        returnUrl: `${window.location.origin}/launch`,
+      });
+      window.location.href = result.url;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to open billing manager');
+    } finally {
+      setBillingAction(null);
+    }
+  }
+
+  const paymentBadge = useMemo(() => badgeConfig(data?.paymentStatus.status ?? 'not_started'), [data?.paymentStatus.status]);
+  const billingBadge = useMemo(() => billingConfig(data?.billing.state ?? 'not_started'), [data?.billing.state]);
+  const growthAdvisorOffer = data?.billing.features.growthAdvisor ?? null;
+  const launchSignals = useMemo(() => (data ? getLaunchSignalCards(data) : []), [data]);
+  const blockerGuidance = useMemo(() => (data ? getBlockerGuidance(data) : []), [data]);
+
+  function toggleGrowthAdvisor(nextValue: boolean) {
+    setIncludeGrowthAdvisor(nextValue);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(GROWTH_ADVISOR_SELECTION_KEY, String(nextValue));
+    }
+  }
+
+  if (loading && !data) {
+    return <p style={{ color: '#78716C' }}>Loading launch center...</p>;
+  }
+
+  if (error && !data) {
+    return (
+      <div>
+        <h1 style={headingStyle}>Launch Center</h1>
+        <Banner tone="error" text={error} />
+      </div>
+    );
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  if (data.billing.state === 'not_started') {
+    return (
+      <div>
+        <div style={{ maxWidth: 760, margin: '0 auto' }}>
+          <Header
+            title="Complete signup"
+            subtitle="TrayLoop Pro billing is part of signup. Once secure checkout is complete, this merchant workspace can continue into payouts, operations, and launch setup."
+          />
+
+          {banner ? <Banner tone={banner.tone} text={banner.text} /> : null}
+          {error ? <Banner tone="error" text={error} /> : null}
+
+          <section style={{ border: '1px solid #E7E5E4', borderRadius: 18, background: '#FFFFFF', padding: isMobile ? 20 : 24 }}>
+            <div style={{ marginBottom: 16 }}>
+              <Pill bg="#F3F4F6" color="#57534E">Billing required</Pill>
+            </div>
+            <p style={bodyStyle}>
+              This workspace is saved, but it is not active until the TrayLoop Pro subscription is confirmed. The dashboard should only manage billing after signup, not start it for the first time.
+            </p>
+            <div style={{ ...noteStyle, marginTop: 16 }}>
+              Plan: {data.billing.planName} at ${(data.billing.priceCents / 100).toFixed(0)}/{data.billing.interval}
+            </div>
+            {growthAdvisorEnabled && growthAdvisorOffer?.available ? (
+              <label
+                style={{
+                  display: 'flex',
+                  gap: 12,
+                  alignItems: 'flex-start',
+                  marginTop: 16,
+                  padding: '14px 16px',
+                  borderRadius: 14,
+                  border: `1px solid ${includeGrowthAdvisor ? '#1D7A55' : '#E7E5E4'}`,
+                  background: includeGrowthAdvisor ? '#F0FDF4' : '#FFFFFF',
+                  cursor: 'pointer',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={includeGrowthAdvisor}
+                  onChange={(event) => toggleGrowthAdvisor(event.target.checked)}
+                  style={{ marginTop: 4 }}
+                />
+                <div>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 6 }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: '#1C1917' }}>Add Growth Advisor</div>
+                    <Pill bg="#1C1917" color="#FAFAF9">{`+$${((growthAdvisorOffer.priceCents ?? 0) / 100).toFixed(0)}/${growthAdvisorOffer.interval}`}</Pill>
+                  </div>
+                  <div style={{ fontSize: 13, color: '#57534E', lineHeight: 1.6 }}>
+                    Attach the premium growth plan add-on during onboarding so the merchant workspace unlocks it immediately after billing syncs.
+                  </div>
+                </div>
+              </label>
+            ) : null}
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : undefined, gap: 10, marginTop: 18 }}>
+              <button type="button" onClick={handleStartSubscription} disabled={billingAction !== null} style={{ ...primaryButtonStyle, width: isMobile ? '100%' : undefined }}>
+                {billingAction === 'checkout' ? 'Redirecting...' : 'Continue Secure Checkout'}
+              </button>
+              <a href="/register" style={{ ...secondaryButtonStyle, width: isMobile ? '100%' : undefined }}>Back to Signup</a>
+            </div>
+          </section>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <Header
+        title="Launch Center"
+        subtitle="One operating view for billing, payouts, storefront readiness, and the next action to get this merchant live."
+        right={
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <Pill
+              bg={data.stripeMode === 'live' ? '#DCFCE7' : data.stripeMode === 'test' ? '#FEF3C7' : '#F3F4F6'}
+              color={data.stripeMode === 'live' ? '#166534' : data.stripeMode === 'test' ? '#92400E' : '#57534E'}
+            >
+              {data.stripeMode === 'live' ? 'Stripe Live' : data.stripeMode === 'test' ? 'Stripe Sandbox' : 'Stripe Disabled'}
+            </Pill>
+            <Pill bg="#F5F5F4" color="#57534E">{data.launch.completed} of {data.launch.total} launch steps complete</Pill>
+          </div>
+        }
+      />
+
+      {banner ? <Banner tone={banner.tone} text={banner.text} /> : null}
+      {error ? <Banner tone="error" text={error} /> : null}
+
+      <section style={{ border: '1px solid #E7E5E4', borderRadius: 20, background: '#FFFFFF', padding: isMobile ? 18 : 22, marginBottom: 22 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1.35fr) minmax(280px, 0.85fr)', gap: 18 }}>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#78716C', marginBottom: 8 }}>
+              Current mission
+            </div>
+            <div style={{ fontSize: isMobile ? 24 : 30, lineHeight: 1.04, letterSpacing: '-0.05em', fontFamily: 'var(--font-display), var(--font-body), sans-serif', fontWeight: 800, color: '#1C1917' }}>
+              {data.launch.nextAction.title}
+            </div>
+            <p style={{ margin: '10px 0 0', color: '#57534E', fontSize: 14, lineHeight: 1.7 }}>{data.launch.nextAction.description}</p>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 14 }}>
+              <a href={data.launch.nextAction.href} style={primaryButtonStyle}>{data.launch.nextAction.cta}</a>
+              {data.launch.liveStorefrontUrl ? (
+                <a href={data.launch.liveStorefrontUrl} target="_blank" rel="noopener noreferrer" style={secondaryButtonStyle}>Preview live storefront</a>
+              ) : null}
+            </div>
+          </div>
+
+          <div style={{ border: '1px solid #E7E5E4', borderRadius: 16, background: '#FCFBF8', padding: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#78716C' }}>Launch score</span>
+              <span style={{ fontSize: 14, fontWeight: 800, color: '#1C1917' }}>{data.launch.progressPercent}%</span>
+            </div>
+            <div style={{ height: 8, background: '#ECE7DE', borderRadius: 999, overflow: 'hidden' }}>
+              <div style={{ width: `${data.launch.progressPercent}%`, height: '100%', background: 'linear-gradient(90deg, #E85618 0%, #D4A853 100%)', borderRadius: 999 }} />
+            </div>
+            <div style={{ marginTop: 14, fontSize: 12, color: '#57534E', lineHeight: 1.7 }}>
+              {data.launch.blockers.length === 0
+                ? 'No blockers remain. Place a final test order and share the storefront.'
+                : `${data.launch.blockers.length} blocker${data.launch.blockers.length === 1 ? '' : 's'} still need attention before this workspace is fully live.`}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(${isMobile ? 180 : 220}px, 1fr))`, gap: 12, marginTop: 18 }}>
+          {launchSignals.map((signal) => (
+            <div key={signal.label} style={{ borderRadius: 16, border: '1px solid #E7E5E4', background: signal.bg, padding: '14px 15px' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#78716C' }}>
+                {signal.label}
+              </div>
+              <div style={{ marginTop: 8, fontSize: 18, fontWeight: 800, color: signal.tone }}>{signal.value}</div>
+              <div style={{ marginTop: 6, fontSize: 12, lineHeight: 1.6, color: '#57534E' }}>{signal.detail}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(${isMobile ? 160 : 210}px, 1fr))`, gap: 14, marginBottom: 24 }}>
+        <SummaryCard label="Launch Progress" value={`${data.launch.progressPercent}%`} sub={`${data.launch.completed}/${data.launch.total} milestone${data.launch.total === 1 ? '' : 's'}`} />
+        <SummaryCard label="Payouts" value={data.paymentStatus.status === 'ready' ? 'Ready' : paymentBadge.label} sub={data.paymentStatus.chargesEnabled ? 'Charges enabled' : 'Stripe still needs action'} accent={data.paymentStatus.status === 'ready'} />
+        <SummaryCard label="Billing" value={billingBadge.label} sub={billingDetail(data)} accent={data.billing.state === 'active'} />
+        <SummaryCard label="Storefront" value={data.readiness.canLaunchStorefront ? 'Ready to launch' : 'Needs review'} sub={data.storefront.storefrontUrl} />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1.5fr) minmax(280px, 1fr)', gap: 20 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <SectionCard title="1. TrayLoop Pro billing" subtitle="This is the platform subscription for your TrayLoop workspace, separate from customer transactions." badge={billingBadge.label}>
+            <div style={{ marginBottom: 16 }}>
+              <Pill bg={billingBadge.bg} color={billingBadge.color}>{billingBadge.label}</Pill>
+            </div>
+            <p style={bodyStyle}>{billingDetail(data)}</p>
+            {data.billing.subscription?.trialEnd ? (
+              <div style={noteStyle}>
+                Legacy intro period ends on {new Date(data.billing.subscription.trialEnd).toLocaleDateString()}.
+              </div>
+            ) : null}
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : undefined, gap: 10, marginTop: 16 }}>
+              {data.billing.canCheckout ? (
+                <button type="button" onClick={handleStartSubscription} disabled={billingAction !== null} style={{ ...primaryButtonStyle, width: isMobile ? '100%' : undefined }}>
+                  {billingAction === 'checkout' ? 'Redirecting...' : data.billing.state === 'canceled' ? 'Resubscribe' : 'Resume TrayLoop Pro'}
+                </button>
+              ) : null}
+              {data.billing.canManage ? (
+                <button type="button" onClick={handleManageBilling} disabled={billingAction !== null} style={{ ...secondaryButtonStyle, width: isMobile ? '100%' : undefined }}>
+                  {billingAction === 'portal' ? 'Opening...' : 'Manage Subscription'}
+                </button>
+              ) : null}
+              <a href="/billing" style={{ ...secondaryButtonStyle, width: isMobile ? '100%' : undefined }}>Open Billing Hub</a>
+            </div>
+            {growthAdvisorEnabled && growthAdvisorOffer?.available && !growthAdvisorOffer.enabled ? (
+              <div style={{ ...noteStyle, marginTop: 14 }}>
+                Growth Advisor stays hidden until it is purchased. Add it during onboarding checkout to unlock the premium strategy workspace right away.
+              </div>
+            ) : null}
+          </SectionCard>
+
+          <SectionCard title="2. Merchant payouts" subtitle="This connects your merchant payout account so customer deposits can flow to your business." badge={paymentBadge.label}>
+            <div style={{ marginBottom: 16 }}>
+              <Pill bg={paymentBadge.bg} color={paymentBadge.color}>{paymentBadge.label}</Pill>
+            </div>
+            <p style={bodyStyle}>
+              {data.paymentStatus.status === 'ready'
+                ? 'Your payout account is connected and ready to accept customer deposit flows.'
+                : data.paymentStatus.status === 'action_required'
+                  ? 'Stripe has outstanding requirements. Resolve them here and come back to TrayLoop once complete.'
+                  : data.paymentStatus.status === 'in_progress'
+                    ? 'Your payout account exists, but Stripe still needs more information before deposits can be routed.'
+                    : 'Start TrayLoop merchant payments onboarding to create and connect your payout account.'}
+            </p>
+            {data.paymentStatus.disabledReason || data.paymentStatus.requirementsPastDue.length > 0 || data.paymentStatus.requirementsCurrentlyDue.length > 0 ? (
+              <div style={noteStyle}>
+                {data.paymentStatus.disabledReason ? <div style={{ marginBottom: 6 }}>Stripe reason: {data.paymentStatus.disabledReason.replaceAll('_', ' ')}</div> : null}
+                {data.paymentStatus.requirementsPastDue.length > 0 ? <div style={{ marginBottom: 6 }}>Past due: {data.paymentStatus.requirementsPastDue.join(', ')}</div> : null}
+                {data.paymentStatus.requirementsCurrentlyDue.length > 0 ? <div>Currently due: {data.paymentStatus.requirementsCurrentlyDue.join(', ')}</div> : null}
+              </div>
+            ) : null}
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : undefined, gap: 10, marginTop: 16 }}>
+              <button type="button" onClick={handleStartPayments} disabled={paymentAction !== null} style={{ ...primaryButtonStyle, width: isMobile ? '100%' : undefined }}>
+                {paymentAction === 'connect'
+                  ? 'Redirecting...'
+                  : data.paymentStatus.status === 'ready'
+                    ? 'Reopen Stripe'
+                    : data.paymentStatus.status === 'not_started'
+                      ? 'Start Merchant Payments'
+                      : 'Continue Stripe Onboarding'}
+              </button>
+              <button type="button" onClick={handleRefreshPayments} disabled={paymentAction !== null} style={{ ...secondaryButtonStyle, width: isMobile ? '100%' : undefined }}>
+                {paymentAction === 'refresh' ? 'Refreshing...' : 'Refresh Status'}
+              </button>
+            </div>
+          </SectionCard>
+
+          <SectionCard title="3. Business foundation" subtitle="Make sure your storefront has a location, orderable packages, and branded finishing touches." badge={`${data.setup.completedSteps}/${data.setup.totalSteps} setup steps`}>
+            <ChecklistRow done={data.setup.steps.offering.done} title="Offerings" description={`${data.setup.steps.offering.count ?? 0} active package${(data.setup.steps.offering.count ?? 0) === 1 ? '' : 's'} ready for customers.`} href="/catalog" cta="Open Offerings" />
+            <ChecklistRow done={data.setup.steps.location.done} title="Operations" description={`${data.storefront.locations.length} active location${data.storefront.locations.length === 1 ? '' : 's'} available on the storefront.`} href="/settings#operations" cta="Edit Operations" />
+            <ChecklistRow done={Boolean(data.storefront.organization.name)} title="Storefront branding" description="Polish the logo, brand color, and display font so the storefront feels intentionally yours." href="/storefront/customize" cta="Open Brand Studio" />
+          </SectionCard>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <SectionCard title="Launch readiness" subtitle="Review the remaining blockers, then finish the next required step.">
+            {data.launch.blockers.length === 0 ? (
+              <div style={{ ...noteStyle, background: '#F0FDF4', borderColor: '#BBF7D0', color: '#166534' }}>
+                You are ready to launch. Review your live storefront and start taking orders.
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: 10 }}>
+                {blockerGuidance.map((item) => (
+                  <div key={item.title} style={{ borderRadius: 14, border: '1px solid #E7E5E4', background: '#FCFBF8', padding: '14px 15px' }}>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: '#1C1917' }}>{item.title}</div>
+                    <div style={{ marginTop: 6, fontSize: 13, color: '#57534E', lineHeight: 1.6 }}>{item.detail}</div>
+                    <a href={item.href} style={{ ...secondaryButtonStyle, display: 'inline-flex', marginTop: 12 }}>{item.cta}</a>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ marginTop: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#1C1917', marginBottom: 6 }}>{data.launch.nextAction.title}</div>
+              <div style={{ fontSize: 13, color: '#78716C', lineHeight: 1.6 }}>{data.launch.nextAction.description}</div>
+              <a href={data.launch.nextAction.href} style={{ ...primaryButtonStyle, display: 'inline-flex', marginTop: 12, width: isMobile ? '100%' : undefined }}>
+                {data.launch.nextAction.cta}
+              </a>
+            </div>
+          </SectionCard>
+
+          <LaunchApprovalCard launchStatus={data} />
+
+          <SectionCard title="Live storefront" subtitle="Open your branded TrayLoop storefront and test the exact customer journey.">
+            <div style={{ ...noteStyle, background: '#FAFAF9' }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#1C1917', marginBottom: 6 }}>{data.storefront.organization.name}</div>
+              <div style={{ fontSize: 12, color: '#57534E', wordBreak: 'break-all' }}>{data.launch.liveStorefrontUrl ?? data.storefront.storefrontUrl}</div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : undefined, gap: 10, marginTop: 16 }}>
+              <a href={data.launch.liveStorefrontUrl ?? data.storefront.storefrontUrl} target="_blank" rel="noopener noreferrer" style={{ ...primaryButtonStyle, width: isMobile ? '100%' : undefined }}>
+                View Storefront
+              </a>
+              <a href="/storefront/customize" style={{ ...secondaryButtonStyle, width: isMobile ? '100%' : undefined }}>Open Brand Studio</a>
+            </div>
+          </SectionCard>
+        </div>
+      </div>
+    </div>
+  );
+}

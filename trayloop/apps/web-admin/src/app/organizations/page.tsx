@@ -32,7 +32,7 @@ function cents(amount: number): string {
   })}`;
 }
 
-function buildMerchantSupportUrl(restaurant: Restaurant, target: '/catalog' | '/onboarding') {
+function buildMerchantSupportUrl(restaurant: Restaurant, target: '/catalog' | '/launch') {
   const params = new URLSearchParams({
     orgId: restaurant.id,
     orgSlug: restaurant.slug,
@@ -101,6 +101,14 @@ export default function OrganizationsPage() {
     inactive: restaurants.filter((restaurant) => !restaurant.isActive).length,
     at_risk: restaurants.filter((restaurant) => restaurant.health === 'at_risk').length,
   }), [restaurants]);
+  const totalGmv = useMemo(
+    () => restaurants.reduce((sum, restaurant) => sum + restaurant.gmv, 0),
+    [restaurants],
+  );
+  const totalOrders = useMemo(
+    () => restaurants.reduce((sum, restaurant) => sum + restaurant.orderCount, 0),
+    [restaurants],
+  );
 
   if (loading) {
     return <p style={{ color: '#78716C', fontSize: 14 }}>Loading restaurants...</p>;
@@ -114,9 +122,21 @@ export default function OrganizationsPage() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, marginTop: 0, marginBottom: 4 }}>Restaurants</h1>
-          <p style={{ fontSize: 13, color: '#78716C', margin: 0 }}>{restaurants.length} on the platform</p>
+          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#D4A853', marginBottom: 8 }}>
+            Support Workspace
+          </div>
+          <h1 style={{ fontSize: 28, fontWeight: 800, marginTop: 0, marginBottom: 6, color: '#1C1917' }}>Merchant support desk</h1>
+          <p style={{ fontSize: 14, color: '#78716C', margin: 0, maxWidth: 760 }}>
+            Open the exact merchant surface you need, understand account health fast, and jump into launch or menu work without context switching.
+          </p>
         </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 22 }}>
+        <SummaryCard label="Restaurants" value={String(restaurants.length)} sub={`${counts.active} active · ${counts.inactive} inactive`} accent />
+        <SummaryCard label="Paid accounts" value={String(counts.paid)} sub={`${counts.trial} still trialing`} />
+        <SummaryCard label="Platform GMV" value={cents(totalGmv)} sub="All-time merchant GMV" />
+        <SummaryCard label="Order volume" value={String(totalOrders)} sub={`${counts.at_risk} merchants need attention`} />
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 16, flexWrap: 'wrap' }}>
@@ -199,7 +219,7 @@ export default function OrganizationsPage() {
           </p>
         </div>
       ) : (
-        <div style={{ border: '1px solid #E7E5E4', borderRadius: 10, background: '#FFFFFF', overflow: 'hidden' }}>
+        <div style={{ border: '1px solid #E7E5E4', borderRadius: 16, background: '#FFFFFF', overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', minWidth: 1120, borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
@@ -271,12 +291,12 @@ export default function OrganizationsPage() {
                           Menu Editor
                         </a>
                         <a
-                          href={buildMerchantSupportUrl(restaurant, '/onboarding')}
+                          href={buildMerchantSupportUrl(restaurant, '/launch')}
                           target="_blank"
                           rel="noreferrer"
                           style={secondaryActionLinkStyle}
                         >
-                          Launch Setup
+                          Launch Center
                         </a>
                         <a
                           href={buildStorefrontUrl(restaurant)}
@@ -319,6 +339,35 @@ const secondaryActionLinkStyle: React.CSSProperties = {
   color: '#44403C',
   border: '1px solid #D6D3D1',
 };
+
+function SummaryCard({
+  label,
+  value,
+  sub,
+  accent,
+}: {
+  label: string;
+  value: string;
+  sub: string;
+  accent?: boolean;
+}) {
+  return (
+    <div
+      style={{
+        border: '1px solid #E7E5E4',
+        borderRadius: 16,
+        background: accent ? '#1C1917' : '#FFFFFF',
+        padding: '16px 18px',
+      }}
+    >
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: accent ? '#D4A853' : '#78716C' }}>
+        {label}
+      </div>
+      <div style={{ marginTop: 7, fontSize: 24, fontWeight: 800, color: accent ? '#FAFAF9' : '#1C1917' }}>{value}</div>
+      <div style={{ marginTop: 4, fontSize: 12, color: accent ? '#D6D3D1' : '#78716C', lineHeight: 1.5 }}>{sub}</div>
+    </div>
+  );
+}
 
 function Th({ children, align }: { children: React.ReactNode; align?: 'left' | 'right' }) {
   return (

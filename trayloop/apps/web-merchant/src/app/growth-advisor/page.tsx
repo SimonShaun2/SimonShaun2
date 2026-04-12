@@ -20,7 +20,7 @@ const PROMPT_IDEAS = [
 ] as const;
 
 function formatCurrency(cents: number | null) {
-  if (cents == null) return '—';
+  if (cents == null) return '--';
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
@@ -229,7 +229,7 @@ function AnalysisPanel({
           textDecoration: 'none',
         }}
       >
-        Ask about the Growth Advisor add-on →
+        Ask about the Growth Advisor add-on
       </a>
     </div>
   );
@@ -260,11 +260,11 @@ export default function GrowthAdvisorPage() {
       const result = await createBillingCheckout({
         successUrl: usingExistingSubscription
           ? `${window.location.origin}/growth-advisor?upgraded=1`
-          : `${window.location.origin}/onboarding?billing=success`,
+          : `${window.location.origin}/launch?billing=success`,
         cancelUrl: usingExistingSubscription
           ? `${window.location.origin}/growth-advisor`
-          : `${window.location.origin}/onboarding?billing=cancel`,
-        addOns: ['growth_advisor'],
+          : `${window.location.origin}/launch?billing=cancel`,
+        includeGrowthAdvisor: true,
       });
       window.location.href = result.url;
     } catch (err) {
@@ -311,7 +311,7 @@ export default function GrowthAdvisorPage() {
           </div>
           <h1 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: '#1C1917' }}>Growth Advisor</h1>
           <p style={{ fontSize: 14, color: '#57534E', margin: '10px 0 0', maxWidth: 760, lineHeight: 1.7 }}>
-            Growth Advisor is sold as an add-on product. Add it from this page and it unlocks immediately for this merchant workspace.
+            Growth Advisor is sold as a premium add-on. It turns a merchant&apos;s live storefront, pricing setup, and order signals into a concrete 30-day growth plan the team can actually execute.
           </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginTop: 22 }}>
@@ -320,16 +320,17 @@ export default function GrowthAdvisorPage() {
             <SnapshotStat label="Best for" value="Launch + growth" sub="Menu, pricing, channel, and repeat-order guidance" />
           </div>
 
-          <div style={{ display: 'grid', gap: 12, marginTop: 20 }}>
-            <div style={{ ...featureCalloutStyle }}>
-              Uses your live storefront, offer mix, payouts setup, and order traction to generate a merchant-specific growth plan.
-            </div>
-            <div style={{ ...featureCalloutStyle }}>
-              Great for onboarding teams creating menus and storefronts for merchants before launch.
-            </div>
-            <div style={{ ...featureCalloutStyle }}>
-              Designed as an incremental revenue add-on, separate from the base TrayLoop subscription.
-            </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginTop: 20 }}>
+            {[
+              ['Offer strategy', 'Recommend what to sell first, where to price it, and how to position it.'],
+              ['Launch coaching', 'Perfect for onboarding teams shaping a storefront before the first order arrives.'],
+              ['Repeat revenue', 'Focuses on getting merchants to reorder, rebook, and grow direct demand.'],
+            ].map(([title, description]) => (
+              <div key={title} style={{ ...featureCalloutStyle, minHeight: 118 }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: '#1C1917', marginBottom: 6 }}>{title}</div>
+                <div>{description}</div>
+              </div>
+            ))}
             {usingExistingSubscription ? (
               <div style={{ ...featureCalloutStyle, borderColor: '#FDE68A', background: '#FFFBEB', color: '#92400E' }}>
                 This merchant already has base billing active. Add Growth Advisor here and we will attach it to the current subscription.
@@ -362,7 +363,7 @@ export default function GrowthAdvisorPage() {
                   cursor: upgradeLoading ? 'wait' : 'pointer',
                 }}
               >
-                {upgradeLoading ? 'Redirecting...' : 'Add Growth Advisor to onboarding →'}
+                {upgradeLoading ? 'Redirecting...' : 'Unlock Growth Advisor'}
               </button>
             ) : null}
             <a
@@ -407,12 +408,18 @@ export default function GrowthAdvisorPage() {
           </div>
           <h1 style={{ fontSize: 30, fontWeight: 700, margin: 0, color: '#1C1917' }}>Growth Advisor</h1>
           <p style={{ fontSize: 14, color: '#57534E', margin: '8px 0 0', maxWidth: 760 }}>
-            Turn your live storefront, pricing, and launch setup into a 30-day catering growth plan. This is built as a premium merchant add-on, so the recommendations are grounded in your actual TrayLoop setup instead of generic advice.
+            Turn your live storefront, pricing, and launch setup into a 30-day catering growth plan. This workspace is meant to feel like a strategist sitting beside the operator, not a generic AI box.
           </p>
         </div>
         <div style={{ padding: '10px 12px', borderRadius: 14, background: '#FFFBEB', border: '1px solid #FDE68A', fontSize: 12, color: '#92400E', maxWidth: 280 }}>
-          Start with your current setup or add a specific growth question. The advisor will use your live merchant data either way.
+          Use a specific growth question or let the advisor read the merchant&apos;s current setup and tell you what matters most.
         </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+        <SnapshotStat label="What you get" value="30-day plan" sub="Offer, pricing, channel, and launch guidance" />
+        <SnapshotStat label="Best moment" value="Before launch" sub="Sharpen the storefront before traffic hits" />
+        <SnapshotStat label="Best owner" value="Operator + onboarding" sub="Built for teams helping merchants go live" />
       </div>
 
       <div className="growth-advisor-grid" style={{ display: 'grid', gridTemplateColumns: '0.92fr 1.08fr', gap: 18, alignItems: 'start' }}>
@@ -504,7 +511,7 @@ export default function GrowthAdvisorPage() {
               cursor: loading ? 'wait' : 'pointer',
             }}
           >
-            {loading ? 'Building your growth plan...' : 'Generate Growth Advisor plan →'}
+            {loading ? 'Building your growth plan...' : 'Generate Growth Advisor plan'}
           </button>
 
           <div style={{ marginTop: 14, fontSize: 12, color: '#78716C', lineHeight: 1.6 }}>
@@ -549,6 +556,23 @@ export default function GrowthAdvisorPage() {
                   ))}
                 </div>
               </SectionCard>
+
+              <SectionCard eyebrow="What comes out" title="A premium output your team can use right away">
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {[
+                    'A recommended offer to launch with, including price, minimum guests, and service style.',
+                    'Clear pricing guidance for delivery fees, minimum orders, and deposits.',
+                    'Channel and follow-up priorities so merchants know where repeat demand should come from.',
+                  ].map((item, index) => (
+                    <div key={item} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14, color: '#44403C' }}>
+                      <div style={{ width: 22, height: 22, borderRadius: 999, background: '#1C1917', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+                        {index + 1}
+                      </div>
+                      <div>{item}</div>
+                    </div>
+                  ))}
+                </div>
+              </SectionCard>
             </div>
           )}
         </div>
@@ -566,3 +590,4 @@ const featureCalloutStyle: React.CSSProperties = {
   color: '#44403C',
   lineHeight: 1.6,
 };
+
