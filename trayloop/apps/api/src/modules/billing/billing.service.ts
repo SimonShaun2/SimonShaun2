@@ -551,6 +551,7 @@ export async function createCheckoutSession(orgId: string, input: BillingCheckou
     mode: 'subscription',
     customer: stripeCustomerId,
     client_reference_id: record.organizationId,
+    allow_promotion_codes: true,
     line_items: lineItems,
     success_url: successUrl,
     cancel_url: cancelUrl,
