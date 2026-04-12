@@ -1,4 +1,4 @@
-import { getNextPlan, type FeatureKey, type PlanKey } from '@trayloop/types/src/plan-access';
+import { getNextPlan, type FeatureKey, type PlanKey } from '@trayloop/types/plan-access';
 
 export type MerchantPlanDisplay = {
   label: string;

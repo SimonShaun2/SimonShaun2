@@ -17,6 +17,12 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@trayloop/types": [
+        "../../packages/types/src/index.ts"
+      ],
+      "@trayloop/types/*": [
+        "../../packages/types/src/*"
       ]
     },
     "allowJs": true,

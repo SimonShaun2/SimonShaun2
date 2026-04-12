@@ -10,7 +10,7 @@ import {
   type MerchantOnboardingStatus,
 } from '../../lib/api';
 import { merchantResetHref } from '../../lib/session';
-import { PLAN_KEYS, type FeatureKey, type PlanKey } from '@trayloop/types/src/plan-access';
+import { PLAN_KEYS, type FeatureKey, type PlanKey } from '@trayloop/types/plan-access';
 import {
   getFeatureLabel,
   getMerchantPlanDisplay,

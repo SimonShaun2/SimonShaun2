@@ -3,7 +3,7 @@ import type {
   BillingCycleKey,
   FeatureKey,
   PlanKey,
-} from '@trayloop/types/src/plan-access';
+} from '@trayloop/types/plan-access';
 import { clearMerchantSession, ensureMerchantSession } from './session';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';

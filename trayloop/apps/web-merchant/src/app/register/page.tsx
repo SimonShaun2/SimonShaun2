@@ -7,7 +7,7 @@ import { createBillingCheckout } from '../../lib/api';
 import { growthAdvisorEnabled } from '../../lib/features';
 import { ensureMerchantSession, hasMerchantSession, markMerchantSession } from '../../lib/session';
 import { useMobile } from '../../lib/use-mobile';
-import { type PlanKey } from '@trayloop/types/src/plan-access';
+import { type PlanKey } from '@trayloop/types/plan-access';
 import { getMerchantPlanDisplay, getMerchantPlanPriceLabel } from '../../lib/plan-copy';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';

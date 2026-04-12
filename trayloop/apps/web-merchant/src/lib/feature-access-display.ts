@@ -1,4 +1,4 @@
-import type { FeatureKey, PlanKey } from '@trayloop/types/src/plan-access';
+import type { FeatureKey, PlanKey } from '@trayloop/types/plan-access';
 import { getFeatureLabel, getMerchantPlanDisplay } from './plan-copy';
 
 type FeatureUpgradeInput = {

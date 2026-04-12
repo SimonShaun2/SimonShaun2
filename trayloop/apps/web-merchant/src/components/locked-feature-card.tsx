@@ -3,7 +3,7 @@
 import {
   type FeatureKey,
   type PlanKey,
-} from '@trayloop/types/src/plan-access';
+} from '@trayloop/types/plan-access';
 import { useFeatureAccess } from './plan-access-provider';
 import { getLockedFeaturePresentation } from '../lib/feature-access-display';
 import { getMerchantPlanLabel } from '../lib/plan-copy';

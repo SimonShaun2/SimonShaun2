@@ -18,7 +18,7 @@ import {
   getNextPlan,
   type FeatureKey,
   type PlanKey,
-} from '@trayloop/types/src/plan-access';
+} from '@trayloop/types/plan-access';
 import { getFeatureUpgradeCta } from '../lib/feature-access-display';
 
 interface PlanAccessContextValue {

@@ -6,7 +6,9 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./plan-access": "./src/plan-access.ts",
     "./plan-access.js": "./src/plan-access.ts",
+    "./entitlements": "./src/entitlements.ts",
     "./entitlements.js": "./src/entitlements.ts"
   },
   "scripts": {

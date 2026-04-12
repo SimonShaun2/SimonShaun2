@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { PLAN_DEFINITIONS, type FeatureKey } from '@trayloop/types/src/plan-access';
+import { PLAN_DEFINITIONS, type FeatureKey } from '@trayloop/types/plan-access';
 import NotificationBell from './notification-bell';
 import { clearMerchantSession, hasMerchantSession } from '../lib/session';
 import { apiFetch, fetchStorefrontContext, type MerchantStorefrontContext } from '../lib/api';
