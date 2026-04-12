@@ -334,8 +334,8 @@ export default function AiSalesPanel() {
         <LockedFeatureCard
           compact
           featureKey="campaigns.reactivation"
-          title="AI sales engine is available on Growth"
-          description="Unlock AI-powered reactivation campaigns, reorder reminders, and guided message generation once this merchant is ready for growth automation."
+          title="AI sales engine is available on Engine"
+          description="Unlock AI-powered reactivation campaigns, reorder reminders, and guided message generation once this merchant is ready for Engine automation."
           bullets={[
             'Generate email and SMS campaign copy for repeat customers',
             'Surface reorder-ready accounts before they lapse',

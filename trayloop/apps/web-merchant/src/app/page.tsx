@@ -6,8 +6,10 @@ import { apiFetch } from '../lib/api';
 import SetupChecklist from '../components/setup-checklist';
 import AiSalesPanel from '../components/ai-sales-panel';
 import RevenueIntelligencePanel from '../components/revenue-intelligence-panel';
+import { usePlanAccess } from '../components/plan-access-provider';
 import { automationsEnabled } from '../lib/features';
 import { hasMerchantSession } from '../lib/session';
+import { getMerchantPlanDisplay, getMerchantPlanPriceLabel } from '../lib/plan-copy';
 
 const AutomationSummaryPanel = dynamic(() => import('../components/automation-summary-panel'));
 
@@ -106,6 +108,7 @@ function isUpcoming(eventDate: string): boolean {
 }
 
 export default function DashboardPage() {
+  const planAccess = usePlanAccess();
   const [orders, setOrders] = useState<Order[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [statusFilter, setStatusFilter] = useState('');
@@ -173,6 +176,9 @@ export default function DashboardPage() {
     if (!stats?.dailyRevenue?.length) return 0;
     return Math.max(...stats.dailyRevenue.map((d) => d.revenue), 1);
   }, [stats?.dailyRevenue]);
+  const currentPlanDisplay = getMerchantPlanDisplay(planAccess.currentPlan);
+  const nextPlanDisplay = currentPlanDisplay?.nextPlan ? getMerchantPlanDisplay(currentPlanDisplay.nextPlan) : null;
+  const currentPlanPriceLabel = getMerchantPlanPriceLabel(planAccess.currentPlan);
 
   return (
     <div>
@@ -180,6 +186,45 @@ export default function DashboardPage() {
 
       {/* Page header */}
       <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 20px', color: '#1C1917' }}>Dashboard</h1>
+
+      {currentPlanDisplay ? (
+        <section style={{ border: '1px solid #E7E5E4', borderRadius: 16, background: '#FFFFFF', padding: 18, marginBottom: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start', marginBottom: 14 }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#A16207', marginBottom: 6 }}>
+                Plan access
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: '#1C1917' }}>
+                {currentPlanDisplay.label} is active
+              </div>
+              <div style={{ fontSize: 13, color: '#78716C', marginTop: 4, lineHeight: 1.6 }}>
+                The dashboard shows what is included now and what unlocks next on the upgrade path.
+              </div>
+            </div>
+            <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 10px', borderRadius: 999, background: '#FEF3C7', color: '#92400E', fontSize: 12, fontWeight: 700 }}>
+              {currentPlanPriceLabel}
+            </span>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+            <PlanSummaryCard
+              label="Included now"
+              title={currentPlanDisplay.label}
+              body={currentPlanDisplay.highlights.join(' · ')}
+            />
+            <PlanSummaryCard
+              label="Next unlock"
+              title={nextPlanDisplay?.label ?? 'No higher plan'}
+              body={nextPlanDisplay ? nextPlanDisplay.highlights.join(' · ') : 'You are already on the top plan.'}
+            />
+            <PlanSummaryCard
+              label="Guidance"
+              title={planAccess.currentPlan ? 'Use billing for changes' : 'Plan not loaded'}
+              body={planAccess.currentPlan ? 'Billing manages upgrades, downgrades, and plan access.' : 'Wait for plan access to load.'}
+            />
+          </div>
+        </section>
+      ) : null}
 
       <AiSalesPanel />
       {automationsEnabled ? <AutomationSummaryPanel /> : null}
@@ -662,6 +707,18 @@ function KpiCard({
         {value}
       </div>
       <div style={{ fontSize: 12, color: '#A8A29E', marginTop: 2 }}>{sub}</div>
+    </div>
+  );
+}
+
+function PlanSummaryCard({ label, title, body }: { label: string; title: string; body: string }) {
+  return (
+    <div style={{ border: '1px solid #EEEAE4', borderRadius: 14, background: '#FAFAF9', padding: '14px 16px' }}>
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#78716C', marginBottom: 6 }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: '#1C1917', marginBottom: 4 }}>{title}</div>
+      <div style={{ fontSize: 12, color: '#57534E', lineHeight: 1.55 }}>{body}</div>
     </div>
   );
 }

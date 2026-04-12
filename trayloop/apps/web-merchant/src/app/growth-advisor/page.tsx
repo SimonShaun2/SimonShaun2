@@ -264,7 +264,7 @@ export default function GrowthAdvisorPage() {
         cancelUrl: usingExistingSubscription
           ? `${window.location.origin}/growth-advisor`
           : `${window.location.origin}/onboarding?billing=cancel`,
-        includeGrowthAdvisor: true,
+        addOns: ['growth_advisor'],
       });
       window.location.href = result.url;
     } catch (err) {

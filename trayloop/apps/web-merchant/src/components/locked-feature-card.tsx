@@ -1,11 +1,12 @@
 'use client';
 
 import {
-  PLAN_DEFINITIONS,
   type FeatureKey,
   type PlanKey,
 } from '@trayloop/types/src/plan-access';
 import { useFeatureAccess } from './plan-access-provider';
+import { getLockedFeaturePresentation } from '../lib/feature-access-display';
+import { getMerchantPlanLabel } from '../lib/plan-copy';
 
 interface LockedFeatureCardProps {
   title: string;
@@ -15,10 +16,6 @@ interface LockedFeatureCardProps {
   ctaHref?: string;
   ctaLabel?: string;
   compact?: boolean;
-}
-
-function planLabel(plan: PlanKey | null) {
-  return plan ? PLAN_DEFINITIONS[plan].label : 'a higher plan';
 }
 
 export default function LockedFeatureCard({
@@ -31,9 +28,16 @@ export default function LockedFeatureCard({
   compact = false,
 }: LockedFeatureCardProps) {
   const access = useFeatureAccess(featureKey);
-
-  const resolvedHref = ctaHref ?? access.upgradeHref;
-  const resolvedLabel = ctaLabel ?? access.upgradeLabel;
+  const presentation = getLockedFeaturePresentation({
+    featureKey,
+    currentPlan: access.currentPlan,
+    enabled: access.enabled,
+    included: access.included,
+    requiredPlan: access.requiredPlan,
+    upgradePlan: access.upgradePlan,
+    ctaHref: ctaHref ?? access.upgradeHref,
+    ctaLabel: ctaLabel ?? access.upgradeLabel,
+  });
 
   return (
     <section
@@ -64,6 +68,12 @@ export default function LockedFeatureCard({
         Locked feature
       </div>
 
+      <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginBottom: 16 }}>
+        <StatTile label="Current plan" value={planLabel(access.currentPlan, 'Not assigned')} />
+        <StatTile label="Availability" value={presentation.availabilityLabel} />
+        <StatTile label="Unlocks on" value={presentation.unlocksOnLabel} />
+      </div>
+
       <h2
         style={{
           margin: 0,
@@ -88,9 +98,14 @@ export default function LockedFeatureCard({
           marginBottom: bullets.length > 0 ? 18 : 0,
         }}
       >
-        <StatTile label="Current plan" value={planLabel(access.currentPlan)} />
-        <StatTile label="Required plan" value={planLabel(access.requiredPlan)} />
-        <StatTile label="Upgrade path" value={planLabel(access.upgradePlan)} />
+        <StatTile label="Required plan" value={planLabel(access.requiredPlan, 'Billing add-on')} />
+        <StatTile label="Upgrade path" value={planLabel(access.upgradePlan, 'Billing add-on')} />
+        <StatTile label="Feature" value={presentation.featureLabel} />
+      </div>
+
+      <div style={{ marginTop: 2, padding: '12px 14px', borderRadius: 12, background: '#FAFAF9', border: '1px solid #EEEAE4', fontSize: 13, color: '#57534E', lineHeight: 1.6 }}>
+        <strong style={{ color: '#1C1917' }}>{presentation.availabilityLabel}:</strong> {presentation.availabilityDetail}
+        {presentation.currentPlanLabel ? ` You are currently on ${presentation.currentPlanLabel}.` : null}
       </div>
 
       {bullets.length > 0 ? (
@@ -115,7 +130,7 @@ export default function LockedFeatureCard({
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <a
-          href={resolvedHref}
+          href={presentation.ctaHref}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -129,7 +144,7 @@ export default function LockedFeatureCard({
             textDecoration: 'none',
           }}
         >
-          {resolvedLabel}
+          {presentation.ctaLabel}
         </a>
         <a
           href="/billing"
@@ -152,6 +167,10 @@ export default function LockedFeatureCard({
       </div>
     </section>
   );
+}
+
+function planLabel(plan: PlanKey | null, fallback: string) {
+  return plan ? getMerchantPlanLabel(plan) : fallback;
 }
 
 function StatTile({ label, value }: { label: string; value: string }) {

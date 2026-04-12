@@ -16,10 +16,10 @@ import {
 import { hasMerchantSession } from '../lib/session';
 import {
   getNextPlan,
-  PLAN_DEFINITIONS,
   type FeatureKey,
   type PlanKey,
 } from '@trayloop/types/src/plan-access';
+import { getFeatureUpgradeCta } from '../lib/feature-access-display';
 
 interface PlanAccessContextValue {
   billing: MerchantBillingSubscription | null;
@@ -110,6 +110,9 @@ export function useFeatureAccess(featureKey: FeatureKey) {
   const context = usePlanAccess();
   const feature = context.getFeature(featureKey);
   const upgradePlan = context.getUpgradePlan(featureKey);
+  const upgradeCta = getFeatureUpgradeCta({
+    upgradePlan,
+  });
 
   return {
     loading: context.loading,
@@ -120,7 +123,7 @@ export function useFeatureAccess(featureKey: FeatureKey) {
     feature,
     requiredPlan: feature?.requiredPlan ?? null,
     upgradePlan,
-    upgradeHref: upgradePlan ? `/billing?upgrade=${upgradePlan}` : '/billing',
-    upgradeLabel: upgradePlan ? `Upgrade to ${PLAN_DEFINITIONS[upgradePlan].label}` : 'View plans',
+    upgradeHref: upgradeCta.href,
+    upgradeLabel: upgradeCta.label,
   };
 }

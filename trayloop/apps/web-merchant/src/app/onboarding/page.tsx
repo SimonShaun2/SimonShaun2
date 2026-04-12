@@ -12,6 +12,10 @@ import {
   syncPaymentStatus,
   type MerchantOnboardingStatus,
 } from '../../lib/api';
+import {
+  getMerchantPlanDisplay,
+  getMerchantPlanPriceLabel,
+} from '../../lib/plan-copy';
 
 const GROWTH_ADVISOR_SELECTION_KEY = 'trayloop-growth-advisor-selected';
 
@@ -31,6 +35,10 @@ function MerchantOnboardingPageContent() {
   const [billingAction, setBillingAction] = useState<'checkout' | 'portal' | null>(null);
   const [billingRedirectStarted, setBillingRedirectStarted] = useState(false);
   const [includeGrowthAdvisor, setIncludeGrowthAdvisor] = useState(false);
+  const currentPlanDisplay = getMerchantPlanDisplay(data?.billing.currentPlan ?? null);
+  const currentPlanLabel = currentPlanDisplay?.label ?? data?.billing.planName ?? 'Launch';
+  const currentPlanPriceLabel = getMerchantPlanPriceLabel(data?.billing.currentPlan ?? null);
+  const nextPlanDisplay = currentPlanDisplay?.nextPlan ? getMerchantPlanDisplay(currentPlanDisplay.nextPlan) : null;
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -152,7 +160,7 @@ function MerchantOnboardingPageContent() {
         plan: data?.billing.currentPlan,
         successUrl: `${window.location.origin}/onboarding?billing=success`,
         cancelUrl: `${window.location.origin}/onboarding?billing=cancel`,
-        includeGrowthAdvisor: growthAdvisorEnabled && includeGrowthAdvisor,
+        addOns: growthAdvisorEnabled && includeGrowthAdvisor ? ['growth_advisor'] : [],
       });
       window.location.href = result.url;
     } catch (err) {
@@ -233,7 +241,7 @@ function MerchantOnboardingPageContent() {
               This workspace is saved, but it is not active until the selected TrayLoop plan is confirmed. The dashboard should only manage billing after signup, not start it for the first time.
             </p>
             <div style={{ ...noteStyle, marginTop: 16 }}>
-              Plan: {data.billing.planName} at ${(data.billing.priceCents / 100).toFixed(0)}/{data.billing.interval}
+              Plan: {currentPlanLabel} at {currentPlanPriceLabel}
             </div>
             {growthAdvisorEnabled && growthAdvisorOffer?.available ? (
               <label
@@ -261,11 +269,21 @@ function MerchantOnboardingPageContent() {
                     <Pill bg="#1C1917" color="#FAFAF9">{`+$${((growthAdvisorOffer.priceCents ?? 0) / 100).toFixed(0)}/${growthAdvisorOffer.interval}`}</Pill>
                   </div>
                   <div style={{ fontSize: 13, color: '#57534E', lineHeight: 1.6 }}>
-                    Attach the premium growth plan add-on during onboarding so the merchant workspace unlocks it immediately after billing syncs.
+                    Add Growth Advisor during onboarding so the merchant workspace unlocks guided strategy help as soon as billing syncs.
                   </div>
                 </div>
               </label>
             ) : null}
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0, 1fr))', gap: 12, marginTop: 16 }}>
+              <InfoTile
+                title={`Included on ${currentPlanLabel}`}
+                body={(currentPlanDisplay?.highlights ?? []).join(', ')}
+              />
+              <InfoTile
+                title={nextPlanDisplay ? `Next unlock: ${nextPlanDisplay.label}` : 'Top plan'}
+                body={nextPlanDisplay ? nextPlanDisplay.highlights.join(', ') : 'Everything in the merchant dashboard is already unlocked on this plan.'}
+              />
+            </div>
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : undefined, gap: 10, marginTop: 18 }}>
               <button type="button" onClick={handleStartSubscription} disabled={billingAction !== null} style={{ ...primaryButtonStyle, width: isMobile ? '100%' : undefined }}>
                 {billingAction === 'checkout' ? 'Redirecting...' : 'Continue Secure Checkout'}
@@ -284,7 +302,7 @@ function MerchantOnboardingPageContent() {
         <div>
           <h1 style={{ ...headingStyle, fontSize: isMobile ? 24 : headingStyle.fontSize }}>Launch Setup</h1>
           <p style={{ margin: '6px 0 0', color: '#78716C', fontSize: 14, maxWidth: 720 }}>
-            Finish the remaining launch steps after billing is in place.
+            Finish the remaining launch steps after billing is in place. Your current plan is {currentPlanLabel}, which determines what the dashboard will unlock next.
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -308,6 +326,29 @@ function MerchantOnboardingPageContent() {
         <SummaryCard label="Storefront" value={data.readiness.canLaunchStorefront ? 'Ready to launch' : 'Needs review'} sub={data.storefront.storefrontUrl} />
       </div>
 
+      <section style={{ ...sectionStyle, marginBottom: 24 }}>
+        <header style={{ marginBottom: 16 }}>
+          <h2 style={sectionTitleStyle}>Plan access inside the dashboard</h2>
+          <p style={sectionSubtitleStyle}>
+            Launch Center, billing, and the merchant dashboard all read from the same plan model. What is included now will appear unlocked, and anything higher will show the correct upgrade path.
+          </p>
+        </header>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
+          <InfoTile
+            title={`Included on ${currentPlanLabel}`}
+            body={(currentPlanDisplay?.highlights ?? []).join(', ')}
+          />
+          <InfoTile
+            title={nextPlanDisplay ? `Unlock with ${nextPlanDisplay.label}` : 'Top plan unlocked'}
+            body={nextPlanDisplay ? nextPlanDisplay.highlights.join(', ') : 'This merchant already has the highest available plan tier.'}
+          />
+          <InfoTile
+            title="Where you will see it"
+            body="Dashboard widgets, automations, customer insights, analytics, and upgrade prompts all follow this plan access model."
+          />
+        </div>
+      </section>
+
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1.5fr) minmax(280px, 1fr)', gap: 20 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           <SectionCard
@@ -319,6 +360,9 @@ function MerchantOnboardingPageContent() {
               <Pill bg={billingBadge.bg} color={billingBadge.color}>{billingBadge.label}</Pill>
             </div>
             <p style={bodyStyle}>{billingDetail(data)}</p>
+            <div style={{ ...noteStyle, marginTop: 12, background: '#FAFAF9', borderColor: '#E7E5E4', color: '#57534E' }}>
+              This workspace is on {currentPlanLabel}, so the dashboard will show the features included in that plan and gray out the rest.
+            </div>
             {data.billing.subscription?.trialEnd ? (
               <div style={noteStyle}>
                 Legacy intro period ends on {new Date(data.billing.subscription.trialEnd).toLocaleDateString()}.
@@ -331,7 +375,7 @@ function MerchantOnboardingPageContent() {
                   ? 'Redirecting...'
                   : data.billing.state === 'canceled'
                     ? 'Resubscribe'
-                    : `Resume ${data.billing.planName}`}
+                    : `Resume ${currentPlanLabel}`}
               </button>
             ) : null}
               {data.billing.canManage ? (
@@ -343,7 +387,7 @@ function MerchantOnboardingPageContent() {
             </div>
             {growthAdvisorEnabled && growthAdvisorOffer?.available && !growthAdvisorOffer.enabled ? (
               <div style={{ ...noteStyle, marginTop: 14 }}>
-                Growth Advisor stays hidden until it is purchased. Add it during onboarding checkout to unlock the premium strategy workspace right away.
+                Growth Advisor stays hidden until it is purchased. Add it during onboarding checkout to unlock the premium Engine strategy workspace right away.
               </div>
             ) : null}
           </SectionCard>
@@ -494,13 +538,13 @@ function billingDetail(data: MerchantOnboardingStatus) {
     case 'active':
       return data.billing.subscription?.currentPeriodEnd
         ? `Next billing on ${new Date(data.billing.subscription.currentPeriodEnd).toLocaleDateString()}.`
-        : `${data.billing.planName} is active.`;
+        : `${getMerchantPlanDisplay(data.billing.currentPlan)?.label ?? data.billing.planName} is active.`;
     case 'past_due':
       return 'Your subscription needs a payment method update to stay healthy.';
     case 'unpaid':
       return 'Stripe marked the subscription unpaid. Open billing to resolve it.';
     case 'canceled':
-      return `Resubscribe to reactivate ${data.billing.planName} for this workspace.`;
+      return `Resubscribe to reactivate ${getMerchantPlanDisplay(data.billing.currentPlan)?.label ?? data.billing.planName} for this workspace.`;
     default:
       return 'Billing setup must be completed during signup before launch setup can continue.';
   }
@@ -597,6 +641,19 @@ function ChecklistRow({
   );
 }
 
+function InfoTile({ title, body }: { title: string; body: string }) {
+  return (
+    <div style={{ border: '1px solid #EEEAE4', borderRadius: 12, padding: '14px 16px', background: '#FAFAF9' }}>
+      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#78716C', marginBottom: 6 }}>
+        {title}
+      </div>
+      <div style={{ fontSize: 13, color: '#57534E', lineHeight: 1.65 }}>
+        {body}
+      </div>
+    </div>
+  );
+}
+
 function Pill({ children, bg, color }: { children: React.ReactNode; bg: string; color: string }) {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 10px', borderRadius: 999, background: bg, color, fontSize: 12, fontWeight: 700 }}>
@@ -626,6 +683,27 @@ const noteStyle: React.CSSProperties = {
   padding: '12px 14px',
   fontSize: 13,
   color: '#78350F',
+  lineHeight: 1.6,
+};
+
+const sectionStyle: React.CSSProperties = {
+  border: '1px solid #E7E5E4',
+  borderRadius: 14,
+  background: '#FFFFFF',
+  padding: 22,
+};
+
+const sectionTitleStyle: React.CSSProperties = {
+  fontSize: 18,
+  fontWeight: 700,
+  color: '#1C1917',
+  margin: 0,
+};
+
+const sectionSubtitleStyle: React.CSSProperties = {
+  fontSize: 13,
+  color: '#78716C',
+  margin: '6px 0 0',
   lineHeight: 1.6,
 };
 

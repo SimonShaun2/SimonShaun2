@@ -100,8 +100,8 @@ export default function CustomersPage() {
     return (
       <LockedFeatureCard
         featureKey="customers.basic_insights"
-        title="Customer insights unlock on Pro"
-        description="Pro gives merchants a clear view of repeat customers, total spend, and order recency so they can make better catering decisions."
+        title="Customer insights unlock on Momentum"
+        description="Momentum gives merchants a clear view of repeat customers, total spend, and order recency so they can make better catering decisions."
         bullets={[
           'See repeat customers and ordering momentum',
           'Review spend, recency, and order history in one place',

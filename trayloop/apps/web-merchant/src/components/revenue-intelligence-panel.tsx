@@ -94,8 +94,8 @@ export default function RevenueIntelligencePanel() {
         <LockedFeatureCard
           compact
           featureKey="analytics.advanced"
-          title="Advanced revenue intelligence unlocks on Growth"
-          description="Starter and Pro keep the operational basics. Growth adds AI insights, customer health, at-risk revenue signals, and deeper revenue analysis."
+          title="Advanced revenue intelligence unlocks on Engine"
+          description="Launch and Momentum keep the operational basics. Engine adds AI insights, customer health, at-risk revenue signals, and deeper revenue analysis."
           bullets={[
             'Spot at-risk catering accounts before they churn',
             'See repeat vs new revenue mix and customer health',

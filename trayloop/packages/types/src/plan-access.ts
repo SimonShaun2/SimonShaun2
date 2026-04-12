@@ -6,6 +6,21 @@ export const BILLING_CYCLE_KEYS = ['monthly', 'annual'] as const;
 
 export type BillingCycleKey = (typeof BILLING_CYCLE_KEYS)[number];
 
+export const ENTITLEMENT_SOURCE_KEYS = [
+  'plan',
+  'subscription',
+  'add_on',
+  'promo',
+  'trial',
+  'manual',
+] as const;
+
+export type EntitlementSourceKey = (typeof ENTITLEMENT_SOURCE_KEYS)[number];
+
+export const SHARED_ENTITLEMENT_KEYS = ['growth_advisor'] as const;
+
+export type SharedEntitlementKey = (typeof SHARED_ENTITLEMENT_KEYS)[number];
+
 export const FEATURE_KEYS = [
   'storefront.basic',
   'orders.basic_intake',
@@ -34,6 +49,14 @@ export const FEATURE_KEYS = [
 
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 
+export interface SharedEntitlementDefinition {
+  key: SharedEntitlementKey;
+  label: string;
+  description: string;
+  monthlyPriceCents: number;
+  interval: 'month';
+}
+
 export interface PlanDefinition {
   key: PlanKey;
   label: string;
@@ -45,20 +68,30 @@ export const PLAN_DEFINITIONS: Record<PlanKey, PlanDefinition> = {
   starter: {
     key: 'starter',
     label: 'Launch',
-    monthlyPriceCents: 4900,
+    monthlyPriceCents: 2900,
     description: 'Core infrastructure for direct catering orders.',
   },
   pro: {
     key: 'pro',
     label: 'Momentum',
-    monthlyPriceCents: 14900,
+    monthlyPriceCents: 9900,
     description: 'Recurring ordering and operational optimization tools.',
   },
   growth: {
     key: 'growth',
     label: 'Engine',
-    monthlyPriceCents: 19900,
+    monthlyPriceCents: 14900,
     description: 'AI-driven repeat revenue, campaigns, and growth intelligence.',
+  },
+};
+
+export const SHARED_ENTITLEMENT_DEFINITIONS: Record<SharedEntitlementKey, SharedEntitlementDefinition> = {
+  growth_advisor: {
+    key: 'growth_advisor',
+    label: 'Growth Advisor',
+    description: 'AI growth guidance and launch planning.',
+    monthlyPriceCents: 9900,
+    interval: 'month',
   },
 };
 
@@ -102,4 +135,8 @@ export function getNextPlan(plan: PlanKey): PlanKey | null {
 
 export function planIncludesFeature(plan: PlanKey, featureKey: FeatureKey) {
   return PLAN_FEATURES[plan].includes(featureKey);
+}
+
+export function getSharedEntitlementDefinition(key: SharedEntitlementKey): SharedEntitlementDefinition {
+  return SHARED_ENTITLEMENT_DEFINITIONS[key];
 }

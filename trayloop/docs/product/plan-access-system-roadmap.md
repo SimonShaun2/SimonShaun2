@@ -1,6 +1,6 @@
 # Plan Access System
 
-TrayLoop's plan access initiative makes Starter, Pro, and Growth real across billing, backend authorization, frontend visibility, and future add-ons.
+TrayLoop's plan access initiative makes Launch, Momentum, and Engine real across billing, backend authorization, frontend visibility, and future add-ons.
 
 ## PAS-1: Foundation
 - Add typed plans: `starter`, `pro`, `growth`
@@ -30,6 +30,7 @@ TrayLoop's plan access initiative makes Starter, Pro, and Growth real across bil
 - Support base plans plus add-ons
 - Support promo unlocks and trials
 - Migrate Growth Advisor to the shared entitlement model
+- Keep onboarding and billing plan messaging aligned with the live product catalog
 
 ## PAS-6: Verification
 - Add entitlement-focused tests

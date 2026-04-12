@@ -9,4 +9,5 @@ export * from './follow-up.js';
 export * from './notification.js';
 export * from './api.js';
 export * from './events.js';
+export * from './entitlements.js';
 export * from './plan-access.js';

@@ -7,11 +7,12 @@ import { createBillingCheckout } from '../../lib/api';
 import { growthAdvisorEnabled } from '../../lib/features';
 import { ensureMerchantSession, hasMerchantSession, markMerchantSession } from '../../lib/session';
 import { useMobile } from '../../lib/use-mobile';
-import { PLAN_DEFINITIONS, type PlanKey } from '@trayloop/types/src/plan-access';
+import { type PlanKey } from '@trayloop/types/src/plan-access';
+import { getMerchantPlanDisplay, getMerchantPlanPriceLabel } from '../../lib/plan-copy';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const DEFAULT_PLAN: PlanKey = 'starter';
-const DEFAULT_PLAN_DEFINITION = PLAN_DEFINITIONS[DEFAULT_PLAN];
+const DEFAULT_PLAN_DEFINITION = getMerchantPlanDisplay(DEFAULT_PLAN)!;
 const GROWTH_ADVISOR_SELECTION_KEY = 'trayloop-growth-advisor-selected';
 
 type Step = 'plan' | 'details';
@@ -150,7 +151,7 @@ function RegisterContent() {
           plan: selectedPlan,
           successUrl: `${window.location.origin}/onboarding?welcome=1&billing=success`,
           cancelUrl: `${window.location.origin}/onboarding?welcome=1&billing=cancel`,
-          includeGrowthAdvisor,
+          addOns: includeGrowthAdvisor ? ['growth_advisor'] : [],
         });
         window.location.href = result.url;
       } catch {
@@ -243,9 +244,9 @@ function RegisterContent() {
               </div>
               <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'flex-start', gap: 12, marginBottom: 14 }}>
                 <div>
-                  <div style={{ fontSize: isMobile ? 20 : 22, fontWeight: 700, color: '#1C1917' }}>{DEFAULT_PLAN_DEFINITION.label}</div>
+                <div style={{ fontSize: isMobile ? 20 : 22, fontWeight: 700, color: '#1C1917' }}>{DEFAULT_PLAN_DEFINITION.label}</div>
                   <div style={{ fontSize: 14, color: '#57534E', marginTop: 6 }}>
-                    {`$${(DEFAULT_PLAN_DEFINITION.monthlyPriceCents / 100).toFixed(0)}/month`}
+                    {getMerchantPlanPriceLabel(DEFAULT_PLAN)}
                   </div>
                 </div>
                 <div style={{ display: 'inline-flex', alignItems: 'center', alignSelf: isMobile ? 'flex-start' : 'auto', borderRadius: 999, background: '#F5F5F4', color: '#57534E', fontSize: 12, fontWeight: 700, padding: '6px 10px' }}>
@@ -386,7 +387,7 @@ function RegisterContent() {
         </p>
 
         <div style={{ display: 'grid', gap: 12, marginTop: 20 }}>
-          <SideCard title={`1. ${DEFAULT_PLAN_DEFINITION.label} is selected`} body={`The $${(DEFAULT_PLAN_DEFINITION.monthlyPriceCents / 100).toFixed(0)}/month plan is already preselected so merchants can move straight into signup.`} />
+          <SideCard title={`1. ${DEFAULT_PLAN_DEFINITION.label} is selected`} body={`The ${getMerchantPlanPriceLabel(DEFAULT_PLAN)} plan is already preselected so merchants can move straight into signup.`} />
           <SideCard title="2. Create your workspace" body="Set up your owner account and business profile in one step." />
           <SideCard title="3. Complete billing and go live" body="Secure checkout opens automatically, then you can build your menu and launch the storefront." />
         </div>

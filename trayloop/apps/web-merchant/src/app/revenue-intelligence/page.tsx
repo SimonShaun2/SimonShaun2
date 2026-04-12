@@ -76,8 +76,8 @@ export default function RevenueIntelligencePage() {
     return (
       <LockedFeatureCard
         featureKey="analytics.advanced"
-        title="Catering Revenue Report unlocks on Growth"
-        description="Growth turns reporting into an action engine with AI insights, customer health, revenue mix, and at-risk opportunity tracking."
+        title="Catering Revenue Report unlocks on Engine"
+        description="Engine turns reporting into an action engine with AI insights, customer health, revenue mix, and at-risk opportunity tracking."
         bullets={[
           'See at-risk customers and dormant revenue clearly',
           'Track repeat vs new revenue mix over time',

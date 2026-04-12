@@ -7,6 +7,12 @@ import {
   type PlanKey,
   getPlanFeatures,
 } from '@trayloop/types';
+import {
+  SHARED_ENTITLEMENT_DEFINITIONS,
+  SHARED_ENTITLEMENT_KEYS,
+  type EntitlementSourceKey,
+  type SharedEntitlementKey,
+} from '@trayloop/types';
 import { eq } from 'drizzle-orm';
 import type Stripe from 'stripe';
 import {
@@ -17,11 +23,9 @@ import {
   normalizePlanKey,
   resolveUpgradePlan,
 } from './plan-access.js';
-import { getGrowthAdvisorPriceId } from './stripe.js';
+import { getConfiguredSharedEntitlementPriceIds } from './stripe.js';
 
 export const GROWTH_ADVISOR_FEATURE_KEY = 'growth_advisor' as const;
-export const GROWTH_ADVISOR_PRICE_CENTS = 9900;
-export const GROWTH_ADVISOR_INTERVAL = 'month' as const;
 
 export type FeatureAccessState = ResolvedFeatureAccess;
 
@@ -33,12 +37,15 @@ export interface OrganizationFeatureEntitlements {
   growthAdvisor: FeatureAccessState;
 }
 
+const SHARED_ENTITLEMENT_KEY_SET = new Set<SharedEntitlementKey>(SHARED_ENTITLEMENT_KEYS);
+
 function buildBaseFeatureState(currentPlan: PlanKey, featureKey: FeatureKey): FeatureAccessState {
   const requiredPlan = getMinimumPlanForFeature(featureKey);
   const upgradeToPlan = resolveUpgradePlan(currentPlan, featureKey);
 
   return {
     key: featureKey,
+    kind: 'plan_feature',
     included: getPlanFeatures(currentPlan).includes(featureKey),
     enabled: getPlanFeatures(currentPlan).includes(featureKey),
     source: getPlanFeatures(currentPlan).includes(featureKey) ? 'plan' : null,
@@ -52,9 +59,13 @@ function buildBaseFeatureState(currentPlan: PlanKey, featureKey: FeatureKey): Fe
   };
 }
 
-function buildGrowthAdvisorState(): FeatureAccessState {
+function buildSharedEntitlementState(entitlementKey: SharedEntitlementKey): FeatureAccessState {
+  const definition = SHARED_ENTITLEMENT_DEFINITIONS[entitlementKey];
+  const configuredPriceIds = getConfiguredSharedEntitlementPriceIds();
+
   return {
-    key: GROWTH_ADVISOR_FEATURE_KEY,
+    key: entitlementKey,
+    kind: 'shared_add_on',
     included: false,
     enabled: false,
     source: null,
@@ -62,17 +73,17 @@ function buildGrowthAdvisorState(): FeatureAccessState {
     upgradeToPlan: null,
     stripePriceId: null,
     stripeSubscriptionItemId: null,
-    available: Boolean(getGrowthAdvisorPriceId()),
-    priceCents: GROWTH_ADVISOR_PRICE_CENTS,
-    interval: GROWTH_ADVISOR_INTERVAL,
+    available: Boolean(configuredPriceIds[entitlementKey]),
+    priceCents: definition.monthlyPriceCents,
+    interval: definition.interval,
   };
 }
 
 function buildFeatureMap(currentPlan: PlanKey): ResolvedFeatureMap {
   return FEATURE_KEYS.reduce<ResolvedFeatureMap>((accumulator, featureKey) => {
     accumulator[featureKey] =
-      featureKey === GROWTH_ADVISOR_FEATURE_KEY
-        ? buildGrowthAdvisorState()
+      SHARED_ENTITLEMENT_KEY_SET.has(featureKey as SharedEntitlementKey)
+        ? buildSharedEntitlementState(featureKey as SharedEntitlementKey)
         : buildBaseFeatureState(currentPlan, featureKey);
 
     return accumulator;
@@ -115,6 +126,7 @@ export async function getOrganizationFeatureEntitlements(orgId: string): Promise
     .where(eq(organizationFeatures.organizationId, orgId));
 
   const byKey = buildFeatureMap(currentPlan);
+  const configuredSharedEntitlementPriceIds = getConfiguredSharedEntitlementPriceIds();
 
   for (const row of rows) {
     const current = byKey[row.featureKey];
@@ -123,18 +135,26 @@ export async function getOrganizationFeatureEntitlements(orgId: string): Promise
       continue;
     }
 
+    const isSharedEntitlement = SHARED_ENTITLEMENT_KEY_SET.has(row.featureKey as SharedEntitlementKey);
+    const configuredPriceId = isSharedEntitlement
+      ? configuredSharedEntitlementPriceIds[row.featureKey as SharedEntitlementKey]
+      : null;
     const enabled = current.included || row.enabled;
+    const source = (row.source ?? current.source ?? null) as EntitlementSourceKey | null;
 
     byKey[row.featureKey] = {
       ...current,
+      kind: isSharedEntitlement ? 'shared_add_on' : 'plan_feature',
       enabled,
-      source: current.included ? 'plan' : (row.source ?? current.source),
-      stripePriceId: row.stripePriceId,
+      source: current.included ? 'plan' : source,
+      stripePriceId: row.stripePriceId ?? configuredPriceId,
       stripeSubscriptionItemId: row.stripeSubscriptionItemId,
       available:
-        row.featureKey === GROWTH_ADVISOR_FEATURE_KEY
-          ? Boolean(getGrowthAdvisorPriceId())
-          : !enabled && current.upgradeToPlan !== null,
+        current.included
+          ? false
+          : isSharedEntitlement
+            ? enabled || Boolean(row.stripePriceId ?? configuredPriceId)
+            : current.upgradeToPlan !== null,
     };
   }
 
@@ -160,6 +180,7 @@ async function upsertSubscriptionFeatureState(input: {
   organizationId: string;
   featureKey: FeatureKey;
   enabled: boolean;
+  source: EntitlementSourceKey;
   stripePriceId: string | null;
   stripeSubscriptionItemId: string | null;
 }) {
@@ -169,7 +190,7 @@ async function upsertSubscriptionFeatureState(input: {
       organizationId: input.organizationId,
       featureKey: input.featureKey,
       enabled: input.enabled,
-      source: 'subscription',
+      source: input.source,
       stripePriceId: input.stripePriceId,
       stripeSubscriptionItemId: input.stripeSubscriptionItemId,
       updatedAt: new Date(),
@@ -178,7 +199,7 @@ async function upsertSubscriptionFeatureState(input: {
       target: [organizationFeatures.organizationId, organizationFeatures.featureKey],
       set: {
         enabled: input.enabled,
-        source: 'subscription',
+        source: input.source,
         stripePriceId: input.stripePriceId,
         stripeSubscriptionItemId: input.stripeSubscriptionItemId,
         updatedAt: new Date(),
@@ -190,27 +211,27 @@ export async function syncSubscriptionFeatureEntitlements(
   organizationId: string,
   subscription: Pick<Stripe.Subscription, 'status' | 'items'>,
 ) {
-  const growthAdvisorPriceId = getGrowthAdvisorPriceId();
   const subscriptionIsActive = subscription.status !== 'canceled' && subscription.status !== 'incomplete_expired';
+  const configuredSharedEntitlementPriceIds = getConfiguredSharedEntitlementPriceIds();
 
-  if (!growthAdvisorPriceId) {
+  for (const entitlementKey of SHARED_ENTITLEMENT_KEYS) {
+    const configuredPriceId = configuredSharedEntitlementPriceIds[entitlementKey];
+    const matchingItem = configuredPriceId
+      ? subscription.items.data.find((item) => item.price?.id === configuredPriceId)
+      : null;
+    const source: EntitlementSourceKey = matchingItem
+      ? subscription.status === 'trialing'
+        ? 'trial'
+        : 'add_on'
+      : 'manual';
+
     await upsertSubscriptionFeatureState({
       organizationId,
-      featureKey: GROWTH_ADVISOR_FEATURE_KEY,
-      enabled: false,
-      stripePriceId: null,
-      stripeSubscriptionItemId: null,
+      featureKey: entitlementKey,
+      enabled: Boolean(matchingItem && subscriptionIsActive),
+      source,
+      stripePriceId: matchingItem?.price?.id ?? configuredPriceId ?? null,
+      stripeSubscriptionItemId: matchingItem?.id ?? null,
     });
-    return;
   }
-
-  const matchingItem = subscription.items.data.find((item) => item.price?.id === growthAdvisorPriceId);
-
-  await upsertSubscriptionFeatureState({
-    organizationId,
-    featureKey: GROWTH_ADVISOR_FEATURE_KEY,
-    enabled: Boolean(matchingItem && subscriptionIsActive),
-    stripePriceId: matchingItem?.price?.id ?? growthAdvisorPriceId,
-    stripeSubscriptionItemId: matchingItem?.id ?? null,
-  });
 }

@@ -9,6 +9,7 @@ import { apiFetch, fetchStorefrontContext, type MerchantStorefrontContext } from
 import { automationsEnabled, growthAdvisorEnabled } from '../lib/features';
 import { usePlanAccess } from './plan-access-provider';
 import { useMobile } from '../lib/use-mobile';
+import { getMerchantPlanDisplay } from '../lib/plan-copy';
 
 const NAV_ITEMS = [
   { href: '/', label: 'Dashboard', section: 'workspace' },
@@ -37,6 +38,7 @@ export default function NavBar() {
   const [orgName, setOrgName] = useState<string | null>(null);
   const [defaultLocationName, setDefaultLocationName] = useState<string | null>(null);
   const hasGrowthAdvisorAccess = Boolean(billing?.features?.growthAdvisor?.enabled);
+  const currentPlanDisplay = getMerchantPlanDisplay(billing?.currentPlan ?? null);
 
   const visibleNavItems = NAV_ITEMS.filter((item) => {
     if (item.href === '/automations' && !automationsEnabled) return false;
@@ -101,7 +103,7 @@ export default function NavBar() {
             textTransform: 'uppercase',
             flexShrink: 0,
           }}
-        >
+          >
           Add-on
         </span>
       );
@@ -303,7 +305,9 @@ export default function NavBar() {
             <div style={{ fontSize: 12, color: '#E7E5E4', fontWeight: 600, marginTop: 2 }}>
               {orgName ?? 'Merchant Dashboard'}
             </div>
-            <div style={{ fontSize: 11, color: '#A8A29E' }}>Merchant Dashboard</div>
+            <div style={{ fontSize: 11, color: '#A8A29E' }}>
+              {currentPlanDisplay ? `${currentPlanDisplay.label} plan` : 'Merchant Dashboard'}
+            </div>
           </div>
         </a>
       </div>
@@ -323,6 +327,11 @@ export default function NavBar() {
               <div style={{ fontSize: 12, color: '#D6D3D1', marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {storefrontUrl ?? 'Link available after setup'}
               </div>
+              {currentPlanDisplay ? (
+                <div style={{ fontSize: 11, color: '#A8A29E', marginTop: 4 }}>
+                  {currentPlanDisplay.label} · {`$${(currentPlanDisplay.priceCents / 100).toFixed(0)}/mo`}
+                </div>
+              ) : null}
               {defaultLocationName ? (
                 <div style={{ fontSize: 11, color: '#A8A29E', marginTop: 4 }}>
                   Default location: {defaultLocationName}

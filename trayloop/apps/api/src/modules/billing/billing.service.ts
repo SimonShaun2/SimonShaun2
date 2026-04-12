@@ -2,9 +2,10 @@ import { db, organizations, subscriptions, users } from '@trayloop/database';
 import { eq } from 'drizzle-orm';
 import { ValidationError } from '../../lib/errors.js';
 import {
-  getGrowthAdvisorPriceId,
   getPlanForStripePriceId,
+  getConfiguredSharedEntitlementPriceIds,
   getStripe,
+  getSharedEntitlementPriceId,
   getSubscriptionPriceId,
   getSubscriptionTrialDays,
   isStripeEnabled,
@@ -13,7 +14,15 @@ import { getOrganizationFeatureEntitlements, syncSubscriptionFeatureEntitlements
 import { logger } from '@trayloop/utils';
 import type { BillingCheckoutInput, BillingPortalInput } from './billing.schema.js';
 import Stripe from 'stripe';
-import { PLAN_DEFINITIONS, type BillingCycleKey, type PlanKey } from '@trayloop/types';
+import {
+  PLAN_DEFINITIONS,
+  type BillingCycleKey,
+  type PlanKey,
+} from '@trayloop/types';
+import {
+  SHARED_ENTITLEMENT_DEFINITIONS,
+  type SharedEntitlementKey,
+} from '@trayloop/types';
 
 type BillingState = 'not_started' | 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid';
 type LocalSubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid';
@@ -93,6 +102,34 @@ function getPlanDisplay(plan: PlanKey, billingCycle: BillingCycleKey) {
     priceCents: definition.monthlyPriceCents,
     interval: getIntervalLabel(billingCycle),
   };
+}
+
+function resolveCheckoutSharedEntitlements(input: BillingCheckoutInput): SharedEntitlementKey[] {
+  const selected = new Set<SharedEntitlementKey>(input.addOns ?? []);
+
+  if (input.includeGrowthAdvisor) {
+    selected.add('growth_advisor');
+  }
+
+  return [...selected];
+}
+
+function getSharedEntitlementLineItems(sharedEntitlementKeys: SharedEntitlementKey[]) {
+  return sharedEntitlementKeys.map((entitlementKey) => {
+    const priceId = getSharedEntitlementPriceId(entitlementKey);
+
+    if (!priceId) {
+      const label = SHARED_ENTITLEMENT_DEFINITIONS[entitlementKey].label;
+      throw new ValidationError(
+        `${label} add-on is not configured yet. Set the matching Stripe price ID before selling it.`,
+      );
+    }
+
+    return {
+      entitlementKey,
+      priceId,
+    };
+  });
 }
 
 function resolvePersistedPlan(input: {
@@ -401,7 +438,7 @@ async function updateBasePlanOnExistingSubscription(
   record: Awaited<ReturnType<typeof getBillingRecord>>,
   input: BillingCheckoutInput,
   targetPlan: PlanKey,
-  includeGrowthAdvisor: boolean,
+  sharedEntitlementKeys: SharedEntitlementKey[],
 ) {
   const subscription = await getStripeSubscriptionForRecord(record);
   const fallbackPlan = resolvePersistedPlan({
@@ -411,14 +448,25 @@ async function updateBasePlanOnExistingSubscription(
   const fallbackCycle = resolvePersistedBillingCycle(record.billingCycle);
   const resolvedCurrent = resolvePlanStateFromSubscription(subscription, fallbackPlan, fallbackCycle);
   const targetPriceId = getSubscriptionPriceId(targetPlan, resolvedCurrent.billingCycle);
-  const growthAdvisorPriceId = getGrowthAdvisorPriceId();
-  const existingGrowthAdvisorItem = subscription.items.data.find((item) => item.price?.id === growthAdvisorPriceId);
+  const configuredSharedEntitlementPriceIds = getConfiguredSharedEntitlementPriceIds();
+  const existingSharedEntitlementPriceIds = new Set(
+    subscription.items.data
+      .map((item) => (typeof item.price === 'string' ? item.price : item.price?.id ?? null))
+      .filter((priceId): priceId is string => Boolean(priceId)),
+  );
+  const sharedEntitlementLineItems = getSharedEntitlementLineItems(sharedEntitlementKeys);
 
   if (!resolvedCurrent.basePlanItem) {
     throw new ValidationError('The current base plan could not be identified for this subscription.');
   }
 
-  if (resolvedCurrent.plan === targetPlan && (!includeGrowthAdvisor || existingGrowthAdvisorItem)) {
+  if (
+    resolvedCurrent.plan === targetPlan &&
+    sharedEntitlementKeys.every((entitlementKey) => {
+      const priceId = configuredSharedEntitlementPriceIds[entitlementKey];
+      return priceId ? existingSharedEntitlementPriceIds.has(priceId) : false;
+    })
+  ) {
     await syncSubscriptionSnapshot(
       record.organizationId,
       record.stripeCustomerId!,
@@ -428,14 +476,10 @@ async function updateBasePlanOnExistingSubscription(
     );
 
     throw new ValidationError(
-      includeGrowthAdvisor && existingGrowthAdvisorItem
-        ? 'Growth Advisor is already included in this subscription.'
+      sharedEntitlementKeys.length > 0
+        ? `${sharedEntitlementKeys.map((entitlementKey) => SHARED_ENTITLEMENT_DEFINITIONS[entitlementKey].label).join(', ')} is already included in this subscription.`
         : `${PLAN_DEFINITIONS[targetPlan].label} is already active for this merchant.`,
     );
-  }
-
-  if (includeGrowthAdvisor && !growthAdvisorPriceId) {
-    throw new ValidationError('Growth Advisor add-on is not configured yet. Set STRIPE_GROWTH_ADVISOR_PRICE_ID before selling it.');
   }
 
   const items: Stripe.SubscriptionUpdateParams.Item[] = [
@@ -445,9 +489,13 @@ async function updateBasePlanOnExistingSubscription(
     },
   ];
 
-  if (includeGrowthAdvisor && growthAdvisorPriceId && !existingGrowthAdvisorItem) {
+  for (const sharedEntitlement of sharedEntitlementLineItems) {
+    if (existingSharedEntitlementPriceIds.has(sharedEntitlement.priceId)) {
+      continue;
+    }
+
     items.push({
-      price: growthAdvisorPriceId,
+      price: sharedEntitlement.priceId,
       quantity: 1,
     });
   }
@@ -472,59 +520,11 @@ async function updateBasePlanOnExistingSubscription(
     stripeSubscriptionId: updatedSubscription.id,
     fromPlan: resolvedCurrent.plan,
     toPlan: targetPlan,
-    includeGrowthAdvisor,
+    sharedEntitlementKeys,
   });
 
   return {
     url: input.successUrl ?? `${getMerchantBaseUrl()}/billing?billing=success&plan=${targetPlan}`,
-    sessionId: updatedSubscription.id,
-  };
-}
-
-async function addGrowthAdvisorToExistingSubscription(
-  record: Awaited<ReturnType<typeof getBillingRecord>>,
-  input: BillingCheckoutInput,
-) {
-  const growthAdvisorPriceId = getGrowthAdvisorPriceId();
-  if (!growthAdvisorPriceId) {
-    throw new ValidationError('Growth Advisor add-on is not configured yet. Set STRIPE_GROWTH_ADVISOR_PRICE_ID before selling it.');
-  }
-
-  const subscription = await getStripeSubscriptionForRecord(record);
-  const existingItem = subscription.items.data.find((item) => item.price?.id === growthAdvisorPriceId);
-  const fallbackPlan = resolvePersistedPlan({
-    organizationPlan: record.organizationPlan,
-    subscriptionPlan: record.subscriptionPlan,
-  });
-  const fallbackCycle = resolvePersistedBillingCycle(record.billingCycle);
-
-  if (existingItem) {
-    await syncSubscriptionSnapshot(record.organizationId, record.stripeCustomerId!, subscription, fallbackPlan, fallbackCycle);
-    throw new ValidationError('Growth Advisor is already included in this subscription.');
-  }
-
-  const stripe = getStripe();
-  const updatedSubscription = await stripe.subscriptions.update(subscription.id, {
-    items: [
-      {
-        price: growthAdvisorPriceId,
-        quantity: 1,
-      },
-    ],
-    proration_behavior: 'always_invoice',
-  });
-
-  await syncSubscriptionSnapshot(record.organizationId, record.stripeCustomerId!, updatedSubscription, fallbackPlan, fallbackCycle);
-
-  logger.info('Growth Advisor added to existing subscription', {
-    organizationId: record.organizationId,
-    stripeCustomerId: record.stripeCustomerId,
-    stripeSubscriptionId: updatedSubscription.id,
-    growthAdvisorPriceId,
-  });
-
-  return {
-    url: input.successUrl ?? `${getMerchantBaseUrl()}/growth-advisor?upgraded=1`,
     sessionId: updatedSubscription.id,
   };
 }
@@ -542,12 +542,13 @@ export async function createCheckoutSession(orgId: string, input: BillingCheckou
   const billingCycle = resolvePersistedBillingCycle(record.billingCycle);
   const targetPlan = input.plan ?? persistedPlan;
   const priceId = getSubscriptionPriceId(targetPlan, billingCycle);
+  const sharedEntitlementKeys = resolveCheckoutSharedEntitlements(input);
   const state = mapSubscriptionStatus(record.status);
   const hasActiveSubscription = state === 'active' || state === 'trialing' || state === 'past_due' || state === 'unpaid';
 
   if (hasActiveSubscription) {
-    if (targetPlan !== persistedPlan || input.includeGrowthAdvisor) {
-      return updateBasePlanOnExistingSubscription(record, input, targetPlan, Boolean(input.includeGrowthAdvisor));
+    if (targetPlan !== persistedPlan || sharedEntitlementKeys.length > 0) {
+      return updateBasePlanOnExistingSubscription(record, input, targetPlan, sharedEntitlementKeys);
     }
 
     throw new ValidationError('A subscription already exists for this merchant. Use manage subscription instead.');
@@ -558,11 +559,7 @@ export async function createCheckoutSession(orgId: string, input: BillingCheckou
   const { successUrl, cancelUrl } = buildCheckoutUrls(input);
   const trialDays = getSubscriptionTrialDays();
   const includeTrialPeriod = !record.stripeSubscriptionId && trialDays > 0;
-  const growthAdvisorPriceId = getGrowthAdvisorPriceId();
-
-  if (input.includeGrowthAdvisor && !growthAdvisorPriceId) {
-    throw new ValidationError('Growth Advisor add-on is not configured yet. Set STRIPE_GROWTH_ADVISOR_PRICE_ID before selling it.');
-  }
+  const sharedEntitlementLineItems = getSharedEntitlementLineItems(sharedEntitlementKeys);
 
   const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
     {
@@ -571,9 +568,9 @@ export async function createCheckoutSession(orgId: string, input: BillingCheckou
     },
   ];
 
-  if (input.includeGrowthAdvisor && growthAdvisorPriceId) {
+  for (const sharedEntitlement of sharedEntitlementLineItems) {
     lineItems.push({
-      price: growthAdvisorPriceId,
+      price: sharedEntitlement.priceId,
       quantity: 1,
     });
   }
@@ -588,13 +585,15 @@ export async function createCheckoutSession(orgId: string, input: BillingCheckou
     metadata: {
       trayloop_org_id: record.organizationId,
       trayloop_billing: 'true',
-      trayloop_growth_advisor: input.includeGrowthAdvisor ? 'true' : 'false',
+      trayloop_growth_advisor: sharedEntitlementKeys.includes('growth_advisor') ? 'true' : 'false',
+      trayloop_shared_entitlements: sharedEntitlementKeys.join(','),
       trayloop_plan: targetPlan,
     },
     subscription_data: {
       metadata: {
         trayloop_org_id: record.organizationId,
         trayloop_org_slug: record.organizationSlug,
+        trayloop_shared_entitlements: sharedEntitlementKeys.join(','),
         trayloop_plan: targetPlan,
       },
       ...(includeTrialPeriod ? { trial_period_days: trialDays } : {}),
@@ -607,6 +606,7 @@ export async function createCheckoutSession(orgId: string, input: BillingCheckou
       checkoutSessionId: session.id,
       plan: targetPlan,
       eligibleForTrial: includeTrialPeriod,
+      sharedEntitlementKeys,
     });
 
   // Persist a placeholder snapshot so billing can self-heal from Stripe even

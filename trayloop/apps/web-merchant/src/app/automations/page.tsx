@@ -92,7 +92,7 @@ export default function AutomationsPage() {
     return (
       <LockedFeatureCard
         featureKey="campaigns.reactivation"
-        title="Operator autopilot is available on Growth"
+        title="Operator autopilot is available on Engine"
         description="Automation is where TrayLoop turns repeat customer outreach into a managed operating system. Upgrade when you want queued reactivation runs, approval-first sends, and autopilot campaign rules."
         bullets={[
           'Run approval-first reorder and reactivation campaigns',

@@ -1,4 +1,5 @@
 import type {
+  SharedEntitlementKey,
   BillingCycleKey,
   FeatureKey,
   PlanKey,
@@ -603,7 +604,13 @@ export async function generateGrowthAdvisor(input: { notes?: string } = {}): Pro
   return response.data;
 }
 
-export async function createBillingCheckout(input: { successUrl?: string; cancelUrl?: string; includeGrowthAdvisor?: boolean; plan?: PlanKey } = {}) {
+export async function createBillingCheckout(input: {
+  successUrl?: string;
+  cancelUrl?: string;
+  includeGrowthAdvisor?: boolean;
+  addOns?: SharedEntitlementKey[];
+  plan?: PlanKey;
+} = {}) {
   const response = await apiFetch('/api/billing/checkout', {
     method: 'POST',
     body: JSON.stringify(input),

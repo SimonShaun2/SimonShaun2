@@ -10,12 +10,14 @@ import {
   getPlanFeatures,
   planIncludesFeature,
 } from '@trayloop/types';
+import type { EntitlementSourceKey } from '@trayloop/types';
 
 export interface ResolvedFeatureAccess {
   key: FeatureKey;
+  kind: 'plan_feature' | 'shared_add_on';
   enabled: boolean;
   included: boolean;
-  source: string | null;
+  source: EntitlementSourceKey | null;
   requiredPlan: PlanKey | null;
   upgradeToPlan: PlanKey | null;
   stripePriceId: string | null;
@@ -71,11 +73,11 @@ export function normalizeBillingCycle(value: string | null | undefined): Billing
 }
 
 export function normalizePlanKey(value: string | null | undefined): PlanKey {
-  if (value === 'starter' || value === 'growth') {
+  if (value === 'starter' || value === 'pro' || value === 'growth') {
     return value;
   }
 
-  return 'pro';
+  return 'starter';
 }
 
 export function getUpgradeTarget(currentPlan: PlanKey): PlanKey | null {

@@ -10,7 +10,12 @@ import {
   type MerchantOnboardingStatus,
 } from '../../lib/api';
 import { merchantResetHref } from '../../lib/session';
-import { PLAN_DEFINITIONS, PLAN_KEYS, type PlanKey } from '@trayloop/types/src/plan-access';
+import { PLAN_KEYS, type FeatureKey, type PlanKey } from '@trayloop/types/src/plan-access';
+import {
+  getFeatureLabel,
+  getMerchantPlanDisplay,
+  getMerchantPlanPriceLabel,
+} from '../../lib/plan-copy';
 
 function MerchantBillingPageContent() {
   const searchParams = useSearchParams();
@@ -19,16 +24,19 @@ function MerchantBillingPageContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [action, setAction] = useState<'checkout' | 'portal' | null>(null);
+  const currentPlanDisplay = getMerchantPlanDisplay(data?.billing.currentPlan ?? null);
+  const currentPlanLabel = currentPlanDisplay?.label ?? data?.billing.planName ?? 'Launch';
+  const currentPlanPriceLabel = getMerchantPlanPriceLabel(data?.billing.currentPlan ?? null);
 
   useEffect(() => {
     void loadBilling();
   }, []);
 
   const statusBanner = useMemo(() => {
-    const billingState = data?.billing.state ?? 'not_started';
-    switch (billingState) {
+      const billingState = data?.billing.state ?? 'not_started';
+      switch (billingState) {
       case 'active':
-        return { tone: 'success' as const, title: `${data?.billing.planName ?? 'Plan'} is active`, body: data?.billing.subscription?.currentPeriodEnd ? `Next billing date: ${new Date(data.billing.subscription.currentPeriodEnd).toLocaleDateString()}.` : 'Your merchant workspace is covered and ready for ongoing billing.' };
+        return { tone: 'success' as const, title: `${currentPlanLabel} is active`, body: data?.billing.subscription?.currentPeriodEnd ? `Next billing date: ${new Date(data.billing.subscription.currentPeriodEnd).toLocaleDateString()}.` : 'Your merchant workspace is covered and ready for ongoing billing.' };
       case 'trialing':
         return {
           tone: 'warning' as const,
@@ -39,7 +47,7 @@ function MerchantBillingPageContent() {
         };
       case 'past_due':
       case 'unpaid':
-        return { tone: 'error' as const, title: 'Billing needs attention', body: `Update your payment method to keep ${data?.billing.planName ?? 'your plan'} healthy and avoid storefront disruption.` };
+        return { tone: 'error' as const, title: 'Billing needs attention', body: `Update your payment method to keep ${currentPlanLabel} healthy and avoid storefront disruption.` };
       case 'canceled':
         return { tone: 'error' as const, title: 'Subscription canceled', body: 'Resubscribe to reactivate the paid TrayLoop workspace for this merchant.' };
       default:
@@ -117,6 +125,12 @@ function MerchantBillingPageContent() {
   const highlightedPlan = PLAN_KEYS.includes((requestedUpgrade ?? '') as PlanKey)
     ? (requestedUpgrade as PlanKey)
     : null;
+  const featureRows: Array<{ featureKey: FeatureKey; plan: PlanKey }> = [
+    { featureKey: 'orders.recurring_schedule', plan: 'pro' },
+    { featureKey: 'customers.basic_insights', plan: 'pro' },
+    { featureKey: 'campaigns.reactivation', plan: 'growth' },
+    { featureKey: 'analytics.advanced', plan: 'growth' },
+  ];
 
   if (data.billing.state === 'not_started') {
     return (
@@ -142,12 +156,12 @@ function MerchantBillingPageContent() {
 
         <section style={{ ...sectionStyle, maxWidth: 760 }}>
           <header style={{ marginBottom: 18 }}>
-            <h2 style={sectionTitleStyle}>{data.billing.planName}</h2>
+            <h2 style={sectionTitleStyle}>{currentPlanLabel}</h2>
             <p style={sectionSubtitleStyle}>Finish the initial subscription checkout, then come back here later to manage billing changes, pausing, or cancellation.</p>
           </header>
 
           <div style={{ display: 'grid', gap: 12, marginBottom: 18 }}>
-            <InfoTile title="Plan" body={`${data.billing.planName} at $${(data.billing.priceCents / 100).toFixed(0)}/${data.billing.interval}.`} />
+            <InfoTile title="Plan" body={`${currentPlanLabel} at ${currentPlanPriceLabel}.`} />
             <InfoTile title="Current state" body="Signup is incomplete until secure checkout is confirmed." />
             <InfoTile title="After activation" body="The billing page becomes the place to manage your subscription, not start it for the first time." />
           </div>
@@ -195,7 +209,7 @@ function MerchantBillingPageContent() {
       <Banner tone={statusBanner.tone} title={statusBanner.title} body={statusBanner.body} />
 
       <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(${isMobile ? 160 : 220}px, 1fr))`, gap: 14, marginBottom: 24 }}>
-        <SummaryCard label="Plan" value={data.billing.planName} sub={`$${(data.billing.priceCents / 100).toFixed(0)}/${data.billing.interval}`} />
+        <SummaryCard label="Plan" value={currentPlanLabel} sub={currentPlanPriceLabel} />
         <SummaryCard label="Status" value={data.billing.state.replace('_', ' ')} sub={data.billing.subscription?.currentPeriodEnd ? `Period ends ${new Date(data.billing.subscription.currentPeriodEnd).toLocaleDateString()}` : 'No subscription yet'} />
         <SummaryCard label="Merchant payouts" value={data.paymentStatus.status === 'ready' ? 'Connected' : 'Needs setup'} sub={data.paymentStatus.chargesEnabled ? 'Customer transactions enabled' : 'Finish Connect onboarding'} />
         <SummaryCard label="Storefront readiness" value={data.readiness.canLaunchStorefront ? 'Launch ready' : 'Blocked'} sub={data.launch.blockers.length === 0 ? 'Billing and payouts aligned' : data.launch.blockers[0]} />
@@ -205,11 +219,11 @@ function MerchantBillingPageContent() {
         <section style={{ ...sectionStyle, padding: isMobile ? 18 : sectionStyle.padding }}>
           <header style={{ marginBottom: 18 }}>
             <h2 style={sectionTitleStyle}>Billing & Plan</h2>
-            <p style={sectionSubtitleStyle}>Start, resume, upgrade, or manage your merchant subscription from here.</p>
+            <p style={sectionSubtitleStyle}>Start, resume, upgrade, or manage your merchant subscription from here. Launch, Momentum, and Engine are the plan names merchants will see across the dashboard.</p>
           </header>
 
           <div style={{ display: 'grid', gap: 12, marginBottom: 18 }}>
-            <InfoTile title="Current plan" body={`${data.billing.planName} at $${(data.billing.priceCents / 100).toFixed(0)}/${data.billing.interval}.`} />
+            <InfoTile title="Current plan" body={`${currentPlanLabel} at ${currentPlanPriceLabel}.`} />
             <InfoTile
               title="Subscription state"
               body={
@@ -218,7 +232,7 @@ function MerchantBillingPageContent() {
                   : `Status: ${data.billing.state.replace('_', ' ')}.`
               }
             />
-            <InfoTile title="What this controls" body={`${data.billing.planName} keeps the storefront live and unlocks the matching merchant platform features for this restaurant.`} />
+            <InfoTile title="What this controls" body={`${currentPlanLabel} keeps the storefront live and unlocks the matching merchant platform features for this restaurant.`} />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : undefined, gap: 10, marginBottom: 18 }}>
@@ -241,7 +255,7 @@ function MerchantBillingPageContent() {
 
           <div style={{ display: 'grid', gap: 12 }}>
             {PLAN_KEYS.map((planKey) => {
-              const definition = PLAN_DEFINITIONS[planKey];
+              const definition = getMerchantPlanDisplay(planKey);
               const isCurrent = data.billing.currentPlan === planKey;
               const isHighlighted = highlightedPlan === planKey;
               const isUpgrade = planOrder(planKey) > planOrder(data.billing.currentPlan);
@@ -257,14 +271,14 @@ function MerchantBillingPageContent() {
                     background: isCurrent ? '#FAFAF9' : '#FFFFFF',
                     boxShadow: isHighlighted ? '0 0 0 1px rgba(232,86,24,0.12)' : 'none',
                   }}
-                >
+                  >
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
                     <div>
-                      <div style={{ fontSize: 17, fontWeight: 700, color: '#1C1917' }}>{definition.label}</div>
-                      <div style={{ fontSize: 13, color: '#57534E', marginTop: 4, lineHeight: 1.6 }}>{definition.description}</div>
+                      <div style={{ fontSize: 17, fontWeight: 700, color: '#1C1917' }}>{definition?.label ?? 'Plan'}</div>
+                      <div style={{ fontSize: 13, color: '#57534E', marginTop: 4, lineHeight: 1.6 }}>{definition?.description ?? ''}</div>
                     </div>
                     <div style={{ textAlign: isMobile ? 'left' : 'right' }}>
-                      <div style={{ fontSize: 18, fontWeight: 700, color: '#1C1917' }}>${(definition.monthlyPriceCents / 100).toFixed(0)}/month</div>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: '#1C1917' }}>{getMerchantPlanPriceLabel(planKey)}</div>
                       {isCurrent ? (
                         <span style={{ display: 'inline-flex', marginTop: 8, padding: '4px 10px', borderRadius: 999, background: '#E7E5E4', color: '#44403C', fontSize: 12, fontWeight: 700 }}>
                           Current plan
@@ -276,7 +290,7 @@ function MerchantBillingPageContent() {
                           disabled={action !== null}
                           style={{ ...secondaryButtonStyle, marginTop: 8 }}
                         >
-                          {action === 'checkout' ? 'Redirecting...' : isUpgrade ? `Upgrade to ${definition.label}` : `Switch to ${definition.label}`}
+                          {action === 'checkout' ? 'Redirecting...' : isUpgrade ? `Upgrade to ${definition?.label ?? 'plan'}` : `Switch to ${definition?.label ?? 'plan'}`}
                         </button>
                       ) : null}
                     </div>
@@ -284,6 +298,38 @@ function MerchantBillingPageContent() {
                 </div>
               );
             })}
+          </div>
+
+          <div style={{ marginTop: 20, padding: '16px 18px', borderRadius: 14, border: '1px solid #F1EFEC', background: '#FAFAF9' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#1C1917', marginBottom: 12 }}>Included vs locked on {currentPlanLabel}</div>
+            <div style={{ display: 'grid', gap: 10 }}>
+              {featureRows.map((row) => {
+                const access = data.billing.features.byKey[row.featureKey];
+                const included = Boolean(access?.included);
+                const enabled = Boolean(access?.enabled);
+                const lockedPlan = getMerchantPlanDisplay(access?.requiredPlan ?? row.plan);
+
+                return (
+                  <div key={row.featureKey} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', padding: '12px 14px', borderRadius: 12, background: '#FFFFFF', border: '1px solid #E7E5E4' }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#1C1917' }}>{getFeatureLabel(row.featureKey)}</div>
+                      <div style={{ fontSize: 12, color: '#78716C', marginTop: 4 }}>
+                        {enabled
+                          ? 'Included and active right now.'
+                          : included
+                            ? 'Included on this plan but not active yet.'
+                            : lockedPlan
+                              ? `Locked until ${lockedPlan.label}.`
+                              : 'Locked on a higher plan.'}
+                      </div>
+                    </div>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', alignSelf: 'flex-start', padding: '4px 10px', borderRadius: 999, background: enabled ? '#DCFCE7' : included ? '#FEF3C7' : '#F5F5F4', color: enabled ? '#166534' : included ? '#92400E' : '#57534E', fontSize: 11, fontWeight: 700 }}>
+                      {enabled ? 'Included' : included ? 'Available' : lockedPlan ? `Unlock on ${lockedPlan.label}` : 'Locked'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </section>
 

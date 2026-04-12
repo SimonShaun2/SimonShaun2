@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import { logger } from '@trayloop/utils';
-import type { BillingCycleKey, PlanKey } from '@trayloop/types';
+import { type BillingCycleKey, type PlanKey } from '@trayloop/types';
+import { type SharedEntitlementKey } from '@trayloop/types';
 
 let stripeClient: Stripe | null = null;
 
@@ -11,7 +12,7 @@ export interface StripeConfig {
   starterPriceId: string | null;
   proPriceId: string | null;
   growthPriceId: string | null;
-  growthAdvisorPriceId: string | null;
+  sharedEntitlementPriceIds: Record<SharedEntitlementKey, string | null>;
   subscriptionTrialDays: number;
 }
 
@@ -47,7 +48,9 @@ function loadConfig(): StripeConfig | null {
     'STRIPE_ENGINE_PRICE',
     'STRIPE_GROWTH_PRICE_ID',
   );
-  const growthAdvisorPriceId = getFirstDefinedEnv('STRIPE_GROWTH_ADVISOR_PRICE_ID');
+  const sharedEntitlementPriceIds: Record<SharedEntitlementKey, string | null> = {
+    growth_advisor: getFirstDefinedEnv('STRIPE_GROWTH_ADVISOR_PRICE_ID'),
+  };
   const subscriptionTrialDays = Number.parseInt(process.env.STRIPE_SUBSCRIPTION_TRIAL_DAYS ?? '0', 10);
 
   if (!secretKey || !publishableKey || !webhookSecret) {
@@ -66,7 +69,7 @@ function loadConfig(): StripeConfig | null {
     starterPriceId,
     proPriceId,
     growthPriceId,
-    growthAdvisorPriceId,
+    sharedEntitlementPriceIds,
     subscriptionTrialDays: Number.isNaN(subscriptionTrialDays) ? 0 : Math.max(0, subscriptionTrialDays),
   };
 }
@@ -142,6 +145,18 @@ export function getConfiguredSubscriptionPriceIds() {
   } satisfies Record<PlanKey, string | null>;
 }
 
+export function getConfiguredSharedEntitlementPriceIds(): Record<SharedEntitlementKey, string | null> {
+  const config = loadConfig();
+
+  return config?.sharedEntitlementPriceIds ?? {
+    growth_advisor: null,
+  };
+}
+
+export function getSharedEntitlementPriceId(entitlementKey: SharedEntitlementKey): string | null {
+  return getConfiguredSharedEntitlementPriceIds()[entitlementKey] ?? null;
+}
+
 export function getSubscriptionPriceId(plan: PlanKey, billingCycle: BillingCycleKey = 'monthly'): string {
   if (billingCycle !== 'monthly') {
     throw new Error(`Stripe ${billingCycle} price is not configured for ${plan}.`);
@@ -183,8 +198,7 @@ export function getSubscriptionTrialDays(): number {
 }
 
 export function getGrowthAdvisorPriceId(): string | null {
-  const config = loadConfig();
-  return config?.growthAdvisorPriceId ?? null;
+  return getSharedEntitlementPriceId('growth_advisor');
 }
 
 export function getStripeMode(): StripeMode {
