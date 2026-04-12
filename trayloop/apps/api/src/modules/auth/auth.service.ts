@@ -108,6 +108,7 @@ export async function registerMerchantWorkspace(input: MerchantWorkspaceRegister
         name: input.organizationName,
         slug: input.organizationSlug,
         phone: input.phone || null,
+        currentPlan: input.selectedPlan,
         ownerId: user.id,
       })
       .returning({

@@ -8,7 +8,7 @@ export const subscriptions = pgTable('subscriptions', {
   stripeCustomerId: text('stripe_customer_id').notNull().unique(),
   stripeSubscriptionId: text('stripe_subscription_id').unique(),
   stripePriceId: text('stripe_price_id'),
-  plan: organizationPlanEnum('plan').notNull().default('pro'),
+  plan: organizationPlanEnum('plan').notNull().default('starter'),
   billingCycle: billingCycleEnum('billing_cycle').notNull().default('monthly'),
   status: subscriptionStatusEnum('status').notNull().default('trialing'),
   trialStart: timestamp('trial_start', { withTimezone: true }),

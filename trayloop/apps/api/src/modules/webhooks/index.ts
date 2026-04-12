@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 import { db } from '@trayloop/database';
 import { customers, deposits, orders, organizations, payments, subscriptions } from '@trayloop/database';
 import { and, eq, inArray } from 'drizzle-orm';
-import { getStripe, getWebhookSecret, isStripeEnabled } from '../../lib/stripe.js';
+import { getPlanForStripePriceId, getStripe, getWebhookSecret, isStripeEnabled } from '../../lib/stripe.js';
 import { recordOrderEvent } from '../../lib/order-events.js';
 import { notifyDepositPaid } from '../../lib/notifications.js';
 import { syncSubscriptionFeatureEntitlements } from '../../lib/organization-features.js';
@@ -92,6 +92,34 @@ function normalizeSubscriptionStatus(status: Stripe.Subscription.Status | string
     default:
       return 'unpaid';
   }
+}
+
+function resolveSubscriptionPlan(subscription: Stripe.Subscription, fallbackPlan: 'starter' | 'pro' | 'growth' = 'starter') {
+  for (const item of subscription.items.data) {
+    const priceId = typeof item.price === 'string' ? item.price : item.price?.id ?? null;
+    const plan = getPlanForStripePriceId(priceId);
+    if (plan) {
+      return {
+        plan,
+        billingCycle: 'monthly' as const,
+        stripePriceId: priceId,
+        primaryItem: item,
+      };
+    }
+  }
+
+  const primaryItem = subscription.items.data[0];
+  const priceId =
+    typeof primaryItem?.price === 'string'
+      ? primaryItem.price
+      : primaryItem?.price?.id ?? null;
+
+  return {
+    plan: fallbackPlan,
+    billingCycle: 'monthly' as const,
+    stripePriceId: priceId,
+    primaryItem,
+  };
 }
 
 async function getDepositBySession(checkoutSessionId: string): Promise<DepositSession | null> {
@@ -187,7 +215,14 @@ async function upsertSubscriptionSnapshot(
     return null;
   }
 
-  const primaryItem = subscription.items.data[0];
+  const [existingOrganization] = await db
+    .select({ currentPlan: organizations.currentPlan })
+    .from(organizations)
+    .where(eq(organizations.id, organizationId))
+    .limit(1);
+
+  const resolvedPlan = resolveSubscriptionPlan(subscription, existingOrganization?.currentPlan ?? 'starter');
+  const primaryItem = resolvedPlan.primaryItem;
   const status = overrideStatus ?? normalizeSubscriptionStatus(subscription.status);
 
   // Stripe API versions may place period dates on the subscription or on individual items.
@@ -203,10 +238,9 @@ async function upsertSubscriptionSnapshot(
       organizationId,
       stripeCustomerId,
       stripeSubscriptionId: subscription.id,
-      stripePriceId:
-        typeof primaryItem?.price === 'string'
-          ? primaryItem.price
-          : primaryItem?.price?.id ?? null,
+      stripePriceId: resolvedPlan.stripePriceId,
+      plan: resolvedPlan.plan,
+      billingCycle: resolvedPlan.billingCycle,
       status,
       trialStart: safeDate(subscription.trial_start),
       trialEnd: safeDate(subscription.trial_end),
@@ -220,10 +254,9 @@ async function upsertSubscriptionSnapshot(
       set: {
         stripeCustomerId,
         stripeSubscriptionId: subscription.id,
-        stripePriceId:
-          typeof primaryItem?.price === 'string'
-            ? primaryItem.price
-            : primaryItem?.price?.id ?? null,
+        stripePriceId: resolvedPlan.stripePriceId,
+        plan: resolvedPlan.plan,
+        billingCycle: resolvedPlan.billingCycle,
         status,
         trialStart: safeDate(subscription.trial_start),
         trialEnd: safeDate(subscription.trial_end),
@@ -240,6 +273,14 @@ async function upsertSubscriptionSnapshot(
       stripeSubscriptionId: subscriptions.stripeSubscriptionId,
       status: subscriptions.status,
     });
+
+  await db
+    .update(organizations)
+    .set({
+      currentPlan: resolvedPlan.plan,
+      updatedAt: new Date(),
+    })
+    .where(eq(organizations.id, organizationId));
 
   await syncSubscriptionFeatureEntitlements(organizationId, subscription);
 

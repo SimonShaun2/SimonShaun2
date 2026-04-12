@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import { logger } from '@trayloop/utils';
+import type { BillingCycleKey, PlanKey } from '@trayloop/types';
 
 let stripeClient: Stripe | null = null;
 
@@ -7,7 +8,9 @@ export interface StripeConfig {
   secretKey: string;
   publishableKey: string;
   webhookSecret: string;
-  subscriptionPriceId: string | null;
+  starterPriceId: string | null;
+  proPriceId: string | null;
+  growthPriceId: string | null;
   growthAdvisorPriceId: string | null;
   subscriptionTrialDays: number;
 }
@@ -18,7 +21,9 @@ function loadConfig(): StripeConfig | null {
   const secretKey = process.env.STRIPE_SECRET_KEY;
   const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  const subscriptionPriceId = process.env.STRIPE_PRICE_ID ?? null;
+  const starterPriceId = process.env.STRIPE_STARTER_PRICE_ID ?? process.env.STRIPE_PRICE_ID ?? null;
+  const proPriceId = process.env.STRIPE_PRO_PRICE_ID ?? null;
+  const growthPriceId = process.env.STRIPE_GROWTH_PRICE_ID ?? null;
   const growthAdvisorPriceId = process.env.STRIPE_GROWTH_ADVISOR_PRICE_ID ?? null;
   const subscriptionTrialDays = Number.parseInt(process.env.STRIPE_SUBSCRIPTION_TRIAL_DAYS ?? '0', 10);
 
@@ -35,7 +40,9 @@ function loadConfig(): StripeConfig | null {
     secretKey,
     publishableKey,
     webhookSecret,
-    subscriptionPriceId,
+    starterPriceId,
+    proPriceId,
+    growthPriceId,
     growthAdvisorPriceId,
     subscriptionTrialDays: Number.isNaN(subscriptionTrialDays) ? 0 : Math.max(0, subscriptionTrialDays),
   };
@@ -102,12 +109,49 @@ export function getWebhookSecret(): string {
   return config.webhookSecret;
 }
 
-export function getSubscriptionPriceId(): string {
+export function getConfiguredSubscriptionPriceIds() {
   const config = loadConfig();
-  if (!config?.subscriptionPriceId) {
-    throw new Error('Stripe subscription price is not configured. Set STRIPE_PRICE_ID.');
+
+  return {
+    starter: config?.starterPriceId ?? null,
+    pro: config?.proPriceId ?? null,
+    growth: config?.growthPriceId ?? null,
+  } satisfies Record<PlanKey, string | null>;
+}
+
+export function getSubscriptionPriceId(plan: PlanKey, billingCycle: BillingCycleKey = 'monthly'): string {
+  if (billingCycle !== 'monthly') {
+    throw new Error(`Stripe ${billingCycle} price is not configured for ${plan}.`);
   }
-  return config.subscriptionPriceId;
+
+  const configured = getConfiguredSubscriptionPriceIds()[plan];
+
+  if (!configured) {
+    const envName =
+      plan === 'starter'
+        ? 'STRIPE_STARTER_PRICE_ID'
+        : plan === 'pro'
+          ? 'STRIPE_PRO_PRICE_ID'
+          : 'STRIPE_GROWTH_PRICE_ID';
+    throw new Error(`Stripe subscription price is not configured for ${plan}. Set ${envName}.`);
+  }
+
+  return configured;
+}
+
+export function getPlanForStripePriceId(priceId: string | null | undefined): PlanKey | null {
+  if (!priceId) {
+    return null;
+  }
+
+  const configured = getConfiguredSubscriptionPriceIds();
+  for (const [planKey, configuredPriceId] of Object.entries(configured) as Array<[PlanKey, string | null]>) {
+    if (configuredPriceId === priceId) {
+      return planKey;
+    }
+  }
+
+  return null;
 }
 
 export function getSubscriptionTrialDays(): number {

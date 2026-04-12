@@ -44,19 +44,19 @@ export interface PlanDefinition {
 export const PLAN_DEFINITIONS: Record<PlanKey, PlanDefinition> = {
   starter: {
     key: 'starter',
-    label: 'Starter',
+    label: 'Launch',
     monthlyPriceCents: 4900,
     description: 'Core infrastructure for direct catering orders.',
   },
   pro: {
     key: 'pro',
-    label: 'Pro',
+    label: 'Momentum',
     monthlyPriceCents: 14900,
     description: 'Recurring ordering and operational optimization tools.',
   },
   growth: {
     key: 'growth',
-    label: 'Growth',
+    label: 'Engine',
     monthlyPriceCents: 19900,
     description: 'AI-driven repeat revenue, campaigns, and growth intelligence.',
   },

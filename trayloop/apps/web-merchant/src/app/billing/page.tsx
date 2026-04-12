@@ -10,6 +10,7 @@ import {
   type MerchantOnboardingStatus,
 } from '../../lib/api';
 import { merchantResetHref } from '../../lib/session';
+import { PLAN_DEFINITIONS, PLAN_KEYS, type PlanKey } from '@trayloop/types/src/plan-access';
 
 function MerchantBillingPageContent() {
   const searchParams = useSearchParams();
@@ -27,7 +28,7 @@ function MerchantBillingPageContent() {
     const billingState = data?.billing.state ?? 'not_started';
     switch (billingState) {
       case 'active':
-        return { tone: 'success' as const, title: 'TrayLoop Pro is active', body: data?.billing.subscription?.currentPeriodEnd ? `Next billing date: ${new Date(data.billing.subscription.currentPeriodEnd).toLocaleDateString()}.` : 'Your merchant workspace is covered and ready for ongoing billing.' };
+        return { tone: 'success' as const, title: `${data?.billing.planName ?? 'Plan'} is active`, body: data?.billing.subscription?.currentPeriodEnd ? `Next billing date: ${new Date(data.billing.subscription.currentPeriodEnd).toLocaleDateString()}.` : 'Your merchant workspace is covered and ready for ongoing billing.' };
       case 'trialing':
         return {
           tone: 'warning' as const,
@@ -38,11 +39,11 @@ function MerchantBillingPageContent() {
         };
       case 'past_due':
       case 'unpaid':
-        return { tone: 'error' as const, title: 'Billing needs attention', body: 'Update your payment method to keep TrayLoop Pro healthy and avoid storefront disruption.' };
+        return { tone: 'error' as const, title: 'Billing needs attention', body: `Update your payment method to keep ${data?.billing.planName ?? 'your plan'} healthy and avoid storefront disruption.` };
       case 'canceled':
         return { tone: 'error' as const, title: 'Subscription canceled', body: 'Resubscribe to reactivate the paid TrayLoop workspace for this merchant.' };
       default:
-        return { tone: 'warning' as const, title: 'Complete signup billing', body: 'The first TrayLoop Pro checkout belongs in signup. Finish secure checkout before using this workspace as a live merchant account.' };
+        return { tone: 'warning' as const, title: 'Complete signup billing', body: 'The first TrayLoop plan checkout belongs in signup. Finish secure checkout before using this workspace as a live merchant account.' };
     }
   }, [data]);
 
@@ -63,12 +64,13 @@ function MerchantBillingPageContent() {
     }
   }
 
-  async function handleCheckout() {
+  async function handleCheckout(targetPlan: PlanKey = data?.billing.currentPlan ?? 'starter') {
     setAction('checkout');
     setError('');
     try {
       const result = await createBillingCheckout({
-        successUrl: `${window.location.origin}/billing?billing=success`,
+        plan: targetPlan,
+        successUrl: `${window.location.origin}/billing?billing=success&plan=${targetPlan}`,
         cancelUrl: `${window.location.origin}/billing?billing=cancel`,
       });
       window.location.href = result.url;
@@ -111,6 +113,10 @@ function MerchantBillingPageContent() {
 
   const billingParam = searchParams.get('billing');
   const welcomeParam = searchParams.get('welcome');
+  const requestedUpgrade = searchParams.get('upgrade');
+  const highlightedPlan = PLAN_KEYS.includes((requestedUpgrade ?? '') as PlanKey)
+    ? (requestedUpgrade as PlanKey)
+    : null;
 
   if (data.billing.state === 'not_started') {
     return (
@@ -118,7 +124,7 @@ function MerchantBillingPageContent() {
         <div style={{ marginBottom: 24 }}>
           <h1 style={{ ...headingStyle, fontSize: isMobile ? 24 : headingStyle.fontSize }}>Complete signup billing</h1>
           <p style={{ margin: '6px 0 0', color: '#78716C', fontSize: 14, maxWidth: 720 }}>
-            This workspace should have completed TrayLoop Pro checkout during signup. Billing management belongs here after activation, not before.
+            This workspace should have completed the initial plan checkout during signup. Billing management belongs here after activation, not before.
           </p>
         </div>
 
@@ -136,7 +142,7 @@ function MerchantBillingPageContent() {
 
         <section style={{ ...sectionStyle, maxWidth: 760 }}>
           <header style={{ marginBottom: 18 }}>
-            <h2 style={sectionTitleStyle}>TrayLoop Pro</h2>
+            <h2 style={sectionTitleStyle}>{data.billing.planName}</h2>
             <p style={sectionSubtitleStyle}>Finish the initial subscription checkout, then come back here later to manage billing changes, pausing, or cancellation.</p>
           </header>
 
@@ -147,10 +153,10 @@ function MerchantBillingPageContent() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : undefined, gap: 10 }}>
-            <button type="button" onClick={handleCheckout} disabled={action !== null} style={{ ...primaryButtonStyle, width: isMobile ? '100%' : undefined }}>
+            <button type="button" onClick={() => handleCheckout()} disabled={action !== null} style={{ ...primaryButtonStyle, width: isMobile ? '100%' : undefined }}>
               {action === 'checkout' ? 'Redirecting...' : 'Continue Secure Checkout'}
             </button>
-            <a href="/onboarding" style={{ ...secondaryButtonStyle, width: isMobile ? '100%' : undefined }}>Open Signup Checklist</a>
+            <a href="/launch" style={{ ...secondaryButtonStyle, width: isMobile ? '100%' : undefined }}>Open Launch Center</a>
           </div>
         </section>
       </div>
@@ -161,9 +167,9 @@ function MerchantBillingPageContent() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
         <div>
-          <h1 style={{ ...headingStyle, fontSize: isMobile ? 24 : headingStyle.fontSize }}>Billing</h1>
+          <h1 style={{ ...headingStyle, fontSize: isMobile ? 24 : headingStyle.fontSize }}>Billing &amp; Plan</h1>
           <p style={{ margin: '6px 0 0', color: '#78716C', fontSize: 14, maxWidth: 720 }}>
-            Manage your TrayLoop Pro subscription, payout setup, and storefront billing readiness.
+            Manage your subscription, payout setup, and storefront billing readiness.
           </p>
         </div>
         <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 10px', borderRadius: 999, background: data.stripeMode === 'test' ? '#FEF3C7' : '#DCFCE7', color: data.stripeMode === 'test' ? '#92400E' : '#166534', fontSize: 12, fontWeight: 700 }}>
@@ -175,7 +181,7 @@ function MerchantBillingPageContent() {
         <Banner
           tone="success"
           title="Merchant workspace created"
-          body="Your subscription is active. Use this page later to manage TrayLoop Pro, payouts, and storefront billing health."
+          body="Your subscription is active. Use this page later to manage your plan, payouts, and storefront billing health."
         />
       ) : null}
       {billingParam === 'success' ? (
@@ -198,8 +204,8 @@ function MerchantBillingPageContent() {
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1.35fr) minmax(280px, 1fr)', gap: 20 }}>
         <section style={{ ...sectionStyle, padding: isMobile ? 18 : sectionStyle.padding }}>
           <header style={{ marginBottom: 18 }}>
-            <h2 style={sectionTitleStyle}>TrayLoop Pro</h2>
-            <p style={sectionSubtitleStyle}>Start, resume, or manage your merchant subscription from here.</p>
+            <h2 style={sectionTitleStyle}>Billing & Plan</h2>
+            <p style={sectionSubtitleStyle}>Start, resume, upgrade, or manage your merchant subscription from here.</p>
           </header>
 
           <div style={{ display: 'grid', gap: 12, marginBottom: 18 }}>
@@ -212,12 +218,12 @@ function MerchantBillingPageContent() {
                   : `Status: ${data.billing.state.replace('_', ' ')}.`
               }
             />
-            <InfoTile title="What this controls" body="TrayLoop Pro keeps the storefront live and unlocks the paid merchant workspace for this restaurant." />
+            <InfoTile title="What this controls" body={`${data.billing.planName} keeps the storefront live and unlocks the matching merchant platform features for this restaurant.`} />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : undefined, gap: 10, marginBottom: 18 }}>
             {data.billing.canCheckout ? (
-              <button type="button" onClick={handleCheckout} disabled={action !== null} style={{ ...primaryButtonStyle, width: isMobile ? '100%' : undefined }}>
+              <button type="button" onClick={() => handleCheckout(data.billing.currentPlan)} disabled={action !== null} style={{ ...primaryButtonStyle, width: isMobile ? '100%' : undefined }}>
                 {action === 'checkout'
                   ? 'Redirecting...'
                   : data.billing.state === 'canceled'
@@ -230,7 +236,54 @@ function MerchantBillingPageContent() {
                 {action === 'portal' ? 'Opening...' : 'Manage Subscription'}
               </button>
             ) : null}
-            <a href="/onboarding" style={{ ...secondaryButtonStyle, width: isMobile ? '100%' : undefined }}>Open Onboarding</a>
+            <a href="/launch" style={{ ...secondaryButtonStyle, width: isMobile ? '100%' : undefined }}>Open Launch Center</a>
+          </div>
+
+          <div style={{ display: 'grid', gap: 12 }}>
+            {PLAN_KEYS.map((planKey) => {
+              const definition = PLAN_DEFINITIONS[planKey];
+              const isCurrent = data.billing.currentPlan === planKey;
+              const isHighlighted = highlightedPlan === planKey;
+              const isUpgrade = planOrder(planKey) > planOrder(data.billing.currentPlan);
+              const canChangePlan = data.billing.canCheckout || data.billing.canManage;
+
+              return (
+                <div
+                  key={planKey}
+                  style={{
+                    border: `1px solid ${isHighlighted ? '#E85618' : '#E7E5E4'}`,
+                    borderRadius: 14,
+                    padding: '16px 18px',
+                    background: isCurrent ? '#FAFAF9' : '#FFFFFF',
+                    boxShadow: isHighlighted ? '0 0 0 1px rgba(232,86,24,0.12)' : 'none',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                    <div>
+                      <div style={{ fontSize: 17, fontWeight: 700, color: '#1C1917' }}>{definition.label}</div>
+                      <div style={{ fontSize: 13, color: '#57534E', marginTop: 4, lineHeight: 1.6 }}>{definition.description}</div>
+                    </div>
+                    <div style={{ textAlign: isMobile ? 'left' : 'right' }}>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: '#1C1917' }}>${(definition.monthlyPriceCents / 100).toFixed(0)}/month</div>
+                      {isCurrent ? (
+                        <span style={{ display: 'inline-flex', marginTop: 8, padding: '4px 10px', borderRadius: 999, background: '#E7E5E4', color: '#44403C', fontSize: 12, fontWeight: 700 }}>
+                          Current plan
+                        </span>
+                      ) : canChangePlan ? (
+                        <button
+                          type="button"
+                          onClick={() => handleCheckout(planKey)}
+                          disabled={action !== null}
+                          style={{ ...secondaryButtonStyle, marginTop: 8 }}
+                        >
+                          {action === 'checkout' ? 'Redirecting...' : isUpgrade ? `Upgrade to ${definition.label}` : `Switch to ${definition.label}`}
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </section>
 
@@ -278,6 +331,10 @@ export default function MerchantBillingPage() {
       <MerchantBillingPageContent />
     </Suspense>
   );
+}
+
+function planOrder(plan: PlanKey) {
+  return PLAN_KEYS.indexOf(plan);
 }
 
 function Banner({ tone, title, body }: { tone: 'success' | 'warning' | 'error'; title: string; body: string }) {

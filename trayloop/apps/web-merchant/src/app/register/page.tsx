@@ -7,9 +7,11 @@ import { createBillingCheckout } from '../../lib/api';
 import { growthAdvisorEnabled } from '../../lib/features';
 import { ensureMerchantSession, hasMerchantSession, markMerchantSession } from '../../lib/session';
 import { useMobile } from '../../lib/use-mobile';
+import { PLAN_DEFINITIONS, type PlanKey } from '@trayloop/types/src/plan-access';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-const TRAYLOOP_PRO_PLAN = 'trayloop_pro' as const;
+const DEFAULT_PLAN: PlanKey = 'starter';
+const DEFAULT_PLAN_DEFINITION = PLAN_DEFINITIONS[DEFAULT_PLAN];
 const GROWTH_ADVISOR_SELECTION_KEY = 'trayloop-growth-advisor-selected';
 
 type Step = 'plan' | 'details';
@@ -27,7 +29,7 @@ function RegisterContent() {
   const isMobile = useMobile(900);
   const existingMerchant = searchParams.get('step') === 'org';
   const [step, setStep] = useState<Step>(existingMerchant ? 'details' : 'plan');
-  const [selectedPlan] = useState<string>(TRAYLOOP_PRO_PLAN);
+  const [selectedPlan] = useState<PlanKey>(DEFAULT_PLAN);
   const [includeGrowthAdvisor, setIncludeGrowthAdvisor] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -76,7 +78,7 @@ function RegisterContent() {
     setLoading(true);
     trackEvent('merchant_register_started', {
       has_existing_session: hasExistingMerchantSession,
-      selected_plan: selectedPlan || TRAYLOOP_PRO_PLAN,
+      selected_plan: selectedPlan,
       growth_advisor_selected: includeGrowthAdvisor,
     });
 
@@ -145,6 +147,7 @@ function RegisterContent() {
           organization_slug: organization.slug ?? orgSlug.trim(),
         });
         const result = await createBillingCheckout({
+          plan: selectedPlan,
           successUrl: `${window.location.origin}/onboarding?welcome=1&billing=success`,
           cancelUrl: `${window.location.origin}/onboarding?welcome=1&billing=cancel`,
           includeGrowthAdvisor,
@@ -192,14 +195,14 @@ function RegisterContent() {
             {existingMerchant
               ? 'You are signed in. Finish the business workspace that powers payouts, launch setup, and your storefront.'
               : step === 'plan'
-                ? 'TrayLoop Pro is already selected for you. Review the plan, then continue into the merchant workspace details.'
+                ? `${DEFAULT_PLAN_DEFINITION.label} is already selected for you. Review the plan, then continue into the merchant workspace details.`
                 : 'Create the owner account and business profile, then we will immediately open secure checkout to activate this merchant workspace.'}
           </p>
         </div>
 
         {!existingMerchant ? (
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0, 1fr))', gap: 10, marginBottom: 20 }}>
-            <StepCard active={step === 'plan'} done={step === 'details'} number="1" title="Plan" subtitle="TrayLoop Pro" />
+            <StepCard active={step === 'plan'} done={step === 'details'} number="1" title="Plan" subtitle={DEFAULT_PLAN_DEFINITION.label} />
             <StepCard active={step === 'details'} done={false} number="2" title="Merchant account" subtitle="Owner + business setup" />
           </div>
         ) : null}
@@ -240,9 +243,9 @@ function RegisterContent() {
               </div>
               <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'flex-start', gap: 12, marginBottom: 14 }}>
                 <div>
-                  <div style={{ fontSize: isMobile ? 20 : 22, fontWeight: 700, color: '#1C1917' }}>TrayLoop Pro</div>
+                  <div style={{ fontSize: isMobile ? 20 : 22, fontWeight: 700, color: '#1C1917' }}>{DEFAULT_PLAN_DEFINITION.label}</div>
                   <div style={{ fontSize: 14, color: '#57534E', marginTop: 6 }}>
-                    $49/month
+                    {`$${(DEFAULT_PLAN_DEFINITION.monthlyPriceCents / 100).toFixed(0)}/month`}
                   </div>
                 </div>
                 <div style={{ display: 'inline-flex', alignItems: 'center', alignSelf: isMobile ? 'flex-start' : 'auto', borderRadius: 999, background: '#F5F5F4', color: '#57534E', fontSize: 12, fontWeight: 700, padding: '6px 10px' }}>
@@ -251,11 +254,11 @@ function RegisterContent() {
               </div>
 
               <div style={{ marginBottom: 14, padding: '12px 14px', borderRadius: 12, background: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E', fontSize: 13, fontWeight: 600, lineHeight: 1.55 }}>
-                No extra click is needed here. TrayLoop Pro is the active signup plan, so you can continue straight to the merchant details step.
+                No extra click is needed here. {DEFAULT_PLAN_DEFINITION.label} is the active signup plan, so you can continue straight to the merchant details step.
               </div>
 
               <div style={{ display: 'grid', gap: 10 }}>
-                <PlanBullet text="Create the merchant workspace under the live TrayLoop Pro plan." />
+                <PlanBullet text={`Create the merchant workspace under the live ${DEFAULT_PLAN_DEFINITION.label} plan.`} />
                 <PlanBullet text="Secure subscription checkout happens during signup before the merchant workspace can launch." />
                 {growthAdvisorEnabled ? <PlanBullet text="Optional add-ons like Growth Advisor can be attached during onboarding and unlock as soon as billing confirms." /> : null}
                 <PlanBullet text="If more plans are added later, this section can expand without changing the rest of signup." />
@@ -305,7 +308,7 @@ function RegisterContent() {
           <form onSubmit={handleSubmit}>
             {!existingMerchant ? (
               <div style={{ marginBottom: 16, padding: '12px 14px', borderRadius: 12, background: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E', fontSize: 13, fontWeight: 600, lineHeight: 1.55 }}>
-                Step 2: Create the merchant workspace. Your selected plan is <strong>TrayLoop Pro</strong>, and secure checkout will open automatically after this form.
+                Step 2: Create the merchant workspace. Your selected plan is <strong>{DEFAULT_PLAN_DEFINITION.label}</strong>, and secure checkout will open automatically after this form.
                 {growthAdvisorEnabled ? (
                   <div style={{ marginTop: 6 }}>
                     Growth Advisor: <strong>{includeGrowthAdvisor ? 'Included in checkout' : 'Not included'}</strong>.
@@ -379,11 +382,11 @@ function RegisterContent() {
         </div>
         <h2 style={{ fontSize: isMobile ? 20 : 22, fontWeight: 700, margin: '0 0 10px', lineHeight: 1.2 }}>Everything you need to sell catering online</h2>
         <p style={{ fontSize: 14, color: '#E7E5E4', lineHeight: 1.7, margin: 0 }}>
-          TrayLoop Pro is preselected, so merchants can create the workspace and start accepting catering orders without getting stuck on plan choice.
+          {DEFAULT_PLAN_DEFINITION.label} is preselected, so merchants can create the workspace and start accepting catering orders without getting stuck on plan choice.
         </p>
 
         <div style={{ display: 'grid', gap: 12, marginTop: 20 }}>
-          <SideCard title="1. TrayLoop Pro is selected" body="The $49/month plan is already preselected so merchants can move straight into signup." />
+          <SideCard title={`1. ${DEFAULT_PLAN_DEFINITION.label} is selected`} body={`The $${(DEFAULT_PLAN_DEFINITION.monthlyPriceCents / 100).toFixed(0)}/month plan is already preselected so merchants can move straight into signup.`} />
           <SideCard title="2. Create your workspace" body="Set up your owner account and business profile in one step." />
           <SideCard title="3. Complete billing and go live" body="Secure checkout opens automatically, then you can build your menu and launch the storefront." />
         </div>

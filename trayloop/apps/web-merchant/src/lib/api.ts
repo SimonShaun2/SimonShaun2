@@ -69,6 +69,8 @@ export interface MerchantBillingSubscription {
     stripeCustomerId: string;
     stripeSubscriptionId: string | null;
     stripePriceId: string | null;
+    plan: PlanKey;
+    billingCycle: BillingCycleKey;
     status: 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid';
     trialStart: string | null;
     trialEnd: string | null;
@@ -601,7 +603,7 @@ export async function generateGrowthAdvisor(input: { notes?: string } = {}): Pro
   return response.data;
 }
 
-export async function createBillingCheckout(input: { successUrl?: string; cancelUrl?: string; includeGrowthAdvisor?: boolean } = {}) {
+export async function createBillingCheckout(input: { successUrl?: string; cancelUrl?: string; includeGrowthAdvisor?: boolean; plan?: PlanKey } = {}) {
   const response = await apiFetch('/api/billing/checkout', {
     method: 'POST',
     body: JSON.stringify(input),

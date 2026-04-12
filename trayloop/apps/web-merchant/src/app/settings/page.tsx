@@ -492,9 +492,9 @@ function SettingsContent() {
   const billingState = billingSubscription?.state ?? 'not_started';
   const billingHeadline =
     billingState === 'trialing'
-      ? `${billingSubscription?.planName ?? 'TrayLoop Pro'} intro period`
+      ? `${billingSubscription?.planName ?? 'Launch'} intro period`
       : billingState === 'active'
-        ? `${billingSubscription?.planName ?? 'TrayLoop Pro'} active`
+        ? `${billingSubscription?.planName ?? 'Launch'} active`
         : billingState === 'past_due'
           ? 'Billing attention required'
         : billingState === 'unpaid'
@@ -510,13 +510,13 @@ function SettingsContent() {
       : billingState === 'active'
         ? billingSubscription?.subscription?.currentPeriodEnd
           ? `Next billing ${new Date(billingSubscription.subscription.currentPeriodEnd).toLocaleDateString()}`
-          : '$49/mo subscription is active'
+          : `${billingSubscription?.planName ?? 'Launch'} subscription is active`
         : billingState === 'past_due'
           ? 'Update your payment method to keep your storefront live.'
         : billingState === 'unpaid'
           ? 'Stripe marked this subscription unpaid. Open billing to resolve it.'
       : billingState === 'canceled'
-          ? 'Resubscribe to reactivate TrayLoop Pro.'
+          ? `Resubscribe to reactivate ${billingSubscription?.planName ?? 'your plan'}.`
           : 'Billing setup must be completed during signup before this workspace can launch.';
 
   if (loading && !organization) {
@@ -942,8 +942,8 @@ function SettingsContent() {
                     {paymentActionLoading ? 'Redirecting...' : paymentCard.cta}
                   </button>
                 ) : null}
-                <a href="/onboarding" style={secondaryButtonStyle}>
-                  Open Onboarding Hub
+                <a href="/launch" style={secondaryButtonStyle}>
+                  Open Launch Center
                 </a>
                 <button type="button" onClick={syncStatus} style={secondaryButtonStyle}>
                   Refresh Status
@@ -980,7 +980,7 @@ function SettingsContent() {
             </div>
           </SectionCard>
 
-          <SectionCard id="billing" title="Billing & Security" subtitle="Manage your TrayLoop Pro subscription and basic account security from one place.">
+          <SectionCard id="billing" title="Billing & Security" subtitle="Manage your subscription and basic account security from one place.">
             <div
               style={{
                 border: '1px solid #E7E5E4',
@@ -1034,7 +1034,7 @@ function SettingsContent() {
                   </p>
                   <KeyValueGrid
                     items={[
-                      ['Plan', `${billingSubscription?.planName ?? 'TrayLoop Pro'} - $${((billingSubscription?.priceCents ?? 4900) / 100).toFixed(0)}/${billingSubscription?.interval ?? 'month'}`],
+                      ['Plan', `${billingSubscription?.planName ?? 'Launch'} - $${((billingSubscription?.priceCents ?? 4900) / 100).toFixed(0)}/${billingSubscription?.interval ?? 'month'}`],
                       ['Subscription status', billingState.replace('_', ' ')],
                       ['Storefront readiness', setupStatus?.isComplete ? 'Live' : 'Incomplete'],
                       ['Security basics', 'Password reset and sign-out are live'],

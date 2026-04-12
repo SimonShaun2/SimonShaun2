@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PLAN_KEYS } from '@trayloop/types';
 
 export const registerSchema = z.object({
   email: z.string().email(),
@@ -16,7 +17,7 @@ export const customerRegisterSchema = z.object({
 });
 
 export const merchantWorkspaceRegisterSchema = z.object({
-  selectedPlan: z.enum(['trayloop_pro']),
+  selectedPlan: z.enum(PLAN_KEYS),
   email: z.string().email(),
   name: z.string().min(1).max(255),
   password: z.string().min(8),

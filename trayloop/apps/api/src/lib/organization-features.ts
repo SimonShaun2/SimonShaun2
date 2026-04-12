@@ -1,4 +1,4 @@
-import { db, organizationFeatures } from '@trayloop/database';
+import { db, organizationFeatures, organizations, subscriptions } from '@trayloop/database';
 import {
   FEATURE_KEYS,
   PLAN_DEFINITIONS,
@@ -79,11 +79,29 @@ function buildFeatureMap(currentPlan: PlanKey): ResolvedFeatureMap {
   }, {} as ResolvedFeatureMap);
 }
 
+async function getOrganizationPlanState(orgId: string) {
+  const [record] = await db
+    .select({
+      organizationPlan: organizations.currentPlan,
+      subscriptionPlan: subscriptions.plan,
+      subscriptionBillingCycle: subscriptions.billingCycle,
+    })
+    .from(organizations)
+    .leftJoin(subscriptions, eq(subscriptions.organizationId, organizations.id))
+    .where(eq(organizations.id, orgId))
+    .limit(1);
+
+  const currentPlan = normalizePlanKey(record?.subscriptionPlan ?? record?.organizationPlan);
+  const billingCycle = normalizeBillingCycle(record?.subscriptionBillingCycle ?? 'monthly');
+
+  return {
+    currentPlan,
+    billingCycle,
+  };
+}
+
 export async function getOrganizationFeatureEntitlements(orgId: string): Promise<OrganizationFeatureEntitlements> {
-  // PAS-1 keeps runtime behavior aligned with the current single-plan product until
-  // the billing migration in PAS-2/PAS-4 wires real plan data into production reads.
-  const currentPlan = normalizePlanKey('growth');
-  const billingCycle = normalizeBillingCycle('monthly');
+  const { currentPlan, billingCycle } = await getOrganizationPlanState(orgId);
 
   const rows = await db
     .select({

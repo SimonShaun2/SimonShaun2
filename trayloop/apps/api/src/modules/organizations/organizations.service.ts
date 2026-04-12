@@ -294,8 +294,8 @@ function getNextAction(input: {
   if (!hasBillingAccess(input.billingState)) {
     return {
       key: 'billing',
-      title: 'Activate TrayLoop Pro',
-      description: 'Start your platform subscription so your storefront can stay live after trial.',
+      title: 'Activate your TrayLoop plan',
+      description: 'Start or restore the platform subscription so your storefront can stay live and unlock the right merchant tools.',
       href: '/billing',
       cta: 'Open Billing',
     };
@@ -349,7 +349,7 @@ export async function getMerchantOnboardingStatus(orgId: string) {
   }
 
   if (!billingReady) {
-    blockers.push('Start or restore your TrayLoop Pro subscription.');
+    blockers.push('Start or restore your TrayLoop plan subscription.');
   }
 
   const completed = [hasOffering, hasLocation, paymentsReady, billingReady].filter(Boolean).length;

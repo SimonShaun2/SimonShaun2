@@ -328,11 +328,11 @@ export default function GrowthAdvisorPage() {
               Great for onboarding teams creating menus and storefronts for merchants before launch.
             </div>
             <div style={{ ...featureCalloutStyle }}>
-              Designed as an incremental revenue add-on, separate from the base TrayLoop Pro subscription.
+              Designed as an incremental revenue add-on, separate from the base TrayLoop subscription.
             </div>
             {usingExistingSubscription ? (
               <div style={{ ...featureCalloutStyle, borderColor: '#FDE68A', background: '#FFFBEB', color: '#92400E' }}>
-                This merchant already has TrayLoop Pro billing active. Add Growth Advisor here and we will attach it to the current subscription.
+                This merchant already has base billing active. Add Growth Advisor here and we will attach it to the current subscription.
               </div>
             ) : null}
           </div>
@@ -366,7 +366,7 @@ export default function GrowthAdvisorPage() {
               </button>
             ) : null}
             <a
-              href="/onboarding"
+              href="/launch"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -381,7 +381,7 @@ export default function GrowthAdvisorPage() {
                 textDecoration: 'none',
               }}
             >
-              Return to Launch Setup
+              Return to Launch Center
             </a>
           </div>
         </section>
