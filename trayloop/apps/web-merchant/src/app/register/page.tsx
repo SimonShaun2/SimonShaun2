@@ -12,8 +12,8 @@ import { getMerchantPlanDisplay, getMerchantPlanPriceLabel } from '../../lib/pla
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const DEFAULT_PLAN: PlanKey = 'starter';
-const DEFAULT_PLAN_DEFINITION = getMerchantPlanDisplay(DEFAULT_PLAN)!;
 const GROWTH_ADVISOR_SELECTION_KEY = 'trayloop-growth-advisor-selected';
+const PLAN_OPTIONS: PlanKey[] = ['starter', 'pro', 'growth'];
 
 type Step = 'plan' | 'details';
 
@@ -30,7 +30,7 @@ function RegisterContent() {
   const isMobile = useMobile(900);
   const existingMerchant = searchParams.get('step') === 'org';
   const [step, setStep] = useState<Step>(existingMerchant ? 'details' : 'plan');
-  const [selectedPlan] = useState<PlanKey>(DEFAULT_PLAN);
+  const [selectedPlan, setSelectedPlan] = useState<PlanKey>(DEFAULT_PLAN);
   const [includeGrowthAdvisor, setIncludeGrowthAdvisor] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -42,6 +42,7 @@ function RegisterContent() {
   const [orgSlug, setOrgSlug] = useState('');
   const [orgPhone, setOrgPhone] = useState('');
   const [hasExistingMerchantSession, setHasExistingMerchantSession] = useState(false);
+  const selectedPlanDefinition = getMerchantPlanDisplay(selectedPlan)!;
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -196,14 +197,14 @@ function RegisterContent() {
             {existingMerchant
               ? 'You are signed in. Finish the business workspace that powers payouts, launch setup, and your storefront.'
               : step === 'plan'
-                ? `${DEFAULT_PLAN_DEFINITION.label} is already selected for you. Review the plan, then continue into the merchant workspace details.`
+                ? 'Choose the plan that best matches the merchant. The selected tier will carry straight into secure checkout after workspace details are complete.'
                 : 'Create the owner account and business profile, then we will immediately open secure checkout to activate this merchant workspace.'}
           </p>
         </div>
 
         {!existingMerchant ? (
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, minmax(0, 1fr))', gap: 10, marginBottom: 20 }}>
-            <StepCard active={step === 'plan'} done={step === 'details'} number="1" title="Plan" subtitle={DEFAULT_PLAN_DEFINITION.label} />
+            <StepCard active={step === 'plan'} done={step === 'details'} number="1" title="Plan" subtitle={selectedPlanDefinition.label} />
             <StepCard active={step === 'details'} done={false} number="2" title="Merchant account" subtitle="Owner + business setup" />
           </div>
         ) : null}
@@ -216,6 +217,70 @@ function RegisterContent() {
 
         {!existingMerchant && step === 'plan' ? (
           <div>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, minmax(0, 1fr))',
+                gap: 12,
+                marginBottom: 16,
+              }}
+            >
+              {PLAN_OPTIONS.map((plan) => {
+                const planDisplay = getMerchantPlanDisplay(plan)!;
+                const selected = selectedPlan === plan;
+
+                return (
+                  <button
+                    key={plan}
+                    type="button"
+                    onClick={() => setSelectedPlan(plan)}
+                    style={{
+                      width: '100%',
+                      textAlign: 'left',
+                      borderRadius: 16,
+                      border: selected ? '2px solid #1C1917' : '1px solid #E7E5E4',
+                      background: selected ? '#FAFAF9' : '#FFFFFF',
+                      padding: isMobile ? '16px 14px' : '18px 16px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
+                      <div>
+                        <div style={{ fontSize: 18, fontWeight: 700, color: '#1C1917' }}>{planDisplay.label}</div>
+                        <div style={{ fontSize: 14, color: '#57534E', marginTop: 4 }}>{getMerchantPlanPriceLabel(plan)}</div>
+                      </div>
+                      <div
+                        style={{
+                          width: 18,
+                          height: 18,
+                          borderRadius: 999,
+                          border: selected ? '5px solid #1C1917' : '2px solid #D6D3D1',
+                          background: '#FFFFFF',
+                          flexShrink: 0,
+                          marginTop: 2,
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ fontSize: 13, color: '#57534E', lineHeight: 1.6, marginBottom: 12 }}>
+                      {planDisplay.description}
+                    </div>
+
+                    <div style={{ display: 'grid', gap: 8 }}>
+                      {planDisplay.highlights.slice(0, 4).map((highlight) => (
+                        <div key={highlight} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                          <div style={{ width: 16, height: 16, borderRadius: 999, background: '#F5F5F4', color: '#1C1917', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, marginTop: 1 }}>
+                            +
+                          </div>
+                          <div style={{ fontSize: 12, color: '#57534E', lineHeight: 1.5 }}>{highlight}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
             <div
               style={{
                 width: '100%',
@@ -244,25 +309,25 @@ function RegisterContent() {
               </div>
               <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'flex-start', gap: 12, marginBottom: 14 }}>
                 <div>
-                <div style={{ fontSize: isMobile ? 20 : 22, fontWeight: 700, color: '#1C1917' }}>{DEFAULT_PLAN_DEFINITION.label}</div>
+                <div style={{ fontSize: isMobile ? 20 : 22, fontWeight: 700, color: '#1C1917' }}>{selectedPlanDefinition.label}</div>
                   <div style={{ fontSize: 14, color: '#57534E', marginTop: 6 }}>
-                    {getMerchantPlanPriceLabel(DEFAULT_PLAN)}
+                    {getMerchantPlanPriceLabel(selectedPlan)}
                   </div>
                 </div>
                 <div style={{ display: 'inline-flex', alignItems: 'center', alignSelf: isMobile ? 'flex-start' : 'auto', borderRadius: 999, background: '#F5F5F4', color: '#57534E', fontSize: 12, fontWeight: 700, padding: '6px 10px' }}>
-                  Selected by default
+                  Active selection
                 </div>
               </div>
 
               <div style={{ marginBottom: 14, padding: '12px 14px', borderRadius: 12, background: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E', fontSize: 13, fontWeight: 600, lineHeight: 1.55 }}>
-                No extra click is needed here. {DEFAULT_PLAN_DEFINITION.label} is the active signup plan, so you can continue straight to the merchant details step.
+                {selectedPlanDefinition.label} is selected for this merchant. Continue into workspace details, then secure checkout will open on the matching plan automatically.
               </div>
 
               <div style={{ display: 'grid', gap: 10 }}>
-                <PlanBullet text={`Create the merchant workspace under the live ${DEFAULT_PLAN_DEFINITION.label} plan.`} />
-                <PlanBullet text="Secure subscription checkout happens during signup before the merchant workspace can launch." />
+                <PlanBullet text={selectedPlanDefinition.description} />
+                <PlanBullet text={`Secure subscription checkout will open for the ${selectedPlanDefinition.label} plan right after workspace details are complete.`} />
                 {growthAdvisorEnabled ? <PlanBullet text="Optional add-ons like Growth Advisor can be attached during onboarding and unlock as soon as billing confirms." /> : null}
-                <PlanBullet text="If more plans are added later, this section can expand without changing the rest of signup." />
+                <PlanBullet text={`Best fit signals: ${selectedPlanDefinition.highlights.slice(0, 3).join(', ')}.`} />
               </div>
             </div>
 
@@ -309,7 +374,7 @@ function RegisterContent() {
           <form onSubmit={handleSubmit}>
             {!existingMerchant ? (
               <div style={{ marginBottom: 16, padding: '12px 14px', borderRadius: 12, background: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E', fontSize: 13, fontWeight: 600, lineHeight: 1.55 }}>
-                Step 2: Create the merchant workspace. Your selected plan is <strong>{DEFAULT_PLAN_DEFINITION.label}</strong>, and secure checkout will open automatically after this form.
+                Step 2: Create the merchant workspace. Your selected plan is <strong>{selectedPlanDefinition.label}</strong>, and secure checkout will open automatically after this form.
                 {growthAdvisorEnabled ? (
                   <div style={{ marginTop: 6 }}>
                     Growth Advisor: <strong>{includeGrowthAdvisor ? 'Included in checkout' : 'Not included'}</strong>.
@@ -383,11 +448,11 @@ function RegisterContent() {
         </div>
         <h2 style={{ fontSize: isMobile ? 20 : 22, fontWeight: 700, margin: '0 0 10px', lineHeight: 1.2 }}>Everything you need to sell catering online</h2>
         <p style={{ fontSize: 14, color: '#E7E5E4', lineHeight: 1.7, margin: 0 }}>
-          {DEFAULT_PLAN_DEFINITION.label} is preselected, so merchants can create the workspace and start accepting catering orders without getting stuck on plan choice.
+          Start on Launch, move up to Momentum, or unlock the full Engine stack. The selected tier flows directly into checkout so the merchant lands in the right dashboard experience from day one.
         </p>
 
         <div style={{ display: 'grid', gap: 12, marginTop: 20 }}>
-          <SideCard title={`1. ${DEFAULT_PLAN_DEFINITION.label} is selected`} body={`The ${getMerchantPlanPriceLabel(DEFAULT_PLAN)} plan is already preselected so merchants can move straight into signup.`} />
+          <SideCard title={`1. Pick ${selectedPlanDefinition.label}`} body={`${selectedPlanDefinition.label} is currently selected at ${getMerchantPlanPriceLabel(selectedPlan)} and will carry straight into secure checkout.`} />
           <SideCard title="2. Create your workspace" body="Set up your owner account and business profile in one step." />
           <SideCard title="3. Complete billing and go live" body="Secure checkout opens automatically, then you can build your menu and launch the storefront." />
         </div>
@@ -395,7 +460,7 @@ function RegisterContent() {
         <div style={{ marginTop: 22, padding: '14px 16px', borderRadius: 12, background: '#231F1C', border: '1px solid #2C2724' }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: '#FAFAF9', marginBottom: 6 }}>Simple and direct</div>
           <div style={{ fontSize: 13, color: '#D6D3D1', lineHeight: 1.6 }}>
-            Plan is already selected, signup creates the workspace, and billing opens automatically so the flow keeps moving.
+            The plan step is now explicit, but still fast. Choose the right tier once, create the workspace, and let billing activate the matching dashboard access.
           </div>
         </div>
       </aside>
