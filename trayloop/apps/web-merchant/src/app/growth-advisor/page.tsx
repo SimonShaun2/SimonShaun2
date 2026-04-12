@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   createBillingCheckout,
   fetchBillingSubscription,
@@ -18,6 +18,27 @@ const PROMPT_IDEAS = [
   'Help us price delivery, minimums, and deposits better.',
   'We rely too much on marketplaces and want more direct orders.',
 ] as const;
+
+const SAVED_RUN_PREFIX = 'trayloop:growth-advisor:run';
+
+function getSavedRunKey(organizationId: string) {
+  return `${SAVED_RUN_PREFIX}:${organizationId}`;
+}
+
+interface SavedGrowthAdvisorRun {
+  notes: string;
+  updatedAt: string;
+  result: GrowthAdvisorResult;
+}
+
+function readSavedRun(value: string | null): SavedGrowthAdvisorRun | null {
+  if (!value) return null;
+  try {
+    return JSON.parse(value) as SavedGrowthAdvisorRun;
+  } catch {
+    return null;
+  }
+}
 
 function formatCurrency(cents: number | null) {
   if (cents == null) return '--';
@@ -135,12 +156,79 @@ function StrategyList({
   );
 }
 
+interface CopilotMove {
+  label: string;
+  title: string;
+  body: string;
+  note: string;
+  href: string;
+  cta: string;
+}
+
+function buildCopilotMoves(
+  analysis: GrowthAdvisorPlan,
+  snapshot: GrowthAdvisorSnapshot,
+): CopilotMove[] {
+  const priceLift = analysis.recommendedOffer.priceCents
+    ? Math.max(analysis.recommendedOffer.priceCents - (snapshot.averagePackagePriceCents ?? analysis.recommendedOffer.priceCents), 0)
+    : 0;
+  const priceLiftLabel = priceLift > 0 ? `+${formatCurrency(priceLift)}` : 'from live catalog';
+  const upsellHint = analysis.channelStrategy[0] ?? 'Use the next best add-on inside the order path.';
+  const reorderHint =
+    snapshot.recentOrders30d > 0
+      ? `${snapshot.recentOrders30d} orders in the last 30 days are enough to time a reorder cadence.`
+      : 'Use the first order history to decide when the second order should arrive.';
+  const fixHint =
+    snapshot.payoutsReady
+      ? analysis.pricingGuidance.notes
+      : 'Resolve payouts, then tighten pricing and minimums before more demand lands.';
+
+  return [
+    {
+      label: 'Price higher',
+      title: analysis.recommendedOffer.name,
+      body: analysis.recommendedOffer.description,
+      note: `Target price ${formatCurrency(analysis.recommendedOffer.priceCents)} | ${priceLiftLabel}`,
+      href: '/catalog',
+      cta: 'Review catalog price',
+    },
+    {
+      label: 'Upsell next',
+      title: 'Turn the strongest order into a bigger basket',
+      body: upsellHint,
+      note: `Minimum order ${formatCurrency(analysis.pricingGuidance.minimumOrderCents)} | Delivery ${formatCurrency(analysis.pricingGuidance.deliveryFeeCents)}`,
+      href: '/orders',
+      cta: 'Inspect order flow',
+    },
+    {
+      label: 'Reorder next',
+      title: 'Time the repeat ask with intent',
+      body: reorderHint,
+      note: `${snapshot.completedOrders} completed orders | ${snapshot.recentOrders30d} in the last 30 days`,
+      href: '/customers',
+      cta: 'Open customers',
+    },
+    {
+      label: 'Fix next',
+      title: analysis.biggestOpportunity,
+      body: fixHint,
+      note: snapshot.payoutsReady ? analysis.pricingGuidance.depositPolicy : 'Payouts still need attention',
+      href: '/settings',
+      cta: 'Fix launch setup',
+    },
+  ];
+}
+
 function AnalysisPanel({
   analysis,
   snapshot,
+  copilotMoves,
+  lastRunAt,
 }: {
   analysis: GrowthAdvisorPlan;
   snapshot: GrowthAdvisorSnapshot;
+  copilotMoves: CopilotMove[];
+  lastRunAt: string | null;
 }) {
   return (
     <div style={{ display: 'grid', gap: 16 }}>
@@ -153,6 +241,45 @@ function AnalysisPanel({
       >
         <div style={{ fontSize: 13, color: '#E7E5E4', lineHeight: 1.6 }}>
           {analysis.stageSummary}
+        </div>
+      </SectionCard>
+
+      <SectionCard
+        eyebrow="Copilot brief"
+        title="The engine-level moves surfaced by this run"
+      >
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+          {copilotMoves.map((move) => (
+            <a
+              key={move.label}
+              href={move.href}
+              style={{
+                display: 'grid',
+                gap: 8,
+                textDecoration: 'none',
+                borderRadius: 14,
+                border: '1px solid #EEEAE4',
+                padding: 14,
+                background: '#FAFAF9',
+                color: '#1C1917',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#A16207' }}>
+                  {move.label}
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#57534E' }}>{move.note}</div>
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.25 }}>{move.title}</div>
+              <div style={{ fontSize: 13, lineHeight: 1.6, color: '#57534E' }}>{move.body}</div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: '#A16207' }}>{move.cta}</div>
+            </a>
+          ))}
+        </div>
+        <div style={{ marginTop: 12, fontSize: 12, color: '#78716C' }}>
+          {lastRunAt
+            ? `Last run ${new Date(lastRunAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
+            : 'This run is generated from live storefront, pricing, and order signals.'}
         </div>
       </SectionCard>
 
@@ -241,6 +368,7 @@ export default function GrowthAdvisorPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<GrowthAdvisorResult | null>(null);
+  const [lastRunAt, setLastRunAt] = useState<string | null>(null);
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
 
@@ -250,6 +378,28 @@ export default function GrowthAdvisorPage() {
       .catch((err) => setError(err instanceof Error ? err.message : 'Unable to load Growth Advisor access.'))
       .finally(() => setCheckingAccess(false));
   }, []);
+
+  useEffect(() => {
+    if (!billing?.organizationId || typeof window === 'undefined') return;
+
+    const saved = readSavedRun(window.localStorage.getItem(getSavedRunKey(billing.organizationId)));
+    if (!saved) return;
+
+    setNotes(saved.notes || '');
+    setResult(saved.result);
+    setLastRunAt(saved.updatedAt);
+  }, [billing?.organizationId]);
+
+  useEffect(() => {
+    if (!billing?.organizationId || typeof window === 'undefined' || !result) return;
+
+    const payload: SavedGrowthAdvisorRun = {
+      notes,
+      result,
+      updatedAt: lastRunAt ?? new Date().toISOString(),
+    };
+    window.localStorage.setItem(getSavedRunKey(billing.organizationId), JSON.stringify(payload));
+  }, [billing?.organizationId, notes, result, lastRunAt]);
 
   async function handleUpgrade() {
     setUpgradeLoading(true);
@@ -281,6 +431,7 @@ export default function GrowthAdvisorPage() {
     try {
       const next = await generateGrowthAdvisor({ notes: notes.trim() || undefined });
       setResult(next);
+      setLastRunAt(new Date().toISOString());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to generate your growth plan right now.');
     } finally {
@@ -290,13 +441,22 @@ export default function GrowthAdvisorPage() {
 
   function resetAdvisor() {
     setResult(null);
+    setLastRunAt(null);
     setError('');
+
+    if (billing?.organizationId && typeof window !== 'undefined') {
+      window.localStorage.removeItem(getSavedRunKey(billing.organizationId));
+    }
   }
 
   const entitlement = billing?.features.growthAdvisor;
   const unlocked = growthAdvisorEnabled && Boolean(entitlement?.enabled);
   const canPurchase = growthAdvisorEnabled && Boolean(entitlement?.available) && ((billing?.canCheckout ?? false) || Boolean(billing?.subscription));
   const usingExistingSubscription = Boolean(billing?.subscription) && !(billing?.canCheckout ?? false);
+  const copilotMoves = useMemo(
+    () => (result ? buildCopilotMoves(result.analysis, result.snapshot) : []),
+    [result],
+  );
 
   if (checkingAccess) {
     return <p style={{ color: '#78716C' }}>Loading Growth Advisor...</p>;
@@ -511,7 +671,7 @@ export default function GrowthAdvisorPage() {
               cursor: loading ? 'wait' : 'pointer',
             }}
           >
-            {loading ? 'Building your growth plan...' : 'Generate Growth Advisor plan'}
+            {loading ? 'Building your growth plan...' : 'Run Growth Copilot'}
           </button>
 
           <div style={{ marginTop: 14, fontSize: 12, color: '#78716C', lineHeight: 1.6 }}>
@@ -521,7 +681,12 @@ export default function GrowthAdvisorPage() {
 
         <div>
           {result ? (
-            <AnalysisPanel analysis={result.analysis} snapshot={result.snapshot} />
+            <AnalysisPanel
+              analysis={result.analysis}
+              snapshot={result.snapshot}
+              copilotMoves={copilotMoves}
+              lastRunAt={lastRunAt}
+            />
           ) : (
             <div className="growth-advisor-double" style={{ display: 'grid', gap: 16 }}>
               <SectionCard eyebrow="What this add-on does" title="A merchant-side catering strategist">

@@ -801,6 +801,147 @@ export async function processAutomationRuns(input: { runIds?: string[] } = {}) {
   };
 }
 
+export interface MerchantOrderStats {
+  totalOrders: number;
+  totalRevenue: number;
+  last7DaysRevenue: number;
+  last7DaysOrders: number;
+  last30DaysRevenue: number;
+  completedOrders: number;
+  activeOrders: number;
+  avgOrderValue: number;
+  totalCustomers: number;
+  repeatCustomers: number;
+  dailyRevenue: Array<{
+    date: string;
+    revenue: number;
+    orderCount: number;
+  }>;
+  locationBreakdown: Array<{
+    locationId: string;
+    locationName: string;
+    orderCount: number;
+    revenue: number;
+  }>;
+}
+
+export interface MerchantCustomerSummary {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  company: string | null;
+  isActive: boolean;
+  createdAt: string;
+  orderCount: number;
+  totalSpend: number;
+  lastOrderDate: string | null;
+}
+
+export interface MerchantCustomerDetail {
+  id: string;
+  name: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string | null;
+  company: string | null;
+  notes: string | null;
+  isActive: boolean;
+  createdAt: string;
+  orderCount: number;
+  totalSpend: number;
+  recentOrders: Array<{
+    id: string;
+    orderNumber: string;
+    status: string;
+    total: number;
+    eventDate: string | null;
+    createdAt: string;
+  }>;
+}
+
+export interface MerchantFollowUpOrderSummary {
+  id: string;
+  status: string;
+  eventDate: string | null;
+  total: number;
+  currency: string;
+}
+
+export interface MerchantFollowUpSummary {
+  id: string;
+  status: 'pending' | 'completed';
+  dueDate: string;
+  note: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  order: MerchantFollowUpOrderSummary;
+  customer: {
+    name: string;
+    email: string;
+  };
+}
+
+export interface MerchantFollowUpListResult {
+  data: MerchantFollowUpSummary[];
+  meta: PaginationMeta;
+}
+
+export interface MerchantFollowUpQuery {
+  page?: number;
+  pageSize?: number;
+  status?: 'pending' | 'completed';
+  from?: string;
+  to?: string;
+}
+
+export interface MerchantFollowUpUpdateInput {
+  status?: 'pending' | 'completed';
+  dueDate?: string;
+  note?: string | null;
+}
+
+export async function fetchCustomers(): Promise<MerchantCustomerSummary[]> {
+  const response = await apiFetch('/api/customers');
+  return response.data;
+}
+
+export async function fetchCustomer(customerId: string): Promise<MerchantCustomerDetail> {
+  const response = await apiFetch(`/api/customers/${customerId}`);
+  return response.data;
+}
+
+export async function fetchOrderStats(): Promise<MerchantOrderStats> {
+  const response = await apiFetch('/api/orders/stats');
+  return response.data;
+}
+
+export async function fetchMerchantCustomers(): Promise<MerchantCustomerSummary[]> {
+  return fetchCustomers();
+}
+
+export async function fetchMerchantFollowUps(query: MerchantFollowUpQuery = {}): Promise<MerchantFollowUpListResult> {
+  const params = new URLSearchParams();
+
+  if (query.page !== undefined) params.set('page', String(query.page));
+  if (query.pageSize !== undefined) params.set('pageSize', String(query.pageSize));
+  if (query.status) params.set('status', query.status);
+  if (query.from) params.set('from', query.from);
+  if (query.to) params.set('to', query.to);
+
+  const response = await apiFetch(`/api/follow-ups${params.toString() ? `?${params.toString()}` : ''}`);
+  return { data: response.data, meta: response.meta };
+}
+
+export async function updateMerchantFollowUp(id: string, input: MerchantFollowUpUpdateInput) {
+  const response = await apiFetch(`/api/follow-ups/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+  return response.data as MerchantFollowUpSummary;
+}
+
 interface PaginationMeta {
   page: number;
   pageSize: number;

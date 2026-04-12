@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { automationsEnabled } from '../../lib/features';
 import { fetchAdminAutomationIntelligence, type AdminAutomationIntelligence } from '../../lib/api';
 
@@ -9,6 +9,29 @@ function money(cents: number) {
 }
 
 export default function AdminAutomationIntelligencePage() {
+  const [data, setData] = useState<AdminAutomationIntelligence | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!automationsEnabled) {
+      setLoading(false);
+      return;
+    }
+
+    fetchAdminAutomationIntelligence()
+      .then((next) => setData(next))
+      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load automation intelligence'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const topOperators = useMemo(() => {
+    if (!data) return [];
+    return [...data.organizations]
+      .sort((a, b) => b.revenueInfluencedCents - a.revenueInfluencedCents)
+      .slice(0, 4);
+  }, [data]);
+
   if (!automationsEnabled) {
     return (
       <div style={{ padding: 18, borderRadius: 12, border: '1px solid #DBEAFE', background: '#EFF6FF', color: '#1D4ED8', fontSize: 13 }}>
@@ -19,107 +42,166 @@ export default function AdminAutomationIntelligencePage() {
     );
   }
 
-  const [data, setData] = useState<AdminAutomationIntelligence | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    fetchAdminAutomationIntelligence()
-      .then((next) => setData(next))
-      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load automation intelligence'))
-      .finally(() => setLoading(false));
-  }, []);
-
   return (
-    <div>
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, marginTop: 0, marginBottom: 4 }}>Automation Intelligence</h1>
-        <p style={{ fontSize: 13, color: '#78716C', marginTop: 0 }}>
-          Track automation adoption, approval-first workflows, autopilot usage, and influenced revenue across merchants.
-        </p>
-      </div>
-
-      {loading ? (
-        <div style={{ fontSize: 13, color: '#78716C' }}>Loading automation intelligence...</div>
-      ) : error || !data ? (
-        <div style={{ padding: 18, borderRadius: 12, border: '1px solid #FECACA', background: '#FEF2F2', color: '#B91C1C', fontSize: 13 }}>
-          {error || 'Unable to load automation intelligence.'}
-        </div>
-      ) : (
-        <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, marginBottom: 24 }}>
-            <MetricCard label="Merchants using automation" value={String(data.summary.merchantsUsingAutomation)} sub="At least one active rule" />
-            <MetricCard label="Autopilot merchants" value={String(data.summary.autopilotMerchants)} sub="Explicit opt-in only" />
-            <MetricCard label="Active rules" value={String(data.summary.activeRules)} sub={`${data.summary.pendingApprovalRuns} waiting approval`} />
-            <MetricCard label="Sent runs" value={String(data.summary.sentRuns)} sub={`${data.summary.failedRuns} failed`} />
-            <MetricCard label="Revenue influenced" value={money(data.summary.revenueInfluencedCents)} sub="Estimated from sent runs" />
+    <div style={{ display: 'grid', gap: 22 }}>
+      <section
+        style={{
+          borderRadius: 22,
+          padding: 24,
+          background: 'linear-gradient(135deg, #111827 0%, #1F2937 100%)',
+          color: '#F9FAFB',
+          display: 'grid',
+          gap: 18,
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
+          <div style={{ maxWidth: 760 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#D4A853', marginBottom: 8 }}>
+              AI Campaign Engine
+            </div>
+            <h1 style={{ fontSize: 32, fontWeight: 800, margin: 0, lineHeight: 1.1 }}>Measure where automation is actually creating repeat revenue.</h1>
+            <p style={{ fontSize: 14, color: '#D1D5DB', lineHeight: 1.7, margin: '10px 0 0' }}>
+              This is the internal operating view for campaign adoption, autopilot readiness, approval queues, and the revenue influenced by AI-led outreach.
+            </p>
           </div>
+          <div
+            style={{
+              minWidth: 260,
+              borderRadius: 18,
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              padding: 18,
+              alignSelf: 'flex-start',
+            }}
+          >
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#D4A853', marginBottom: 8 }}>
+              Operator focus
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.35 }}>
+              Keep approval-first merchants moving toward autopilot without losing trust.
+            </div>
+            <div style={{ fontSize: 13, color: '#D1D5DB', lineHeight: 1.6, marginTop: 10 }}>
+              The strongest Tier 3 merchants should graduate from assisted campaigns into recurring automation with clear influenced revenue.
+            </div>
+          </div>
+        </div>
 
-          <section style={{ border: '1px solid #E7E5E4', borderRadius: 12, background: '#FFFFFF', padding: '20px 24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 12, flexWrap: 'wrap' }}>
-              <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Merchant automation table</h2>
-              <span style={{ fontSize: 12, color: '#78716C' }}>{data.organizations.length} organizations</span>
+        {loading ? (
+          <div style={{ fontSize: 13, color: '#D1D5DB' }}>Loading automation intelligence...</div>
+        ) : error || !data ? (
+          <div style={{ padding: 18, borderRadius: 14, border: '1px solid rgba(248,113,113,0.35)', background: 'rgba(127,29,29,0.22)', color: '#FCA5A5', fontSize: 13 }}>
+            {error || 'Unable to load automation intelligence.'}
+          </div>
+        ) : (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12 }}>
+              <MetricCard label="Merchants using automation" value={String(data.summary.merchantsUsingAutomation)} sub="At least one live retention rule" />
+              <MetricCard label="Autopilot merchants" value={String(data.summary.autopilotMerchants)} sub="Running without approval hold" />
+              <MetricCard label="Pending approvals" value={String(data.summary.pendingApprovalRuns)} sub="Operator review still required" />
+              <MetricCard label="Sent runs" value={String(data.summary.sentRuns)} sub={`${data.summary.failedRuns} failed`} />
+              <MetricCard label="Revenue influenced" value={money(data.summary.revenueInfluencedCents)} sub="Estimated from campaign-linked results" />
             </div>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', minWidth: 760, borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid #E7E5E4' }}>
-                    <Th>Merchant</Th>
-                    <Th>Active Rules</Th>
-                    <Th>Autopilot</Th>
-                    <Th>Pending Queue</Th>
-                    <Th>Sent Runs</Th>
-                    <Th>Failed</Th>
-                    <Th>Revenue Influenced</Th>
-                    <Th>Last Run</Th>
-                  </tr>
-                </thead>
-                <tbody>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1.15fr 0.85fr', gap: 18 }}>
+              <Panel title="Merchant automation table" eyebrow="Who is driving repeat revenue now">
+                <div style={{ display: 'grid', gap: 10 }}>
                   {data.organizations.map((organization) => (
-                    <tr key={organization.id} style={{ borderBottom: '1px solid #F5F5F4' }}>
-                      <td style={{ padding: '10px 0' }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: '#1C1917' }}>{organization.name}</div>
-                        <div style={{ fontSize: 12, color: '#78716C' }}>{organization.slug}</div>
-                      </td>
-                      <td style={{ padding: '10px 0', fontSize: 13 }}>{organization.activeRules}</td>
-                      <td style={{ padding: '10px 0', fontSize: 13 }}>{organization.autopilotRules}</td>
-                      <td style={{ padding: '10px 0', fontSize: 13 }}>{organization.pendingApprovalRuns}</td>
-                      <td style={{ padding: '10px 0', fontSize: 13 }}>{organization.sentRuns}</td>
-                      <td style={{ padding: '10px 0', fontSize: 13, color: organization.failedRuns > 0 ? '#B91C1C' : '#1C1917' }}>
-                        {organization.failedRuns}
-                      </td>
-                      <td style={{ padding: '10px 0', fontSize: 13 }}>{money(organization.revenueInfluencedCents)}</td>
-                      <td style={{ padding: '10px 0', fontSize: 12, color: '#78716C' }}>
-                        {organization.lastRunAt ? new Date(organization.lastRunAt).toLocaleString() : 'No runs yet'}
-                      </td>
-                    </tr>
+                    <div
+                      key={organization.id}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1.2fr repeat(5, minmax(0, 0.6fr)) 0.9fr',
+                        gap: 12,
+                        alignItems: 'center',
+                        padding: '12px 14px',
+                        borderRadius: 14,
+                        background: 'rgba(255,255,255,0.04)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#FFFFFF' }}>{organization.name}</div>
+                        <div style={{ fontSize: 12, color: '#D1D5DB' }}>{organization.slug}</div>
+                      </div>
+                      <MiniMetric value={String(organization.activeRules)} label="rules" />
+                      <MiniMetric value={String(organization.autopilotRules)} label="autopilot" />
+                      <MiniMetric value={String(organization.pendingApprovalRuns)} label="queue" />
+                      <MiniMetric value={String(organization.sentRuns)} label="sent" />
+                      <MiniMetric value={String(organization.failedRuns)} label="failed" accent={organization.failedRuns > 0 ? 'danger' : 'neutral'} />
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#F9FAFB' }}>{money(organization.revenueInfluencedCents)}</div>
+                        <div style={{ fontSize: 11, color: '#D1D5DB' }}>
+                          {organization.lastRunAt ? new Date(organization.lastRunAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'No runs'}
+                        </div>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              </Panel>
+
+              <Panel title="Top operators" eyebrow="Merchants proving the moat">
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {topOperators.map((organization, index) => (
+                    <div key={organization.id} style={{ borderRadius: 14, padding: '14px 16px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#D4A853', marginBottom: 6 }}>
+                        #{index + 1} influenced revenue
+                      </div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: '#FFFFFF' }}>{organization.name}</div>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: '#FFFFFF', marginTop: 8 }}>{money(organization.revenueInfluencedCents)}</div>
+                      <div style={{ fontSize: 12, color: '#D1D5DB', marginTop: 6, lineHeight: 1.55 }}>
+                        {organization.activeRules} live rules • {organization.autopilotRules} autopilot • {organization.pendingApprovalRuns} waiting review
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Panel>
             </div>
-          </section>
-        </>
-      )}
+          </>
+        )}
+      </section>
     </div>
+  );
+}
+
+function Panel({
+  title,
+  eyebrow,
+  children,
+}: {
+  title: string;
+  eyebrow?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section style={{ border: '1px solid rgba(255,255,255,0.08)', borderRadius: 18, background: 'rgba(255,255,255,0.03)', padding: '20px 22px' }}>
+      {eyebrow ? (
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#D4A853', marginBottom: 8 }}>
+          {eyebrow}
+        </div>
+      ) : null}
+      <h2 style={{ fontSize: 18, fontWeight: 800, margin: '0 0 16px', color: '#FFFFFF' }}>{title}</h2>
+      {children}
+    </section>
   );
 }
 
 function MetricCard({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
-    <div style={{ borderRadius: 10, padding: '16px 18px', background: '#FFFFFF', border: '1px solid #E7E5E4' }}>
-      <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#78716C', marginBottom: 6 }}>
+    <div style={{ borderRadius: 16, padding: '16px 18px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)' }}>
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#D4A853', marginBottom: 6 }}>
         {label}
       </div>
-      <div style={{ fontSize: 24, fontWeight: 700, color: '#1C1917' }}>{value}</div>
-      <div style={{ fontSize: 12, color: '#78716C', marginTop: 4 }}>{sub}</div>
+      <div style={{ fontSize: 26, fontWeight: 800, color: '#FFFFFF' }}>{value}</div>
+      <div style={{ fontSize: 12, color: '#D1D5DB', marginTop: 4, lineHeight: 1.5 }}>{sub}</div>
     </div>
   );
 }
 
-function Th({ children }: { children: React.ReactNode }) {
+function MiniMetric({ value, label, accent = 'neutral' }: { value: string; label: string; accent?: 'neutral' | 'danger' }) {
   return (
-    <th style={{ padding: '8px 0', textAlign: 'left', fontSize: 11, fontWeight: 600, color: '#78716C', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-      {children}
-    </th>
+    <div style={{ textAlign: 'center' }}>
+      <div style={{ fontSize: 15, fontWeight: 700, color: accent === 'danger' ? '#FCA5A5' : '#FFFFFF' }}>{value}</div>
+      <div style={{ fontSize: 11, color: '#D1D5DB', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
+    </div>
   );
 }

@@ -163,6 +163,146 @@ function shortDate(value: string) {
   });
 }
 
+type CopilotInsightKey = 'price_higher' | 'upsell_next' | 'reorder_next' | 'fix_next';
+
+interface CopilotInsight {
+  key: CopilotInsightKey;
+  label: string;
+  title: string;
+  summary: string;
+  detail: string;
+  actionLabel: string;
+  href: string;
+  stat: string;
+}
+
+function buildCopilotInsights({
+  stats,
+  dueSoonOrders,
+  awaitingDepositOrders,
+  repeatCustomers,
+  unlocked,
+  storefrontUrl,
+  locationCount,
+}: {
+  stats: Stats | null;
+  dueSoonOrders: Order[];
+  awaitingDepositOrders: Order[];
+  repeatCustomers: number;
+  unlocked: boolean;
+  storefrontUrl: string | null;
+  locationCount: number;
+}): CopilotInsight[] {
+  const avgOrderValue = stats?.avgOrderValue ?? null;
+  const priceLift = avgOrderValue == null ? 8 : avgOrderValue >= 80000 ? 12 : avgOrderValue >= 50000 ? 10 : 8;
+  const reorderCadence =
+    repeatCustomers > 12 ? '72 hours after fulfillment' : repeatCustomers > 4 ? '5 days after fulfillment' : '1 week after fulfillment';
+  const priceStat = avgOrderValue != null ? money(avgOrderValue) : '---';
+  const reorderStat = repeatCustomers > 0 ? `${repeatCustomers} repeat customers` : 'No repeat signal yet';
+  const upsellStat =
+    stats && stats.upsellShown > 0
+      ? `${stats.upsellAccepted} accepted from ${stats.upsellShown} shown`
+      : 'No upsell data yet';
+  const fixHref = storefrontUrl ? '/launch' : '/settings';
+
+  const insights: CopilotInsight[] = [
+    {
+      key: 'price_higher',
+      label: 'Price higher',
+      title: unlocked
+        ? avgOrderValue != null
+          ? `Test a ${priceLift}% lift on your top package`
+          : 'Test a higher price on your strongest offer'
+        : 'Unlock pricing guidance',
+      summary: unlocked
+        ? avgOrderValue != null
+          ? `Your average order value is ${priceStat}. Start with the busiest package and hold everything else steady.`
+          : 'Once the engine has enough order data, it will point to the strongest package to reprice first.'
+        : 'Growth Advisor will calculate the exact price move using live orders, packages, and launch setup.',
+      detail: unlocked
+        ? avgOrderValue != null
+          ? `A measured ${priceLift}% lift gives you room to protect margin without changing the whole catalog at once.`
+          : 'Use the live catalog signal to identify the first offer worth testing.'
+        : 'Unlock the copilot to see the precise pricing move and the offer to test first.',
+      actionLabel: unlocked ? 'Review catalog pricing' : 'Open Growth Advisor',
+      href: unlocked ? '/catalog' : '/growth-advisor',
+      stat: unlocked ? priceStat : 'Locked',
+    },
+    {
+      key: 'upsell_next',
+      label: 'Upsell next',
+      title: unlocked
+        ? stats?.upsellAttachRate != null
+          ? `Push attach rate above ${stats.upsellAttachRate}%`
+          : 'Add one stronger upsell at checkout'
+        : 'Unlock upsell guidance',
+      summary: unlocked
+        ? stats?.upsellShown
+          ? `You already showed upsells ${stats.upsellShown} times. Add premium sides, beverages, or add-ons where orders already convert.`
+          : 'The engine will point to the best bundle and add-on path once it can read order behavior.'
+        : 'Growth Advisor will tell you what add-on or bundle should sell next.',
+      detail: unlocked
+        ? stats?.upsellShown
+          ? `${upsellStat}. Route that attention into the highest-margin add-on first.`
+          : 'The next unlock is a clean add-on ladder, not more menu noise.'
+        : 'Unlock the engine-level view to see the exact upsell move.',
+      actionLabel: unlocked ? 'Open customer engine' : 'Open Growth Advisor',
+      href: unlocked ? '/customers' : '/growth-advisor',
+      stat: unlocked ? upsellStat : 'Locked',
+    },
+    {
+      key: 'reorder_next',
+      label: 'Reorder next',
+      title: unlocked
+        ? repeatCustomers > 0
+          ? `Rebook repeat buyers on a ${reorderCadence} cadence`
+          : 'Build the reorder loop'
+        : 'Unlock reorder guidance',
+      summary: unlocked
+        ? repeatCustomers > 0
+          ? `You have ${repeatCustomers} repeat customers already. Use a timed reminder after fulfillment so the next order arrives before the calendar goes cold.`
+          : 'The copilot will define a reorder cadence after it sees the first repeat signal.'
+        : 'The copilot will show which customers are ready to reorder next.',
+      detail: unlocked
+        ? dueSoonOrders.length > 0
+          ? `${dueSoonOrders.length} orders are due soon, which is a good moment to plan the next request before delivery closes the loop.`
+          : `Use the best current buyers and ask again on a ${reorderCadence} cadence.`
+        : 'Unlock the engine to see the reorder timing that matches your live demand.',
+      actionLabel: unlocked ? 'Review orders' : 'Open Growth Advisor',
+      href: unlocked ? '/orders' : '/growth-advisor',
+      stat: unlocked ? reorderStat : 'Locked',
+    },
+    {
+      key: 'fix_next',
+      label: 'Fix next',
+      title: unlocked
+        ? awaitingDepositOrders.length > 0
+          ? 'Close deposit follow-up before scaling more demand'
+          : locationCount === 0
+            ? 'Add a location before pushing traffic'
+            : 'Tighten the launch lane'
+        : 'Unlock launch fixes',
+      summary: unlocked
+        ? awaitingDepositOrders.length > 0
+          ? `${awaitingDepositOrders.length} orders are waiting on deposits. Clear that blocker first so more traffic does not leak into the gap.`
+          : locationCount === 0
+            ? 'The storefront still needs a location. Fix the structure before spending on growth.'
+            : 'The engine will point to the highest-friction setup step before the next growth move.'
+        : 'The copilot will surface the first fix that blocks growth.',
+      detail: unlocked
+        ? storefrontUrl
+          ? 'Keep launch, pricing, and deposit policy aligned before you turn on more demand.'
+          : 'A public storefront is still the fastest force multiplier to lock down.'
+        : 'Unlock the copilot to see the launch blocker with the biggest payback.',
+      actionLabel: unlocked ? 'Open Launch Center' : 'Open Growth Advisor',
+      href: fixHref,
+      stat: unlocked ? (storefrontUrl ? 'Storefront live' : 'No storefront yet') : 'Locked',
+    },
+  ];
+
+  return insights;
+}
+
 export default function DashboardPage() {
   const planAccess = usePlanAccess();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -288,6 +428,28 @@ export default function DashboardPage() {
     ? getMerchantPlanDisplay(currentPlanDisplay.nextPlan)
     : null;
   const currentPlanPriceLabel = getMerchantPlanPriceLabel(planAccess.currentPlan);
+  const growthAdvisorFeature = planAccess.billing?.features.growthAdvisor;
+  const growthAdvisorUnlocked = Boolean(growthAdvisorFeature?.enabled);
+  const copilotInsights = useMemo(
+    () =>
+      buildCopilotInsights({
+        stats,
+        dueSoonOrders,
+        awaitingDepositOrders,
+        repeatCustomers: stats?.repeatCustomers ?? 0,
+        unlocked: growthAdvisorUnlocked,
+        storefrontUrl: storefrontContext?.storefrontUrl ?? null,
+        locationCount: storefrontContext?.locations.length ?? 0,
+      }),
+    [
+      stats,
+      dueSoonOrders,
+      awaitingDepositOrders,
+      growthAdvisorUnlocked,
+      storefrontContext?.storefrontUrl,
+      storefrontContext?.locations.length,
+    ],
+  );
 
   const priorityCards = [
     {
@@ -672,6 +834,121 @@ export default function DashboardPage() {
               </div>
             </section>
           ) : null}
+
+          <section
+            style={{
+              border: '1px solid #E7E5E4',
+              borderRadius: 18,
+              background:
+                'linear-gradient(135deg, rgba(28,25,23,0.98) 0%, rgba(41,37,36,0.98) 55%, rgba(68,64,60,0.98) 100%)',
+              color: '#FAFAF9',
+              padding: 20,
+              display: 'grid',
+              gap: 16,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: 12,
+                alignItems: 'flex-start',
+                flexWrap: 'wrap',
+              }}
+            >
+              <div>
+                <div style={sectionEyebrowStyle}>Growth Copilot</div>
+                <h2
+                  style={{
+                    fontSize: 24,
+                    fontWeight: 800,
+                    color: '#FAFAF9',
+                    margin: '4px 0 6px',
+                  }}
+                >
+                  What to price higher, upsell, reorder, and fix next
+                </h2>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 13,
+                    color: 'rgba(250,250,249,0.78)',
+                    lineHeight: 1.6,
+                    maxWidth: 780,
+                  }}
+                >
+                  The copilot reads the same live signal as the operator board, then turns it into
+                  a short list of moves the team can act on immediately.
+                </p>
+              </div>
+              <div
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 999,
+                  background: growthAdvisorUnlocked ? 'rgba(34,197,94,0.14)' : 'rgba(212,168,83,0.16)',
+                  border: growthAdvisorUnlocked ? '1px solid rgba(34,197,94,0.35)' : '1px solid rgba(212,168,83,0.35)',
+                  color: growthAdvisorUnlocked ? '#BBF7D0' : '#FDE68A',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                }}
+              >
+                {growthAdvisorUnlocked ? 'Copilot live on this plan' : 'Copilot preview locked'}
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+                gap: 12,
+              }}
+            >
+              {copilotInsights.map((insight) => (
+                <CopilotInsightCard
+                  key={insight.key}
+                  insight={insight}
+                  unlocked={growthAdvisorUnlocked}
+                />
+              ))}
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: 12,
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                paddingTop: 2,
+              }}
+            >
+              <div style={{ fontSize: 12, color: 'rgba(250,250,249,0.72)', lineHeight: 1.6 }}>
+                {growthAdvisorUnlocked
+                  ? 'Unlocks stay intact through billing, and the advisor links directly into the catalog, customers, orders, and launch surfaces.'
+                  : 'Unlock Growth Advisor to turn these previews into live, data-backed actions tied to the current plan.'}
+              </div>
+              <a
+                href="/growth-advisor"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '11px 16px',
+                  borderRadius: 12,
+                  background: '#D4A853',
+                  color: '#1C1917',
+                  fontSize: 13,
+                  fontWeight: 800,
+                  textDecoration: 'none',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {growthAdvisorUnlocked ? 'Open Growth Copilot' : 'Unlock Growth Advisor'}
+              </a>
+            </div>
+          </section>
 
           <section
             style={{
@@ -1352,6 +1629,84 @@ function PlanSummaryCard({
       </div>
       <div style={{ fontSize: 12, color: '#57534E', lineHeight: 1.55 }}>{body}</div>
     </div>
+  );
+}
+
+function CopilotInsightCard({
+  insight,
+  unlocked,
+}: {
+  insight: CopilotInsight;
+  unlocked: boolean;
+}) {
+  return (
+    <section
+      style={{
+        border: unlocked ? '1px solid rgba(255,255,255,0.10)' : '1px solid rgba(255,255,255,0.12)',
+        borderRadius: 16,
+        background: unlocked ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.05)',
+        padding: 16,
+        display: 'grid',
+        gap: 10,
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          gap: 8,
+          alignItems: 'center',
+        }}
+      >
+        <div
+          style={{
+            display: 'inline-flex',
+            padding: '5px 9px',
+            borderRadius: 999,
+            background: unlocked ? 'rgba(250,204,21,0.12)' : 'rgba(250,204,21,0.16)',
+            color: '#FDE68A',
+            fontSize: 10,
+            fontWeight: 800,
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+          }}
+        >
+          {insight.label}
+        </div>
+        <div style={{ fontSize: 12, fontWeight: 800, color: '#FAFAF9' }}>{insight.stat}</div>
+      </div>
+
+      <div style={{ fontSize: 17, fontWeight: 800, lineHeight: 1.25, color: '#FAFAF9' }}>
+        {insight.title}
+      </div>
+
+      <div style={{ fontSize: 13, lineHeight: 1.6, color: 'rgba(250,250,249,0.76)' }}>
+        {insight.summary}
+      </div>
+
+      <div style={{ fontSize: 12, lineHeight: 1.6, color: 'rgba(250,250,249,0.62)' }}>
+        {insight.detail}
+      </div>
+
+      <a
+        href={insight.href}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 'fit-content',
+          padding: '9px 12px',
+          borderRadius: 10,
+          background: unlocked ? '#FAFAF9' : 'rgba(250,250,249,0.14)',
+          color: unlocked ? '#1C1917' : '#FAFAF9',
+          fontSize: 12,
+          fontWeight: 800,
+          textDecoration: 'none',
+        }}
+      >
+        {insight.actionLabel}
+      </a>
+    </section>
   );
 }
 

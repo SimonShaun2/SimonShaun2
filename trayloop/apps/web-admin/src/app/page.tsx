@@ -115,10 +115,48 @@ export default function AdminDashboard() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, fontWeight: 700, marginTop: 0, marginBottom: 4 }}>Overview</h1>
-      <p style={{ fontSize: 13, color: '#78716C', marginTop: 0, marginBottom: 28 }}>
-        Every restaurant, every dollar - your TrayLoop business at a glance
-      </p>
+      <div style={{ display: 'grid', gap: 16, marginBottom: 24 }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#D4A853', marginBottom: 8 }}>
+            Tier 3 control room
+          </div>
+          <h1 style={{ fontSize: 28, fontWeight: 800, marginTop: 0, marginBottom: 6 }}>Overview</h1>
+          <p style={{ fontSize: 13, color: '#78716C', marginTop: 0, marginBottom: 0 }}>
+            Every restaurant, every dollar, and every retention signal in one place.
+          </p>
+        </div>
+
+        <div
+          style={{
+            border: '1px solid #E7E5E4',
+            borderRadius: 16,
+            background: '#FFFFFF',
+            padding: '16px 18px',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: 12,
+          }}
+        >
+          <QuickLink
+            eyebrow="Retention moat"
+            title="Churn risk desk"
+            description="See merchants and customers slipping out of cycle before revenue disappears."
+            href="/churn-risk"
+          />
+          <QuickLink
+            eyebrow="AI campaigns"
+            title="Automation intelligence"
+            description="Track adoption, approval queues, and the revenue influenced by Engine automations."
+            href="/automation-intelligence"
+          />
+          <QuickLink
+            eyebrow="Growth signals"
+            title="Revenue forecast"
+            description="Model repeat revenue and identify the highest-value customer patterns to scale."
+            href="/revenue-forecast"
+          />
+        </div>
+      </div>
 
       <div
         style={{
@@ -400,6 +438,38 @@ export default function AdminDashboard() {
         )}
       </Panel>
     </div>
+  );
+}
+
+function QuickLink({
+  eyebrow,
+  title,
+  description,
+  href,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  href: string;
+}) {
+  return (
+    <a
+      href={href}
+      style={{
+        display: 'block',
+        border: '1px solid #EEEAE4',
+        borderRadius: 14,
+        background: '#FAFAF9',
+        padding: '14px 16px',
+        textDecoration: 'none',
+      }}
+    >
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#A16207', marginBottom: 6 }}>
+        {eyebrow}
+      </div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: '#1C1917', marginBottom: 6 }}>{title}</div>
+      <div style={{ fontSize: 12, color: '#57534E', lineHeight: 1.55 }}>{description}</div>
+    </a>
   );
 }
 
