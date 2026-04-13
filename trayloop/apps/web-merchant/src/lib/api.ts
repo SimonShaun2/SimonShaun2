@@ -903,7 +903,7 @@ export interface MerchantFollowUpUpdateInput {
 }
 
 export async function fetchCustomers(): Promise<MerchantCustomerSummary[]> {
-  const response = await apiFetch('/api/customers');
+  const response = await apiFetch('/api/customers?pageSize=100');
   return response.data;
 }
 

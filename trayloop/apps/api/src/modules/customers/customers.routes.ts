@@ -3,7 +3,7 @@ import { requireAuth } from '../../lib/middleware/auth.js';
 import { requireTenant } from '../../lib/middleware/tenant.js';
 import { validateBody, validateParams } from '../../lib/middleware/validate.js';
 import { idParamsSchema } from '../../lib/params.js';
-import { createCustomerSchema, updateCustomerSchema } from './customers.schema.js';
+import { createCustomerSchema, updateCustomerSchema, customerListQuerySchema } from './customers.schema.js';
 import * as service from './customers.service.js';
 
 export function registerRoutes(app: FastifyInstance) {
@@ -12,8 +12,17 @@ export function registerRoutes(app: FastifyInstance) {
   app.addHook('preHandler', requireTenant);
 
   app.get('/', async (request) => {
-    const customers = await service.listByOrg(request.ctx.tenant!.organizationId);
-    return { data: customers };
+    const query = customerListQuerySchema.parse(request.query);
+    const result = await service.listByOrg(request.ctx.tenant!.organizationId, query);
+    return {
+      data: result.items,
+      pagination: {
+        page: result.page,
+        pageSize: result.pageSize,
+        total: result.total,
+        hasMore: result.hasMore,
+      },
+    };
   });
 
   app.get('/:id', { preHandler: [validateParams(idParamsSchema)] }, async (request) => {

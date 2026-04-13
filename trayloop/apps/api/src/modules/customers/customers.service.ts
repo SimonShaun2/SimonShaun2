@@ -1,39 +1,72 @@
 import { db } from '@trayloop/database';
 import { customers, orders } from '@trayloop/database';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, desc, sql, ilike, or } from 'drizzle-orm';
 import { NotFoundError } from '../../lib/errors.js';
-import type { CreateCustomerInput, UpdateCustomerInput } from './customers.schema.js';
+import type { CreateCustomerInput, UpdateCustomerInput, CustomerListQuery } from './customers.schema.js';
 
-export async function listByOrg(orgId: string) {
-  const rows = await db
-    .select({
-      id: customers.id,
-      email: customers.email,
-      firstName: customers.firstName,
-      lastName: customers.lastName,
-      phone: customers.phone,
-      companyName: customers.companyName,
-      isActive: customers.isActive,
-      createdAt: customers.createdAt,
-      orderCount: sql<number>`(select count(*)::int from orders where orders.customer_id = customers.id)`,
-      totalSpend: sql<number>`(select coalesce(sum(total_amount), 0)::int from orders where orders.customer_id = customers.id)`,
-      lastOrderDate: sql<string | null>`(select max(scheduled_at)::text from orders where orders.customer_id = customers.id)`,
-    })
-    .from(customers)
-    .where(eq(customers.organizationId, orgId));
+export async function listByOrg(orgId: string, query: CustomerListQuery) {
+  const { page, pageSize, search } = query;
+  const offset = (page - 1) * pageSize;
 
-  return rows.map((r) => ({
-    id: r.id,
-    name: `${r.firstName} ${r.lastName}`,
-    email: r.email,
-    phone: r.phone,
-    company: r.companyName,
-    isActive: r.isActive,
-    createdAt: r.createdAt,
-    orderCount: r.orderCount,
-    totalSpend: r.totalSpend,
-    lastOrderDate: r.lastOrderDate,
-  }));
+  const searchTerm = search ? `%${search}%` : null;
+  const whereClause = searchTerm
+    ? and(
+        eq(customers.organizationId, orgId),
+        or(
+          ilike(customers.firstName, searchTerm),
+          ilike(customers.lastName, searchTerm),
+          ilike(customers.email, searchTerm),
+          ilike(customers.companyName, searchTerm),
+        ),
+      )
+    : eq(customers.organizationId, orgId);
+
+  const [rows, totalRow] = await Promise.all([
+    db
+      .select({
+        id: customers.id,
+        email: customers.email,
+        firstName: customers.firstName,
+        lastName: customers.lastName,
+        phone: customers.phone,
+        companyName: customers.companyName,
+        isActive: customers.isActive,
+        createdAt: customers.createdAt,
+        orderCount: sql<number>`(select count(*)::int from orders where orders.customer_id = customers.id)`,
+        totalSpend: sql<number>`(select coalesce(sum(total_amount), 0)::int from orders where orders.customer_id = customers.id)`,
+        lastOrderDate: sql<string | null>`(select max(scheduled_at)::text from orders where orders.customer_id = customers.id)`,
+      })
+      .from(customers)
+      .where(whereClause)
+      .orderBy(desc(customers.createdAt))
+      .limit(pageSize)
+      .offset(offset),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(customers)
+      .where(whereClause),
+  ]);
+
+  const total = totalRow[0]?.count ?? 0;
+
+  return {
+    items: rows.map((r) => ({
+      id: r.id,
+      name: `${r.firstName} ${r.lastName}`,
+      email: r.email,
+      phone: r.phone,
+      company: r.companyName,
+      isActive: r.isActive,
+      createdAt: r.createdAt,
+      orderCount: r.orderCount,
+      totalSpend: r.totalSpend,
+      lastOrderDate: r.lastOrderDate,
+    })),
+    total,
+    page,
+    pageSize,
+    hasMore: offset + rows.length < total,
+  };
 }
 
 export async function getById(id: string) {
