@@ -480,6 +480,10 @@ export default function ProductPage() {
           .tl-product-section {
             padding: 64px 18px !important;
           }
+          .tl-product-section > div {
+            max-width: 560px !important;
+            margin: 0 auto !important;
+          }
           .tl-product-hero-title {
             font-size: 42px !important;
             line-height: 1.02 !important;
@@ -494,6 +498,12 @@ export default function ProductPage() {
           }
           .tl-product-hero-canvas {
             min-height: 420px !important;
+          }
+          .tl-product-stage,
+          .tl-product-advisor,
+          .tl-product-feature-grid {
+            max-width: 560px !important;
+            margin-inline: auto !important;
           }
           .tl-product-chip-grid,
           .tl-product-stage-metrics {
@@ -511,7 +521,15 @@ export default function ProductPage() {
           }
           .tl-product-stage-card,
           .tl-product-advisor {
+            grid-template-columns: 1fr !important;
             gap: 14px !important;
+          }
+          .tl-product-stage-copy {
+            order: 1 !important;
+            min-height: auto !important;
+          }
+          .tl-product-stage-preview {
+            order: 2 !important;
           }
           .tl-product-stage-copy,
           .tl-product-stage-preview,
@@ -530,7 +548,7 @@ export default function ProductPage() {
             grid-template-columns: 1fr !important;
           }
           .tl-product-closing-actions {
-            justify-content: flex-start !important;
+            justify-content: center !important;
           }
         }
       `}</style>

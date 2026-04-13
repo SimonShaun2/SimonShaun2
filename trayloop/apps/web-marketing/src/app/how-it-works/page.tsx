@@ -335,7 +335,7 @@ function StepPanel({
         alignItems: 'stretch',
       }}
     >
-      <Card dark={dark} style={{ display: 'grid', gap: 16, minHeight: 320, color: dark ? C.white : C.ink }}>
+      <Card className="tl-how-step-copy" dark={dark} style={{ display: 'grid', gap: 16, minHeight: 320, color: dark ? C.white : C.ink }}>
         <div
           style={{
             display: 'inline-flex',
@@ -368,6 +368,7 @@ function StepPanel({
       </Card>
 
       <Card
+        className="tl-how-step-preview"
         dark={dark && step.number === '04'}
         style={{
           display: 'grid',
@@ -531,6 +532,10 @@ export default function HowItWorksPage() {
           .tl-how-section {
             padding: 64px 18px !important;
           }
+          .tl-how-section > div {
+            max-width: 560px !important;
+            margin: 0 auto !important;
+          }
           .tl-how-hero-title {
             font-size: 42px !important;
             line-height: 1.02 !important;
@@ -545,6 +550,21 @@ export default function HowItWorksPage() {
           }
           .tl-how-hero-canvas {
             min-height: 420px !important;
+          }
+          .tl-how-step {
+            grid-template-columns: 1fr !important;
+            gap: 14px !important;
+          }
+          .tl-how-step-copy {
+            order: 1 !important;
+            min-height: auto !important;
+          }
+          .tl-how-step-preview {
+            order: 2 !important;
+          }
+          .tl-how-feature-grid {
+            max-width: 560px !important;
+            margin-inline: auto !important;
           }
           .tl-how-hero-copy,
           .tl-how-heading-block,

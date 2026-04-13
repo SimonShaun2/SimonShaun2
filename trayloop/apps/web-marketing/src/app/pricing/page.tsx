@@ -247,6 +247,10 @@ export default function PricingPage() {
           .tl-pricing-section {
             padding: 64px 18px !important;
           }
+          .tl-pricing-section > div {
+            max-width: 560px !important;
+            margin: 0 auto !important;
+          }
           .tl-pricing-hero-title {
             font-size: 42px !important;
             line-height: 1.02 !important;
@@ -259,6 +263,11 @@ export default function PricingPage() {
             font-size: 16px !important;
             line-height: 1.65 !important;
           }
+          .tl-pricing-grid,
+          .tl-pricing-addon-cards {
+            max-width: 560px !important;
+            margin-inline: auto !important;
+          }
           .tl-pricing-hero > div:first-child,
           .tl-pricing-heading-block,
           .tl-pricing-addon-header > div:first-child,
@@ -269,6 +278,9 @@ export default function PricingPage() {
           .tl-pricing-hero-actions,
           .tl-pricing-closing-actions {
             justify-content: center !important;
+          }
+          .tl-pricing-addon-header > div:last-child {
+            text-align: center !important;
           }
           .tl-pricing-header-cell {
             display: none !important;
