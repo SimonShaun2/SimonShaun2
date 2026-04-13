@@ -1,7 +1,7 @@
 'use client';
 
 import type { CSSProperties } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import Script from 'next/script';
 import { trackEvent } from '@trayloop/analytics';
 
@@ -27,11 +27,50 @@ const tealDot: CSSProperties = {
 const DEMO_EMAIL = 'hello@trayloophq.com';
 const HUBSPOT_PORTAL_ID = '245856247';
 const HUBSPOT_FORM_ID = '1ace2de1-fd67-4b27-9d0b-07d724abacfc';
+const HUBSPOT_REGION = 'na2';
+
+declare global {
+  interface Window {
+    hbspt?: {
+      forms?: {
+        create: (options: {
+          region: string;
+          portalId: string;
+          formId: string;
+          target: string;
+        }) => void;
+      };
+    };
+  }
+}
 
 export default function DemoPage() {
+  const formReadyRef = useRef(false);
+
   useEffect(() => {
     trackEvent('marketing_demo_page_viewed', { placement: 'demo_page' });
   }, []);
+
+  function mountHubspotForm() {
+    if (formReadyRef.current) {
+      return;
+    }
+
+    const formHost = document.getElementById('hubspot-demo-form');
+    if (!formHost || !window.hbspt?.forms?.create) {
+      return;
+    }
+
+    formHost.innerHTML = '';
+    window.hbspt.forms.create({
+      region: HUBSPOT_REGION,
+      portalId: HUBSPOT_PORTAL_ID,
+      formId: HUBSPOT_FORM_ID,
+      target: '#hubspot-demo-form',
+    });
+    formReadyRef.current = true;
+    trackEvent('marketing_demo_form_loaded', { placement: 'demo_page' });
+  }
 
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', minHeight: '100vh' }}>
@@ -75,9 +114,7 @@ export default function DemoPage() {
       <Script
         src="https://js-na2.hsforms.net/forms/embed/245856247.js"
         strategy="afterInteractive"
-        onLoad={() => {
-          trackEvent('marketing_demo_form_loaded', { placement: 'demo_page' });
-        }}
+        onLoad={mountHubspotForm}
       />
 
       <div
@@ -228,12 +265,7 @@ export default function DemoPage() {
               minHeight: 400,
             }}
           >
-            <div
-              className="hs-form-frame"
-              data-region="na2"
-              data-form-id={HUBSPOT_FORM_ID}
-              data-portal-id={HUBSPOT_PORTAL_ID}
-            />
+            <div id="hubspot-demo-form" />
             <p
               style={{
                 fontSize: 14,
