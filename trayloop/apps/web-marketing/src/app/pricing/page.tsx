@@ -16,13 +16,15 @@ function Section({
   children,
   bg = 'transparent',
   style,
+  className,
 }: {
   children: ReactNode;
   bg?: string;
   style?: CSSProperties;
+  className?: string;
 }) {
   return (
-    <section style={{ backgroundColor: bg, padding: '88px 24px', ...style }}>
+    <section className={className} style={{ backgroundColor: bg, padding: '88px 24px', ...style }}>
       <div style={{ maxWidth: 1180, margin: '0 auto' }}>{children}</div>
     </section>
   );
@@ -45,10 +47,11 @@ function Eyebrow({ text }: { text: string }) {
   );
 }
 
-function Heading({ title, summary }: { title: string; summary: string }) {
+function Heading({ title, summary, className }: { title: string; summary: string; className?: string }) {
   return (
     <div style={{ maxWidth: 780 }}>
       <h2
+        className={className}
         style={{
           fontSize: 42,
           lineHeight: 1.08,
@@ -69,14 +72,17 @@ function Card({
   dark = false,
   accent = C.creamDark,
   style,
+  className,
 }: {
   children: ReactNode;
   dark?: boolean;
   accent?: string;
   style?: CSSProperties;
+  className?: string;
 }) {
   return (
     <div
+      className={className}
       style={{
         backgroundColor: dark ? '#231E19' : C.white,
         borderRadius: 26,
@@ -175,9 +181,12 @@ function PlanCard({
   );
 }
 
-function ComparisonCell({ on }: { on: boolean }) {
+function ComparisonCell({ on, label }: { on: boolean; label: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 54 }}>
+      <span className="tl-pricing-mobile-label" style={{ display: 'none', fontSize: 12, fontWeight: 800, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.08em', marginRight: 10 }}>
+        {label}
+      </span>
       <StatusDot on={on} />
     </div>
   );
@@ -210,6 +219,13 @@ export default function PricingPage() {
           background: rgba(255,255,255,0.65);
         }
         @media (max-width: 960px) {
+          .tl-pricing-hero,
+          .tl-pricing-addon-header,
+          .tl-pricing-addon-grid,
+          .tl-pricing-addon-cards,
+          .tl-pricing-closing {
+            grid-template-columns: 1fr !important;
+          }
           .tl-pricing-grid {
             grid-template-columns: 1fr !important;
           }
@@ -217,11 +233,47 @@ export default function PricingPage() {
           .tl-pricing-row {
             grid-template-columns: 1fr !important;
           }
+          .tl-pricing-row > div {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+          }
+          .tl-pricing-mobile-label {
+            display: inline-block !important;
+          }
+        }
+        @media (max-width: 768px) {
+          .tl-pricing-section {
+            padding: 64px 18px !important;
+          }
+          .tl-pricing-hero-title {
+            font-size: 42px !important;
+            line-height: 1.02 !important;
+          }
+          .tl-pricing-section-title {
+            font-size: 32px !important;
+            line-height: 1.08 !important;
+          }
+          .tl-pricing-body-copy {
+            font-size: 16px !important;
+            line-height: 1.65 !important;
+          }
+          .tl-pricing-header-cell {
+            display: none !important;
+          }
+          .tl-pricing-header-feature {
+            border-bottom: 1px solid #E5DCCD;
+          }
+          .tl-pricing-closing-actions {
+            justify-content: flex-start !important;
+          }
         }
       `}</style>
 
-      <Section bg={C.cream}>
+      <Section bg={C.cream} className="tl-pricing-section">
         <div
+          className="tl-pricing-hero"
           style={{
             display: 'grid',
             gridTemplateColumns: '1.05fr 0.95fr',
@@ -232,6 +284,7 @@ export default function PricingPage() {
           <div>
             <Eyebrow text="Pricing" />
             <h1
+              className="tl-pricing-hero-title"
               style={{
                 fontSize: 68,
                 lineHeight: 0.98,
@@ -244,7 +297,7 @@ export default function PricingPage() {
             >
               Choose the tier that matches the growth engine you want to build.
             </h1>
-            <p style={{ fontSize: 18, lineHeight: 1.7, color: C.muted, maxWidth: 620 }}>
+            <p className="tl-pricing-body-copy" style={{ fontSize: 18, lineHeight: 1.7, color: C.muted, maxWidth: 620 }}>
               Launch gets the storefront live. Momentum turns orders into repeat revenue. Engine layers in AI,
               campaigns, and retention intelligence.
             </p>
@@ -317,10 +370,11 @@ export default function PricingPage() {
         </div>
       </Section>
 
-      <Section bg={C.white}>
+      <Section bg={C.white} className="tl-pricing-section">
         <div style={{ maxWidth: 980 }}>
           <Eyebrow text="Packages" />
           <Heading
+            className="tl-pricing-section-title"
             title="Launch, Momentum, and Engine are built to map to the way catering revenue actually grows."
             summary="Launch is for the first direct orders. Momentum is for recurring scheduling and upsells. Engine is for AI-led retention and growth automation."
           />
@@ -333,8 +387,8 @@ export default function PricingPage() {
         </div>
       </Section>
 
-      <Section bg={C.creamDark}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 24, alignItems: 'center' }}>
+      <Section bg={C.creamDark} className="tl-pricing-section">
+        <div className="tl-pricing-addon-header" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 24, alignItems: 'center' }}>
           <div>
             <Eyebrow text="Add-on" />
             <h2 style={{ fontSize: 36, lineHeight: 1.1, fontWeight: 800, color: C.ink, marginBottom: 12 }}>
@@ -371,7 +425,7 @@ export default function PricingPage() {
         </div>
 
         <div style={{ marginTop: 28 }}>
-          <Card style={{ display: 'grid', gridTemplateColumns: '1.05fr 0.95fr', gap: 22, alignItems: 'stretch' }}>
+          <Card className="tl-pricing-addon-grid" style={{ display: 'grid', gridTemplateColumns: '1.05fr 0.95fr', gap: 22, alignItems: 'stretch' }}>
             <div>
               <div
                 style={{
@@ -445,7 +499,7 @@ export default function PricingPage() {
             </div>
           </Card>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 18, marginTop: 18 }}>
+          <div className="tl-pricing-addon-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 18, marginTop: 18 }}>
             {[
               {
                 title: 'Pricing direction',
@@ -469,10 +523,11 @@ export default function PricingPage() {
         </div>
       </Section>
 
-      <Section bg={C.white}>
+      <Section bg={C.white} className="tl-pricing-section">
         <div>
           <Eyebrow text="Plan comparison" />
           <Heading
+            className="tl-pricing-section-title"
             title="See what changes as you move from storefront to repeat revenue to AI growth."
             summary="The base stack stays the same. Each tier simply adds the next layer of compounding capability."
           />
@@ -480,27 +535,28 @@ export default function PricingPage() {
 
         <div style={{ marginTop: 28, border: '1px solid #E5DCCD', borderRadius: 26, overflow: 'hidden' }}>
           <div className="tl-pricing-compare" style={{ backgroundColor: '#F5EEE4', fontSize: 13, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            <div style={{ padding: '16px 18px' }}>Feature</div>
-            <div style={{ padding: '16px 18px', textAlign: 'center' }}>Launch</div>
-            <div style={{ padding: '16px 18px', textAlign: 'center' }}>Momentum</div>
-            <div style={{ padding: '16px 18px', textAlign: 'center' }}>Engine</div>
+            <div className="tl-pricing-header-feature" style={{ padding: '16px 18px' }}>Feature</div>
+            <div className="tl-pricing-header-cell" style={{ padding: '16px 18px', textAlign: 'center' }}>Launch</div>
+            <div className="tl-pricing-header-cell" style={{ padding: '16px 18px', textAlign: 'center' }}>Momentum</div>
+            <div className="tl-pricing-header-cell" style={{ padding: '16px 18px', textAlign: 'center' }}>Engine</div>
           </div>
 
           {pricingRows.map((row) => (
             <div key={row.feature} className="tl-pricing-row">
               <div style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>{row.feature}</div>
-              <ComparisonCell on={row.launch} />
-              <ComparisonCell on={row.momentum} />
-              <ComparisonCell on={row.engine} />
+              <ComparisonCell on={row.launch} label="Launch" />
+              <ComparisonCell on={row.momentum} label="Momentum" />
+              <ComparisonCell on={row.engine} label="Engine" />
             </div>
           ))}
         </div>
       </Section>
 
-      <Section bg={C.cream}>
+      <Section bg={C.cream} className="tl-pricing-section">
         <div>
           <Eyebrow text="FAQ" />
           <Heading
+            className="tl-pricing-section-title"
             title="A few practical questions before you choose a tier."
             summary="The pricing ladder is meant to be simple, but merchants still need to know what unlocks what and how the add-on fits in."
           />
@@ -518,6 +574,7 @@ export default function PricingPage() {
 
       <section style={{ backgroundColor: C.ink, color: C.white, padding: '96px 24px' }}>
         <div
+          className="tl-pricing-closing"
           style={{
             maxWidth: 1180,
             margin: '0 auto',
@@ -537,7 +594,7 @@ export default function PricingPage() {
               become the growth moat.
             </p>
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 12 }}>
+          <div className="tl-pricing-closing-actions" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 12 }}>
             <PillButton text="Get started" href="/signup" variant="primary" size="md" />
             <PillButton text="Book a demo" href="/demo" variant="ghost" size="md" />
           </div>

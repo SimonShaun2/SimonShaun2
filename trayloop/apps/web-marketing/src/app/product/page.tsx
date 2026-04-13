@@ -19,13 +19,15 @@ function Section({
   children,
   bg = 'transparent',
   style,
+  className,
 }: {
   children: ReactNode;
   bg?: string;
   style?: CSSProperties;
+  className?: string;
 }) {
   return (
-    <section style={{ backgroundColor: bg, padding: '84px 24px', ...style }}>
+    <section className={className} style={{ backgroundColor: bg, padding: '84px 24px', ...style }}>
       <div style={{ maxWidth: 1180, margin: '0 auto' }}>{children}</div>
     </section>
   );
@@ -48,10 +50,11 @@ function Eyebrow({ text }: { text: string }) {
   );
 }
 
-function Heading({ title, summary }: { title: string; summary: string }) {
+function Heading({ title, summary, className }: { title: string; summary: string; className?: string }) {
   return (
     <div style={{ maxWidth: 760 }}>
       <h2
+        className={className}
         style={{
           fontSize: 40,
           lineHeight: 1.06,
@@ -227,7 +230,7 @@ function StageMock({
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
+      <div className="tl-product-stage-metrics" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
         {planName === 'Launch'
           ? ['Brand', 'Minimums', 'Deposit'].map((label) => <MetricChip key={label} label={label} value="Configured" dark={dark} />)
           : planName === 'Momentum'
@@ -386,7 +389,7 @@ function AdvisorPreview() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gap: 12 }}>
+      <div className="tl-product-advisor-preview-grid" style={{ display: 'grid', gap: 12 }}>
         {moves.map((move, index) => (
           <div
             key={move.label}
@@ -471,9 +474,42 @@ export default function ProductPage() {
             grid-template-columns: 1fr !important;
           }
         }
+        @media (max-width: 768px) {
+          .tl-product-section {
+            padding: 64px 18px !important;
+          }
+          .tl-product-hero-title {
+            font-size: 42px !important;
+            line-height: 1.02 !important;
+          }
+          .tl-product-section-title {
+            font-size: 32px !important;
+            line-height: 1.08 !important;
+          }
+          .tl-product-body-copy {
+            font-size: 16px !important;
+            line-height: 1.65 !important;
+          }
+          .tl-product-hero-canvas {
+            min-height: 420px !important;
+          }
+          .tl-product-chip-grid,
+          .tl-product-stage-metrics {
+            grid-template-columns: 1fr !important;
+          }
+          .tl-product-advisor-preview-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .tl-product-closing {
+            grid-template-columns: 1fr !important;
+          }
+          .tl-product-closing-actions {
+            justify-content: flex-start !important;
+          }
+        }
       `}</style>
 
-      <Section bg={C.ink} style={{ paddingTop: 72, paddingBottom: 72 }}>
+      <Section bg={C.ink} style={{ paddingTop: 72, paddingBottom: 72 }} className="tl-product-section">
         <div
           className="tl-product-hero"
           style={{
@@ -504,6 +540,7 @@ export default function ProductPage() {
             </div>
 
             <h1
+              className="tl-product-hero-title"
               style={{
                 fontSize: 64,
                 lineHeight: 0.98,
@@ -521,6 +558,7 @@ export default function ProductPage() {
               Engine.
             </h1>
             <p
+              className="tl-product-body-copy"
               style={{
                 fontSize: 19,
                 lineHeight: 1.65,
@@ -536,7 +574,7 @@ export default function ProductPage() {
               <PillButton text="How it works" href="/how-it-works" variant="ghost" size="md" />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12, marginTop: 28, maxWidth: 620 }}>
+            <div className="tl-product-chip-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12, marginTop: 28, maxWidth: 620 }}>
               <MetricChip label="Launch" value="Get live" dark />
               <MetricChip label="Momentum" value="Build repeat" dark />
               <MetricChip label="Engine" value="Compounds" dark />
@@ -545,6 +583,7 @@ export default function ProductPage() {
 
           <div className="tl-product-fade tl-product-delay-1">
             <div
+              className="tl-product-hero-canvas"
               style={{
                 position: 'relative',
                 minHeight: 620,
@@ -628,10 +667,11 @@ export default function ProductPage() {
         </div>
       </Section>
 
-      <Section bg={C.white}>
+      <Section bg={C.white} className="tl-product-section">
         <div className="tl-product-fade">
           <Eyebrow text="The ladder" />
           <Heading
+            className="tl-product-section-title"
             title="Three stages, one product story."
             summary="Each tier adds a clear layer of leverage instead of resetting the account or making the merchant relearn the workflow."
           />
@@ -646,10 +686,11 @@ export default function ProductPage() {
         </div>
       </Section>
 
-      <Section bg={C.creamDark}>
+      <Section bg={C.creamDark} className="tl-product-section">
         <div className="tl-product-fade">
           <Eyebrow text="Growth Advisor" />
           <Heading
+            className="tl-product-section-title"
             title="The strategy layer feels like an operator sitting next to the merchant."
             summary="It turns live storefront data into a short list of decisions: what to price higher, what to upsell, what to reorder, and what to fix next."
           />
@@ -690,10 +731,11 @@ export default function ProductPage() {
         </div>
       </Section>
 
-      <Section bg={C.white}>
+      <Section bg={C.white} className="tl-product-section">
         <div className="tl-product-fade">
           <Eyebrow text="Capability atlas" />
           <Heading
+            className="tl-product-section-title"
             title="The features stay focused on direct catering."
             summary="Every block is there to increase conversion, repeat rate, or operator confidence."
           />
@@ -710,6 +752,7 @@ export default function ProductPage() {
 
       <section style={{ backgroundColor: C.ink, color: C.white, padding: '92px 24px' }}>
         <div
+          className="tl-product-closing"
           style={{
             maxWidth: 1180,
             margin: '0 auto',
@@ -728,7 +771,7 @@ export default function ProductPage() {
               That is the product story in one line, and it is the story every page should tell.
             </p>
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 12 }}>
+          <div className="tl-product-closing-actions" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 12 }}>
             <PillButton text="See pricing" href="/pricing" variant="primary" size="md" />
             <PillButton text="How it works" href="/how-it-works" variant="ghost" size="md" />
           </div>

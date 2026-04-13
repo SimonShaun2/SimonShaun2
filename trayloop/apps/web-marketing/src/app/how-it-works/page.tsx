@@ -19,13 +19,15 @@ function Section({
   children,
   bg = 'transparent',
   style,
+  className,
 }: {
   children: ReactNode;
   bg?: string;
   style?: CSSProperties;
+  className?: string;
 }) {
   return (
-    <section style={{ backgroundColor: bg, padding: '84px 24px', ...style }}>
+    <section className={className} style={{ backgroundColor: bg, padding: '84px 24px', ...style }}>
       <div style={{ maxWidth: 1180, margin: '0 auto' }}>{children}</div>
     </section>
   );
@@ -48,10 +50,11 @@ function Eyebrow({ text }: { text: string }) {
   );
 }
 
-function Heading({ title, summary }: { title: string; summary: string }) {
+function Heading({ title, summary, className }: { title: string; summary: string; className?: string }) {
   return (
     <div style={{ maxWidth: 780 }}>
       <h2
+        className={className}
         style={{
           fontSize: 40,
           lineHeight: 1.06,
@@ -220,6 +223,7 @@ function MockSurface({
 function HeroCanvas() {
   return (
     <div
+      className="tl-how-hero-canvas"
       style={{
         position: 'relative',
         minHeight: 620,
@@ -523,9 +527,35 @@ export default function HowItWorksPage() {
             grid-template-columns: 1fr !important;
           }
         }
+        @media (max-width: 768px) {
+          .tl-how-section {
+            padding: 64px 18px !important;
+          }
+          .tl-how-hero-title {
+            font-size: 42px !important;
+            line-height: 1.02 !important;
+          }
+          .tl-how-section-title {
+            font-size: 32px !important;
+            line-height: 1.08 !important;
+          }
+          .tl-how-body-copy {
+            font-size: 16px !important;
+            line-height: 1.65 !important;
+          }
+          .tl-how-hero-canvas {
+            min-height: 420px !important;
+          }
+          .tl-how-closing {
+            grid-template-columns: 1fr !important;
+          }
+          .tl-how-closing-actions {
+            justify-content: flex-start !important;
+          }
+        }
       `}</style>
 
-      <Section bg={C.ink} style={{ paddingTop: 72, paddingBottom: 72 }}>
+      <Section bg={C.ink} style={{ paddingTop: 72, paddingBottom: 72 }} className="tl-how-section">
         <div
           className="tl-how-hero"
           style={{
@@ -556,6 +586,7 @@ export default function HowItWorksPage() {
             </div>
 
             <h1
+              className="tl-how-hero-title"
               style={{
                 fontSize: 64,
                 lineHeight: 0.98,
@@ -573,6 +604,7 @@ export default function HowItWorksPage() {
               Keep the next one in motion.
             </h1>
             <p
+              className="tl-how-body-copy"
               style={{
                 fontSize: 19,
                 lineHeight: 1.65,
@@ -590,15 +622,18 @@ export default function HowItWorksPage() {
           </div>
 
           <div className="tl-how-fade tl-how-delay-1">
-            <HeroCanvas />
+            <div className="tl-how-hero-canvas">
+              <HeroCanvas />
+            </div>
           </div>
         </div>
       </Section>
 
-      <Section bg={C.white}>
+      <Section bg={C.white} className="tl-how-section">
         <div className="tl-how-fade">
           <Eyebrow text="The sequence" />
           <Heading
+            className="tl-how-section-title"
             title="The story is linear, which makes it easier to teach and easier to run."
             summary="Each step introduces one new layer of leverage without breaking the flow the merchant already understands."
           />
@@ -613,10 +648,11 @@ export default function HowItWorksPage() {
         </div>
       </Section>
 
-      <Section bg={C.creamDark}>
+      <Section bg={C.creamDark} className="tl-how-section">
         <div className="tl-how-fade">
           <Eyebrow text="What each team sees" />
           <Heading
+            className="tl-how-section-title"
             title="The same order, rendered for three different jobs."
             summary="Customer, kitchen, and operator all get the slice of the experience they need, so nothing important gets lost between screens."
           />
@@ -659,6 +695,7 @@ export default function HowItWorksPage() {
 
       <section style={{ backgroundColor: C.ink, color: C.white, padding: '92px 24px' }}>
         <div
+          className="tl-how-closing"
           style={{
             maxWidth: 1180,
             margin: '0 auto',
@@ -677,7 +714,7 @@ export default function HowItWorksPage() {
               That is the operating model behind the product and the reason the pages now lean on the same story.
             </p>
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 12 }}>
+          <div className="tl-how-closing-actions" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 12 }}>
             <PillButton text="See pricing" href="/pricing" variant="primary" size="md" />
             <PillButton text="View product" href="/product" variant="ghost" size="md" />
           </div>
