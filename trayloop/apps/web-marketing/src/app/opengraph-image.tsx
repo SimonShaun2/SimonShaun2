@@ -444,7 +444,7 @@ export default async function OpengraphImage() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            {['$49/month flat', 'No commissions', 'No contracts'].map((t, i) => (
+            {['$29/month flat', 'No commissions', 'No contracts'].map((t, i) => (
               <div
                 key={t}
                 style={{

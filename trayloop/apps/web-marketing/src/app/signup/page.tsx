@@ -99,7 +99,7 @@ export default function SignupPage() {
             }}
           >
             <span style={{ fontSize: 18, fontWeight: 700, color: C.teal }}>
-              $49/month + 5%
+              $29/month + 5%
             </span>
           </div>
 

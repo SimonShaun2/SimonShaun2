@@ -1,14 +1,17 @@
+'use client';
+
+import Image from 'next/image';
 import type { CSSProperties, ReactNode } from 'react';
 import PillButton from '@/components/pill-button';
-import { howItWorksSteps, plans } from '@/lib/marketing-story';
+import { howItWorksSteps } from '@/lib/marketing-story';
 
 const C = {
-  cream: '#F9F5EF',
-  creamDark: '#EFE7DB',
-  ink: '#1A1612',
+  cream: '#F8F3EC',
+  creamDark: '#EEE4D2',
+  ink: '#191510',
   orange: '#E85618',
-  teal: '#42D9A0',
-  muted: '#7B6F65',
+  teal: '#44D9A1',
+  muted: '#776A5F',
   white: '#FEFCFA',
 };
 
@@ -22,7 +25,7 @@ function Section({
   style?: CSSProperties;
 }) {
   return (
-    <section style={{ backgroundColor: bg, padding: '88px 24px', ...style }}>
+    <section style={{ backgroundColor: bg, padding: '84px 24px', ...style }}>
       <div style={{ maxWidth: 1180, margin: '0 auto' }}>{children}</div>
     </section>
   );
@@ -32,11 +35,11 @@ function Eyebrow({ text }: { text: string }) {
   return (
     <div
       style={{
-        fontSize: 13,
-        fontWeight: 700,
+        fontSize: 12,
+        fontWeight: 800,
         color: C.orange,
         textTransform: 'uppercase',
-        letterSpacing: '0.1em',
+        letterSpacing: '0.12em',
         marginBottom: 14,
       }}
     >
@@ -47,19 +50,19 @@ function Eyebrow({ text }: { text: string }) {
 
 function Heading({ title, summary }: { title: string; summary: string }) {
   return (
-    <div style={{ maxWidth: 760 }}>
+    <div style={{ maxWidth: 780 }}>
       <h2
         style={{
-          fontSize: 42,
-          lineHeight: 1.08,
+          fontSize: 40,
+          lineHeight: 1.06,
           fontWeight: 800,
           color: C.ink,
-          marginBottom: 16,
+          marginBottom: 14,
         }}
       >
         {title}
       </h2>
-      <p style={{ fontSize: 18, lineHeight: 1.65, color: C.muted }}>{summary}</p>
+      <p style={{ fontSize: 17, lineHeight: 1.65, color: C.muted, maxWidth: 700 }}>{summary}</p>
     </div>
   );
 }
@@ -79,10 +82,10 @@ function Card({
     <div
       className={className}
       style={{
-        backgroundColor: dark ? '#231E19' : C.white,
+        backgroundColor: dark ? '#221D19' : C.white,
         border: dark ? '1px solid rgba(254,252,250,0.08)' : `1px solid ${C.creamDark}`,
-        borderRadius: 26,
-        padding: 28,
+        borderRadius: 28,
+        padding: 26,
         ...style,
       }}
     >
@@ -104,10 +107,387 @@ function Bullet({ text, light = false }: { text: string; light?: boolean }) {
           marginTop: 7,
         }}
       />
-      <span style={{ fontSize: 15, lineHeight: 1.6, color: light ? 'rgba(254,252,250,0.82)' : C.ink }}>
+      <span
+        style={{
+          fontSize: 15,
+          lineHeight: 1.55,
+          color: light ? 'rgba(254,252,250,0.84)' : C.ink,
+        }}
+      >
         {text}
       </span>
     </div>
+  );
+}
+
+function MockSurface({
+  title,
+  label,
+  accent,
+  dark = false,
+  rows,
+}: {
+  title: string;
+  label: string;
+  accent: string;
+  dark?: boolean;
+  rows: string[];
+}) {
+  return (
+    <div
+      style={{
+        borderRadius: 24,
+        border: dark ? '1px solid rgba(254,252,250,0.08)' : '1px solid #E8DDCE',
+        background: dark ? 'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.03) 100%)' : 'linear-gradient(180deg, #FFFDF9 0%, #FFF4E7 100%)',
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '12px 14px',
+          borderBottom: dark ? '1px solid rgba(254,252,250,0.08)' : '1px solid #EADCC9',
+          backgroundColor: dark ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.55)',
+        }}
+      >
+        <div style={{ display: 'flex', gap: 6 }}>
+          <span style={{ width: 10, height: 10, borderRadius: 999, background: '#F97316' }} />
+          <span style={{ width: 10, height: 10, borderRadius: 999, background: '#F59E0B' }} />
+          <span style={{ width: 10, height: 10, borderRadius: 999, background: '#22C55E' }} />
+        </div>
+        <div style={{ fontSize: 11, fontWeight: 800, color: dark ? 'rgba(254,252,250,0.72)' : C.muted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          {label}
+        </div>
+      </div>
+      <div style={{ padding: 16, display: 'grid', gap: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: accent, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              {title}
+            </div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: dark ? C.white : C.ink, marginTop: 6 }}>
+              Direct catering, simplified.
+            </div>
+          </div>
+          <div
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: 18,
+              background: dark ? 'rgba(68,217,161,0.12)' : 'rgba(232,86,24,0.12)',
+              border: dark ? '1px solid rgba(68,217,161,0.18)' : '1px solid rgba(232,86,24,0.14)',
+            }}
+          />
+        </div>
+        <div style={{ display: 'grid', gap: 10 }}>
+          {rows.map((row, index) => (
+            <div
+              key={row}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '18px 1fr',
+                gap: 10,
+                alignItems: 'center',
+              }}
+            >
+              <div
+                style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: 999,
+                  backgroundColor: index === rows.length - 1 ? accent : dark ? 'rgba(254,252,250,0.12)' : '#F6E9D9',
+                  color: index === rows.length - 1 ? C.white : accent,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 10,
+                  fontWeight: 800,
+                }}
+              >
+                {index + 1}
+              </div>
+              <div style={{ height: 8, borderRadius: 999, background: index === rows.length - 1 ? accent : dark ? 'rgba(254,252,250,0.16)' : '#E6D6C2' }} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HeroCanvas() {
+  return (
+    <div
+      style={{
+        position: 'relative',
+        minHeight: 620,
+        borderRadius: 34,
+        overflow: 'hidden',
+        border: '1px solid rgba(254,252,250,0.1)',
+        boxShadow: '0 26px 80px rgba(0, 0, 0, 0.24)',
+        backgroundColor: '#2A2520',
+      }}
+    >
+      <Image
+        src="https://images.unsplash.com/photo-1528605248644-14dd04022da1?w=1200&h=1400&fit=crop&q=80"
+        alt="Team planning orders on a laptop"
+        fill
+        priority
+        style={{ objectFit: 'cover', objectPosition: 'center' }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background:
+            'linear-gradient(180deg, rgba(25,21,16,0.06) 0%, rgba(25,21,16,0.2) 40%, rgba(25,21,16,0.9) 100%)',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          padding: 24,
+          display: 'grid',
+          alignContent: 'space-between',
+          color: C.white,
+        }}
+      >
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          {['Launch', 'Momentum', 'Engine'].map((chip, index) => (
+            <div
+              key={chip}
+              style={{
+                padding: '8px 12px',
+                borderRadius: 999,
+                backgroundColor: index === 2 ? 'rgba(68,217,161,0.14)' : 'rgba(255,255,255,0.08)',
+                color: index === 2 ? C.teal : C.white,
+                border: '1px solid rgba(254,252,250,0.1)',
+                fontSize: 11,
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+              }}
+            >
+              {chip}
+            </div>
+          ))}
+        </div>
+
+        <div
+          style={{
+            display: 'grid',
+            gap: 12,
+            padding: 18,
+            borderRadius: 22,
+            backgroundColor: 'rgba(25,21,16,0.72)',
+            border: '1px solid rgba(254,252,250,0.12)',
+            backdropFilter: 'blur(14px)',
+            maxWidth: 430,
+          }}
+        >
+          <div style={{ fontSize: 12, color: C.teal, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            What the workflow looks like
+          </div>
+          <div style={{ fontSize: 26, fontWeight: 800 }}>The storefront, the order, and the follow-up all move together.</div>
+          <p style={{ fontSize: 15, lineHeight: 1.6, color: 'rgba(254,252,250,0.78)' }}>
+            TrayLoop keeps the operator in one loop instead of sending the team across disconnected tools.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StepPanel({
+  step,
+  dark = false,
+  reverse = false,
+}: {
+  step: (typeof howItWorksSteps)[number];
+  dark?: boolean;
+  reverse?: boolean;
+}) {
+  const rows =
+    step.number === '01'
+      ? ['Choose tier', 'Set storefront rules', 'Go live']
+      : step.number === '02'
+        ? ['Brand', 'Menu', 'Minimums']
+        : step.number === '03'
+          ? ['Ticket arrives', 'Kitchen sees the details', 'Deposit stays visible']
+          : ['Recurring orders', 'Upsells', 'AI follow-up'];
+
+  const accent = step.number === '01' ? C.orange : step.number === '02' ? '#1D7A55' : C.teal;
+
+  return (
+    <div
+      className="tl-how-step"
+      style={{
+        display: 'grid',
+        gridTemplateColumns: reverse ? '1fr 1.05fr' : '1.05fr 1fr',
+        gap: 18,
+        alignItems: 'stretch',
+      }}
+    >
+      <Card dark={dark} style={{ display: 'grid', gap: 16, minHeight: 320, color: dark ? C.white : C.ink }}>
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '6px 12px',
+            borderRadius: 999,
+            backgroundColor: dark ? 'rgba(68,217,161,0.14)' : '#FFF0E6',
+            color: accent,
+            fontSize: 12,
+            fontWeight: 800,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            alignSelf: 'flex-start',
+          }}
+        >
+          {step.number}
+        </div>
+        <div>
+          <h3 style={{ fontSize: 30, lineHeight: 1.05, fontWeight: 800, marginBottom: 10 }}>{step.title}</h3>
+          <p style={{ fontSize: 16, lineHeight: 1.65, color: dark ? 'rgba(254,252,250,0.78)' : C.muted }}>
+            {step.summary}
+          </p>
+        </div>
+        <div style={{ display: 'grid', gap: 10 }}>
+          {step.bullets.slice(0, 2).map((bullet) => (
+            <Bullet key={bullet} text={bullet} light={dark} />
+          ))}
+        </div>
+      </Card>
+
+      <Card
+        dark={dark && step.number === '04'}
+        style={{
+          display: 'grid',
+          gap: 16,
+          background:
+            step.number === '01'
+              ? 'linear-gradient(180deg, #FFFDF9 0%, #FFF4E7 100%)'
+              : step.number === '02'
+                ? 'linear-gradient(180deg, #FFFFFF 0%, #F3FBF7 100%)'
+                : step.number === '03'
+                  ? 'linear-gradient(180deg, #FFFDF9 0%, #FFF2E8 100%)'
+                  : 'linear-gradient(180deg, #221D19 0%, #191510 100%)',
+          color: step.number === '04' ? C.white : C.ink,
+        }}
+      >
+        {step.number === '03' ? (
+          <div
+            style={{
+              borderRadius: 24,
+              overflow: 'hidden',
+              position: 'relative',
+              minHeight: 240,
+            }}
+          >
+            <Image
+              src="https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=1200&h=900&fit=crop&q=80"
+              alt="Catering ticket on a kitchen counter"
+              fill
+              style={{ objectFit: 'cover', objectPosition: 'center' }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'linear-gradient(180deg, rgba(25,21,16,0.12) 0%, rgba(25,21,16,0.82) 100%)',
+              }}
+            />
+            <div style={{ position: 'absolute', inset: 0, padding: 18, display: 'grid', alignContent: 'space-between' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                <div
+                  style={{
+                    padding: '6px 10px',
+                    borderRadius: 999,
+                    backgroundColor: 'rgba(254,252,250,0.12)',
+                    color: C.white,
+                    fontSize: 11,
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                  }}
+                >
+                  Order ticket
+                </div>
+                <div
+                  style={{
+                    padding: '6px 10px',
+                    borderRadius: 999,
+                    backgroundColor: 'rgba(68,217,161,0.14)',
+                    color: C.teal,
+                    fontSize: 11,
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                  }}
+                >
+                  Deposit collected
+                </div>
+              </div>
+              <div
+                style={{
+                  display: 'grid',
+                  gap: 8,
+                  padding: 14,
+                  borderRadius: 18,
+                  backgroundColor: 'rgba(25,21,16,0.72)',
+                  border: '1px solid rgba(254,252,250,0.1)',
+                  color: C.white,
+                  maxWidth: 360,
+                }}
+              >
+                <div style={{ fontSize: 12, color: C.teal, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  Merchant view
+                </div>
+                <div style={{ fontSize: 20, fontWeight: 800 }}>One order record, ready for action.</div>
+                <div style={{ fontSize: 13, lineHeight: 1.55, color: 'rgba(254,252,250,0.76)' }}>
+                  The ticket, the customer, and the kitchen all see the same details.
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <MockSurface
+            title={step.number === '01' ? 'Setup' : step.number === '02' ? 'Storefront' : 'Retention'}
+            label={step.number === '04' ? 'Engine loop' : 'Workflow view'}
+            accent={accent}
+            dark={step.number === '04'}
+            rows={rows}
+          />
+        )}
+      </Card>
+    </div>
+  );
+}
+
+function SurfaceCard({
+  title,
+  bullets,
+  dark = false,
+}: {
+  title: string;
+  bullets: string[];
+  dark?: boolean;
+}) {
+  return (
+    <Card dark={dark} style={{ display: 'grid', gap: 14 }}>
+      <div style={{ fontSize: 12, fontWeight: 800, color: dark ? C.teal : C.orange, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+        {title}
+      </div>
+      <div style={{ display: 'grid', gap: 10 }}>
+        {bullets.map((bullet) => (
+          <Bullet key={bullet} text={bullet} light={dark} />
+        ))}
+      </div>
+    </Card>
   );
 }
 
@@ -132,11 +512,13 @@ export default function HowItWorksPage() {
           from { opacity: 0; transform: translateY(14px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        @media (max-width: 960px) {
+        @media (max-width: 1024px) {
           .tl-how-hero,
           .tl-how-step {
             grid-template-columns: 1fr !important;
           }
+        }
+        @media (max-width: 960px) {
           .tl-how-feature-grid {
             grid-template-columns: 1fr !important;
           }
@@ -148,7 +530,7 @@ export default function HowItWorksPage() {
           className="tl-how-hero"
           style={{
             display: 'grid',
-            gridTemplateColumns: '1fr 0.95fr',
+            gridTemplateColumns: '1fr 1.02fr',
             gap: 32,
             alignItems: 'center',
           }}
@@ -164,9 +546,9 @@ export default function HowItWorksPage() {
                 backgroundColor: 'rgba(254,252,250,0.08)',
                 color: C.teal,
                 fontSize: 12,
-                fontWeight: 700,
-                letterSpacing: '0.08em',
+                fontWeight: 800,
                 textTransform: 'uppercase',
+                letterSpacing: '0.08em',
                 marginBottom: 20,
               }}
             >
@@ -175,27 +557,30 @@ export default function HowItWorksPage() {
 
             <h1
               style={{
-                fontSize: 66,
+                fontSize: 64,
                 lineHeight: 0.98,
-                letterSpacing: '-0.04em',
+                letterSpacing: '-0.045em',
                 color: C.white,
                 fontWeight: 800,
-                maxWidth: 700,
-                marginBottom: 18,
+                maxWidth: 660,
+                marginBottom: 16,
               }}
             >
-              From first order to repeat revenue.
+              Launch the storefront.
+              <br />
+              Capture the order.
+              <br />
+              Keep the next one in motion.
             </h1>
             <p
               style={{
                 fontSize: 19,
-                lineHeight: 1.7,
+                lineHeight: 1.65,
                 color: 'rgba(254,252,250,0.82)',
                 maxWidth: 620,
               }}
             >
-              TrayLoop connects the storefront, the kitchen, and the follow-up loop so the order keeps moving after
-              the customer pays the deposit.
+              TrayLoop gives the merchant one clean loop: go live, fulfill the ticket, and keep revenue compounding after the deposit lands.
             </p>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 26 }}>
@@ -205,86 +590,7 @@ export default function HowItWorksPage() {
           </div>
 
           <div className="tl-how-fade tl-how-delay-1">
-            <Card
-              dark
-              style={{
-                color: C.white,
-                display: 'grid',
-                gap: 18,
-                boxShadow: '0 24px 60px rgba(26, 22, 18, 0.2)',
-              }}
-            >
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '8px 14px',
-                  borderRadius: 999,
-                  backgroundColor: 'rgba(66,217,160,0.14)',
-                  color: C.teal,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  alignSelf: 'flex-start',
-                }}
-              >
-                Revenue loop
-              </div>
-
-              <div style={{ display: 'grid', gap: 12 }}>
-                {plans.map((plan, index) => (
-                  <div
-                    key={plan.name}
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: '86px 1fr',
-                      gap: 14,
-                      alignItems: 'stretch',
-                      padding: 16,
-                      borderRadius: 20,
-                      backgroundColor:
-                        index === 0 ? 'rgba(232,86,24,0.12)' : index === 1 ? 'rgba(66,217,160,0.12)' : 'rgba(254,252,250,0.06)',
-                      border:
-                        index === 0
-                          ? '1px solid rgba(232,86,24,0.2)'
-                          : index === 1
-                          ? '1px solid rgba(66,217,160,0.18)'
-                          : '1px solid rgba(254,252,250,0.08)',
-                    }}
-                  >
-                    <div
-                      style={{
-                        borderRadius: 16,
-                        backgroundColor: index === 0 ? C.orange : index === 1 ? C.teal : '#D7C2A1',
-                        color: index === 1 ? C.ink : C.white,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 24,
-                        fontWeight: 800,
-                        letterSpacing: '-0.04em',
-                      }}
-                    >
-                      {index + 1}
-                    </div>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                        <div style={{ fontSize: 17, fontWeight: 800 }}>{plan.name}</div>
-                        <div style={{ fontSize: 14, color: 'rgba(254,252,250,0.72)' }}>
-                          {plan.price}
-                          {plan.cadence}
-                        </div>
-                      </div>
-                      <div style={{ fontSize: 14, lineHeight: 1.6, color: 'rgba(254,252,250,0.76)', marginTop: 6 }}>
-                        {plan.summary}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
+            <HeroCanvas />
           </div>
         </div>
       </Section>
@@ -293,156 +599,15 @@ export default function HowItWorksPage() {
         <div className="tl-how-fade">
           <Eyebrow text="The sequence" />
           <Heading
-            title="The workflow is simple: launch the storefront, capture the order, then keep the next order in motion."
-            summary="The pages and products all point back to the same loop so the story is easy to understand and the product is easy to run."
+            title="The story is linear, which makes it easier to teach and easier to run."
+            summary="Each step introduces one new layer of leverage without breaking the flow the merchant already understands."
           />
         </div>
 
-        <div style={{ display: 'grid', gap: 18, marginTop: 34 }}>
+        <div style={{ display: 'grid', gap: 18, marginTop: 30 }}>
           {howItWorksSteps.map((step, index) => (
-            <div
-              key={step.number}
-              className={`tl-how-step tl-how-fade tl-how-delay-${index + 1}`}
-              style={{
-                display: 'grid',
-                gridTemplateColumns: index % 2 === 0 ? '0.92fr 1.08fr' : '1.08fr 0.92fr',
-                gap: 20,
-                alignItems: 'stretch',
-              }}
-            >
-              <Card className="tl-how-hover">
-                <div
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    padding: '6px 12px',
-                    borderRadius: 999,
-                    backgroundColor: '#F6EFE5',
-                    color: C.orange,
-                    fontSize: 12,
-                    fontWeight: 700,
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase',
-                    marginBottom: 18,
-                  }}
-                >
-                  {step.number}
-                </div>
-                <h3 style={{ fontSize: 30, lineHeight: 1.05, fontWeight: 800, color: C.ink, marginBottom: 12 }}>
-                  {step.title}
-                </h3>
-                <p style={{ fontSize: 16, lineHeight: 1.7, color: C.muted, marginBottom: 18 }}>{step.summary}</p>
-                <div style={{ display: 'grid', gap: 10 }}>
-                  {step.bullets.map((bullet) => (
-                    <Bullet key={bullet} text={bullet} />
-                  ))}
-                </div>
-              </Card>
-
-              <Card
-                dark={index === 0 || index === 3}
-                style={{
-                  color: index === 0 || index === 3 ? C.white : C.ink,
-                  display: 'grid',
-                  gap: 16,
-                }}
-              >
-                {index === 0 ? (
-                  <>
-                    <div style={{ fontSize: 13, color: C.teal, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                      Setup
-                    </div>
-                    <div style={{ fontSize: 28, fontWeight: 800 }}>Launch, Momentum, or Engine.</div>
-                    <p style={{ fontSize: 15, lineHeight: 1.65, color: 'rgba(254,252,250,0.78)' }}>
-                      The merchant chooses the right tier and Growth Advisor can be attached when strategy matters.
-                    </p>
-                  </>
-                ) : index === 1 ? (
-                  <>
-                    <div style={{ fontSize: 13, color: C.orange, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                      Storefront setup
-                    </div>
-                    <div style={{ display: 'grid', gap: 10 }}>
-                      {['Brand', 'Menu', 'Lead time', 'Minimum', 'Deposit', 'Location'].map((item) => (
-                        <div
-                          key={item}
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            padding: '10px 0',
-                            borderBottom: '1px solid rgba(26,22,18,0.08)',
-                          }}
-                        >
-                          <span style={{ fontSize: 15, color: C.muted }}>{item}</span>
-                          <span style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>Configured</span>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                ) : index === 2 ? (
-                  <>
-                    <div style={{ fontSize: 13, color: C.orange, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                      Order ticket
-                    </div>
-                    <div
-                      style={{
-                        borderRadius: 20,
-                        padding: 18,
-                        backgroundColor: '#FFF8F2',
-                        border: '1px solid #F1E0CF',
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
-                        <div style={{ fontWeight: 800, color: C.ink }}>Order #300674532</div>
-                        <div style={{ color: C.orange, fontWeight: 700 }}>Deposit collected</div>
-                      </div>
-                      <div style={{ display: 'grid', gap: 10 }}>
-                        {['Executive Lunch x 40', 'Pickup at Downtown Kitchen', 'Customer email and phone saved', 'Merchant email mirrors the ticket'].map((item) => (
-                          <div key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                            <span
-                              style={{
-                                width: 8,
-                                height: 8,
-                                borderRadius: '50%',
-                                backgroundColor: C.teal,
-                                marginTop: 7,
-                                flexShrink: 0,
-                              }}
-                            />
-                            <span style={{ fontSize: 15, lineHeight: 1.55, color: C.ink }}>{item}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div style={{ fontSize: 13, color: C.teal, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                      Retention
-                    </div>
-                    <div style={{ fontSize: 28, fontWeight: 800 }}>Momentum feeds Engine.</div>
-                    <div style={{ display: 'grid', gap: 10 }}>
-                      {['Recurring scheduling', 'Upsell and reorder prompts', 'AI follow-up drafts', 'Lead scoring and churn risk'].map((item) => (
-                        <div key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                          <span
-                            style={{
-                              width: 8,
-                              height: 8,
-                              borderRadius: '50%',
-                              backgroundColor: C.teal,
-                              marginTop: 7,
-                              flexShrink: 0,
-                            }}
-                          />
-                          <span style={{ fontSize: 15, lineHeight: 1.55, color: 'rgba(254,252,250,0.78)' }}>{item}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </Card>
+            <div key={step.number} className={`tl-how-fade tl-how-delay-${index + 1}`}>
+              <StepPanel step={step} reverse={index % 2 === 1} dark={step.number === '04'} />
             </div>
           ))}
         </div>
@@ -452,41 +617,47 @@ export default function HowItWorksPage() {
         <div className="tl-how-fade">
           <Eyebrow text="What each team sees" />
           <Heading
-            title="Customers, kitchens, and operators all get the right version of the same order."
-            summary="The flow is designed so the merchant dashboard, the order email, and the follow-up logic stay aligned instead of becoming separate systems."
+            title="The same order, rendered for three different jobs."
+            summary="Customer, kitchen, and operator all get the slice of the experience they need, so nothing important gets lost between screens."
           />
         </div>
 
-        <div className="tl-how-feature-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 18, marginTop: 34 }}>
-          {[
-            {
-              title: 'Customer',
-              bullets: ['Branded checkout', 'Deposit and order confirmation', 'Repeat booking path', 'Clear order updates'],
-            },
-            {
-              title: 'Kitchen',
-              bullets: ['Standard ticket-style order summary', 'Item counts and modifiers', 'Service timing and location', 'Fulfillment-ready details'],
-            },
-            {
-              title: 'Operator',
-              bullets: ['Merchant dashboard order view', 'Follow-up and reactivation prompts', 'Recurring scheduling and upsell signals', 'Growth Advisor guidance when needed'],
-            },
-          ].map((panel) => (
-            <Card key={panel.title} className="tl-how-hover">
-              <div style={{ fontSize: 12, fontWeight: 700, color: C.orange, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
-                {panel.title}
-              </div>
-              <div style={{ display: 'grid', gap: 10 }}>
-                {panel.bullets.map((bullet) => (
-                  <Bullet key={bullet} text={bullet} />
-                ))}
-              </div>
-            </Card>
-          ))}
+        <div className="tl-how-feature-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 18, marginTop: 30 }}>
+          <div className="tl-how-fade tl-how-delay-1">
+            <SurfaceCard
+              title="Customer"
+              bullets={[
+                'Branded checkout and deposit flow',
+                'Clear confirmations and updates',
+                'The path back to the next booking',
+              ]}
+            />
+          </div>
+          <div className="tl-how-fade tl-how-delay-2">
+            <SurfaceCard
+              title="Kitchen"
+              bullets={[
+                'A ticket-style summary that is easy to read',
+                'Timing, location, and counts in one place',
+                'No extra noise between order and fulfillment',
+              ]}
+            />
+          </div>
+          <div className="tl-how-fade tl-how-delay-3">
+            <SurfaceCard
+              title="Operator"
+              bullets={[
+                'Merchant dashboard order view',
+                'Follow-up, reactivation, and reorder prompts',
+                'Growth Advisor guidance when strategy matters',
+              ]}
+              dark
+            />
+          </div>
         </div>
       </Section>
 
-      <section style={{ backgroundColor: C.ink, color: C.white, padding: '96px 24px' }}>
+      <section style={{ backgroundColor: C.ink, color: C.white, padding: '92px 24px' }}>
         <div
           style={{
             maxWidth: 1180,
@@ -499,12 +670,11 @@ export default function HowItWorksPage() {
         >
           <div>
             <Eyebrow text="Ready for the loop" />
-            <h2 style={{ fontSize: 46, lineHeight: 1.04, fontWeight: 800, marginBottom: 16, maxWidth: 650 }}>
+            <h2 style={{ fontSize: 44, lineHeight: 1.04, fontWeight: 800, marginBottom: 14, maxWidth: 660 }}>
               Launch gets you live. Momentum keeps it moving. Engine compounds it.
             </h2>
             <p style={{ fontSize: 18, lineHeight: 1.65, color: 'rgba(254,252,250,0.82)', maxWidth: 640 }}>
-              That is the working model behind the redesign. Every page should show how the platform turns a single
-              catering order into a repeat relationship.
+              That is the operating model behind the product and the reason the pages now lean on the same story.
             </p>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 12 }}>

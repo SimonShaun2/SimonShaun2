@@ -290,7 +290,7 @@ export default function HomePage() {
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 30 }}>
               <PillButton
-                text="Start with Launch"
+                text="Start with Momentum"
                 href="/signup"
                 variant="primary"
                 size="md"
@@ -313,18 +313,35 @@ export default function HomePage() {
                   key={plan.name}
                   className="tl-hover"
                   style={{
-                    padding: '16px 18px',
+                    padding: '16px 18px 18px',
                     borderRadius: 20,
-                    backgroundColor: 'rgba(254,252,250,0.08)',
-                    border: '1px solid rgba(254,252,250,0.08)',
-                    color: C.white,
+                    backgroundColor: 'rgba(254,252,250,0.9)',
+                    border: '1px solid rgba(26,22,18,0.08)',
+                    color: C.ink,
+                    boxShadow: '0 14px 30px rgba(26,22,18,0.08)',
                   }}
                 >
-                  <div style={{ fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.teal }}>
-                    {plan.name}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                    <div style={{ fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.orange }}>
+                      {plan.name}
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: C.muted }}>{plan.badge}</div>
                   </div>
-                  <div style={{ fontSize: 17, fontWeight: 800, margin: '8px 0 6px' }}>{plan.badge}</div>
-                  <div style={{ fontSize: 14, lineHeight: 1.5, color: 'rgba(254,252,250,0.75)' }}>
+                  <div style={{ marginTop: 10, height: 8, borderRadius: 999, background: 'rgba(26,22,18,0.08)', overflow: 'hidden' }}>
+                    <div
+                      style={{
+                        height: '100%',
+                        width: plan.name === 'Launch' ? '38%' : plan.name === 'Momentum' ? '68%' : '88%',
+                        borderRadius: 999,
+                        background: plan.name === 'Launch'
+                          ? 'linear-gradient(90deg, #E85618 0%, #F59E0B 100%)'
+                          : plan.name === 'Momentum'
+                            ? 'linear-gradient(90deg, #42D9A0 0%, #E85618 100%)'
+                            : 'linear-gradient(90deg, #1D7A55 0%, #42D9A0 100%)',
+                      }}
+                    />
+                  </div>
+                  <div style={{ fontSize: 15, lineHeight: 1.55, color: C.ink, marginTop: 12 }}>
                     {plan.summary}
                   </div>
                 </div>
@@ -512,7 +529,7 @@ export default function HomePage() {
           <Eyebrow text="The stack" />
           <Heading
             title="Every tier adds a layer to the same revenue engine."
-            summary="Launch gets you live, Momentum makes repeat orders easier, Engine adds AI and retention, and Growth Advisor gives the operator a strategic co-pilot."
+            summary="Launch gets you live, Momentum grows repeat orders, Engine adds AI and retention, and Growth Advisor sits beside the operator."
           />
         </div>
 
@@ -541,8 +558,7 @@ export default function HomePage() {
                 A premium strategy layer for the teams that want more than software.
               </h3>
               <p style={{ fontSize: 15, lineHeight: 1.7, color: C.muted, maxWidth: 720 }}>
-                Use Growth Advisor when you want launch coaching, pricing guidance, menu strategy, and repeat revenue
-                planning alongside the base platform.
+                Growth Advisor helps you choose the next move without turning the page into another pricing pitch.
               </p>
             </div>
             <div style={{ textAlign: 'right' }}>

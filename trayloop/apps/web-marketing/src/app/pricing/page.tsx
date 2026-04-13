@@ -250,7 +250,7 @@ export default function PricingPage() {
             </p>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 28 }}>
-              <PillButton text="Start with Launch" href="/signup" variant="primary" size="md" />
+              <PillButton text="Start with Momentum" href="/signup" variant="primary" size="md" />
               <PillButton text="See how it works" href="/how-it-works" variant="ghost" size="md" />
             </div>
           </div>
@@ -284,7 +284,7 @@ export default function PricingPage() {
               Revenue ladder
             </div>
             <div style={{ fontSize: 28, fontWeight: 800, lineHeight: 1.1 }}>Three tiers, one compounding story.</div>
-            <p style={{ fontSize: 15, lineHeight: 1.65, color: 'rgba(254,252,250,0.76)' }}>
+            <p style={{ fontSize: 15, lineHeight: 1.65, color: 'rgba(254,252,250,0.88)' }}>
               Every tier is built to move the same account forward: Launch gets the order live, Momentum repeats it,
               and Engine automates what happens next.
             </p>
@@ -302,12 +302,12 @@ export default function PricingPage() {
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                     <div style={{ fontSize: 18, fontWeight: 800 }}>{plan.name}</div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: index === 1 ? C.teal : 'rgba(254,252,250,0.72)' }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: index === 1 ? C.teal : 'rgba(254,252,250,0.9)' }}>
                       {plan.price}
                       {plan.cadence}
                     </div>
                   </div>
-                  <div style={{ fontSize: 14, lineHeight: 1.6, color: 'rgba(254,252,250,0.74)', marginTop: 8 }}>
+                  <div style={{ fontSize: 14, lineHeight: 1.6, color: 'rgba(254,252,250,0.88)', marginTop: 8 }}>
                     {plan.summary}
                   </div>
                 </div>
@@ -338,11 +338,10 @@ export default function PricingPage() {
           <div>
             <Eyebrow text="Add-on" />
             <h2 style={{ fontSize: 36, lineHeight: 1.1, fontWeight: 800, color: C.ink, marginBottom: 12 }}>
-              Growth Advisor adds the strategy layer.
+              Growth Advisor is the strategist beside the operator.
             </h2>
             <p style={{ fontSize: 16, lineHeight: 1.7, color: C.muted, maxWidth: 760 }}>
-              Use Growth Advisor when you want help deciding what to sell, how to price it, and what actions will
-              increase repeat revenue fastest.
+              Use it when pricing, menu mix, or follow-up needs a sharper second set of eyes.
             </p>
           </div>
           <div style={{ textAlign: 'right' }}>
@@ -372,7 +371,7 @@ export default function PricingPage() {
         </div>
 
         <div style={{ marginTop: 28 }}>
-          <Card style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 22, alignItems: 'start' }}>
+          <Card style={{ display: 'grid', gridTemplateColumns: '1.05fr 0.95fr', gap: 22, alignItems: 'stretch' }}>
             <div>
               <div
                 style={{
@@ -387,43 +386,83 @@ export default function PricingPage() {
                 Growth Advisor
               </div>
               <div style={{ fontSize: 24, fontWeight: 800, color: C.ink, marginBottom: 10 }}>
-                What the add-on actually gives the operator.
+                Turns live signals into a 30-day plan.
               </div>
               <p style={{ fontSize: 15, lineHeight: 1.7, color: C.muted, maxWidth: 760 }}>
                 {growthAdvisor.detail}
               </p>
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 36, fontWeight: 800, color: C.ink }}>
-                {growthAdvisor.price}
-                <span style={{ fontSize: 16, color: C.muted }}>{growthAdvisor.cadence}</span>
+            <div
+              style={{
+                borderRadius: 22,
+                background: 'linear-gradient(180deg, #221D19 0%, #171311 100%)',
+                padding: 18,
+                color: C.white,
+                display: 'grid',
+                gap: 12,
+              }}
+            >
+              <div style={{ fontSize: 12, fontWeight: 700, color: C.teal, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                What it surfaces
               </div>
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '6px 12px',
-                  borderRadius: 999,
-                  backgroundColor: '#FFF0E9',
-                  color: C.orange,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  marginTop: 10,
-                }}
-              >
-                {growthAdvisor.badge}
-              </div>
+              {[
+                'Price the strongest offer higher.',
+                'Keep the right add-on visible at the right moment.',
+                'Time the next order before the last one cools off.',
+              ].map((item, index) => (
+                <div
+                  key={item}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '30px 1fr',
+                    gap: 12,
+                    alignItems: 'center',
+                    padding: 12,
+                    borderRadius: 16,
+                    backgroundColor: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: '50%',
+                      backgroundColor: index === 0 ? 'rgba(232,86,24,0.18)' : 'rgba(66,217,160,0.16)',
+                      color: index === 0 ? C.orange : C.teal,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 12,
+                      fontWeight: 800,
+                    }}
+                  >
+                    {index + 1}
+                  </div>
+                  <div style={{ fontSize: 14, lineHeight: 1.5, color: 'rgba(254,252,250,0.86)' }}>{item}</div>
+                </div>
+              ))}
             </div>
           </Card>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 18, marginTop: 18 }}>
-            {growthAdvisor.highlights.map((item) => (
-              <Card key={item} style={{ minHeight: 120 }}>
-                <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, marginBottom: 8 }}>{item}</div>
-                <p style={{ fontSize: 14, lineHeight: 1.6, color: C.muted }}>{growthAdvisor.detail}</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 18, marginTop: 18 }}>
+            {[
+              {
+                title: 'Pricing direction',
+                body: 'See where the first price lift should happen.',
+              },
+              {
+                title: 'Offer mix',
+                body: 'Decide what to sell first and what to bundle.',
+              },
+              {
+                title: 'Follow-up timing',
+                body: 'Pick the next move before the opportunity cools off.',
+              },
+            ].map((item) => (
+              <Card key={item.title} style={{ minHeight: 120 }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, marginBottom: 8 }}>{item.title}</div>
+                <p style={{ fontSize: 14, lineHeight: 1.6, color: C.muted }}>{item.body}</p>
               </Card>
             ))}
           </div>
@@ -494,7 +533,7 @@ export default function PricingPage() {
               Pick the tier that matches how fast you want catering to compound.
             </h2>
             <p style={{ fontSize: 18, lineHeight: 1.65, color: 'rgba(254,252,250,0.82)', maxWidth: 640 }}>
-              Start with Launch, move to Momentum when repeats matter, and step into Engine when AI and retention
+              Start with Momentum if you want repeat orders and upsells, then step into Engine when AI and retention
               become the growth moat.
             </p>
           </div>

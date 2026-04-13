@@ -27,8 +27,7 @@ export const plans: PlanStory[] = [
     badge: 'Get live',
     bestFor: 'Restaurants ready to own direct catering',
     summary: 'A branded storefront that gets the first direct orders moving.',
-    detail:
-      'Launch gives restaurants the storefront, order intake, and guardrails needed to stop sending catering demand through third-party channels.',
+    detail: 'Launch gives you the storefront, intake, and guardrails to bring catering demand in-house.',
     highlights: [
       'Branded catering storefront',
       'Delivery and pickup selection',
@@ -44,8 +43,7 @@ export const plans: PlanStory[] = [
     badge: 'Repeat revenue',
     bestFor: 'Teams that want recurring orders and bigger baskets',
     summary: 'Recurring scheduling, upsells, and reorder flows that keep accounts warm.',
-    detail:
-      'Momentum turns one-time catering into repeat business with scheduling, incentives, templates, and order-growth tools that make it easy to book the next event.',
+    detail: 'Momentum turns one-off catering into repeat business with scheduling, incentives, and reorder tools.',
     highlights: [
       'Recurring scheduling',
       'Booking incentives and reorder flows',
@@ -61,8 +59,7 @@ export const plans: PlanStory[] = [
     badge: 'AI growth',
     bestFor: 'Operators who want automation and retention working together',
     summary: 'AI campaigns, customer intelligence, and growth automation in one stack.',
-    detail:
-      'Engine layers AI on top of direct catering so the system can recommend the next move, re-engage dormant customers, and surface the accounts that matter most.',
+    detail: 'Engine adds AI on top of direct catering so the system can recommend, re-engage, and prioritize work.',
     highlights: [
       'AI upsells and campaign generation',
       'Reactivation and follow-up workflows',
@@ -79,8 +76,7 @@ export const growthAdvisor: AddOnStory = {
   cadence: '/month',
   badge: 'Premium add-on',
   summary: 'A strategic layer for pricing, launch coaching, menu decisions, and repeat revenue planning.',
-  detail:
-    'Growth Advisor helps operators make better calls on what to sell, how to price it, and how to shape the first 30 days of direct catering.',
+  detail: 'Growth Advisor turns live storefront signals into a clear 30-day plan the team can act on.',
   highlights: [
     'Launch readiness coaching',
     'Pricing and menu guidance',
@@ -92,18 +88,15 @@ export const growthAdvisor: AddOnStory = {
 export const revenuePillars = [
   {
     title: 'Sell direct',
-    summary:
-      'Launch gives restaurants a branded storefront, deposit collection, and direct ordering flow they control.',
+    summary: 'Launch gives restaurants a branded storefront, deposit collection, and a direct ordering flow.',
   },
   {
     title: 'Grow repeat revenue',
-    summary:
-      'Momentum makes it easy to schedule the next order, suggest the right add-ons, and bring accounts back.',
+    summary: 'Momentum schedules the next order, suggests add-ons, and makes repeat business easier.',
   },
   {
     title: 'Compound with AI',
-    summary:
-      'Engine adds campaign generation, lead scoring, and customer intelligence so the business keeps learning.',
+    summary: 'Engine adds campaign generation, lead scoring, and customer intelligence so the business keeps learning.',
   },
 ];
 
@@ -111,8 +104,7 @@ export const howItWorksSteps = [
   {
     number: '01',
     title: 'Choose the right tier',
-    summary:
-      'Launch gets you live, Momentum adds recurring revenue tools, and Engine layers in AI and retention automation.',
+    summary: 'Launch gets you live, Momentum adds repeat revenue tools, and Engine layers in AI.',
     bullets: [
       'Every tier starts with a branded direct catering channel.',
       'Momentum and Engine are the repeat-revenue layers.',
@@ -122,8 +114,7 @@ export const howItWorksSteps = [
   {
     number: '02',
     title: 'Set the storefront rules',
-    summary:
-      'Brand, menu, lead times, minimums, deposits, and locations all get configured before the first order.',
+    summary: 'Brand, menu, lead times, minimums, deposits, and locations are set before the first order.',
     bullets: [
       'The customer sees one clean storefront, not a patchwork of tools.',
       'Order guardrails protect margin and keep the kitchen prepared.',
@@ -133,8 +124,7 @@ export const howItWorksSteps = [
   {
     number: '03',
     title: 'Capture the order and ticket the kitchen',
-    summary:
-      'The order flows through the storefront, the ticket lands in the dashboard, and the team can act quickly.',
+    summary: 'The order flows through the storefront, lands in the dashboard, and the team can act quickly.',
     bullets: [
       'Customer and merchant emails show the same order details.',
       'The kitchen can use a standard ticket-style order summary.',
@@ -144,8 +134,7 @@ export const howItWorksSteps = [
   {
     number: '04',
     title: 'Keep the next order in motion',
-    summary:
-      'Momentum schedules repeats, Engine drafts reactivation and campaign work, and the account keeps compounding.',
+    summary: 'Momentum schedules repeats, Engine handles reactivation, and the account keeps compounding.',
     bullets: [
       'Recurring scheduling creates a new order path without starting over.',
       'Upsells and reorder nudges lift basket size and frequency.',
@@ -241,11 +230,11 @@ export const pricingRows = [
 export const pricingFaqs = [
   {
     q: 'Which plan should most restaurants start with?',
-    a: 'Launch is the right entry point if you want the branded storefront live quickly. Momentum is the better fit when repeat revenue and upsells matter. Engine is for teams that want AI and automation working together.',
+    a: 'Launch is the right entry point for a branded storefront. Momentum is the better fit when repeat revenue and upsells matter. Engine is for teams that want AI and automation working together.',
   },
   {
     q: 'Can I add Growth Advisor to any tier?',
-    a: 'Yes. Growth Advisor is a premium add-on that can be paired with any base plan when you want more strategy and launch guidance.',
+    a: 'Yes. Growth Advisor is a premium add-on that can be paired with any base plan when you want strategy and launch guidance.',
   },
   {
     q: 'What is the difference between Momentum and Engine?',
@@ -253,6 +242,6 @@ export const pricingFaqs = [
   },
   {
     q: 'Can I upgrade later?',
-    a: 'Yes. TrayLoop is designed so the plan ladder can grow with the business. You can start with Launch and move up once recurring orders and automation become the next priority.',
+    a: 'Yes. You can start with Launch and move up once recurring orders and automation become the next priority.',
   },
 ];

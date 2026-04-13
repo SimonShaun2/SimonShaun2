@@ -100,7 +100,7 @@ export default function Footer() {
               marginBottom: 32,
             }}
           >
-            $49/month. No commissions. No contracts. The longer you wait, the more you lose.
+            $29/month. No commissions. No contracts. The longer you wait, the more you lose.
           </p>
           <div
             style={{
