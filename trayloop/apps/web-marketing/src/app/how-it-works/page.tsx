@@ -1,48 +1,43 @@
-'use client';
-
-import { useState } from 'react';
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import PillButton from '@/components/pill-button';
+import { howItWorksSteps, plans } from '@/lib/marketing-story';
 
-/* ── Design tokens ── */
 const C = {
   cream: '#F9F5EF',
-  creamDark: '#F0EBE1',
+  creamDark: '#EFE7DB',
   ink: '#1A1612',
   orange: '#E85618',
   teal: '#42D9A0',
   muted: '#7B6F65',
   white: '#FEFCFA',
-  red: '#FF6243',
 };
 
-/* ── Helpers ── */
 function Section({
   children,
   bg = 'transparent',
   style,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   bg?: string;
   style?: CSSProperties;
 }) {
   return (
-    <section style={{ backgroundColor: bg, padding: '80px 24px', ...style }}>
-      <div style={{ maxWidth: 1120, margin: '0 auto' }}>{children}</div>
+    <section style={{ backgroundColor: bg, padding: '88px 24px', ...style }}>
+      <div style={{ maxWidth: 1180, margin: '0 auto' }}>{children}</div>
     </section>
   );
 }
 
-function Label({ text, color = C.orange }: { text: string; color?: string }) {
+function Eyebrow({ text }: { text: string }) {
   return (
     <div
       style={{
         fontSize: 13,
-        fontWeight: 600,
-        color,
-        textTransform: 'uppercase' as const,
-        letterSpacing: '0.08em',
-        marginBottom: 12,
+        fontWeight: 700,
+        color: C.orange,
+        textTransform: 'uppercase',
+        letterSpacing: '0.1em',
+        marginBottom: 14,
       }}
     >
       {text}
@@ -50,894 +45,474 @@ function Label({ text, color = C.orange }: { text: string; color?: string }) {
   );
 }
 
-function TealDot() {
+function Heading({ title, summary }: { title: string; summary: string }) {
   return (
-    <span
-      style={{
-        display: 'inline-block',
-        width: 8,
-        height: 8,
-        borderRadius: '50%',
-        backgroundColor: C.teal,
-        marginRight: 10,
-        flexShrink: 0,
-        marginTop: 7,
-      }}
-    />
-  );
-}
-
-function BulletItem({ text }: { text: string }) {
-  return (
-    <li style={{ display: 'flex', alignItems: 'flex-start', marginBottom: 12, listStyle: 'none' }}>
-      <TealDot />
-      <span style={{ color: C.ink, fontSize: 15, lineHeight: 1.5 }}>{text}</span>
-    </li>
-  );
-}
-
-function XItem({ text }: { text: string }) {
-  return (
-    <li style={{ display: 'flex', alignItems: 'flex-start', marginBottom: 14, listStyle: 'none' }}>
-      <span
+    <div style={{ maxWidth: 760 }}>
+      <h2
         style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: 22,
-          height: 22,
-          borderRadius: '50%',
-          backgroundColor: '#FDEAEA',
-          color: C.red,
-          fontSize: 13,
-          fontWeight: 700,
-          marginRight: 10,
-          flexShrink: 0,
-          marginTop: 2,
+          fontSize: 42,
+          lineHeight: 1.08,
+          fontWeight: 800,
+          color: C.ink,
+          marginBottom: 16,
         }}
       >
-        &#10005;
-      </span>
-      <span style={{ color: C.ink, fontSize: 15, lineHeight: 1.5 }}>{text}</span>
-    </li>
-  );
-}
-
-function FaqItem({ q, a }: { q: string; a: string }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div
-      style={{
-        backgroundColor: C.white,
-        borderRadius: 12,
-        padding: '20px 24px',
-        cursor: 'pointer',
-      }}
-      onClick={() => setOpen(!open)}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <p style={{ fontSize: 16, fontWeight: 600, color: C.ink }}>{q}</p>
-        <span
-          style={{
-            fontSize: 20,
-            color: C.muted,
-            transition: 'transform 0.2s',
-            transform: open ? 'rotate(45deg)' : 'rotate(0deg)',
-            flexShrink: 0,
-            marginLeft: 16,
-          }}
-        >
-          +
-        </span>
-      </div>
-      {open && (
-        <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.7, marginTop: 12 }}>{a}</p>
-      )}
+        {title}
+      </h2>
+      <p style={{ fontSize: 18, lineHeight: 1.65, color: C.muted }}>{summary}</p>
     </div>
   );
 }
 
-/* ── FAQ data ── */
-const faqs = [
-  {
-    q: 'How does TrayLoop differ from catering marketplaces?',
-    a: 'Marketplaces own the customer relationship and charge 20-30% commissions on every order. TrayLoop gives you a branded direct ordering channel where you keep 100% of your revenue minus only a flat $49/month and 5% processing fee. You own the data, the relationship, and the revenue.',
-  },
-  {
-    q: 'How long does setup take?',
-    a: 'Most restaurants are live within 48 hours. Our team handles menu setup, branding, and technical configuration so you can focus on cooking. It is a fully done-for-you onboarding experience.',
-  },
-  {
-    q: 'Do I need technical skills to use TrayLoop?',
-    a: 'Not at all. We handle the full setup and your dashboard is designed to be as simple as checking your email. If you can use a smartphone, you can use TrayLoop.',
-  },
-  {
-    q: 'What does the AI actually do?',
-    a: 'Our AI detects reorder patterns, predicts when customers are likely to order again, flags at-risk accounts before they churn, generates personalized follow-up messages, and recommends upsell opportunities. It runs in the background so your catering program grows without manual effort.',
-  },
-  {
-    q: 'How does TrayLoop make money if there are no commissions?',
-    a: 'We charge a flat $49/month subscription plus 5% payment processing. That is the entire cost. We make money when you succeed, not by taking a cut of every order.',
-  },
-  {
-    q: 'Can I still use marketplaces alongside TrayLoop?',
-    a: 'Absolutely. TrayLoop is additive, not a replacement. Keep your existing marketplace presence while building a direct channel that you own and control. Over time, most restaurants naturally shift their best accounts to direct ordering because the economics are dramatically better.',
-  },
-  {
-    q: 'What happens if I cancel?',
-    a: 'There are no contracts and no cancellation fees. You can cancel any time from your dashboard. Your storefront stays live through the end of your billing period, and you can export all your customer data at any point.',
-  },
-];
+function Card({
+  children,
+  dark = false,
+  className,
+  style,
+}: {
+  children: ReactNode;
+  dark?: boolean;
+  className?: string;
+  style?: CSSProperties;
+}) {
+  return (
+    <div
+      className={className}
+      style={{
+        backgroundColor: dark ? '#231E19' : C.white,
+        border: dark ? '1px solid rgba(254,252,250,0.08)' : `1px solid ${C.creamDark}`,
+        borderRadius: 26,
+        padding: 28,
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
 
-/* ══════════════════════════════════════════════
-   HOW IT WORKS PAGE
-   ══════════════════════════════════════════════ */
+function Bullet({ text, light = false }: { text: string; light?: boolean }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+      <span
+        style={{
+          width: 8,
+          height: 8,
+          borderRadius: '50%',
+          backgroundColor: light ? C.teal : C.orange,
+          flexShrink: 0,
+          marginTop: 7,
+        }}
+      />
+      <span style={{ fontSize: 15, lineHeight: 1.6, color: light ? 'rgba(254,252,250,0.82)' : C.ink }}>
+        {text}
+      </span>
+    </div>
+  );
+}
+
 export default function HowItWorksPage() {
   return (
-    <>
-      {/* ── 1. HERO ── */}
-      <Section bg={C.cream} style={{ paddingTop: 100, paddingBottom: 60 }}>
-        <div style={{ textAlign: 'center', maxWidth: 780, margin: '0 auto' }}>
-          <Label text="Product" />
-          <h1
-            style={{
-              fontSize: 46,
-              fontWeight: 800,
-              color: C.ink,
-              lineHeight: 1.15,
-              marginBottom: 20,
-            }}
-          >
-            The System Behind Every High-Performing Catering Program
-          </h1>
-          <p style={{ fontSize: 18, lineHeight: 1.6, color: C.muted, marginBottom: 48 }}>
-            Most restaurants have catering orders. Few have catering infrastructure. TrayLoop is the
-            operating system that turns scattered orders into a predictable, growing revenue stream.
-          </p>
+    <main style={{ backgroundColor: C.cream }}>
+      <style>{`
+        .tl-how-fade {
+          animation: tlFadeUp 0.7s ease both;
+        }
+        .tl-how-delay-1 { animation-delay: 0.1s; }
+        .tl-how-delay-2 { animation-delay: 0.2s; }
+        .tl-how-delay-3 { animation-delay: 0.3s; }
+        .tl-how-hover {
+          transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+        }
+        .tl-how-hover:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 18px 50px rgba(26, 22, 18, 0.08);
+        }
+        @keyframes tlFadeUp {
+          from { opacity: 0; transform: translateY(14px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @media (max-width: 960px) {
+          .tl-how-hero,
+          .tl-how-step {
+            grid-template-columns: 1fr !important;
+          }
+          .tl-how-feature-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
 
-          {/* Stats row */}
-          <div
-            style={{
-              display: 'flex',
-              gap: 32,
-              justifyContent: 'center',
-              flexWrap: 'wrap',
-            }}
-          >
-            {[
-              { value: '100%', label: 'of revenue stays yours' },
-              { value: '3\u00d7', label: 'repeat order rate' },
-              { value: '100%', label: 'done-for-you setup' },
-            ].map((s) => (
-              <div key={s.label} style={{ textAlign: 'center', flex: '0 1 200px' }}>
-                <div style={{ fontSize: 40, fontWeight: 800, color: C.ink }}>{s.value}</div>
-                <div style={{ fontSize: 14, color: C.muted, marginTop: 4 }}>{s.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </Section>
-
-      {/* ── 2. THE LOOP ── */}
-      <Section bg={C.creamDark}>
-        <div style={{ textAlign: 'center', marginBottom: 48 }}>
-          <Label text="How It Works" />
-          <h2
-            style={{
-              fontSize: 36,
-              fontWeight: 700,
-              color: C.ink,
-              lineHeight: 1.2,
-              maxWidth: 680,
-              margin: '0 auto 16px',
-            }}
-          >
-            One order starts the loop. The system takes it from there.
-          </h2>
-        </div>
-
-        {/* 6 step cards */}
+      <Section bg={C.ink} style={{ paddingTop: 72, paddingBottom: 72 }}>
         <div
+          className="tl-how-hero"
           style={{
-            display: 'flex',
+            display: 'grid',
+            gridTemplateColumns: '1fr 0.95fr',
+            gap: 32,
             alignItems: 'center',
-            justifyContent: 'center',
-            flexWrap: 'wrap',
-            gap: 0,
           }}
         >
-          {[
-            { title: 'Order In', highlight: false },
-            { title: 'Deposit Collected', highlight: false },
-            { title: 'Order Confirmed', highlight: false },
-            { title: 'Fulfilled', highlight: false },
-            { title: 'Follow Up Sent', highlight: false },
-            { title: 'Reorder Triggered', highlight: true },
-          ].map((step, i) => (
-            <div key={step.title} style={{ display: 'flex', alignItems: 'center' }}>
+          <div className="tl-how-fade">
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '8px 14px',
+                borderRadius: 999,
+                backgroundColor: 'rgba(254,252,250,0.08)',
+                color: C.teal,
+                fontSize: 12,
+                fontWeight: 700,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                marginBottom: 20,
+              }}
+            >
+              How it works
+            </div>
+
+            <h1
+              style={{
+                fontSize: 66,
+                lineHeight: 0.98,
+                letterSpacing: '-0.04em',
+                color: C.white,
+                fontWeight: 800,
+                maxWidth: 700,
+                marginBottom: 18,
+              }}
+            >
+              From first order to repeat revenue.
+            </h1>
+            <p
+              style={{
+                fontSize: 19,
+                lineHeight: 1.7,
+                color: 'rgba(254,252,250,0.82)',
+                maxWidth: 620,
+              }}
+            >
+              TrayLoop connects the storefront, the kitchen, and the follow-up loop so the order keeps moving after
+              the customer pays the deposit.
+            </p>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 26 }}>
+              <PillButton text="See pricing" href="/pricing" variant="primary" size="md" />
+              <PillButton text="View product" href="/product" variant="ghost" size="md" />
+            </div>
+          </div>
+
+          <div className="tl-how-fade tl-how-delay-1">
+            <Card
+              dark
+              style={{
+                color: C.white,
+                display: 'grid',
+                gap: 18,
+                boxShadow: '0 24px 60px rgba(26, 22, 18, 0.2)',
+              }}
+            >
               <div
                 style={{
-                  backgroundColor: step.highlight ? C.orange : C.white,
-                  color: step.highlight ? C.white : C.ink,
-                  borderRadius: 12,
-                  padding: '20px 22px',
-                  fontSize: 14,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '8px 14px',
+                  borderRadius: 999,
+                  backgroundColor: 'rgba(66,217,160,0.14)',
+                  color: C.teal,
+                  fontSize: 12,
                   fontWeight: 700,
-                  textAlign: 'center',
-                  minWidth: 130,
-                  border: step.highlight ? 'none' : `1px solid ${C.creamDark}`,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  alignSelf: 'flex-start',
                 }}
               >
-                {step.title}
+                Revenue loop
               </div>
-              {i < 5 && (
-                <span
-                  style={{
-                    fontSize: 20,
-                    color: C.muted,
-                    margin: '0 8px',
-                    flexShrink: 0,
-                  }}
-                >
-                  &rarr;
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
 
-        <p
-          style={{
-            textAlign: 'center',
-            fontSize: 15,
-            color: C.muted,
-            marginTop: 32,
-            fontStyle: 'italic',
-          }}
-        >
-          Most restaurants break the loop after fulfillment. TrayLoop closes it automatically.
-        </p>
-      </Section>
-
-      {/* ── 3. FEATURE 1 — Direct Ordering (01) ── */}
-      <Section bg={C.cream}>
-        <div
-          style={{
-            display: 'flex',
-            gap: 48,
-            flexWrap: 'wrap',
-            alignItems: 'center',
-          }}
-        >
-          <div style={{ flex: '1 1 440px', minWidth: 300 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: C.orange, marginBottom: 10 }}>01</div>
-            <h2
-              style={{
-                fontSize: 32,
-                fontWeight: 700,
-                color: C.ink,
-                lineHeight: 1.2,
-                marginBottom: 20,
-              }}
-            >
-              Your Branded Direct Ordering Channel
-            </h2>
-            <ul style={{ padding: 0, marginBottom: 20 }}>
-              <BulletItem text="Custom URL for your restaurant" />
-              <BulletItem text="Package builder with add-ons and minimums" />
-              <BulletItem text="Upfront deposit collected automatically" />
-              <BulletItem text="No commission on any order ever" />
-            </ul>
-          </div>
-          <div style={{ flex: '1 1 440px', minWidth: 300 }}>
-            <div
-              style={{
-                backgroundColor: C.white,
-                borderRadius: 16,
-                padding: 28,
-                border: `1px solid ${C.creamDark}`,
-              }}
-            >
-              <div style={{ fontSize: 12, color: C.muted, marginBottom: 8 }}>Your storefront</div>
-              <div
-                style={{
-                  backgroundColor: C.cream,
-                  borderRadius: 10,
-                  padding: '14px 18px',
-                  fontSize: 15,
-                  fontWeight: 600,
-                  color: C.ink,
-                  marginBottom: 16,
-                  fontFamily: 'monospace',
-                }}
-              >
-                order.trayloophq.com/rosarios-kitchen
-              </div>
-              {[
-                { label: 'Standard Lunch', price: '$18/person' },
-                { label: 'Premium Lunch', price: '$26/person' },
-                { label: 'Executive Package', price: '$38/person' },
-              ].map((p) => (
-                <div
-                  key={p.label}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    padding: '12px 0',
-                    borderBottom: `1px solid ${C.creamDark}`,
-                    fontSize: 14,
-                  }}
-                >
-                  <span style={{ color: C.ink }}>{p.label}</span>
-                  <span style={{ fontWeight: 600, color: C.ink }}>{p.price}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </Section>
-
-      {/* ── 4. FEATURE 2 — Automation (02) ── */}
-      <Section bg={C.white}>
-        <div
-          style={{
-            display: 'flex',
-            gap: 48,
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            flexDirection: 'row-reverse',
-          }}
-        >
-          <div style={{ flex: '1 1 440px', minWidth: 300 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: C.orange, marginBottom: 10 }}>02</div>
-            <h2
-              style={{
-                fontSize: 32,
-                fontWeight: 700,
-                color: C.ink,
-                lineHeight: 1.2,
-                marginBottom: 20,
-              }}
-            >
-              Operations That Run Without You
-            </h2>
-            <ul style={{ padding: 0 }}>
-              <BulletItem text="Instant order confirmation" />
-              <BulletItem text="Automated pre-order reminder" />
-              <BulletItem text="Post-delivery follow up queued" />
-              <BulletItem text="Lead time enforcement" />
-            </ul>
-          </div>
-          <div style={{ flex: '1 1 440px', minWidth: 300 }}>
-            <div
-              style={{
-                backgroundColor: C.ink,
-                borderRadius: 16,
-                padding: 28,
-              }}
-            >
-              <div style={{ fontSize: 13, color: C.muted, marginBottom: 16 }}>
-                Automation Timeline
-              </div>
-              {[
-                { time: 'T+0', event: 'Order received & confirmed', dot: C.teal },
-                { time: 'T+1h', event: 'Deposit collected automatically', dot: C.teal },
-                { time: 'T-24h', event: 'Pre-order reminder sent to kitchen', dot: C.orange },
-                { time: 'T+1d', event: 'Post-delivery follow-up queued', dot: C.teal },
-                { time: 'T+14d', event: 'Reorder suggestion sent', dot: C.orange },
-              ].map((item) => (
-                <div
-                  key={item.time + item.event}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12,
-                    padding: '10px 0',
-                    borderBottom: '1px solid rgba(255,255,255,0.08)',
-                  }}
-                >
-                  <span style={{ fontSize: 12, color: C.muted, width: 48, flexShrink: 0, fontFamily: 'monospace' }}>
-                    {item.time}
-                  </span>
-                  <span
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      backgroundColor: item.dot,
-                      flexShrink: 0,
-                    }}
-                  />
-                  <span style={{ fontSize: 14, color: C.white }}>{item.event}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </Section>
-
-      {/* ── 5. FEATURE 3 — Intelligence (03) ── */}
-      <Section bg={C.cream}>
-        <div
-          style={{
-            display: 'flex',
-            gap: 48,
-            flexWrap: 'wrap',
-            alignItems: 'center',
-          }}
-        >
-          <div style={{ flex: '1 1 440px', minWidth: 300 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: C.orange, marginBottom: 10 }}>03</div>
-            <h2
-              style={{
-                fontSize: 32,
-                fontWeight: 700,
-                color: C.ink,
-                lineHeight: 1.2,
-                marginBottom: 8,
-              }}
-            >
-              AI That Knows When to Reach Out
-            </h2>
-            <div style={{ fontSize: 13, color: C.teal, marginBottom: 20 }}>Assisted by AI</div>
-            <ul style={{ padding: 0 }}>
-              <BulletItem text="Pattern detection for reorder cycles" />
-              <BulletItem text="Proactive outreach before windows close" />
-              <BulletItem text="Revenue gap alerts" />
-              <BulletItem text="Dormant account recovery" />
-            </ul>
-          </div>
-          <div style={{ flex: '1 1 440px', minWidth: 300 }}>
-            <div
-              style={{
-                backgroundColor: C.ink,
-                borderRadius: 16,
-                padding: 28,
-              }}
-            >
-              <div style={{ fontSize: 13, color: C.muted, marginBottom: 16 }}>
-                AI Insights — Apex Financial
-              </div>
-              <div
-                style={{
-                  backgroundColor: 'rgba(66,217,160,0.1)',
-                  borderRadius: 10,
-                  padding: '16px 18px',
-                  marginBottom: 12,
-                }}
-              >
-                <div style={{ fontSize: 12, color: C.teal, fontWeight: 600, marginBottom: 4 }}>
-                  Reorder Prediction
-                </div>
-                <div style={{ fontSize: 15, color: C.white }}>
-                  Apex Financial orders every 14 days. Next order window opens in 2 days.
-                </div>
-              </div>
-              <div
-                style={{
-                  backgroundColor: 'rgba(232,86,24,0.1)',
-                  borderRadius: 10,
-                  padding: '16px 18px',
-                  marginBottom: 12,
-                }}
-              >
-                <div style={{ fontSize: 12, color: C.orange, fontWeight: 600, marginBottom: 4 }}>
-                  Revenue Gap Alert
-                </div>
-                <div style={{ fontSize: 15, color: C.white }}>
-                  3 accounts have not ordered in 30+ days. Estimated lost revenue: $2,400/mo.
-                </div>
-              </div>
-              <div
-                style={{
-                  backgroundColor: 'rgba(66,217,160,0.1)',
-                  borderRadius: 10,
-                  padding: '16px 18px',
-                }}
-              >
-                <div style={{ fontSize: 12, color: C.teal, fontWeight: 600, marginBottom: 4 }}>
-                  Dormant Recovery
-                </div>
-                <div style={{ fontSize: 15, color: C.white }}>
-                  Re-engagement email sent to Metro Law Group. Last order: 45 days ago.
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Section>
-
-      {/* ── 6. FEATURE 4 — Dashboard (04) ── */}
-      <Section bg={C.white}>
-        <div
-          style={{
-            display: 'flex',
-            gap: 48,
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            flexDirection: 'row-reverse',
-          }}
-        >
-          <div style={{ flex: '1 1 440px', minWidth: 300 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: C.orange, marginBottom: 10 }}>04</div>
-            <h2
-              style={{
-                fontSize: 32,
-                fontWeight: 700,
-                color: C.ink,
-                lineHeight: 1.2,
-                marginBottom: 20,
-              }}
-            >
-              A Revenue Dashboard That Tells You What Matters
-            </h2>
-            <ul style={{ padding: 0 }}>
-              <BulletItem text="Monthly recurring revenue by account" />
-              <BulletItem text="At-risk accounts flagged" />
-              <BulletItem text="Revenue recovered from reengagement" />
-              <BulletItem text="Upcoming order pipeline with deposit status" />
-            </ul>
-          </div>
-          <div style={{ flex: '1 1 440px', minWidth: 300 }}>
-            <div
-              style={{
-                backgroundColor: C.ink,
-                borderRadius: 16,
-                padding: 28,
-              }}
-            >
-              <div style={{ fontSize: 13, color: C.muted, marginBottom: 16 }}>
-                Revenue Dashboard
-              </div>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: 12,
-                  marginBottom: 16,
-                }}
-              >
-                {[
-                  { label: 'Monthly Revenue', value: '$18,400', change: '+23%' },
-                  { label: 'At-Risk Accounts', value: '3', change: 'flagged' },
-                  { label: 'Recovered Revenue', value: '$4,200', change: 'this quarter' },
-                  { label: 'Pipeline Value', value: '$6,800', change: '8 orders' },
-                ].map((kpi) => (
+              <div style={{ display: 'grid', gap: 12 }}>
+                {plans.map((plan, index) => (
                   <div
-                    key={kpi.label}
+                    key={plan.name}
                     style={{
-                      backgroundColor: '#2A2520',
-                      borderRadius: 10,
-                      padding: '14px 16px',
+                      display: 'grid',
+                      gridTemplateColumns: '86px 1fr',
+                      gap: 14,
+                      alignItems: 'stretch',
+                      padding: 16,
+                      borderRadius: 20,
+                      backgroundColor:
+                        index === 0 ? 'rgba(232,86,24,0.12)' : index === 1 ? 'rgba(66,217,160,0.12)' : 'rgba(254,252,250,0.06)',
+                      border:
+                        index === 0
+                          ? '1px solid rgba(232,86,24,0.2)'
+                          : index === 1
+                          ? '1px solid rgba(66,217,160,0.18)'
+                          : '1px solid rgba(254,252,250,0.08)',
                     }}
                   >
-                    <div style={{ fontSize: 11, color: C.muted }}>{kpi.label}</div>
-                    <div style={{ fontSize: 22, fontWeight: 700, color: C.white, marginTop: 4 }}>
-                      {kpi.value}
+                    <div
+                      style={{
+                        borderRadius: 16,
+                        backgroundColor: index === 0 ? C.orange : index === 1 ? C.teal : '#D7C2A1',
+                        color: index === 1 ? C.ink : C.white,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 24,
+                        fontWeight: 800,
+                        letterSpacing: '-0.04em',
+                      }}
+                    >
+                      {index + 1}
                     </div>
-                    <div style={{ fontSize: 11, color: C.teal, marginTop: 2 }}>{kpi.change}</div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                        <div style={{ fontSize: 17, fontWeight: 800 }}>{plan.name}</div>
+                        <div style={{ fontSize: 14, color: 'rgba(254,252,250,0.72)' }}>
+                          {plan.price}
+                          {plan.cadence}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 14, lineHeight: 1.6, color: 'rgba(254,252,250,0.76)', marginTop: 6 }}>
+                        {plan.summary}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
-            </div>
+            </Card>
           </div>
         </div>
       </Section>
 
-      {/* ── 7. MID CTA ── */}
-      <Section bg={C.cream} style={{ padding: '0 24px 80px' }}>
-        <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <PillButton text="Book a free Demo &rarr;" href="/demo" variant="primary" />
-          <PillButton text="See pricing &rarr;" href="/pricing" variant="ghost" />
-        </div>
-      </Section>
-
-      {/* ── 8. REVENUE GROWTH ENGINE ── */}
-      <Section bg={C.ink}>
-        <div style={{ textAlign: 'center', marginBottom: 56 }}>
-          <Label text="Built for Recurring Revenue" />
-          <h2
-            style={{
-              fontSize: 36,
-              fontWeight: 700,
-              color: C.white,
-              lineHeight: 1.2,
-              maxWidth: 680,
-              margin: '0 auto',
-            }}
-          >
-            The tools that turn one-time catering orders into a predictable revenue stream.
-          </h2>
+      <Section bg={C.white}>
+        <div className="tl-how-fade">
+          <Eyebrow text="The sequence" />
+          <Heading
+            title="The workflow is simple: launch the storefront, capture the order, then keep the next order in motion."
+            summary="The pages and products all point back to the same loop so the story is easy to understand and the product is easy to run."
+          />
         </div>
 
-        {/* Alternating feature rows */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-          {[
-            {
-              title: 'Recurring accounts, not one-off orders',
-              desc: 'TrayLoop tracks order patterns and automatically re-engages customers at the right time, turning single orders into recurring accounts.',
-              stat: '3\u00d7',
-              statLabel: 'repeat order rate',
-              ai: 'Assisted by AI: pattern detection',
-              reverse: false,
-            },
-            {
-              title: 'At-risk customers caught before they churn',
-              desc: 'The system flags accounts showing early signs of churn so you can act before they disappear.',
-              stat: '$1,840/mo',
-              statLabel: 'revenue recovered',
-              ai: 'Assisted by AI: health scoring',
-              reverse: true,
-            },
-            {
-              title: 'Outreach that writes itself',
-              desc: 'AI generates personalized follow-ups, proposals, and re-engagement messages based on each account\u2019s history.',
-              stat: '1 click',
-              statLabel: 'to send personalized outreach',
-              ai: 'Assisted by AI: generates copy',
-              reverse: false,
-            },
-            {
-              title: 'Revenue visibility you\u2019ve never had',
-              desc: 'See monthly recurring revenue, pipeline value, at-risk accounts, and recovered revenue in one dashboard.',
-              stat: '100%',
-              statLabel: 'revenue visibility',
-              ai: 'Assisted by AI: insights',
-              reverse: true,
-            },
-            {
-              title: 'Every order gets bigger with smart upsells',
-              desc: 'Contextual add-on suggestions at checkout increase average order value without any manual quoting.',
-              stat: '+15%',
-              statLabel: 'avg order value increase',
-              ai: 'Assisted by AI: learns add-on conversions',
-              reverse: false,
-            },
-          ].map((row) => (
+        <div style={{ display: 'grid', gap: 18, marginTop: 34 }}>
+          {howItWorksSteps.map((step, index) => (
             <div
-              key={row.title}
+              key={step.number}
+              className={`tl-how-step tl-how-fade tl-how-delay-${index + 1}`}
               style={{
-                display: 'flex',
-                gap: 32,
-                flexWrap: 'wrap',
-                alignItems: 'center',
-                flexDirection: row.reverse ? 'row-reverse' : 'row',
+                display: 'grid',
+                gridTemplateColumns: index % 2 === 0 ? '0.92fr 1.08fr' : '1.08fr 0.92fr',
+                gap: 20,
+                alignItems: 'stretch',
               }}
             >
-              <div style={{ flex: '1 1 500px', minWidth: 280 }}>
-                <h3
-                  style={{
-                    fontSize: 24,
-                    fontWeight: 700,
-                    color: C.white,
-                    lineHeight: 1.3,
-                    marginBottom: 12,
-                  }}
-                >
-                  {row.title}
-                </h3>
-                <p style={{ fontSize: 15, lineHeight: 1.6, color: '#C2B9AE', marginBottom: 12 }}>
-                  {row.desc}
-                </p>
-                <div style={{ fontSize: 13, color: C.teal }}>{row.ai}</div>
-              </div>
-              <div style={{ flex: '0 1 280px', minWidth: 200 }}>
+              <Card className="tl-how-hover">
                 <div
                   style={{
-                    backgroundColor: '#2A2520',
-                    borderRadius: 16,
-                    padding: 32,
-                    textAlign: 'center',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '6px 12px',
+                    borderRadius: 999,
+                    backgroundColor: '#F6EFE5',
+                    color: C.orange,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    marginBottom: 18,
                   }}
                 >
-                  <div style={{ fontSize: 48, fontWeight: 800, color: C.white }}>{row.stat}</div>
-                  <div style={{ fontSize: 14, color: '#C2B9AE', marginTop: 4 }}>{row.statLabel}</div>
+                  {step.number}
                 </div>
+                <h3 style={{ fontSize: 30, lineHeight: 1.05, fontWeight: 800, color: C.ink, marginBottom: 12 }}>
+                  {step.title}
+                </h3>
+                <p style={{ fontSize: 16, lineHeight: 1.7, color: C.muted, marginBottom: 18 }}>{step.summary}</p>
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {step.bullets.map((bullet) => (
+                    <Bullet key={bullet} text={bullet} />
+                  ))}
+                </div>
+              </Card>
+
+              <Card
+                dark={index === 0 || index === 3}
+                style={{
+                  color: index === 0 || index === 3 ? C.white : C.ink,
+                  display: 'grid',
+                  gap: 16,
+                }}
+              >
+                {index === 0 ? (
+                  <>
+                    <div style={{ fontSize: 13, color: C.teal, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                      Setup
+                    </div>
+                    <div style={{ fontSize: 28, fontWeight: 800 }}>Launch, Momentum, or Engine.</div>
+                    <p style={{ fontSize: 15, lineHeight: 1.65, color: 'rgba(254,252,250,0.78)' }}>
+                      The merchant chooses the right tier and Growth Advisor can be attached when strategy matters.
+                    </p>
+                  </>
+                ) : index === 1 ? (
+                  <>
+                    <div style={{ fontSize: 13, color: C.orange, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                      Storefront setup
+                    </div>
+                    <div style={{ display: 'grid', gap: 10 }}>
+                      {['Brand', 'Menu', 'Lead time', 'Minimum', 'Deposit', 'Location'].map((item) => (
+                        <div
+                          key={item}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '10px 0',
+                            borderBottom: '1px solid rgba(26,22,18,0.08)',
+                          }}
+                        >
+                          <span style={{ fontSize: 15, color: C.muted }}>{item}</span>
+                          <span style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>Configured</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : index === 2 ? (
+                  <>
+                    <div style={{ fontSize: 13, color: C.orange, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                      Order ticket
+                    </div>
+                    <div
+                      style={{
+                        borderRadius: 20,
+                        padding: 18,
+                        backgroundColor: '#FFF8F2',
+                        border: '1px solid #F1E0CF',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
+                        <div style={{ fontWeight: 800, color: C.ink }}>Order #300674532</div>
+                        <div style={{ color: C.orange, fontWeight: 700 }}>Deposit collected</div>
+                      </div>
+                      <div style={{ display: 'grid', gap: 10 }}>
+                        {['Executive Lunch x 40', 'Pickup at Downtown Kitchen', 'Customer email and phone saved', 'Merchant email mirrors the ticket'].map((item) => (
+                          <div key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                            <span
+                              style={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: '50%',
+                                backgroundColor: C.teal,
+                                marginTop: 7,
+                                flexShrink: 0,
+                              }}
+                            />
+                            <span style={{ fontSize: 15, lineHeight: 1.55, color: C.ink }}>{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontSize: 13, color: C.teal, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                      Retention
+                    </div>
+                    <div style={{ fontSize: 28, fontWeight: 800 }}>Momentum feeds Engine.</div>
+                    <div style={{ display: 'grid', gap: 10 }}>
+                      {['Recurring scheduling', 'Upsell and reorder prompts', 'AI follow-up drafts', 'Lead scoring and churn risk'].map((item) => (
+                        <div key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                          <span
+                            style={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: '50%',
+                              backgroundColor: C.teal,
+                              marginTop: 7,
+                              flexShrink: 0,
+                            }}
+                          />
+                          <span style={{ fontSize: 15, lineHeight: 1.55, color: 'rgba(254,252,250,0.78)' }}>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </Card>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      <Section bg={C.creamDark}>
+        <div className="tl-how-fade">
+          <Eyebrow text="What each team sees" />
+          <Heading
+            title="Customers, kitchens, and operators all get the right version of the same order."
+            summary="The flow is designed so the merchant dashboard, the order email, and the follow-up logic stay aligned instead of becoming separate systems."
+          />
+        </div>
+
+        <div className="tl-how-feature-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 18, marginTop: 34 }}>
+          {[
+            {
+              title: 'Customer',
+              bullets: ['Branded checkout', 'Deposit and order confirmation', 'Repeat booking path', 'Clear order updates'],
+            },
+            {
+              title: 'Kitchen',
+              bullets: ['Standard ticket-style order summary', 'Item counts and modifiers', 'Service timing and location', 'Fulfillment-ready details'],
+            },
+            {
+              title: 'Operator',
+              bullets: ['Merchant dashboard order view', 'Follow-up and reactivation prompts', 'Recurring scheduling and upsell signals', 'Growth Advisor guidance when needed'],
+            },
+          ].map((panel) => (
+            <Card key={panel.title} className="tl-how-hover">
+              <div style={{ fontSize: 12, fontWeight: 700, color: C.orange, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
+                {panel.title}
               </div>
-            </div>
+              <div style={{ display: 'grid', gap: 10 }}>
+                {panel.bullets.map((bullet) => (
+                  <Bullet key={bullet} text={bullet} />
+                ))}
+              </div>
+            </Card>
           ))}
-        </div>
-
-        {/* Bottom CTA */}
-        <div
-          style={{
-            display: 'flex',
-            gap: 16,
-            justifyContent: 'center',
-            flexWrap: 'wrap',
-            marginTop: 56,
-          }}
-        >
-          <PillButton text="Book a free Demo &rarr;" href="/demo" variant="primary" />
-          <PillButton text="See pricing &rarr;" href="/pricing" variant="ghost" />
         </div>
       </Section>
 
-      {/* ── 9. CRM COMPARISON ── */}
-      <Section bg={C.ink} style={{ paddingTop: 0 }}>
-        <div style={{ textAlign: 'center', marginBottom: 48 }}>
-          <Label text="The Difference" />
-          <h2
-            style={{
-              fontSize: 36,
-              fontWeight: 700,
-              color: C.white,
-              lineHeight: 1.2,
-              maxWidth: 640,
-              margin: '0 auto',
-            }}
-          >
-            This is not a CRM. CRMs are where data goes to sit.
-          </h2>
-        </div>
-
+      <section style={{ backgroundColor: C.ink, color: C.white, padding: '96px 24px' }}>
         <div
           style={{
-            display: 'flex',
+            maxWidth: 1180,
+            margin: '0 auto',
+            display: 'grid',
+            gridTemplateColumns: '1fr auto',
             gap: 24,
-            flexWrap: 'wrap',
-            maxWidth: 880,
-            margin: '0 auto',
+            alignItems: 'center',
           }}
         >
-          {/* Traditional CRM */}
-          <div
-            style={{
-              flex: '1 1 380px',
-              backgroundColor: '#2A2520',
-              borderRadius: 16,
-              padding: 32,
-              opacity: 0.85,
-            }}
-          >
-            <div
-              style={{
-                fontSize: 13,
-                fontWeight: 600,
-                textTransform: 'uppercase' as const,
-                letterSpacing: '0.08em',
-                color: C.muted,
-                marginBottom: 20,
-              }}
-            >
-              Traditional CRM
-            </div>
-            <ul style={{ padding: 0 }}>
-              {[
-                'You manually log every interaction',
-                'You write and send every follow-up',
-                'No automated reorder triggers',
-                'No deposit collection',
-                'No ordering portal',
-                'Data sits in fields nobody checks',
-              ].map((t) => (
-                <li
-                  key={t}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    marginBottom: 14,
-                    listStyle: 'none',
-                  }}
-                >
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: 20,
-                      height: 20,
-                      borderRadius: '50%',
-                      backgroundColor: 'rgba(255,98,67,0.15)',
-                      color: C.red,
-                      fontSize: 11,
-                      fontWeight: 700,
-                      marginRight: 10,
-                      flexShrink: 0,
-                      marginTop: 2,
-                    }}
-                  >
-                    &#10005;
-                  </span>
-                  <span style={{ color: '#C2B9AE', fontSize: 15, lineHeight: 1.5 }}>{t}</span>
-                </li>
-              ))}
-            </ul>
+          <div>
+            <Eyebrow text="Ready for the loop" />
+            <h2 style={{ fontSize: 46, lineHeight: 1.04, fontWeight: 800, marginBottom: 16, maxWidth: 650 }}>
+              Launch gets you live. Momentum keeps it moving. Engine compounds it.
+            </h2>
+            <p style={{ fontSize: 18, lineHeight: 1.65, color: 'rgba(254,252,250,0.82)', maxWidth: 640 }}>
+              That is the working model behind the redesign. Every page should show how the platform turns a single
+              catering order into a repeat relationship.
+            </p>
           </div>
-
-          {/* TrayLoop */}
-          <div
-            style={{
-              flex: '1 1 380px',
-              backgroundColor: '#2A2520',
-              borderRadius: 16,
-              padding: 32,
-              border: `2px solid ${C.orange}`,
-            }}
-          >
-            <div
-              style={{
-                fontSize: 13,
-                fontWeight: 600,
-                textTransform: 'uppercase' as const,
-                letterSpacing: '0.08em',
-                color: C.orange,
-                marginBottom: 20,
-              }}
-            >
-              TrayLoop
-            </div>
-            <ul style={{ padding: 0 }}>
-              {[
-                'Every interaction logged automatically',
-                'AI writes and sends follow-ups for you',
-                'Automated reorder triggers based on patterns',
-                'Deposits collected at checkout',
-                'Branded ordering portal included',
-                'Data drives actions, not just reports',
-              ].map((t) => (
-                <li
-                  key={t}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    marginBottom: 14,
-                    listStyle: 'none',
-                  }}
-                >
-                  <span
-                    style={{
-                      display: 'inline-block',
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      backgroundColor: C.teal,
-                      marginRight: 10,
-                      flexShrink: 0,
-                      marginTop: 7,
-                    }}
-                  />
-                  <span style={{ color: C.white, fontSize: 15, lineHeight: 1.5 }}>{t}</span>
-                </li>
-              ))}
-            </ul>
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 12 }}>
+            <PillButton text="See pricing" href="/pricing" variant="primary" size="md" />
+            <PillButton text="View product" href="/product" variant="ghost" size="md" />
           </div>
         </div>
-
-        <p
-          style={{
-            textAlign: 'center',
-            fontSize: 14,
-            color: C.muted,
-            marginTop: 32,
-            fontStyle: 'italic',
-          }}
-        >
-          A CRM tracks what happened. TrayLoop makes things happen.
-        </p>
-      </Section>
-
-      {/* ── 10. FAQ ── */}
-      <Section bg={C.cream}>
-        <div style={{ textAlign: 'center', marginBottom: 40 }}>
-          <Label text="FAQ" />
-          <h2 style={{ fontSize: 36, fontWeight: 700, color: C.ink }}>Common questions</h2>
-        </div>
-        <div
-          style={{
-            maxWidth: 720,
-            margin: '0 auto',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 12,
-          }}
-        >
-          {faqs.map((faq) => (
-            <FaqItem key={faq.q} q={faq.q} a={faq.a} />
-          ))}
-        </div>
-      </Section>
-
-    </>
+      </section>
+    </main>
   );
 }

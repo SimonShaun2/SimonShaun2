@@ -1,12 +1,12 @@
-import type { CSSProperties } from 'react';
-import Link from 'next/link';
+import type { CSSProperties, ReactNode } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import PillButton from '@/components/pill-button';
+import { featureAtlas, growthAdvisor, plans } from '@/lib/marketing-story';
 
-/* ── Design tokens ── */
-const color = {
+const C = {
   cream: '#F9F5EF',
-  creamDark: '#F0EBE1',
+  creamDark: '#EFE7DB',
   ink: '#1A1612',
   orange: '#E85618',
   teal: '#42D9A0',
@@ -14,528 +14,677 @@ const color = {
   white: '#FEFCFA',
 };
 
-/* ── Reusable section wrapper ── */
 function Section({
   children,
   bg = 'transparent',
   style,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   bg?: string;
   style?: CSSProperties;
 }) {
   return (
-    <section style={{ backgroundColor: bg, padding: '80px 24px', ...style }}>
-      <div style={{ maxWidth: 1120, margin: '0 auto' }}>{children}</div>
+    <section style={{ backgroundColor: bg, padding: '88px 24px', ...style }}>
+      <div style={{ maxWidth: 1180, margin: '0 auto' }}>{children}</div>
     </section>
   );
 }
 
-/* ── Teal bullet helper ── */
-function TealDot() {
+function Eyebrow({ text }: { text: string }) {
   return (
-    <span
+    <div
       style={{
-        display: 'inline-block',
-        width: 8,
-        height: 8,
-        borderRadius: '50%',
-        backgroundColor: color.teal,
-        marginRight: 10,
-        flexShrink: 0,
-        marginTop: 7,
+        fontSize: 13,
+        fontWeight: 700,
+        color: C.orange,
+        textTransform: 'uppercase',
+        letterSpacing: '0.1em',
+        marginBottom: 14,
       }}
-    />
+    >
+      {text}
+    </div>
   );
 }
 
-function BulletItem({ text }: { text: string }) {
+function Heading({ title, summary }: { title: string; summary: string }) {
   return (
-    <li style={{ display: 'flex', alignItems: 'flex-start', marginBottom: 12, listStyle: 'none' }}>
-      <TealDot />
-      <span style={{ color: color.ink, fontSize: 15, lineHeight: 1.5 }}>{text}</span>
-    </li>
-  );
-}
-
-/* ── Mid-section CTA banner ── */
-function MidCta() {
-  return (
-    <Section bg={color.creamDark} style={{ padding: '48px 24px' }}>
-      <div style={{ textAlign: 'center' }}>
-        <p style={{ fontSize: 20, fontWeight: 700, color: color.ink, marginBottom: 20 }}>
-          See enough? Let us walk you through it live.
-        </p>
-        <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <PillButton text="Book a free Demo →" href="/demo" variant="primary" />
-          <PillButton text="See Pricing →" href="/pricing" variant="ghost" />
-        </div>
-      </div>
-    </Section>
-  );
-}
-
-/* ── Feature data ── */
-interface Feature {
-  number: string;
-  title: string;
-  href: string;
-  subtitle: string;
-  bullets: string[];
-  visual: React.ReactNode;
-}
-
-const features: Feature[] = [
-  {
-    number: '01',
-    title: 'Recurring Order Automation',
-    href: '/product/recurring-orders',
-    subtitle: 'Turn one-time orders into a predictable revenue stream',
-    bullets: [
-      'AI detects reorder patterns',
-      'Automated outreach at the right time',
-      '$1,840/mo avg recovered',
-    ],
-    visual: (
-      <div
+    <div style={{ maxWidth: 780 }}>
+      <h2
         style={{
-          backgroundColor: color.ink,
-          borderRadius: 16,
-          padding: 32,
+          fontSize: 42,
+          lineHeight: 1.08,
+          fontWeight: 800,
+          color: C.ink,
+          marginBottom: 16,
+        }}
+      >
+        {title}
+      </h2>
+      <p style={{ fontSize: 18, lineHeight: 1.65, color: C.muted }}>{summary}</p>
+    </div>
+  );
+}
+
+function Card({
+  children,
+  dark = false,
+  className,
+  style,
+}: {
+  children: ReactNode;
+  dark?: boolean;
+  className?: string;
+  style?: CSSProperties;
+}) {
+  return (
+    <div
+      className={className}
+      style={{
+        backgroundColor: dark ? '#231E19' : C.white,
+        border: dark ? '1px solid rgba(254,252,250,0.08)' : `1px solid ${C.creamDark}`,
+        borderRadius: 28,
+        padding: 28,
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function Bullet({ text, light = false }: { text: string; light?: boolean }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+      <span
+        style={{
+          width: 8,
+          height: 8,
+          borderRadius: '50%',
+          backgroundColor: light ? C.teal : C.orange,
+          flexShrink: 0,
+          marginTop: 7,
+        }}
+      />
+      <span style={{ fontSize: 15, lineHeight: 1.55, color: light ? 'rgba(254,252,250,0.84)' : C.ink }}>
+        {text}
+      </span>
+    </div>
+  );
+}
+
+function PlanBlock({
+  plan,
+  reverse = false,
+}: {
+  plan: (typeof plans)[number];
+  reverse?: boolean;
+}) {
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: reverse ? '1fr 0.95fr' : '0.95fr 1fr',
+        gap: 22,
+        alignItems: 'stretch',
+      }}
+    >
+      <Card
+        dark={plan.name === 'Engine'}
+        style={{
+          color: plan.name === 'Engine' ? C.white : C.ink,
           display: 'flex',
           flexDirection: 'column',
-          gap: 20,
+          justifyContent: 'space-between',
+          minHeight: 320,
         }}
       >
-        <div style={{ fontSize: 13, color: color.muted, marginBottom: 4 }}>Impact snapshot</div>
-        {[
-          { label: '$1,840/mo recovered', accent: color.teal },
-          { label: '3\u00d7 repeat orders', accent: color.teal },
-          { label: '72% reorder rate', accent: color.teal },
-        ].map((stat) => (
-          <div
-            key={stat.label}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              padding: '14px 18px',
-              backgroundColor: 'rgba(255,255,255,0.06)',
-              borderRadius: 10,
-            }}
-          >
-            <span
-              style={{
-                width: 10,
-                height: 10,
-                borderRadius: '50%',
-                backgroundColor: stat.accent,
-                flexShrink: 0,
-              }}
-            />
-            <span style={{ fontSize: 16, fontWeight: 700, color: color.white }}>{stat.label}</span>
-          </div>
-        ))}
-      </div>
-    ),
-  },
-  {
-    number: '02',
-    title: 'Merchant Self-Service Portal',
-    href: '/product/merchant-portal',
-    subtitle: 'Run your entire catering operation from one dashboard',
-    bullets: [
-      'Full order management',
-      'Customer database with health scores',
-      'Self-serve \u2014 no support tickets',
-    ],
-    visual: (
-      <div
-        style={{
-          backgroundColor: color.white,
-          borderRadius: 16,
-          padding: 24,
-          border: `1px solid ${color.creamDark}`,
-        }}
-      >
-        <div style={{ fontSize: 14, fontWeight: 600, color: color.ink, marginBottom: 16 }}>
-          Portal Modules
-        </div>
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: 10,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '6px 12px',
+            borderRadius: 999,
+            backgroundColor: plan.name === 'Momentum' ? '#E9FBF3' : plan.name === 'Engine' ? 'rgba(66,217,160,0.14)' : '#F6EFE5',
+            color: plan.name === 'Engine' ? C.teal : plan.name === 'Momentum' ? '#1D7A55' : C.orange,
+            fontSize: 12,
+            fontWeight: 700,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            alignSelf: 'flex-start',
+            marginBottom: 18,
           }}
         >
-          {[
-            'Dashboard',
-            'Orders',
-            'Customers',
-            'Offerings',
-            'Locations',
-            'Follow-Ups',
-            'Revenue',
-            'Automations',
-            'Settings',
-          ].map((mod) => (
-            <div
-              key={mod}
-              style={{
-                padding: '12px 10px',
-                fontSize: 13,
-                fontWeight: 600,
-                color: color.ink,
-                backgroundColor: color.cream,
-                borderRadius: 8,
-                textAlign: 'center',
-              }}
-            >
-              {mod}
-            </div>
-          ))}
+          {plan.badge}
         </div>
-      </div>
-    ),
-  },
-  {
-    number: '03',
-    title: 'Smart Pricing',
-    href: '/product/smart-pricing',
-    subtitle: 'Price catering based on what actually drives margin',
-    bullets: [
-      'Per-head, flat-rate, or hybrid models',
-      'Minimums and deposits enforced',
-      'Location-specific rules',
-    ],
-    visual: (
-      <div
-        style={{
-          backgroundColor: color.white,
-          borderRadius: 16,
-          padding: 24,
-          border: `1px solid ${color.creamDark}`,
-        }}
-      >
-        <div style={{ fontSize: 14, fontWeight: 600, color: color.ink, marginBottom: 16 }}>
-          Package Example
-        </div>
-        <div
-          style={{
-            padding: '20px 18px',
-            backgroundColor: '#FFF7F0',
-            border: `1.5px solid ${color.orange}`,
-            borderRadius: 12,
-          }}
-        >
-          <div style={{ fontSize: 18, fontWeight: 700, color: color.ink, marginBottom: 12 }}>
-            Executive Lunch
-          </div>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: 10,
-            }}
-          >
-            {[
-              { label: 'Price', value: '$28/pp' },
-              { label: 'Min headcount', value: '15' },
-              { label: 'Max headcount', value: '200' },
-              { label: 'Deposit', value: '25%' },
-            ].map((row) => (
-              <div key={row.label}>
-                <div style={{ fontSize: 11, color: color.muted }}>{row.label}</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: color.ink, marginTop: 2 }}>
-                  {row.value}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    ),
-  },
-  {
-    number: '04',
-    title: 'Smart Upsell',
-    href: '/product/smart-upsell',
-    subtitle: 'Every checkout suggests the right add-ons',
-    bullets: [
-      'Contextual recommendations',
-      '+15% avg order value',
-      'Upsell tracking in dashboard',
-    ],
-    visual: (
-      <div
-        style={{
-          backgroundColor: color.white,
-          borderRadius: 16,
-          padding: 24,
-          border: `1px solid ${color.creamDark}`,
-        }}
-      >
-        <div style={{ fontSize: 14, fontWeight: 600, color: color.ink, marginBottom: 16 }}>
-          Suggested Add-ons
-        </div>
-        {[
-          { item: 'Fresh Fruit Platter', price: '+$4.50/pp' },
-          { item: 'Coffee Service', price: '+$3/pp' },
-          { item: 'Dessert Tray', price: '+$45' },
-        ].map((addon) => (
-          <div
-            key={addon.item}
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '14px 16px',
-              marginBottom: 8,
-              borderRadius: 10,
-              backgroundColor: '#F0FBF5',
-              border: `1.5px solid ${color.teal}`,
-            }}
-          >
-            <span style={{ fontSize: 14, fontWeight: 500, color: color.ink }}>{addon.item}</span>
-            <span style={{ fontSize: 14, fontWeight: 700, color: color.teal }}>{addon.price}</span>
-          </div>
-        ))}
-      </div>
-    ),
-  },
-  {
-    number: '05',
-    title: 'Capacity Management',
-    href: '/product/capacity-management',
-    subtitle: 'Never overcommit your kitchen',
-    bullets: [
-      'Lead time requirements enforced',
-      'Delivery radius and zones',
-      'Multi-location support',
-    ],
-    visual: (
-      <div
-        style={{
-          backgroundColor: color.white,
-          borderRadius: 16,
-          padding: 24,
-          border: `1px solid ${color.creamDark}`,
-        }}
-      >
-        <div style={{ fontSize: 14, fontWeight: 600, color: color.ink, marginBottom: 16 }}>
-          Location Settings — Main Kitchen
-        </div>
-        {[
-          { label: 'Max daily catering orders', value: '8' },
-          { label: 'Lead time required', value: '24 hours' },
-          { label: 'Delivery radius', value: '15 miles' },
-          { label: 'Max headcount per order', value: '150' },
-        ].map((s) => (
-          <div
-            key={s.label}
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '14px 16px',
-              marginBottom: 8,
-              borderRadius: 10,
-              backgroundColor: color.cream,
-            }}
-          >
-            <span style={{ fontSize: 14, color: color.ink }}>{s.label}</span>
-            <span style={{ fontWeight: 700, color: color.ink, fontSize: 15 }}>{s.value}</span>
-          </div>
-        ))}
-      </div>
-    ),
-  },
-];
 
-/* ══════════════════════════════════════════════
-   PRODUCT PAGE — V2
-   ══════════════════════════════════════════════ */
-export default function ProductPage() {
-  return (
-    <main>
-      {/* ── HERO ── */}
-      <Section bg={color.cream} style={{ paddingTop: 100, paddingBottom: 60 }}>
-        <div style={{ textAlign: 'center', maxWidth: 720, margin: '0 auto' }}>
+        <div>
           <div
             style={{
               fontSize: 13,
-              fontWeight: 600,
-              color: color.orange,
-              textTransform: 'uppercase' as const,
-              letterSpacing: 1.5,
-              marginBottom: 12,
+              fontWeight: 700,
+              color: plan.name === 'Engine' ? C.teal : C.orange,
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              marginBottom: 10,
             }}
           >
-            The Product
+            {plan.name}
           </div>
-          <h1
-            style={{
-              fontSize: 44,
-              fontWeight: 800,
-              color: color.ink,
-              lineHeight: 1.15,
-              marginBottom: 20,
-            }}
-          >
-            Everything your catering program needs to grow revenue on autopilot.
-          </h1>
+          <h3 style={{ fontSize: 34, lineHeight: 1.02, fontWeight: 800, marginBottom: 12 }}>{plan.summary}</h3>
           <p
             style={{
-              fontSize: 18,
-              color: color.muted,
-              lineHeight: 1.6,
-              marginBottom: 32,
+              fontSize: 16,
+              lineHeight: 1.7,
+              color: plan.name === 'Engine' ? 'rgba(254,252,250,0.8)' : C.muted,
+              maxWidth: 640,
             }}
           >
-            Five core capabilities — each designed to capture more orders, increase order value,
-            and turn one-time customers into recurring accounts.
+            {plan.detail}
           </p>
-          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 48 }}>
-            <PillButton text="Book a free Demo →" href="/demo" variant="primary" />
-            <PillButton text="See Pricing →" href="/pricing" variant="ghost" />
-          </div>
-          <div style={{ borderRadius: 16, overflow: 'hidden' }}>
-            <Image
-              src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1100&h=400&fit=crop"
-              alt="Catering spread"
-              width={1100}
-              height={400}
-              style={{ display: 'block', width: '100%', height: 'auto', objectFit: 'cover' }}
-              priority
-            />
+        </div>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: 8, marginTop: 24 }}>
+          <div style={{ fontSize: 40, fontWeight: 800 }}>{plan.price}</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: plan.name === 'Engine' ? 'rgba(254,252,250,0.72)' : C.muted }}>
+            {plan.cadence}
           </div>
         </div>
-      </Section>
+      </Card>
 
-      {/* ── FEATURE CARDS ── */}
-      {features.map((feature, i) => {
-        const isEven = i % 2 === 1;
-        const bg = i % 2 === 0 ? color.white : color.cream;
-
-        const textBlock = (
-          <div style={{ flex: '1 1 440px', minWidth: 300 }}>
-            <div
-              style={{
-                fontSize: 14,
-                fontWeight: 700,
-                color: color.orange,
-                marginBottom: 10,
-              }}
-            >
-              {feature.number}
-            </div>
-            <h2
-              style={{
-                fontSize: 32,
-                fontWeight: 700,
-                color: color.ink,
-                lineHeight: 1.2,
-                marginBottom: 8,
-              }}
-            >
-              {feature.title}
-            </h2>
-            <p style={{ fontSize: 18, color: color.muted, marginBottom: 24, lineHeight: 1.5 }}>
-              {feature.subtitle}
-            </p>
-            <ul style={{ padding: 0, marginBottom: 24 }}>
-              {feature.bullets.map((b) => (
-                <BulletItem key={b} text={b} />
-              ))}
-            </ul>
-            <Link
-              href={feature.href}
-              style={{
-                fontSize: 15,
-                fontWeight: 600,
-                color: color.orange,
-                textDecoration: 'none',
-              }}
-            >
-              Learn more →
-            </Link>
-          </div>
-        );
-
-        const visualBlock = (
-          <div style={{ flex: '1 1 440px', minWidth: 300 }}>{feature.visual}</div>
-        );
-
-        return (
-          <div key={feature.number}>
-            <Section bg={bg}>
-              <div
-                style={{
-                  display: 'flex',
-                  gap: 48,
-                  flexWrap: 'wrap',
-                  alignItems: 'center',
-                  flexDirection: isEven ? 'row-reverse' : 'row',
-                }}
-              >
-                {textBlock}
-                {visualBlock}
-              </div>
-            </Section>
-
-            {/* Mid-section CTA after feature 2 (index 1) and feature 4 (index 3) */}
-            {(i === 1 || i === 3) && <MidCta />}
-          </div>
-        );
-      })}
-
-      {/* ── PLATFORM OVERVIEW ── */}
-      <Section bg={color.ink}>
-        <div style={{ textAlign: 'center', maxWidth: 720, margin: '0 auto', marginBottom: 48 }}>
-          <h2
+      <Card
+        style={{
+          display: 'grid',
+          gridTemplateRows: 'auto auto 1fr',
+          gap: 20,
+          background:
+            plan.name === 'Launch'
+              ? 'linear-gradient(180deg, #FFFDF9 0%, #FFF7F1 100%)'
+              : plan.name === 'Momentum'
+              ? 'linear-gradient(180deg, #FFFFFF 0%, #F0FBF6 100%)'
+              : 'linear-gradient(180deg, #2C2520 0%, #231E19 100%)',
+          color: plan.name === 'Engine' ? C.white : C.ink,
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center' }}>
+          <div
             style={{
-              fontSize: 36,
+              fontSize: 12,
               fontWeight: 700,
-              color: color.white,
-              lineHeight: 1.2,
-              marginBottom: 16,
+              color: plan.name === 'Engine' ? C.teal : C.orange,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
             }}
           >
-            One platform. Five capabilities. Zero commissions.
-          </h2>
+            What it unlocks
+          </div>
+          <Link
+            href="/pricing"
+            style={{
+              fontSize: 14,
+              fontWeight: 700,
+              color: plan.name === 'Engine' ? C.teal : C.orange,
+              textDecoration: 'none',
+            }}
+          >
+            See pricing
+          </Link>
+        </div>
+
+        <div style={{ display: 'grid', gap: 12 }}>
+          {plan.highlights.map((item) => (
+            <Bullet key={item} text={item} light={plan.name === 'Engine'} />
+          ))}
+        </div>
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+            gap: 14,
+            alignSelf: 'end',
+          }}
+        >
+          <div
+            style={{
+              padding: 16,
+              borderRadius: 18,
+              backgroundColor: plan.name === 'Engine' ? 'rgba(66,217,160,0.12)' : '#FFF6EE',
+              border: plan.name === 'Engine' ? '1px solid rgba(66,217,160,0.18)' : '1px solid #F2E4D6',
+            }}
+          >
+            <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              Best for
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: plan.name === 'Engine' ? C.white : C.ink, marginTop: 8 }}>
+              {plan.bestFor}
+            </div>
+          </div>
+          <div
+            style={{
+              padding: 16,
+              borderRadius: 18,
+              backgroundColor: plan.name === 'Engine' ? 'rgba(66,217,160,0.12)' : '#FFF6EE',
+              border: plan.name === 'Engine' ? '1px solid rgba(66,217,160,0.18)' : '1px solid #F2E4D6',
+            }}
+          >
+            <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              Category
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: plan.name === 'Engine' ? C.white : C.ink, marginTop: 8 }}>
+              {plan.name === 'Launch' ? 'Sell direct' : plan.name === 'Momentum' ? 'Repeat revenue' : 'AI growth'}
+            </div>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function AdvisorBlock() {
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 0.95fr',
+        gap: 22,
+        alignItems: 'stretch',
+      }}
+    >
+      <Card
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          minHeight: 320,
+          background: 'linear-gradient(180deg, #FFF8F2 0%, #FFF2E8 100%)',
+        }}
+      >
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '6px 12px',
+            borderRadius: 999,
+            backgroundColor: '#FFF0E9',
+            color: C.orange,
+            fontSize: 12,
+            fontWeight: 700,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            alignSelf: 'flex-start',
+            marginBottom: 18,
+          }}
+        >
+          {growthAdvisor.badge}
+        </div>
+        <div>
+          <div
+            style={{
+              fontSize: 13,
+              fontWeight: 700,
+              color: C.orange,
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              marginBottom: 10,
+            }}
+          >
+            Growth Advisor
+          </div>
+          <h3 style={{ fontSize: 34, lineHeight: 1.02, fontWeight: 800, color: C.ink, marginBottom: 12 }}>
+            A premium strategy layer for the operators who want help deciding what to do next.
+          </h3>
+          <p style={{ fontSize: 16, lineHeight: 1.7, color: C.muted, maxWidth: 640 }}>
+            {growthAdvisor.detail}
+          </p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 24 }}>
+          <div style={{ fontSize: 40, fontWeight: 800, color: C.ink }}>
+            {growthAdvisor.price}
+            <span style={{ fontSize: 16, fontWeight: 600, color: C.muted, marginLeft: 4 }}>{growthAdvisor.cadence}</span>
+          </div>
+        </div>
+      </Card>
+
+      <Card
+        style={{
+          display: 'grid',
+          gap: 20,
+          background: 'linear-gradient(180deg, #FFFFFF 0%, #F7F0E6 100%)',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center' }}>
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: C.orange,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+            }}
+          >
+            What it adds
+          </div>
+          <Link
+            href="/pricing"
+            style={{
+              fontSize: 14,
+              fontWeight: 700,
+              color: C.orange,
+              textDecoration: 'none',
+            }}
+          >
+            See pricing
+          </Link>
+        </div>
+        <div style={{ display: 'grid', gap: 12 }}>
+          {growthAdvisor.highlights.map((item) => (
+            <Bullet key={item} text={item} />
+          ))}
         </div>
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-            gap: 24,
-            maxWidth: 800,
-            margin: '0 auto',
+            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+            gap: 14,
+            alignSelf: 'end',
           }}
         >
-          {[
-            { value: '$49/month', label: 'flat' },
-            { value: '0%', label: 'commissions' },
-            { value: '100%', label: 'done-for-you setup' },
-          ].map((stat) => (
+          <div
+            style={{
+              padding: 16,
+              borderRadius: 18,
+              backgroundColor: '#FFF6EE',
+              border: '1px solid #F2E4D6',
+            }}
+          >
+            <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              Best for
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, marginTop: 8 }}>{growthAdvisor.summary}</div>
+          </div>
+          <div
+            style={{
+              padding: 16,
+              borderRadius: 18,
+              backgroundColor: '#FFF6EE',
+              border: '1px solid #F2E4D6',
+            }}
+          >
+            <div style={{ fontSize: 12, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              Category
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, marginTop: 8 }}>Strategy add-on</div>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+export default function ProductPage() {
+  return (
+    <main style={{ backgroundColor: C.cream }}>
+      <style>{`
+        .tl-product-fade {
+          animation: tlFadeUp 0.7s ease both;
+        }
+        .tl-product-delay-1 { animation-delay: 0.1s; }
+        .tl-product-delay-2 { animation-delay: 0.2s; }
+        .tl-product-delay-3 { animation-delay: 0.3s; }
+        .tl-product-hover {
+          transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+        }
+        .tl-product-hover:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 18px 50px rgba(26, 22, 18, 0.08);
+        }
+        @keyframes tlFadeUp {
+          from { opacity: 0; transform: translateY(14px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @media (max-width: 960px) {
+          .tl-product-hero,
+          .tl-product-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .tl-product-feature-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
+
+      <Section bg={C.ink} style={{ paddingTop: 72, paddingBottom: 72 }}>
+        <div
+          className="tl-product-hero"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 0.95fr',
+            gap: 32,
+            alignItems: 'center',
+          }}
+        >
+          <div className="tl-product-fade">
             <div
-              key={stat.label}
               style={{
-                backgroundColor: 'rgba(255,255,255,0.06)',
-                borderRadius: 16,
-                padding: '32px 24px',
-                textAlign: 'center',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '8px 14px',
+                borderRadius: 999,
+                backgroundColor: 'rgba(254,252,250,0.08)',
+                color: C.teal,
+                fontSize: 12,
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                marginBottom: 20,
               }}
             >
-              <div style={{ fontSize: 36, fontWeight: 800, color: color.white, marginBottom: 4 }}>
-                {stat.value}
-              </div>
-              <div style={{ fontSize: 15, color: '#C2B9AE' }}>{stat.label}</div>
+              Product overview
             </div>
+
+            <h1
+              style={{
+                fontSize: 66,
+                lineHeight: 0.98,
+                letterSpacing: '-0.04em',
+                color: C.white,
+                fontWeight: 800,
+                maxWidth: 700,
+                marginBottom: 18,
+              }}
+            >
+              One platform.
+              <br />
+              Four growth layers.
+            </h1>
+            <p
+              style={{
+                fontSize: 19,
+                lineHeight: 1.7,
+                color: 'rgba(254,252,250,0.82)',
+                maxWidth: 620,
+              }}
+            >
+              TrayLoop is not just a storefront. It is a direct catering system with Launch, Momentum, Engine, and
+              Growth Advisor layered to grow revenue as the business gets more serious.
+            </p>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 26 }}>
+              <PillButton text="See pricing" href="/pricing" variant="primary" size="md" />
+              <PillButton text="How it works" href="/how-it-works" variant="ghost" size="md" />
+            </div>
+          </div>
+
+          <div className="tl-product-fade tl-product-delay-1">
+            <div
+              style={{
+                position: 'relative',
+                minHeight: 620,
+                borderRadius: 34,
+                overflow: 'hidden',
+                border: '1px solid rgba(254,252,250,0.1)',
+                boxShadow: '0 26px 80px rgba(0, 0, 0, 0.25)',
+                backgroundColor: '#2A2520',
+              }}
+            >
+              <Image
+                src="https://images.unsplash.com/photo-1547592180-85f173990554?w=1200&h=1500&fit=crop&q=80"
+                alt="Catering team preparing a large order"
+                fill
+                priority
+                style={{ objectFit: 'cover', objectPosition: 'center' }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background:
+                    'linear-gradient(180deg, rgba(26,22,18,0.08) 0%, rgba(26,22,18,0.28) 40%, rgba(26,22,18,0.92) 100%)',
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  padding: 26,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  color: C.white,
+                }}
+              >
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    alignSelf: 'flex-start',
+                    padding: '8px 14px',
+                    borderRadius: 999,
+                    backgroundColor: 'rgba(66,217,160,0.14)',
+                    color: C.teal,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Built for repeat revenue
+                </div>
+
+                <div
+                  style={{
+                    display: 'grid',
+                    gap: 12,
+                    padding: 18,
+                    borderRadius: 22,
+                    backgroundColor: 'rgba(26,22,18,0.72)',
+                    border: '1px solid rgba(254,252,250,0.12)',
+                    backdropFilter: 'blur(14px)',
+                  }}
+                >
+                  <div style={{ fontSize: 13, color: C.teal, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    Product layer
+                  </div>
+                  <div style={{ fontSize: 26, fontWeight: 800 }}>Launch. Momentum. Engine. Growth Advisor.</div>
+                  <p style={{ fontSize: 15, lineHeight: 1.65, color: 'rgba(254,252,250,0.78)' }}>
+                    Each layer adds the next capability: storefront, repeat revenue, AI growth, and strategic
+                    support.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Section>
+
+      <Section bg={C.white}>
+        <div className="tl-product-fade">
+          <Eyebrow text="Product layers" />
+          <Heading
+            title="Each product layer exists to move a catering account further down the revenue ladder."
+            summary="Launch gets the order live. Momentum makes repeat orders feel natural. Engine turns follow-up and retention into a system. Growth Advisor helps the merchant decide what to do next."
+          />
+        </div>
+
+        <div className="tl-product-grid" style={{ display: 'grid', gap: 18, marginTop: 34 }}>
+          {plans.map((plan, index) => (
+            <div key={plan.name} className={`tl-product-fade tl-product-delay-${index + 1}`}>
+              <PlanBlock plan={plan} reverse={index % 2 === 1} />
+            </div>
+          ))}
+
+          <div className="tl-product-fade tl-product-delay-3">
+            <AdvisorBlock />
+          </div>
+        </div>
+      </Section>
+
+      <Section bg={C.creamDark}>
+        <div className="tl-product-fade">
+          <Eyebrow text="Feature atlas" />
+          <Heading
+            title="The details that make Momentum and Engine matter."
+            summary="These are the revenue levers the new tier story needs to show clearly: recurring scheduling, upsells, AI, and retention intelligence."
+          />
+        </div>
+
+        <div className="tl-product-feature-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 18, marginTop: 34 }}>
+          {featureAtlas.map((group) => (
+            <Card key={group.title} className="tl-product-hover" style={{ minHeight: 260 }}>
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: C.orange,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                  marginBottom: 12,
+                }}
+              >
+                {group.title}
+              </div>
+              <div style={{ display: 'grid', gap: 10 }}>
+                {group.items.map((item) => (
+                  <Bullet key={item} text={item} />
+                ))}
+              </div>
+            </Card>
           ))}
         </div>
       </Section>
 
+      <section style={{ backgroundColor: C.ink, color: C.white, padding: '96px 24px' }}>
+        <div
+          style={{
+            maxWidth: 1180,
+            margin: '0 auto',
+            display: 'grid',
+            gridTemplateColumns: '1fr auto',
+            gap: 24,
+            alignItems: 'center',
+          }}
+        >
+          <div>
+            <Eyebrow text="Growth path" />
+            <h2 style={{ fontSize: 46, lineHeight: 1.04, fontWeight: 800, marginBottom: 16, maxWidth: 660 }}>
+              TrayLoop grows with the account instead of resetting it.
+            </h2>
+            <p style={{ fontSize: 18, lineHeight: 1.65, color: 'rgba(254,252,250,0.82)', maxWidth: 640 }}>
+              That is what makes the pricing ladder feel real. Each upgrade adds the next repeat-revenue capability,
+              and Growth Advisor gives operators a strategy layer when they want more guidance.
+            </p>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 12 }}>
+            <PillButton text="See pricing" href="/pricing" variant="primary" size="md" />
+            <PillButton text="Book a demo" href="/demo" variant="ghost" size="md" />
+          </div>
+        </div>
+      </section>
     </main>
   );
 }
