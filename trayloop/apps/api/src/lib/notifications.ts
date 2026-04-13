@@ -27,11 +27,17 @@ export interface DirectSmsNotificationPayload {
   body: string;
 }
 
+function normalizeBaseUrl(value: string | undefined, fallback: string) {
+  const raw = value?.trim();
+  const candidate = raw && raw.length > 0 ? raw : fallback;
+  return candidate.replace(/\/+$/, '');
+}
+
 function renderNotificationHtml(body: string, actionUrl?: string, merchantName?: string) {
   const brandName = merchantName || 'TrayLoop';
   const htmlBody = body
     .split('\n')
-    .map((line) => line.trim() === '' ? '<br>' : `<p style="margin:0 0 4px">${line}</p>`)
+    .map((line) => (line.trim() === '' ? '<br>' : `<p style="margin:0 0 4px">${line}</p>`))
     .join('\n');
 
   return `<div style="font-family:Inter,-apple-system,sans-serif;max-width:560px;margin:0 auto;color:#1C1917">
@@ -179,11 +185,11 @@ export async function notifyCustomerSms(input: {
 }
 
 export function getMerchantDashboardUrl(path: string) {
-  return `${process.env.MERCHANT_URL || 'http://localhost:3003'}${path}`;
+  return `${normalizeBaseUrl(process.env.MERCHANT_URL, 'https://dashboard.trayloophq.com')}${path}`;
 }
 
 export function getStorefrontAccountUrl() {
-  return `${process.env.STOREFRONT_URL || 'http://localhost:3001'}/account`;
+  return `${normalizeBaseUrl(process.env.STOREFRONT_URL, 'https://order.trayloophq.com')}/account`;
 }
 
 export async function sendNotification(payload: NotificationPayload): Promise<void> {

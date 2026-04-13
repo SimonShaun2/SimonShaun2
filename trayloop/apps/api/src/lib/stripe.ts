@@ -1,14 +1,13 @@
 import Stripe from 'stripe';
 import { logger } from '@trayloop/utils';
-import { type BillingCycleKey, type PlanKey } from '@trayloop/types';
-import { type SharedEntitlementKey } from '@trayloop/types';
+import { type BillingCycleKey, type PlanKey, type SharedEntitlementKey } from '@trayloop/types';
 
 let stripeClient: Stripe | null = null;
 
 export interface StripeConfig {
   secretKey: string;
   publishableKey: string | null;
-  webhookSecret: string;
+  webhookSecret: string | null;
   starterPriceId: string | null;
   proPriceId: string | null;
   growthPriceId: string | null;
@@ -32,7 +31,7 @@ function getFirstDefinedEnv(...names: string[]) {
 function loadConfig(): StripeConfig | null {
   const secretKey = process.env.STRIPE_SECRET_KEY;
   const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET ?? null;
   const starterPriceId = getFirstDefinedEnv(
     'STRIPE_LAUNCH_PRICE_ID',
     'STRIPE_STARTER_PRICE_ID',
@@ -53,11 +52,10 @@ function loadConfig(): StripeConfig | null {
   };
   const subscriptionTrialDays = Number.parseInt(process.env.STRIPE_SUBSCRIPTION_TRIAL_DAYS ?? '0', 10);
 
-  if (!secretKey || !webhookSecret) {
+  if (!secretKey) {
     return null;
   }
 
-  // Reject obvious placeholder values
   if (secretKey.startsWith('sk_test_xxx') || secretKey === 'sk_test_xxx') {
     return null;
   }
@@ -74,16 +72,12 @@ function loadConfig(): StripeConfig | null {
   };
 }
 
-/**
- * Initialize the Stripe client. Call once at API startup.
- * Returns true if Stripe is configured and ready.
- */
 export function initStripe(): boolean {
   const config = loadConfig();
 
   if (!config) {
-    logger.warn('Stripe not configured — payment features disabled', {
-      hint: 'Set STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY, and STRIPE_WEBHOOK_SECRET',
+    logger.warn('Stripe not configured - payment features disabled', {
+      hint: 'Set STRIPE_SECRET_KEY. Add STRIPE_WEBHOOK_SECRET to enable webhook verification.',
     });
     return false;
   }
@@ -94,14 +88,12 @@ export function initStripe(): boolean {
 
   logger.info('Stripe initialized', {
     mode: config.secretKey.startsWith('sk_live_') ? 'live' : 'test',
+    webhooksConfigured: Boolean(config.webhookSecret),
   });
 
   return true;
 }
 
-/**
- * Get the Stripe client instance. Throws if Stripe is not initialized.
- */
 export function getStripe(): Stripe {
   if (!stripeClient) {
     throw new Error('Stripe is not configured. Set STRIPE_SECRET_KEY environment variable.');
@@ -109,27 +101,18 @@ export function getStripe(): Stripe {
   return stripeClient;
 }
 
-/**
- * Check if Stripe is configured and available.
- */
 export function isStripeEnabled(): boolean {
   return stripeClient !== null;
 }
 
-/**
- * Get the publishable key for client-side use.
- */
 export function getPublishableKey(): string | null {
   const config = loadConfig();
   return config?.publishableKey ?? null;
 }
 
-/**
- * Get the webhook secret for signature verification.
- */
 export function getWebhookSecret(): string {
   const config = loadConfig();
-  if (!config) {
+  if (!config?.webhookSecret) {
     throw new Error('Stripe webhook secret is not configured.');
   }
   return config.webhookSecret;

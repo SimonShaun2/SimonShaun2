@@ -10,49 +10,73 @@ interface EmailMessage {
 interface EmailConfig {
   provider: 'smtp' | 'resend';
   from: string;
-  // SMTP
   smtpHost?: string;
   smtpPort?: number;
   smtpUser?: string;
   smtpPass?: string;
-  // Resend
   resendApiKey?: string;
 }
 
 let config: EmailConfig | null = null;
 
-function loadConfig(): EmailConfig | null {
-  const provider = process.env.EMAIL_PROVIDER as 'smtp' | 'resend' | undefined;
-  const from = process.env.EMAIL_FROM;
-
-  if (!provider || !from) return null;
-
-  if (provider === 'resend') {
-    const resendApiKey = process.env.RESEND_API_KEY;
-    if (!resendApiKey) return null;
-    return { provider, from, resendApiKey };
+function getEmailProvider(): EmailConfig['provider'] | null {
+  const explicitProvider = process.env.EMAIL_PROVIDER as EmailConfig['provider'] | undefined;
+  if (explicitProvider === 'resend' || explicitProvider === 'smtp') {
+    return explicitProvider;
   }
 
-  if (provider === 'smtp') {
-    const smtpHost = process.env.SMTP_HOST;
-    const smtpPort = parseInt(process.env.SMTP_PORT || '587', 10);
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
-    if (!smtpHost) return null;
-    return { provider, from, smtpHost, smtpPort, smtpUser, smtpPass };
+  if (process.env.RESEND_API_KEY) {
+    return 'resend';
+  }
+
+  if (process.env.SMTP_HOST) {
+    return 'smtp';
   }
 
   return null;
 }
 
+function loadConfig(): EmailConfig | null {
+  const provider = getEmailProvider();
+  const from =
+    process.env.EMAIL_FROM ??
+    process.env.RESEND_FROM_EMAIL ??
+    process.env.SMTP_FROM_EMAIL ??
+    null;
+
+  if (!provider || !from) {
+    return null;
+  }
+
+  if (provider === 'resend') {
+    const resendApiKey = process.env.RESEND_API_KEY;
+    if (!resendApiKey) {
+      return null;
+    }
+
+    return { provider, from, resendApiKey };
+  }
+
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpPort = parseInt(process.env.SMTP_PORT || '587', 10);
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+  if (!smtpHost) {
+    return null;
+  }
+
+  return { provider, from, smtpHost, smtpPort, smtpUser, smtpPass };
+}
+
 export function initEmail(): boolean {
   config = loadConfig();
   if (!config) {
-    logger.warn('Email not configured — notifications will be logged only', {
-      hint: 'Set EMAIL_PROVIDER (smtp|resend), EMAIL_FROM, and provider credentials',
+    logger.warn('Email not configured - notifications will be logged only', {
+      hint: 'Set EMAIL_FROM plus either RESEND_API_KEY or SMTP_HOST. EMAIL_PROVIDER is optional.',
     });
     return false;
   }
+
   logger.info('Email configured', { provider: config.provider, from: config.from });
   return true;
 }
@@ -71,9 +95,11 @@ export async function sendEmail(message: EmailMessage): Promise<boolean> {
     if (config.provider === 'resend') {
       return await sendViaResend(message);
     }
+
     if (config.provider === 'smtp') {
       return await sendViaSmtp(message);
     }
+
     return false;
   } catch (err) {
     logger.error('Email delivery failed', {
@@ -89,7 +115,7 @@ async function sendViaResend(message: EmailMessage): Promise<boolean> {
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${config!.resendApiKey}`,
+      Authorization: `Bearer ${config!.resendApiKey}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -111,12 +137,11 @@ async function sendViaResend(message: EmailMessage): Promise<boolean> {
 }
 
 async function sendViaSmtp(message: EmailMessage): Promise<boolean> {
-  // Dynamic import — nodemailer is optional
   let nodemailer: any;
   try {
     nodemailer = await import('nodemailer');
   } catch {
-    logger.error('nodemailer not installed — run: npm install nodemailer');
+    logger.error('nodemailer not installed - run: npm install nodemailer');
     return false;
   }
 

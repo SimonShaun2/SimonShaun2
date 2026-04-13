@@ -15,37 +15,48 @@ interface SmsConfig {
 
 let config: SmsConfig | null = null;
 
-function loadConfig(): SmsConfig | null {
-  const provider = process.env.SMS_PROVIDER as 'twilio' | undefined;
-  if (!provider) return null;
+function getSmsProvider(): SmsConfig['provider'] | null {
+  const explicitProvider = process.env.SMS_PROVIDER as SmsConfig['provider'] | undefined;
+  if (explicitProvider === 'twilio') {
+    return explicitProvider;
+  }
 
-  if (provider === 'twilio') {
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
-    const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
-    const fromNumber = process.env.TWILIO_FROM_NUMBER;
-
-    if (!accountSid || !authToken || (!messagingServiceSid && !fromNumber)) {
-      return null;
-    }
-
-    return {
-      provider,
-      accountSid,
-      authToken,
-      messagingServiceSid,
-      fromNumber,
-    };
+  if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+    return 'twilio';
   }
 
   return null;
+}
+
+function loadConfig(): SmsConfig | null {
+  const provider = getSmsProvider();
+  if (!provider) {
+    return null;
+  }
+
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
+  const fromNumber = process.env.TWILIO_FROM_NUMBER;
+
+  if (!accountSid || !authToken || (!messagingServiceSid && !fromNumber)) {
+    return null;
+  }
+
+  return {
+    provider,
+    accountSid,
+    authToken,
+    messagingServiceSid,
+    fromNumber,
+  };
 }
 
 export function initSms(): boolean {
   config = loadConfig();
   if (!config) {
     logger.warn('SMS not configured - text notifications will be logged only', {
-      hint: 'Set SMS_PROVIDER=twilio, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_MESSAGING_SERVICE_SID or TWILIO_FROM_NUMBER',
+      hint: 'Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_MESSAGING_SERVICE_SID or TWILIO_FROM_NUMBER. SMS_PROVIDER is optional.',
     });
     return false;
   }
@@ -69,10 +80,7 @@ export async function sendSms(message: SmsMessage): Promise<boolean> {
   }
 
   try {
-    if (config.provider === 'twilio') {
-      return await sendViaTwilio(message);
-    }
-    return false;
+    return await sendViaTwilio(message);
   } catch (err) {
     logger.error('SMS delivery failed', {
       to: message.to,
