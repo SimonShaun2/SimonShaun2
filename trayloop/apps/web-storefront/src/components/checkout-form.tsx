@@ -48,6 +48,27 @@ interface RecurringPreset {
   deliveriesPerMonth: number;
   apiInterval: 'weekly' | 'biweekly' | 'monthly';
 }
+type CheckoutUpsellSuggestion =
+  | {
+      kind: 'addon';
+      addOnId: string;
+      name: string;
+      headline: string;
+      reason: string;
+      recommendationType: string;
+      suggestedQuantity: number;
+      totalPrice: number;
+    }
+  | {
+      kind: 'package';
+      packageId: string;
+      name: string;
+      headline: string;
+      reason: string;
+      recommendationType: 'package_upgrade' | 'package_boost';
+      suggestedQuantity: number;
+      totalPrice: number;
+    };
 type ItemModalState =
   | { type: 'package'; id: string }
   | { type: 'addon'; id: string }
@@ -238,6 +259,53 @@ function getRecommendedAddOns(addOns: StorefrontAddOn[]) {
       return (b.upsellPriority ?? 0) - (a.upsellPriority ?? 0);
     })
     .slice(0, 3);
+}
+function getPackageUpsellCandidate(
+  allPackages: StorefrontPackage[],
+  selectedPkgs: Record<string, number>,
+  headcount: number,
+): CheckoutUpsellSuggestion | null {
+  const unselected = allPackages
+    .filter((pkg) => (selectedPkgs[pkg.id] ?? 0) === 0)
+    .sort((a, b) => {
+      const featuredDiff = Number(Boolean(b.upsellFeatured)) - Number(Boolean(a.upsellFeatured));
+      if (featuredDiff !== 0) return featuredDiff;
+      return (b.upsellPriority ?? 0) - (a.upsellPriority ?? 0);
+    });
+
+  const relatedPackage =
+    unselected.find((pkg) => pkg.upsellEligible !== false) ??
+    unselected.find((pkg) => (pkg.maximumHeadcount ?? Infinity) >= headcount) ??
+    unselected[0];
+
+  if (relatedPackage) {
+    return {
+      kind: 'package',
+      packageId: relatedPackage.id,
+      name: relatedPackage.name,
+      headline: `Add ${relatedPackage.name} to round out this order`,
+      reason: 'A second package is a strong way to cover larger appetites, extra guests, or variety.',
+      recommendationType: 'package_upgrade',
+      suggestedQuantity: 1,
+      totalPrice: relatedPackage.pricePerHead * headcount,
+    };
+  }
+
+  const selectedPrimary = allPackages.find((pkg) => (selectedPkgs[pkg.id] ?? 0) > 0);
+  if (!selectedPrimary) {
+    return null;
+  }
+
+  return {
+    kind: 'package',
+    packageId: selectedPrimary.id,
+    name: selectedPrimary.name,
+    headline: `Need a little more? Add one more ${selectedPrimary.name}`,
+    reason: 'If this group may run larger than expected, one more package keeps service smooth without changing the order.',
+    recommendationType: 'package_boost',
+    suggestedQuantity: 1,
+    totalPrice: selectedPrimary.pricePerHead * headcount,
+  };
 }
 function buildSections(data: StorefrontData['menu'], query: string): MenuSection[] {
   const q = query.trim().toLowerCase();
@@ -710,6 +778,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
   );
   const featuredPackage = useMemo(() => pickFeaturedPackage(menuSections, headcount), [headcount, menuSections]);
   const recommendedAddOns = useMemo(() => getRecommendedAddOns(allAddOns), [allAddOns]);
+  const canShowStorefrontUpsells = merchant.currentPlan === 'pro' || merchant.currentPlan === 'growth';
   const primaryUpsell = upsellRecommendations[0] ?? null;
   const modalPackage =
     itemModal?.type === 'package'
@@ -774,27 +843,60 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
   );
   const suggestedOftenAddedPrimary = suggestedOftenAdded[0] ?? null;
   const recommendedAddOnPrimary = recommendedAddOns[0] ?? null;
-  const fallbackUpsell =
-    primaryUpsell ??
-    (suggestedOftenAddedPrimary
-      ? {
-          addOnId: suggestedOftenAddedPrimary.id,
-          headline: `Add ${suggestedOftenAddedPrimary.name} to this order?`,
-          reason: 'Popular with similar catering orders.',
-          recommendationType: 'often_added',
-          suggestedQuantity: 1,
-          totalPrice: suggestedOftenAddedPrimary.price,
-        }
-      : recommendedAddOnPrimary
-        ? {
-            addOnId: recommendedAddOnPrimary.id,
-            headline: `Add ${recommendedAddOnPrimary.name} to this order?`,
-            reason: 'A common pairing for this kind of order.',
-            recommendationType: 'recommended',
-            suggestedQuantity: 1,
-            totalPrice: recommendedAddOnPrimary.price,
-          }
-      : null);
+  const fallbackUpsell = useMemo<CheckoutUpsellSuggestion | null>(() => {
+    if (!canShowStorefrontUpsells) {
+      return null;
+    }
+
+    if (primaryUpsell) {
+      return {
+        kind: 'addon',
+        addOnId: primaryUpsell.addOnId,
+        name: primaryUpsell.name,
+        headline: primaryUpsell.headline,
+        reason: primaryUpsell.reason,
+        recommendationType: primaryUpsell.recommendationType,
+        suggestedQuantity: primaryUpsell.suggestedQuantity,
+        totalPrice: primaryUpsell.totalPrice,
+      };
+    }
+
+    if (suggestedOftenAddedPrimary) {
+      return {
+        kind: 'addon',
+        addOnId: suggestedOftenAddedPrimary.id,
+        name: suggestedOftenAddedPrimary.name,
+        headline: `Add ${suggestedOftenAddedPrimary.name} to this order?`,
+        reason: 'Popular with similar catering orders.',
+        recommendationType: 'often_added',
+        suggestedQuantity: 1,
+        totalPrice: suggestedOftenAddedPrimary.price,
+      };
+    }
+
+    if (recommendedAddOnPrimary) {
+      return {
+        kind: 'addon',
+        addOnId: recommendedAddOnPrimary.id,
+        name: recommendedAddOnPrimary.name,
+        headline: `Add ${recommendedAddOnPrimary.name} to this order?`,
+        reason: 'A common pairing for this kind of order.',
+        recommendationType: 'recommended',
+        suggestedQuantity: 1,
+        totalPrice: recommendedAddOnPrimary.price,
+      };
+    }
+
+    return getPackageUpsellCandidate(allPackages, selectedPkgs, headcount);
+  }, [
+    allPackages,
+    canShowStorefrontUpsells,
+    headcount,
+    primaryUpsell,
+    recommendedAddOnPrimary,
+    selectedPkgs,
+    suggestedOftenAddedPrimary,
+  ]);
   const modalSuggestedAddOns = useMemo(() => {
     const excludeId = itemModal?.type === 'addon' ? itemModal.id : null;
     const base = suggestedOftenAdded.length > 0 ? suggestedOftenAdded : filteredAddOns;
@@ -1117,6 +1219,19 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
   );
   const applyUpsellRecommendation = useCallback(() => {
     if (!fallbackUpsell) return;
+    if (fallbackUpsell.kind === 'package') {
+      const currentQuantity = selectedPkgs[fallbackUpsell.packageId] ?? 0;
+      updatePackageQuantity(
+        fallbackUpsell.packageId,
+        currentQuantity === 0 ? Math.max(fallbackUpsell.suggestedQuantity, 1) : currentQuantity + 1,
+      );
+      trackEvent('storefront_upsell_added', {
+        merchantSlug: merchant.slug,
+        packageId: fallbackUpsell.packageId,
+        recommendationType: fallbackUpsell.recommendationType,
+      });
+      return;
+    }
     const currentQuantity = selectedAddOnIds[fallbackUpsell.addOnId] ?? 0;
     updateAddOnQuantity(
       fallbackUpsell.addOnId,
@@ -1126,6 +1241,7 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
       trackEvent('storefront_upsell_added', {
         merchantSlug: merchant.slug,
         addOnId: fallbackUpsell.addOnId,
+        recommendationType: fallbackUpsell.recommendationType,
       });
       return;
     }
@@ -1147,11 +1263,14 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
     trackEvent('storefront_upsell_added', {
       merchantSlug: merchant.slug,
       addOnId: fallbackUpsell.addOnId,
+      recommendationType: fallbackUpsell.recommendationType,
     });
   }, [
     fallbackUpsell,
     primaryUpsell,
+    selectedPkgs,
     updateAddOnQuantity,
+    updatePackageQuantity,
     selectedAddOnIds,
     headcount,
     selectedLocationSlug,
