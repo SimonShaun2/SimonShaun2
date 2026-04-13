@@ -16,6 +16,7 @@ import { packagesModule } from './modules/packages/index.js';
 import { addOnsModule } from './modules/add-ons/index.js';
 import { customersModule } from './modules/customers/index.js';
 import { ordersModule } from './modules/orders/index.js';
+import { orderEmailActionsModule } from './modules/order-email-actions/index.js';
 import { recurringOrdersModule } from './modules/recurring-orders/index.js';
 import { paymentsModule } from './modules/payments/index.js';
 import { billingModule } from './modules/billing/index.js';
@@ -91,6 +92,7 @@ export async function buildApp() {
 
   // Public storefront
   await app.register(storefrontModule, { prefix: '/api/storefront' });
+  await app.register(orderEmailActionsModule, { prefix: '/api/order-email-actions' });
 
   // Protected modules live in an isolated scope so auth hooks cannot bleed onto public routes.
   await app.register(async (protectedApp) => {

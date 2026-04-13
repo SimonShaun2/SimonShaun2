@@ -1,18 +1,22 @@
 import { db } from '@trayloop/database';
-import { customers, locations, orderItems, orders, organizations } from '@trayloop/database';
+import { customers, locations, locationSettings, orderItems, orders, organizations } from '@trayloop/database';
 import { eq } from 'drizzle-orm';
 import { logger } from '@trayloop/utils';
 import type { EventBus } from '../../lib/event-bus/index.js';
+import { createOrderActionToken } from '../../lib/order-action-tokens.js';
 import {
+  getPublicApiUrl,
   getMerchantDashboardUrl,
   getStorefrontAccountUrl,
   notifyCustomerEmail,
   notifyCustomerSms,
   sendNotification,
 } from '../../lib/notifications.js';
+import { renderCustomerOrderEmail, renderMerchantOrderTicketEmail } from '../../lib/order-ticket-email.js';
 
 interface OrderNotificationContext {
   id: string;
+  organizationId: string;
   orderNumber: string;
   status: string;
   serviceType: string;
@@ -31,6 +35,7 @@ interface OrderNotificationContext {
   locationAddress: string | null;
   locationCity: string | null;
   locationState: string | null;
+  depositRequired: boolean;
   items: Array<{
     name: string;
     quantity: number;
@@ -112,51 +117,24 @@ function buildStatusUpdateCopy(
   ctx: OrderNotificationContext,
   newStatus: string,
   reason?: string,
-): { subject: string; body: string } | null {
+): { subject: string; body: string; html: string } | null {
   if (newStatus === 'confirmed') {
-    return {
-      subject: `Your order is confirmed - ${ctx.orderNumber}`,
-      body: [
-        `Hi ${ctx.customerName},`,
-        '',
-        `${ctx.merchantName} confirmed your order.`,
-        '',
-        ...buildOrderSummaryLines(ctx),
-        '',
-        'Next step: keep an eye on your inbox for any final adjustments before service day.',
-      ].join('\n'),
-    };
+    const email = renderCustomerOrderEmail(ctx, 'confirmed', {
+      action: { label: 'View order', url: getStorefrontAccountUrl() },
+    });
+    return { subject: email.subject, body: email.text, html: email.html };
   }
 
   if (newStatus === 'completed') {
-    return {
-      subject: `Your order is complete - ${ctx.orderNumber}`,
-      body: [
-        `Hi ${ctx.customerName},`,
-        '',
-        `${ctx.merchantName} marked your order as complete.`,
-        '',
-        ...buildOrderSummaryLines(ctx),
-        '',
-        `Next step: if you need another event, you can reorder from your account or contact ${ctx.merchantName} directly.`,
-      ].join('\n'),
-    };
+    const email = renderCustomerOrderEmail(ctx, 'completed', {
+      action: { label: 'Reorder', url: getStorefrontAccountUrl() },
+    });
+    return { subject: email.subject, body: email.text, html: email.html };
   }
 
   if (newStatus === 'cancelled') {
-    return {
-      subject: `Your order was cancelled - ${ctx.orderNumber}`,
-      body: [
-        `Hi ${ctx.customerName},`,
-        '',
-        `${ctx.merchantName} cancelled your order.`,
-        ...(reason ? ['', `Reason: ${reason}`] : []),
-        '',
-        ...buildOrderSummaryLines(ctx),
-        '',
-        'Next step: reply to the merchant if you want to reschedule or discuss a replacement order.',
-      ].join('\n'),
-    };
+    const email = renderCustomerOrderEmail(ctx, 'cancelled', { reason });
+    return { subject: email.subject, body: email.text, html: email.html };
   }
 
   return null;
@@ -166,6 +144,7 @@ async function loadOrderNotificationContext(orderId: string): Promise<OrderNotif
   const [row] = await db
     .select({
       id: orders.id,
+      organizationId: orders.organizationId,
       orderNumber: orders.orderNumber,
       status: orders.status,
       serviceType: orders.serviceType,
@@ -185,11 +164,13 @@ async function loadOrderNotificationContext(orderId: string): Promise<OrderNotif
       locationAddress: locations.address,
       locationCity: locations.city,
       locationState: locations.state,
+      depositRequired: locationSettings.depositRequired,
     })
     .from(orders)
     .innerJoin(customers, eq(customers.id, orders.customerId))
     .innerJoin(organizations, eq(organizations.id, orders.organizationId))
     .leftJoin(locations, eq(locations.id, orders.locationId))
+    .leftJoin(locationSettings, eq(locationSettings.locationId, orders.locationId))
     .where(eq(orders.id, orderId))
     .limit(1);
 
@@ -208,6 +189,7 @@ async function loadOrderNotificationContext(orderId: string): Promise<OrderNotif
 
   return {
     id: row.id,
+    organizationId: row.organizationId,
     orderNumber: row.orderNumber,
     status: row.status,
     serviceType: row.serviceType,
@@ -226,6 +208,7 @@ async function loadOrderNotificationContext(orderId: string): Promise<OrderNotif
     locationAddress: row.locationAddress,
     locationCity: row.locationCity,
     locationState: row.locationState,
+    depositRequired: row.depositRequired ?? true,
     items,
   };
 }
@@ -242,23 +225,19 @@ export function registerEventHandlers(eventBus: EventBus) {
       return;
     }
 
-    const customerBody = [
-      `Hi ${ctx.customerName},`,
-      '',
-      `Thanks for ordering with ${ctx.merchantName}. We received your order and the team will review it shortly.`,
-      '',
-      ...buildOrderSummaryLines(ctx),
-      '',
-      'We will send another update as soon as the merchant confirms the order.',
-    ].join('\n');
+    const customerEmail = renderCustomerOrderEmail(ctx, 'received', {
+      action: { label: 'View order', url: getStorefrontAccountUrl() },
+    });
 
     await notifyCustomerEmail({
       customerUserId: ctx.customerUserId,
       customerEmail: ctx.customerEmail,
-      subject: `We received your order - ${ctx.orderNumber}`,
-      body: customerBody,
+      subject: customerEmail.subject,
+      body: customerEmail.text,
       actionUrl: getStorefrontAccountUrl(),
+      actionLabel: 'View order',
       merchantName: ctx.merchantName,
+      html: customerEmail.html,
     });
 
     await notifyCustomerSms({
@@ -269,30 +248,38 @@ export function registerEventHandlers(eventBus: EventBus) {
       actionUrl: getStorefrontAccountUrl(),
     });
 
-    const merchantBody = [
-      `New order ${ctx.orderNumber} from ${ctx.customerName}.`,
-      '',
-      `Customer email: ${ctx.customerEmail}`,
-      ...(ctx.customerPhone ? [`Customer phone: ${ctx.customerPhone}`] : []),
-      `Total: ${formatCurrency(ctx.totalAmount, ctx.currency)}`,
-      `Service: ${formatServiceType(ctx.serviceType)}`,
-      `Event date: ${formatEventDate(ctx.scheduledAt)}`,
-    ].join('\n');
+    const merchantDashboardUrl = getMerchantDashboardUrl(`/orders/${ctx.id}`);
+    const merchantAcceptUrl = !ctx.depositRequired
+      ? `${getPublicApiUrl('/api/order-email-actions/accept')}?token=${encodeURIComponent(
+          await createOrderActionToken({
+            action: 'accept_order',
+            orderId: ctx.id,
+            organizationId: ctx.organizationId,
+          }),
+        )}`
+      : undefined;
+    const merchantEmail = renderMerchantOrderTicketEmail(ctx, {
+      dashboardUrl: merchantDashboardUrl,
+      acceptUrl: merchantAcceptUrl,
+      depositRequired: ctx.depositRequired,
+    });
 
     await sendNotification({
       userId: ctx.merchantOwnerUserId,
       type: 'in_app',
       subject: `New order received - ${ctx.orderNumber}`,
-      body: merchantBody,
+      body: merchantEmail.text,
       actionUrl: `/orders/${ctx.id}`,
     });
 
     await sendNotification({
       userId: ctx.merchantOwnerUserId,
       type: 'email',
-      subject: `New order received - ${ctx.orderNumber}`,
-      body: merchantBody,
-      actionUrl: getMerchantDashboardUrl(`/orders/${ctx.id}`),
+      subject: merchantEmail.subject,
+      body: merchantEmail.text,
+      actionUrl: merchantDashboardUrl,
+      actionLabel: 'Open in dashboard',
+      html: merchantEmail.html,
     });
   });
 
@@ -321,7 +308,9 @@ export function registerEventHandlers(eventBus: EventBus) {
       subject: statusCopy.subject,
       body: statusCopy.body,
       actionUrl: getStorefrontAccountUrl(),
+      actionLabel: event.payload.newStatus === 'completed' ? 'Reorder' : 'View order',
       merchantName: ctx.merchantName,
+      html: statusCopy.html,
     });
 
     let smsBody: string;

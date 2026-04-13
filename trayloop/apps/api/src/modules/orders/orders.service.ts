@@ -794,6 +794,64 @@ export async function updateStatus(id: string, orgId: string, input: UpdateOrder
   };
 }
 
+export async function acceptOrderFromEmail(orderId: string, orgId: string, eventBus: EventBus) {
+  const [existing] = await db
+    .select({
+      id: orders.id,
+      orderNumber: orders.orderNumber,
+      status: orders.status,
+      locationId: orders.locationId,
+    })
+    .from(orders)
+    .where(and(eq(orders.id, orderId), eq(orders.organizationId, orgId)))
+    .limit(1);
+
+  if (!existing) {
+    throw new NotFoundError('Order');
+  }
+
+  const depositRequired = await getDepositRequired(existing.locationId);
+
+  if (existing.status === 'confirmed' || existing.status === 'completed') {
+    return {
+      orderId: existing.id,
+      orderNumber: existing.orderNumber,
+      status: existing.status,
+      alreadyHandled: true,
+      requiresDepositReview: false,
+    };
+  }
+
+  if (existing.status === 'cancelled') {
+    return {
+      orderId: existing.id,
+      orderNumber: existing.orderNumber,
+      status: existing.status,
+      alreadyHandled: true,
+      requiresDepositReview: false,
+    };
+  }
+
+  if (depositRequired && existing.status === 'submitted') {
+    return {
+      orderId: existing.id,
+      orderNumber: existing.orderNumber,
+      status: existing.status,
+      alreadyHandled: false,
+      requiresDepositReview: true,
+    };
+  }
+
+  const updated = await updateStatus(existing.id, orgId, { status: 'confirmed' }, eventBus);
+  return {
+    orderId: updated.id,
+    orderNumber: updated.orderNumber,
+    status: updated.status,
+    alreadyHandled: false,
+    requiresDepositReview: false,
+  };
+}
+
 // --- Send deposit link ---
 
 export async function sendDepositLink(orderId: string, orgId: string, input: SendDepositLinkInput, eventBus: EventBus) {

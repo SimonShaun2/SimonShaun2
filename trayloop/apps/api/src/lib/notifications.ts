@@ -11,7 +11,9 @@ export interface NotificationPayload {
   subject: string;
   body: string;
   actionUrl?: string;
+  actionLabel?: string;
   merchantName?: string;
+  html?: string;
 }
 
 export interface DirectEmailNotificationPayload {
@@ -19,7 +21,9 @@ export interface DirectEmailNotificationPayload {
   subject: string;
   body: string;
   actionUrl?: string;
+  actionLabel?: string;
   merchantName?: string;
+  html?: string;
 }
 
 export interface DirectSmsNotificationPayload {
@@ -33,7 +37,12 @@ function normalizeBaseUrl(value: string | undefined, fallback: string) {
   return candidate.replace(/\/+$/, '');
 }
 
-function renderNotificationHtml(body: string, actionUrl?: string, merchantName?: string) {
+function normalizeExternalUrl(value: string | undefined, fallback: string) {
+  const base = normalizeBaseUrl(value, fallback);
+  return /^https?:\/\//i.test(base) ? base : `https://${base}`;
+}
+
+function renderNotificationHtml(body: string, actionUrl?: string, merchantName?: string, actionLabel = 'View Order') {
   const brandName = merchantName || 'TrayLoop';
   const htmlBody = body
     .split('\n')
@@ -46,7 +55,7 @@ function renderNotificationHtml(body: string, actionUrl?: string, merchantName?:
   </div>
   <div style="padding:32px 24px;background:#FFFFFF;border:1px solid #E7E5E4;border-top:none;border-radius:0 0 8px 8px">
     ${htmlBody}
-    ${actionUrl ? `<a href="${actionUrl}" style="display:inline-block;margin-top:20px;padding:10px 24px;background:#1C1917;color:#FFFFFF;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px">View Order</a>` : ''}
+    ${actionUrl ? `<a href="${actionUrl}" style="display:inline-block;margin-top:20px;padding:10px 24px;background:#1C1917;color:#FFFFFF;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px">${actionLabel}</a>` : ''}
   </div>
   <p style="text-align:center;font-size:12px;color:#9CA3AF;margin-top:16px">Powered by TrayLoop</p>
 </div>`;
@@ -62,7 +71,7 @@ async function deliverEmail(payload: DirectEmailNotificationPayload): Promise<vo
     to: payload.to,
     subject: payload.subject,
     text: payload.body,
-    html: renderNotificationHtml(payload.body, payload.actionUrl, payload.merchantName),
+    html: payload.html ?? renderNotificationHtml(payload.body, payload.actionUrl, payload.merchantName, payload.actionLabel),
   });
 }
 
@@ -133,7 +142,9 @@ export async function notifyCustomerEmail(input: {
   subject: string;
   body: string;
   actionUrl?: string;
+  actionLabel?: string;
   merchantName?: string;
+  html?: string;
 }) {
   if (input.customerUserId) {
     await sendNotification({
@@ -142,7 +153,9 @@ export async function notifyCustomerEmail(input: {
       subject: input.subject,
       body: input.body,
       actionUrl: input.actionUrl,
+      actionLabel: input.actionLabel,
       merchantName: input.merchantName,
+      html: input.html,
     });
     return;
   }
@@ -152,7 +165,9 @@ export async function notifyCustomerEmail(input: {
     subject: input.subject,
     body: input.body,
     actionUrl: input.actionUrl,
+    actionLabel: input.actionLabel,
     merchantName: input.merchantName,
+    html: input.html,
   });
 }
 
@@ -192,6 +207,14 @@ export function getStorefrontAccountUrl() {
   return `${normalizeBaseUrl(process.env.STOREFRONT_URL, 'https://order.trayloophq.com')}/account`;
 }
 
+export function getPublicApiUrl(path: string) {
+  const configured =
+    process.env.API_PUBLIC_URL
+    || process.env.NEXT_PUBLIC_API_URL
+    || process.env.RAILWAY_PUBLIC_DOMAIN;
+  return `${normalizeExternalUrl(configured, 'https://simonshaun2-production.up.railway.app')}${path}`;
+}
+
 export async function sendNotification(payload: NotificationPayload): Promise<void> {
   await persistNotificationRecord(payload);
 
@@ -209,7 +232,9 @@ export async function sendNotification(payload: NotificationPayload): Promise<vo
           subject: payload.subject,
           body: payload.body,
           actionUrl: payload.actionUrl,
+          actionLabel: payload.actionLabel,
           merchantName: payload.merchantName,
+          html: payload.html,
         });
       }
     } catch (err) {
