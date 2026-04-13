@@ -333,6 +333,63 @@ function StageCard({
   );
 }
 
+function MobileStageCard({ plan }: { plan: (typeof plans)[number] }) {
+  const dark = plan.name === 'Engine';
+  const accent = plan.name === 'Momentum' ? '#1D7A55' : plan.name === 'Engine' ? C.teal : C.orange;
+
+  return (
+    <Card
+      className="tl-product-mobile-stage-card"
+      dark={dark}
+      style={{
+        display: 'grid',
+        gap: 18,
+        color: dark ? C.white : C.ink,
+      }}
+    >
+      <div
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '6px 12px',
+          borderRadius: 999,
+          backgroundColor: dark ? 'rgba(68,217,161,0.14)' : plan.name === 'Momentum' ? '#E9FBF3' : '#FFF0E6',
+          color: accent,
+          fontSize: 12,
+          fontWeight: 800,
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+          alignSelf: 'flex-start',
+        }}
+      >
+        {plan.badge}
+      </div>
+
+      <div style={{ display: 'grid', gap: 12 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: accent, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          {plan.name}
+        </div>
+        <h3 style={{ fontSize: 42, lineHeight: 0.96, fontWeight: 800 }}>{plan.summary}</h3>
+        <p style={{ fontSize: 17, lineHeight: 1.65, color: dark ? 'rgba(254,252,250,0.76)' : C.muted }}>{plan.detail}</p>
+      </div>
+
+      <StageMock planName={plan.name} dark={dark} />
+
+      <div style={{ display: 'grid', gap: 10 }}>
+        {plan.highlights.slice(0, 4).map((item) => (
+          <Bullet key={item} text={item} light={dark} />
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+        <div style={{ fontSize: 42, fontWeight: 800 }}>{plan.price}</div>
+        <div style={{ fontSize: 17, fontWeight: 700, color: dark ? 'rgba(254,252,250,0.72)' : C.muted }}>{plan.cadence}</div>
+      </div>
+    </Card>
+  );
+}
+
 function AdvisorPreview() {
   const moves = [
     {
@@ -460,6 +517,14 @@ export default function ProductPage() {
           transform: translateY(-3px);
           box-shadow: 0 18px 50px rgba(26, 22, 18, 0.08);
         }
+        .tl-product-stage-desktop {
+          display: grid;
+          gap: 18px;
+          margin-top: 34px;
+        }
+        .tl-product-stage-mobile {
+          display: none;
+        }
         @keyframes tlFadeUp {
           from { opacity: 0; transform: translateY(14px); }
           to { opacity: 1; transform: translateY(0); }
@@ -479,8 +544,10 @@ export default function ProductPage() {
         @media (max-width: 768px) {
           .tl-product-section {
             padding: 64px 18px !important;
+            overflow-x: clip !important;
           }
           .tl-product-section > div {
+            width: 100% !important;
             max-width: 560px !important;
             margin: 0 auto !important;
           }
@@ -499,11 +566,22 @@ export default function ProductPage() {
           .tl-product-hero-canvas {
             min-height: 420px !important;
           }
-          .tl-product-stage,
           .tl-product-advisor,
           .tl-product-feature-grid {
             max-width: 560px !important;
             margin-inline: auto !important;
+          }
+          .tl-product-stage-desktop {
+            display: none !important;
+          }
+          .tl-product-stage-mobile {
+            display: grid !important;
+            gap: 16px !important;
+            margin-top: 28px !important;
+          }
+          .tl-product-mobile-stage-card,
+          .tl-product-mobile-stage-card > * {
+            min-width: 0 !important;
           }
           .tl-product-chip-grid,
           .tl-product-stage-metrics {
@@ -523,6 +601,12 @@ export default function ProductPage() {
           .tl-product-advisor {
             grid-template-columns: 1fr !important;
             gap: 14px !important;
+          }
+          .tl-product-stage-card,
+          .tl-product-stage-card > *,
+          .tl-product-stage-preview,
+          .tl-product-stage-copy {
+            min-width: 0 !important;
           }
           .tl-product-stage-copy {
             order: 1 !important;
@@ -721,10 +805,18 @@ export default function ProductPage() {
           />
         </div>
 
-        <div className="tl-product-stage" style={{ display: 'grid', gap: 18, marginTop: 34 }}>
+        <div className="tl-product-stage-desktop">
           {plans.map((plan, index) => (
             <div key={plan.name} className={`tl-product-fade tl-product-delay-${index + 1}`}>
               <StageCard plan={plan} reverse={index % 2 === 1} />
+            </div>
+          ))}
+        </div>
+
+        <div className="tl-product-stage-mobile">
+          {plans.map((plan, index) => (
+            <div key={`${plan.name}-mobile`} className={`tl-product-fade tl-product-delay-${index + 1}`}>
+              <MobileStageCard plan={plan} />
             </div>
           ))}
         </div>
