@@ -1,11 +1,10 @@
 'use client';
 
-import type { CSSProperties } from 'react';
-import { useEffect, useRef, useCallback } from 'react';
+import type { CSSProperties, FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Script from 'next/script';
 import { trackEvent } from '@trayloop/analytics';
 
-/* ── Palette ── */
 const C = {
   cream: '#F9F5EF',
   creamDark: '#F0EBE1',
@@ -25,12 +24,82 @@ const tealDot: CSSProperties = {
   marginTop: 7,
 };
 
+const inputStyle: CSSProperties = {
+  width: '100%',
+  backgroundColor: C.white,
+  border: `1.5px solid ${C.creamDark}`,
+  borderRadius: 12,
+  padding: '14px 16px',
+  fontSize: 14,
+  color: C.ink,
+  outline: 'none',
+};
+
+const textareaStyle: CSSProperties = {
+  ...inputStyle,
+  minHeight: 120,
+  resize: 'vertical',
+};
+
+const labelStyle: CSSProperties = {
+  fontSize: 13,
+  fontWeight: 600,
+  color: C.ink,
+  marginBottom: 6,
+  display: 'block',
+};
+
+const DEMO_EMAIL = 'hello@trayloophq.com';
 const HUBSPOT_PORTAL_ID = process.env.NEXT_PUBLIC_HUBSPOT_PORTAL_ID ?? '';
 const HUBSPOT_FORM_ID = process.env.NEXT_PUBLIC_HUBSPOT_FORM_ID ?? '';
+
+type DemoRequest = {
+  name: string;
+  email: string;
+  restaurant: string;
+  phone: string;
+  notes: string;
+};
+
+function createMailtoHref(request: DemoRequest) {
+  const subject = encodeURIComponent(
+    `TrayLoop demo request${request.restaurant ? ` - ${request.restaurant}` : ''}`,
+  );
+  const body = encodeURIComponent(
+    [
+      'Hi TrayLoop team,',
+      '',
+      'I would like to book a demo.',
+      '',
+      `Name: ${request.name || 'Not provided'}`,
+      `Email: ${request.email || 'Not provided'}`,
+      `Restaurant: ${request.restaurant || 'Not provided'}`,
+      `Phone: ${request.phone || 'Not provided'}`,
+      '',
+      'Notes:',
+      request.notes || 'Not provided',
+    ].join('\n'),
+  );
+
+  return `mailto:${DEMO_EMAIL}?subject=${subject}&body=${body}`;
+}
 
 export default function DemoPage() {
   const formContainerRef = useRef<HTMLDivElement>(null);
   const formCreatedRef = useRef(false);
+  const hasHubSpotEmbed = Boolean(HUBSPOT_PORTAL_ID && HUBSPOT_FORM_ID);
+  const [demoRequest, setDemoRequest] = useState<DemoRequest>({
+    name: '',
+    email: '',
+    restaurant: '',
+    phone: '',
+    notes: '',
+  });
+
+  const mailtoHref = useMemo(
+    () => createMailtoHref(demoRequest),
+    [demoRequest],
+  );
 
   const createForm = useCallback(() => {
     if (
@@ -55,21 +124,30 @@ export default function DemoPage() {
     });
   }, []);
 
+  const handleFallbackSubmit = useCallback((event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    trackEvent('marketing_demo_form_submitted', {
+      placement: 'demo_page',
+      source: 'mailto_fallback',
+    });
+    window.location.href = mailtoHref;
+  }, [mailtoHref]);
+
   useEffect(() => {
     trackEvent('marketing_demo_page_viewed', { placement: 'demo_page' });
-    // If HubSpot script already loaded (e.g. cached), create form immediately
     createForm();
   }, [createForm]);
 
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', minHeight: '100vh' }}>
-      <Script
-        src="https://js.hsforms.net/forms/v2.js"
-        strategy="afterInteractive"
-        onLoad={createForm}
-      />
+      {hasHubSpotEmbed && (
+        <Script
+          src="https://js.hsforms.net/forms/v2.js"
+          strategy="afterInteractive"
+          onLoad={createForm}
+        />
+      )}
 
-      {/* ── Left panel ── */}
       <div
         style={{
           flex: '1 1 400px',
@@ -115,20 +193,18 @@ export default function DemoPage() {
               maxWidth: 420,
             }}
           >
-            A 20-minute walkthrough of your branded storefront, order
-            management, and pricing — tailored to your restaurant.
+            A 20-minute walkthrough of your branded storefront, order management, and pricing, tailored to your restaurant.
           </p>
         </div>
 
-        {/* Bullets */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {[
             'See your own branded catering page built live',
             'Walk through the order dashboard and customer tools',
             'Get transparent pricing with no surprises',
             'Learn how AI-assisted re-engagement brings past customers back',
-          ].map((b) => (
-            <div key={b} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+          ].map((item) => (
+            <div key={item} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
               <span style={tealDot} />
               <span
                 style={{
@@ -137,13 +213,12 @@ export default function DemoPage() {
                   lineHeight: 1.5,
                 }}
               >
-                {b}
+                {item}
               </span>
             </div>
           ))}
         </div>
 
-        {/* Testimonial */}
         <div
           style={{
             backgroundColor: 'rgba(255,255,255,0.06)',
@@ -167,12 +242,11 @@ export default function DemoPage() {
             finger.&rdquo;
           </p>
           <p style={{ fontSize: 13, fontWeight: 600, color: C.teal }}>
-            Marcus T. — Southside Catering
+            Marcus T. - Southside Catering
           </p>
         </div>
       </div>
 
-      {/* ── Right panel: HubSpot demo form ── */}
       <div
         style={{
           flex: '1 1 500px',
@@ -203,8 +277,9 @@ export default function DemoPage() {
               textAlign: 'center',
             }}
           >
-            20-minute walkthrough · no prep needed
+            20-minute walkthrough - no prep needed
           </p>
+
           <div
             style={{
               backgroundColor: C.white,
@@ -216,25 +291,137 @@ export default function DemoPage() {
               minHeight: 400,
             }}
           >
-            <div id="hubspot-demo-form" ref={formContainerRef} />
-            {(!HUBSPOT_PORTAL_ID || !HUBSPOT_FORM_ID) && (
-              <p
-                style={{
-                  fontSize: 14,
-                  color: C.muted,
-                  textAlign: 'center',
-                  padding: 40,
-                }}
-              >
-                Demo form loading&hellip; If it doesn&apos;t appear,{' '}
-                <a
-                  href="mailto:hello@trayloophq.com"
-                  style={{ color: C.orange, textDecoration: 'none', fontWeight: 600 }}
+            {hasHubSpotEmbed ? (
+              <>
+                <div id="hubspot-demo-form" ref={formContainerRef} />
+                <p
+                  style={{
+                    fontSize: 14,
+                    color: C.muted,
+                    textAlign: 'center',
+                    padding: 24,
+                  }}
                 >
-                  email us directly
-                </a>
-                .
-              </p>
+                  If the embedded form does not load,{' '}
+                  <a
+                    href={`mailto:${DEMO_EMAIL}`}
+                    style={{ color: C.orange, textDecoration: 'none', fontWeight: 600 }}
+                  >
+                    email us directly
+                  </a>
+                  .
+                </p>
+              </>
+            ) : (
+              <form
+                onSubmit={handleFallbackSubmit}
+                style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
+              >
+                <p
+                  style={{
+                    fontSize: 15,
+                    lineHeight: 1.7,
+                    color: C.muted,
+                    marginBottom: 4,
+                  }}
+                >
+                  HubSpot is not connected in this environment, so the embedded demo request form is rendered directly on the page.
+                </p>
+
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                    gap: 16,
+                  }}
+                >
+                  <div>
+                    <label htmlFor="demo-name" style={labelStyle}>Your name</label>
+                    <input
+                      id="demo-name"
+                      type="text"
+                      value={demoRequest.name}
+                      onChange={(event) => setDemoRequest((current) => ({ ...current, name: event.target.value }))}
+                      placeholder="Jane Doe"
+                      style={inputStyle}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="demo-email" style={labelStyle}>Work email</label>
+                    <input
+                      id="demo-email"
+                      type="email"
+                      value={demoRequest.email}
+                      onChange={(event) => setDemoRequest((current) => ({ ...current, email: event.target.value }))}
+                      placeholder="jane@restaurant.com"
+                      style={inputStyle}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="demo-restaurant" style={labelStyle}>Restaurant name</label>
+                  <input
+                    id="demo-restaurant"
+                    type="text"
+                    value={demoRequest.restaurant}
+                    onChange={(event) => setDemoRequest((current) => ({ ...current, restaurant: event.target.value }))}
+                    placeholder="Chart's Mexican"
+                    style={inputStyle}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="demo-phone" style={labelStyle}>Phone</label>
+                  <input
+                    id="demo-phone"
+                    type="tel"
+                    value={demoRequest.phone}
+                    onChange={(event) => setDemoRequest((current) => ({ ...current, phone: event.target.value }))}
+                    placeholder="(555) 555-5555"
+                    style={inputStyle}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="demo-notes" style={labelStyle}>What do you want help with?</label>
+                  <textarea
+                    id="demo-notes"
+                    value={demoRequest.notes}
+                    onChange={(event) => setDemoRequest((current) => ({ ...current, notes: event.target.value }))}
+                    placeholder="Recurring orders, upsells, brand setup, or AI follow-up..."
+                    style={textareaStyle}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  style={{
+                    backgroundColor: C.orange,
+                    color: C.white,
+                    border: 'none',
+                    borderRadius: 999,
+                    padding: '14px 22px',
+                    fontSize: 16,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    boxShadow: '0 10px 24px rgba(232, 86, 24, 0.2)',
+                  }}
+                >
+                  Request my demo
+                </button>
+
+                <p
+                  style={{
+                    fontSize: 12,
+                    lineHeight: 1.6,
+                    color: C.muted,
+                    textAlign: 'center',
+                  }}
+                >
+                  This opens your email app with the demo request prefilled for the TrayLoop team.
+                </p>
+              </form>
             )}
           </div>
         </div>
