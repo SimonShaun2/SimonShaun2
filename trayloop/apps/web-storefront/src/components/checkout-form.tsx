@@ -48,6 +48,7 @@ interface RecurringPreset {
   deliveriesPerMonth: number;
   apiInterval: 'weekly' | 'biweekly' | 'monthly';
 }
+type StorefrontPlanKey = 'starter' | 'pro' | 'growth' | 'launch' | 'momentum' | 'engine';
 type ItemModalState =
   | { type: 'package'; id: string }
   | { type: 'addon'; id: string }
@@ -207,6 +208,15 @@ function getDisplayFontFamily(displayFont: DisplayFontKey | null | undefined) {
 }
 function buildAddressSummary(address: string, city: string, state: string, zipCode: string) {
   return [address, city, state, zipCode].filter(Boolean).join(', ');
+}
+function normalizeStorefrontPlan(plan: string | null | undefined): StorefrontPlanKey {
+  const normalized = (plan ?? '').trim().toLowerCase();
+  if (normalized === 'momentum') return 'momentum';
+  if (normalized === 'engine') return 'engine';
+  if (normalized === 'launch') return 'launch';
+  if (normalized === 'pro') return 'pro';
+  if (normalized === 'growth') return 'growth';
+  return 'starter';
 }
 function getPackageSubline(pkg: StorefrontPackage) {
   const includeCount = pkg.includes.length;
@@ -679,15 +689,150 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
   const clickedUpsellKeysRef = useRef<Set<string>>(new Set());
 
   const merchant = data.merchant;
+  const hasPublishedLocation = data.locations.length > 0;
   const selectedLocation =
     data.locations.find((location) => location.slug === selectedLocationSlug) ?? data.locations[0];
   const brandColor = merchant.brandColor || BRAND_FALLBACK;
   const displayFontFamily = getDisplayFontFamily(
     (merchant.displayFont ?? 'bricolage') as DisplayFontKey,
   );
-  const currentPlan = merchant.currentPlan ?? 'starter';
-  const recurringFeatureAvailable = currentPlan === 'pro' || currentPlan === 'growth';
+  const currentPlan = normalizeStorefrontPlan(merchant.currentPlan);
+  const recurringFeatureAvailable =
+    currentPlan === 'pro' ||
+    currentPlan === 'growth' ||
+    currentPlan === 'momentum' ||
+    currentPlan === 'engine';
   const recurringActive = recurringFeatureAvailable && recurringEnabled;
+  if (!hasPublishedLocation || !selectedLocation) {
+    return (
+      <section
+        style={{
+          maxWidth: PAGE_MAX_WIDTH,
+          margin: '0 auto',
+          padding: isMobile ? '32px 20px 56px' : '48px 24px 72px',
+        }}
+      >
+        <div
+          style={{
+            borderRadius: 32,
+            border: `1px solid ${BORDER}`,
+            background: '#FFFFFF',
+            boxShadow: '0 24px 80px rgba(26,22,18,0.08)',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              padding: isMobile ? 24 : 32,
+              background: `linear-gradient(135deg, ${hexToSoftBackground(brandColor)} 0%, rgba(249,245,239,0.92) 100%)`,
+              borderBottom: `1px solid ${BORDER}`,
+              display: 'grid',
+              gap: 14,
+            }}
+          >
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                fontSize: 11,
+                fontWeight: 900,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color: brandColor,
+              }}
+            >
+              Storefront unavailable
+            </div>
+            <div
+              style={{
+                fontFamily: displayFontFamily,
+                fontSize: isMobile ? 34 : 44,
+                lineHeight: 0.96,
+                fontWeight: 900,
+                maxWidth: 620,
+              }}
+            >
+              {merchant.name} needs one published location before ordering can open.
+            </div>
+            <div style={{ maxWidth: 640, fontSize: 16, lineHeight: 1.6, color: MUTED }}>
+              This storefront menu is live, but the merchant has not attached a pickup or delivery
+              location yet. Once a location is published, this page will open for ordering
+              automatically.
+            </div>
+          </div>
+          <div
+            style={{
+              padding: isMobile ? 24 : 32,
+              display: 'grid',
+              gap: 18,
+            }}
+          >
+            <div
+              style={{
+                borderRadius: 24,
+                border: `1px solid ${BORDER}`,
+                background: CREAM,
+                padding: isMobile ? 18 : 22,
+                display: 'grid',
+                gap: 10,
+              }}
+            >
+              <div style={{ fontSize: 14, fontWeight: 900, color: INK }}>What’s missing</div>
+              <div style={{ display: 'grid', gap: 8, fontSize: 14, color: MUTED }}>
+                <div>1. Add at least one live location in the merchant dashboard.</div>
+                <div>2. Enable pickup, delivery, or another service mode for that location.</div>
+                <div>3. Refresh this storefront and ordering will be available.</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+              <Link
+                href="/"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minHeight: 46,
+                  padding: '0 18px',
+                  borderRadius: 999,
+                  background: INK,
+                  color: '#FFFFFF',
+                  textDecoration: 'none',
+                  fontSize: 14,
+                  fontWeight: 800,
+                }}
+              >
+                Browse another storefront
+              </Link>
+              {merchant.website ? (
+                <a
+                  href={merchant.website}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minHeight: 46,
+                    padding: '0 18px',
+                    borderRadius: 999,
+                    border: `1px solid ${BORDER}`,
+                    background: '#FFFFFF',
+                    color: INK,
+                    textDecoration: 'none',
+                    fontSize: 14,
+                    fontWeight: 800,
+                  }}
+                >
+                  Visit merchant website
+                </a>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
   const availableServiceModes = useMemo<StorefrontServiceMode[]>(() => {
     const next = new Set<StorefrontServiceMode>();
     if (selectedLocation?.deliveryEnabled) next.add('delivery');

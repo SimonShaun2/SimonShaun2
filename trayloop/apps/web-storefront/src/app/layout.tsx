@@ -2,9 +2,8 @@ import type { Metadata } from 'next';
 import { showStagingBanner } from '../lib/features';
 import { GoogleAnalytics } from '@next/third-parties/google';
 import { AnalyticsProvider } from '@trayloop/analytics';
-import { Analytics } from '@vercel/analytics/react';
-import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Bricolage_Grotesque, Fraunces, Inter } from 'next/font/google';
+import { StorefrontAnalytics, StorefrontSpeedInsights } from '../components/observability';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -69,8 +68,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         ) : null}
         {children}
         <AnalyticsProvider appName="storefront" />
-        <Analytics />
-        <SpeedInsights />
+        <StorefrontAnalytics />
+        <StorefrontSpeedInsights />
       </body>
       {gaId ? <GoogleAnalytics gaId={gaId} /> : null}
     </html>

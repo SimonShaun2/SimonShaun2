@@ -88,7 +88,7 @@ export interface StorefrontMerchant {
   description: string | null;
   website: string | null;
   phone: string | null;
-  currentPlan: 'starter' | 'pro' | 'growth' | null;
+  currentPlan: 'starter' | 'pro' | 'growth' | 'launch' | 'momentum' | 'engine' | null;
   logoUrl: string | null;
   brandColor: string | null;
   displayFont: 'bricolage' | 'fraunces' | 'inter' | null;
