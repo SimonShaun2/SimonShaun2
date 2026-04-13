@@ -253,7 +253,7 @@ function StageCard({
 
   return (
     <div
-      className="tl-product-hover"
+      className="tl-product-hover tl-product-stage-card"
       style={{
         display: 'grid',
         gridTemplateColumns: reverse ? '1fr 1.05fr' : '1.05fr 1fr',
@@ -262,6 +262,7 @@ function StageCard({
       }}
     >
       <Card
+        className="tl-product-stage-copy"
         dark={dark}
         style={{
           color: dark ? C.white : C.ink,
@@ -308,6 +309,7 @@ function StageCard({
       </Card>
 
       <Card
+        className="tl-product-stage-preview"
         style={{
           display: 'grid',
           gap: 18,
@@ -497,6 +499,30 @@ export default function ProductPage() {
           .tl-product-stage-metrics {
             grid-template-columns: 1fr !important;
           }
+          .tl-product-hero-copy,
+          .tl-product-heading-block,
+          .tl-product-closing > div:first-child {
+            text-align: center !important;
+            margin-inline: auto !important;
+          }
+          .tl-product-actions,
+          .tl-product-closing-actions {
+            justify-content: center !important;
+          }
+          .tl-product-stage-card,
+          .tl-product-advisor {
+            gap: 14px !important;
+          }
+          .tl-product-stage-copy,
+          .tl-product-stage-preview,
+          .tl-product-feature-grid > div,
+          .tl-product-advisor > div {
+            width: 100% !important;
+          }
+          .tl-product-hover {
+            transform: none !important;
+            box-shadow: none !important;
+          }
           .tl-product-advisor-preview-grid {
             grid-template-columns: 1fr !important;
           }
@@ -519,7 +545,7 @@ export default function ProductPage() {
             alignItems: 'center',
           }}
         >
-          <div className="tl-product-fade">
+          <div className="tl-product-fade tl-product-hero-copy">
             <div
               style={{
                 display: 'inline-flex',
@@ -569,7 +595,7 @@ export default function ProductPage() {
               TrayLoop starts with a branded storefront, grows repeat revenue, and finishes with AI that keeps the next order in motion.
             </p>
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 26 }}>
+            <div className="tl-product-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 26 }}>
               <PillButton text="See pricing" href="/pricing" variant="primary" size="md" />
               <PillButton text="How it works" href="/how-it-works" variant="ghost" size="md" />
             </div>
@@ -668,7 +694,7 @@ export default function ProductPage() {
       </Section>
 
       <Section bg={C.white} className="tl-product-section">
-        <div className="tl-product-fade">
+        <div className="tl-product-fade tl-product-heading-block">
           <Eyebrow text="The ladder" />
           <Heading
             className="tl-product-section-title"
@@ -687,7 +713,7 @@ export default function ProductPage() {
       </Section>
 
       <Section bg={C.creamDark} className="tl-product-section">
-        <div className="tl-product-fade">
+        <div className="tl-product-fade tl-product-heading-block">
           <Eyebrow text="Growth Advisor" />
           <Heading
             className="tl-product-section-title"
@@ -732,7 +758,7 @@ export default function ProductPage() {
       </Section>
 
       <Section bg={C.white} className="tl-product-section">
-        <div className="tl-product-fade">
+        <div className="tl-product-fade tl-product-heading-block">
           <Eyebrow text="Capability atlas" />
           <Heading
             className="tl-product-section-title"

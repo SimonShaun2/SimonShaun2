@@ -60,6 +60,16 @@ export default function DemoPage() {
           .tl-demo-form-shell {
             max-width: 100% !important;
           }
+          .tl-demo-left {
+            text-align: center !important;
+          }
+          .tl-demo-bullets {
+            align-items: stretch !important;
+          }
+          .tl-demo-bullet {
+            justify-content: center !important;
+            text-align: left !important;
+          }
         }
       `}</style>
       <Script
@@ -122,14 +132,14 @@ export default function DemoPage() {
           </p>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="tl-demo-bullets" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {[
             'See your own branded catering page built live',
             'Walk through the order dashboard and customer tools',
             'Get transparent pricing with no surprises',
             'Learn how AI-assisted re-engagement brings past customers back',
           ].map((item) => (
-            <div key={item} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+            <div key={item} className="tl-demo-bullet" style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
               <span style={tealDot} />
               <span
                 style={{

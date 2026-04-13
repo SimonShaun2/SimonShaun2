@@ -546,11 +546,18 @@ export default function HowItWorksPage() {
           .tl-how-hero-canvas {
             min-height: 420px !important;
           }
+          .tl-how-hero-copy,
+          .tl-how-heading-block,
+          .tl-how-closing > div:first-child {
+            text-align: center !important;
+            margin-inline: auto !important;
+          }
+          .tl-how-actions,
+          .tl-how-closing-actions {
+            justify-content: center !important;
+          }
           .tl-how-closing {
             grid-template-columns: 1fr !important;
-          }
-          .tl-how-closing-actions {
-            justify-content: flex-start !important;
           }
         }
       `}</style>
@@ -565,7 +572,7 @@ export default function HowItWorksPage() {
             alignItems: 'center',
           }}
         >
-          <div className="tl-how-fade">
+          <div className="tl-how-fade tl-how-hero-copy">
             <div
               style={{
                 display: 'inline-flex',
@@ -615,7 +622,7 @@ export default function HowItWorksPage() {
               TrayLoop gives the merchant one clean loop: go live, fulfill the ticket, and keep revenue compounding after the deposit lands.
             </p>
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 26 }}>
+            <div className="tl-how-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 26 }}>
               <PillButton text="See pricing" href="/pricing" variant="primary" size="md" />
               <PillButton text="View product" href="/product" variant="ghost" size="md" />
             </div>
@@ -630,7 +637,7 @@ export default function HowItWorksPage() {
       </Section>
 
       <Section bg={C.white} className="tl-how-section">
-        <div className="tl-how-fade">
+        <div className="tl-how-fade tl-how-heading-block">
           <Eyebrow text="The sequence" />
           <Heading
             className="tl-how-section-title"
@@ -649,7 +656,7 @@ export default function HowItWorksPage() {
       </Section>
 
       <Section bg={C.creamDark} className="tl-how-section">
-        <div className="tl-how-fade">
+        <div className="tl-how-fade tl-how-heading-block">
           <Eyebrow text="What each team sees" />
           <Heading
             className="tl-how-section-title"

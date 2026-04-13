@@ -259,14 +259,22 @@ export default function PricingPage() {
             font-size: 16px !important;
             line-height: 1.65 !important;
           }
+          .tl-pricing-hero > div:first-child,
+          .tl-pricing-heading-block,
+          .tl-pricing-addon-header > div:first-child,
+          .tl-pricing-closing > div:first-child {
+            text-align: center !important;
+            margin-inline: auto !important;
+          }
+          .tl-pricing-hero-actions,
+          .tl-pricing-closing-actions {
+            justify-content: center !important;
+          }
           .tl-pricing-header-cell {
             display: none !important;
           }
           .tl-pricing-header-feature {
             border-bottom: 1px solid #E5DCCD;
-          }
-          .tl-pricing-closing-actions {
-            justify-content: flex-start !important;
           }
         }
       `}</style>
@@ -302,7 +310,7 @@ export default function PricingPage() {
               campaigns, and retention intelligence.
             </p>
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 28 }}>
+            <div className="tl-pricing-hero-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 28 }}>
               <PillButton text="Start with Momentum" href="/signup" variant="primary" size="md" />
               <PillButton text="See how it works" href="/how-it-works" variant="ghost" size="md" />
             </div>
@@ -371,7 +379,7 @@ export default function PricingPage() {
       </Section>
 
       <Section bg={C.white} className="tl-pricing-section">
-        <div style={{ maxWidth: 980 }}>
+        <div className="tl-pricing-heading-block" style={{ maxWidth: 980 }}>
           <Eyebrow text="Packages" />
           <Heading
             className="tl-pricing-section-title"
@@ -524,7 +532,7 @@ export default function PricingPage() {
       </Section>
 
       <Section bg={C.white} className="tl-pricing-section">
-        <div>
+        <div className="tl-pricing-heading-block">
           <Eyebrow text="Plan comparison" />
           <Heading
             className="tl-pricing-section-title"
@@ -553,7 +561,7 @@ export default function PricingPage() {
       </Section>
 
       <Section bg={C.cream} className="tl-pricing-section">
-        <div>
+        <div className="tl-pricing-heading-block">
           <Eyebrow text="FAQ" />
           <Heading
             className="tl-pricing-section-title"
