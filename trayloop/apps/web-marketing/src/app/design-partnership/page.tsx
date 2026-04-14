@@ -150,7 +150,7 @@ const solutionCards = [
     body: 'Bring past catering customers back with reorder prompts, reminders, and follow-up logic that runs without manual chasing.',
   },
   {
-    title: 'Catering CRM',
+    title: 'Customer history and reorder context',
     body: 'Keep account history, event context, and repeat behavior in one operating system instead of scattered notes and inbox threads.',
   },
   {
