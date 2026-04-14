@@ -1,3 +1,20 @@
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+    title: 'Direct Catering Orders for Restaurants - No Commissions | TrayLoop',
+    description: 'Give your restaurant a branded direct catering ordering channel. Customers order directly from you. You keep 100% of revenue. No marketplace commissions.',
+    alternates: {
+          canonical: 'https://trayloophq.com/solutions/direct-ordering',
+    },
+    openGraph: {
+          title: 'Direct Catering Orders for Restaurants - No Commissions | TrayLoop',
+          description: 'Give your restaurant a branded direct catering ordering channel. You keep 100% of revenue.',
+          url: 'https://trayloophq.com/solutions/direct-ordering',
+          siteName: 'TrayLoop',
+          type: 'website',
+    },
+};
+
 import type { CSSProperties } from 'react';
 import PillButton from '@/components/pill-button';
 
