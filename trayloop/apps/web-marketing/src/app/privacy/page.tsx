@@ -1,3 +1,24 @@
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+    title: 'Privacy Policy | TrayLoop',
+    description: 'Read the TrayLoop Privacy Policy to understand how we collect, use, and protect your data when you use our restaurant catering software platform.',
+    alternates: {
+          canonical: 'https://trayloophq.com/privacy',
+    },
+    openGraph: {
+          title: 'Privacy Policy | TrayLoop',
+          description: 'Read the TrayLoop Privacy Policy to understand how we collect, use, and protect your data.',
+          url: 'https://trayloophq.com/privacy',
+          siteName: 'TrayLoop',
+          type: 'website',
+    },
+    robots: {
+          index: true,
+          follow: false,
+    },
+};
+
 import type { CSSProperties } from 'react';
 
 const color = {
