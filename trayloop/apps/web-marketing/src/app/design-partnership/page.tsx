@@ -22,7 +22,7 @@ const applyHref = 'mailto:info@trayloophq.com?subject=TrayLoop%20Design%20Partne
 export const metadata: Metadata = {
   title: 'TrayLoop Design Partnership',
   description:
-    'Apply for TrayLoop’s Design Partnership Program and help shape an AI-driven catering revenue system built to replace commissions, manual follow-up, and one-off order dependence.',
+    'Apply for TrayLoop’s Design Partnership Program and help shape an AI driven catering revenue system built to replace commissions, manual follow up, and one off order dependence.',
 };
 
 function Section({
@@ -136,8 +136,8 @@ function Bullet({
 const problemPoints = [
   'Marketplace commissions shave margin off the biggest orders on your calendar.',
   'The customer relationship lives with the platform, not with your team.',
-  'One-off catering orders land, get fulfilled, and disappear with no retention system behind them.',
-  'Manual follow-up means missed repeat opportunities, missed reorders, and missed revenue.',
+  'One off catering orders land, get fulfilled, and disappear with no retention system behind them.',
+  'Manual follow up means missed repeat opportunities, missed reorders, and missed revenue.',
 ];
 
 const solutionCards = [
@@ -147,21 +147,21 @@ const solutionCards = [
   },
   {
     title: 'Automated retention system',
-    body: 'Bring past catering customers back with reorder prompts, reminders, and follow-up logic that runs without manual chasing.',
+    body: 'Bring past catering customers back with reorder prompts, reminders, and follow up logic that runs without manual chasing.',
   },
   {
     title: 'Customer history and reorder context',
     body: 'Keep account history, event context, and repeat behavior in one operating system instead of scattered notes and inbox threads.',
   },
   {
-    title: 'AI-powered follow-up engine',
+    title: 'AI powered follow up engine',
     body: 'Surface who is likely to reorder, who is cooling off, and what revenue move should happen next.',
   },
 ];
 
 const valueStack = [
   {
-    title: 'Done-for-you setup',
+    title: 'Done for you setup',
     body: 'We stand up the ordering flow, revenue rules, and operational structure so your team gets to value fast.',
     payoff: 'Faster launch. Less internal drag. Revenue sooner.',
   },
@@ -172,12 +172,12 @@ const valueStack = [
   },
   {
     title: 'Automated reorder and retention engine',
-    body: 'TrayLoop helps turn fulfilled orders into future revenue with post-order follow-up, repeat prompts, and reactivation logic.',
+    body: 'TrayLoop helps turn fulfilled orders into future revenue with post order follow up, repeat prompts, and reactivation logic.',
     payoff: 'More second and third orders with less manual work.',
   },
   {
     title: 'Early access to AI revenue workflows',
-    body: 'Get priority access to AI-assisted follow-up, re-engagement, and operator recommendations before broader rollout.',
+    body: 'Get priority access to AI assisted follow up, re engagement, and operator recommendations before broader rollout.',
     payoff: 'More recovered revenue. Fewer missed opportunities.',
   },
   {
@@ -188,19 +188,19 @@ const valueStack = [
 ];
 
 const requirements = [
-  '$5,000+/month in catering revenue today',
+  '$5,000 or more per month in catering revenue today',
   'A serious intention to grow direct catering, not just experiment with another tool',
   'A willingness to give sharp, practical feedback from a real operating environment',
 ];
 
 const roiCards = [
   {
-    value: '$500-$2,000+',
+    value: '$500 to $2,000 or more',
     label: 'per month from one repeat client',
     body: 'A single account that reorders consistently can change the economics of your catering channel.',
   },
   {
-    value: '$2,250/mo',
+    value: '$2,250 per month',
     label: 'from recovering 3 lost reorder accounts',
     body: 'Three past customers reactivated at $750/month each is meaningful revenue recovered fast.',
   },
@@ -215,7 +215,7 @@ const proofCards = [
   {
     quote:
       'We did not need another dashboard. We needed a system that turned fulfilled catering into the next order.',
-    source: 'Multi-unit operator in early rollout',
+    source: 'Multi unit operator in early rollout',
   },
   {
     quote:
@@ -359,8 +359,8 @@ export default function DesignPartnershipPage() {
                 marginTop: 18,
               }}
             >
-              TrayLoop is an AI-driven catering revenue system that turns one-off orders into predictable recurring
-              revenue, without marketplaces, commissions, or manual follow-up.
+              TrayLoop is an AI driven catering revenue system that turns one off orders into predictable recurring
+              revenue, without marketplaces, commissions, or manual follow up.
             </p>
             <p
               className="dp-copy"
@@ -389,7 +389,7 @@ export default function DesignPartnershipPage() {
                 letterSpacing: '0.02em',
               }}
             >
-              Only 10-15 operators will be accepted in this round.
+              Only 10 to 15 operators will be accepted in this round.
             </div>
           </div>
 
@@ -432,8 +432,8 @@ export default function DesignPartnershipPage() {
               >
                 <div className="dp-stat-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
                   {[
-                    ['Partner cap', '10-15'],
-                    ['Best fit', '$5k-$100k+/mo'],
+                    ['Partner cap', '10 to 15'],
+                    ['Best fit', '$5k to $100k or more per month'],
                     ['Focus', 'Recurring revenue'],
                   ].map(([label, value]) => (
                     <div
@@ -529,7 +529,7 @@ export default function DesignPartnershipPage() {
             <div style={{ marginTop: 18, display: 'grid', gap: 16 }}>
               <div style={{ fontSize: 34, lineHeight: 1.02, fontWeight: 800 }}>You do not have a catering system. You have transactions.</div>
               <p style={{ fontSize: 16, lineHeight: 1.72, color: 'rgba(254,252,250,0.8)' }}>
-                Random inbound demand, manual follow-up, and third-party dependence do not create a predictable revenue
+                Random inbound demand, manual follow up, and third party dependence do not create a predictable revenue
                 channel. They create a treadmill.
               </p>
             </div>
@@ -545,7 +545,7 @@ export default function DesignPartnershipPage() {
         <div className="dp-intro dp-fade" style={{ maxWidth: 760 }}>
           <Eyebrow>The reframe</Eyebrow>
           <h2 className="dp-title" style={{ fontSize: 44, lineHeight: 1.03, fontWeight: 800, marginTop: 18 }}>
-            Catering should be a predictable revenue channel, not a random stream of one-off orders.
+            Catering should be a predictable revenue channel, not a random stream of one off orders.
           </h2>
           <p className="dp-copy" style={{ fontSize: 17, lineHeight: 1.72, color: palette.muted, marginTop: 16 }}>
             The right system captures demand directly, retains the relationship, and creates repeat revenue without your
@@ -576,7 +576,7 @@ export default function DesignPartnershipPage() {
             <div style={{ marginTop: 22, display: 'grid', gap: 14 }}>
               <Bullet>This is not a free trial.</Bullet>
               <Bullet>This is not a beta you click through casually.</Bullet>
-              <Bullet>This is early access with white-glove implementation and direct product influence.</Bullet>
+              <Bullet>This is early access with white glove implementation and direct product influence.</Bullet>
             </div>
           </div>
 
@@ -598,7 +598,7 @@ export default function DesignPartnershipPage() {
         <div className="dp-intro dp-fade" style={{ maxWidth: 760 }}>
           <Eyebrow>What you get</Eyebrow>
           <h2 className="dp-title" style={{ fontSize: 44, lineHeight: 1.03, fontWeight: 800, marginTop: 18 }}>
-            High-leverage support tied directly to revenue growth and operational leverage.
+            Strong support tied directly to revenue growth and operational leverage.
           </h2>
         </div>
 
@@ -725,7 +725,7 @@ export default function DesignPartnershipPage() {
           <div className="dp-final-copy" style={{ maxWidth: 760 }}>
             <Eyebrow dark>Last call</Eyebrow>
             <h2 style={{ fontSize: 46, lineHeight: 1.02, fontWeight: 800, color: palette.paper, marginTop: 18 }}>
-              We are accepting 10-15 partners. Then this round closes.
+              We are accepting 10 to 15 partners. Then this round closes.
             </h2>
             <p className="dp-copy" style={{ fontSize: 18, lineHeight: 1.7, color: 'rgba(254,252,250,0.8)', marginTop: 14 }}>
               If you want to own more of your catering revenue, reduce dependence on third parties, and help shape the
