@@ -1,3 +1,25 @@
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+    title: 'TrayLoop Blog - Restaurant Catering Tips and Industry Insights',
+    description: 'Expert guides on growing restaurant catering revenue, building direct ordering channels, reducing commissions, and using AI to retain catering accounts.',
+    alternates: {
+          canonical: 'https://trayloophq.com/blog',
+    },
+    openGraph: {
+          title: 'TrayLoop Blog - Restaurant Catering Tips and Industry Insights',
+          description: 'Expert guides on growing restaurant catering revenue, building direct ordering channels, and using AI to retain catering accounts.',
+          url: 'https://trayloophq.com/blog',
+          siteName: 'TrayLoop',
+          type: 'website',
+    },
+    twitter: {
+          card: 'summary_large_image',
+          title: 'TrayLoop Blog - Restaurant Catering Tips and Industry Insights',
+          description: 'Expert guides on growing restaurant catering revenue and using AI to retain catering accounts.',
+    },
+};
+
 import type { CSSProperties } from 'react';
 import type { Article } from '@/lib/sanity-types';
 import { client } from '@/lib/sanity';
