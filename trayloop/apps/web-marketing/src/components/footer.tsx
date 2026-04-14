@@ -21,6 +21,7 @@ const columns = [
       { label: 'Smart Upsell', href: '/product/smart-upsell' },
       { label: 'Capacity Management', href: '/product/capacity-management' },
       { label: 'Revenue Dashboard', href: '/product/revenue-dashboard' },
+      { label: 'Growth Advisor', href: '/product/growth-advisor' },
     ],
   },
   {

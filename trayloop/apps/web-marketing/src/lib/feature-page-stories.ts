@@ -1,4 +1,5 @@
 export type FeatureStoryKey =
+  | 'growth-advisor'
   | 'recurring-orders'
   | 'merchant-portal'
   | 'smart-pricing'
@@ -46,6 +47,82 @@ export type FeatureStory = {
 };
 
 export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
+  'growth-advisor': {
+    key: 'growth-advisor',
+    href: '/product/growth-advisor',
+    metaTitle: 'Growth Advisor | TrayLoop',
+    metaDescription:
+      'Growth Advisor gives catering operators pricing guidance, offer strategy, and repeat revenue recommendations built from live TrayLoop signals.',
+    eyebrow: 'Product · Strategic growth',
+    heroTitle: 'Growth Advisor turns storefront data into the next revenue move.',
+    heroSummary:
+      'Growth Advisor sits beside the operator and translates live ordering signals into pricing decisions, offer changes, repeat revenue plays, and launch fixes the team can act on immediately.',
+    heroMetrics: [
+      { label: 'Best fit', value: 'Any active plan' },
+      { label: 'Primary result', value: 'Faster revenue decisions' },
+      { label: 'Operator lift', value: 'Strategy without guesswork' },
+    ],
+    spotlight: {
+      eyebrow: 'Strategy layer',
+      title: 'The merchant sees what to price higher, what to push next, and what is blocking repeat revenue.',
+      summary:
+        'Growth Advisor reads the storefront, order behavior, and setup quality, then turns it into a short action list the operator can use right away.',
+      chips: ['Pricing guidance', 'Offer strategy', 'Repeat revenue plan'],
+      rail: [
+        { label: 'Top move', value: 'Raise the strongest package' },
+        { label: 'Next push', value: 'Promote premium add ons' },
+        { label: 'Main blocker', value: 'Fix lead time messaging' },
+      ],
+    },
+    leversEyebrow: 'Why it matters',
+    leversTitle: 'Growth Advisor gives the team sharper decisions, not more noise.',
+    leversSummary:
+      'Most operators already have enough data. What they need is a cleaner answer to what matters now, what should change next, and where the fastest revenue gain lives.',
+    levers: [
+      {
+        title: 'Price with more confidence',
+        summary:
+          'Use live storefront and order behavior to decide where margins can move up without weakening conversion.',
+      },
+      {
+        title: 'Push the right offer next',
+        summary:
+          'See which package, category, or extra deserves more attention instead of guessing what customers will respond to.',
+      },
+      {
+        title: 'Turn follow up into a plan',
+        summary:
+          'Growth Advisor helps the operator decide which accounts, offers, and reorder prompts should move first.',
+      },
+    ],
+    workflowEyebrow: 'Inside the workflow',
+    workflowTitle: 'The guidance reads like an operator brief, not a wall of analytics.',
+    workflowSummary:
+      'Growth Advisor turns live signals into a short strategic view the team can review, apply, and use to shape the next week of catering decisions.',
+    workflowSteps: [
+      'Read the current storefront setup, pricing, and offer mix.',
+      'Highlight the fastest pricing or menu change that can lift revenue.',
+      'Surface which add ons, packages, or follow up moves deserve the next push.',
+      'Give the operator a compact plan that fits directly into the existing workspace.',
+    ],
+    workflowPanelTitle: 'Advisor snapshot',
+    workflowPanelRows: [
+      { label: 'Price higher', value: 'Executive lunch package' },
+      { label: 'Upsell next', value: 'Dessert tray + drinks' },
+      { label: 'Reorder next', value: 'Office accounts from last month' },
+      { label: 'Fix next', value: 'Deposit language on checkout' },
+    ],
+    workflowPanelNote:
+      'The operator gets a short list of decisions that connects pricing, offers, and repeat revenue without leaving the main workspace.',
+    includedIn: 'Launch',
+    planReason:
+      'Growth Advisor can sit beside any base plan because strategy becomes valuable as soon as a merchant is live and taking real orders.',
+    nextUnlock:
+      'Momentum and Engine give Growth Advisor more repeat revenue and AI surfaces to work with, which makes the guidance more powerful over time.',
+    closingTitle: 'Add strategy where the operator already works.',
+    closingSummary:
+      'Growth Advisor helps merchants make better revenue decisions faster by turning live storefront signals into a practical plan the team can act on now.',
+  },
   'recurring-orders': {
     key: 'recurring-orders',
     href: '/product/recurring-orders',
