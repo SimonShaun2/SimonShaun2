@@ -1,3 +1,20 @@
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+    title: 'AI Catering Re-Engagement for Restaurants | TrayLoop',
+    description: 'Recover dormant catering accounts automatically. TrayLoop AI detects at-risk customers and sends personalized re-engagement messages before they stop ordering.',
+    alternates: {
+          canonical: 'https://trayloophq.com/solutions/ai-reengagement',
+    },
+    openGraph: {
+          title: 'AI Catering Re-Engagement for Restaurants | TrayLoop',
+          description: 'Recover dormant catering accounts automatically with AI-powered re-engagement.',
+          url: 'https://trayloophq.com/solutions/ai-reengagement',
+          siteName: 'TrayLoop',
+          type: 'website',
+    },
+};
+
 import type { CSSProperties } from 'react';
 import PillButton from '@/components/pill-button';
 
