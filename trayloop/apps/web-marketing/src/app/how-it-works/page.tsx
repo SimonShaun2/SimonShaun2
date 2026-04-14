@@ -295,7 +295,7 @@ function HeroCanvas() {
           <div style={{ fontSize: 12, color: C.teal, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             What the workflow looks like
           </div>
-          <div style={{ fontSize: 26, fontWeight: 800 }}>The storefront, the order, and the follow-up all move together.</div>
+          <div style={{ fontSize: 26, fontWeight: 800 }}>The storefront, the order, and the follow up all move together.</div>
           <p style={{ fontSize: 15, lineHeight: 1.6, color: 'rgba(254,252,250,0.78)' }}>
             TrayLoop keeps the operator in one loop instead of sending the team across disconnected tools.
           </p>
@@ -321,7 +321,7 @@ function StepPanel({
         ? ['Brand', 'Menu', 'Minimums']
         : step.number === '03'
           ? ['Ticket arrives', 'Kitchen sees the details', 'Deposit stays visible']
-          : ['Recurring orders', 'Upsells', 'AI follow-up'];
+          : ['Recurring orders', 'Upsells', 'AI follow up'];
 
   const accent = step.number === '01' ? C.orange : step.number === '02' ? '#1D7A55' : C.teal;
 
@@ -700,7 +700,7 @@ export default function HowItWorksPage() {
             <SurfaceCard
               title="Kitchen"
               bullets={[
-                'A ticket-style summary that is easy to read',
+                'A kitchen ticket summary that is easy to read',
                 'Timing, location, and counts in one place',
                 'No extra noise between order and fulfillment',
               ]}
@@ -711,7 +711,7 @@ export default function HowItWorksPage() {
               title="Operator"
               bullets={[
                 'Merchant dashboard order view',
-                'Follow-up, reactivation, and reorder prompts',
+                'Follow up, reactivation, and reorder prompts',
                 'Growth Advisor guidance when strategy matters',
               ]}
               dark

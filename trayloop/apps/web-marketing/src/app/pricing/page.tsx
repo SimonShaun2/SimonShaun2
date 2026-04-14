@@ -396,7 +396,7 @@ export default function PricingPage() {
           <Heading
             className="tl-pricing-section-title"
             title="Launch, Momentum, and Engine are built to map to the way catering revenue actually grows."
-            summary="Launch is for the first direct orders. Momentum is for recurring scheduling and upsells. Engine is for AI-led retention and growth automation."
+            summary="Launch is for the first direct orders. Momentum is for recurring scheduling and upsells. Engine is for AI guided retention and growth automation."
           />
         </div>
 
@@ -410,12 +410,12 @@ export default function PricingPage() {
       <Section bg={C.creamDark} className="tl-pricing-section">
         <div className="tl-pricing-addon-header" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 24, alignItems: 'center' }}>
           <div>
-            <Eyebrow text="Add-on" />
+            <Eyebrow text="Addition" />
             <h2 style={{ fontSize: 36, lineHeight: 1.1, fontWeight: 800, color: C.ink, marginBottom: 12 }}>
               Growth Advisor is the strategist beside the operator.
             </h2>
             <p style={{ fontSize: 16, lineHeight: 1.7, color: C.muted, maxWidth: 760 }}>
-              Use it when pricing, menu mix, or follow-up needs a sharper second set of eyes.
+              Use it when pricing, menu mix, or follow up needs a sharper second set of eyes.
             </p>
           </div>
           <div style={{ textAlign: 'right' }}>
@@ -481,7 +481,7 @@ export default function PricingPage() {
               </div>
               {[
                 'Price the strongest offer higher.',
-                'Keep the right add-on visible at the right moment.',
+                'Keep the right extra visible at the right moment.',
                 'Time the next order before the last one cools off.',
               ].map((item, index) => (
                 <div
@@ -530,7 +530,7 @@ export default function PricingPage() {
                 body: 'Decide what to sell first and what to bundle.',
               },
               {
-                title: 'Follow-up timing',
+                title: 'Follow up timing',
                 body: 'Pick the next move before the opportunity cools off.',
               },
             ].map((item) => (
@@ -578,7 +578,7 @@ export default function PricingPage() {
           <Heading
             className="tl-pricing-section-title"
             title="A few practical questions before you choose a tier."
-            summary="The pricing ladder is meant to be simple, but merchants still need to know what unlocks what and how the add-on fits in."
+            summary="The pricing ladder is meant to be simple, but merchants still need to know what unlocks what and how the added layer fits in."
           />
         </div>
 

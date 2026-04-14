@@ -207,7 +207,7 @@ export default function AnimatedHero() {
             <div className="tl-hero-sidebar-logo" style={{ padding: '0 16px 20px', fontSize: 16, fontWeight: 700, color: C.white }}>
               Tray.Loop
             </div>
-            {['Dashboard', 'Orders', 'Customers', 'Offerings', 'Follow-Ups', 'Revenue'].map(
+            {['Dashboard', 'Orders', 'Customers', 'Offerings', 'Follow Ups', 'Revenue'].map(
               (item, i) => (
                 <div
                   key={item}

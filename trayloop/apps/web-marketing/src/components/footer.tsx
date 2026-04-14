@@ -27,8 +27,8 @@ const columns = [
     title: 'Grow Catering Revenue',
     links: [
       { label: 'Direct Ordering', href: '/solutions/direct-ordering' },
-      { label: 'Automated Follow-Up', href: '/solutions/automated-follow-up' },
-      { label: 'AI Re-engagement', href: '/solutions/ai-reengagement' },
+      { label: 'Automated Follow Up', href: '/solutions/automated-follow-up' },
+      { label: 'AI Reengagement', href: '/solutions/ai-reengagement' },
       { label: 'Smart Upsells', href: '/solutions/smart-upsells' },
       { label: 'Deposit Collection', href: '/solutions/deposit-collection' },
     ],

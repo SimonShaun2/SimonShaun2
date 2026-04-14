@@ -59,7 +59,7 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
     heroMetrics: [
       { label: 'Best tier', value: 'Momentum' },
       { label: 'Core result', value: 'More repeat revenue' },
-      { label: 'Operator lift', value: 'Less manual follow-up' },
+      { label: 'Operator lift', value: 'Less manual follow up' },
     ],
     spotlight: {
       eyebrow: 'Recurring engine',
@@ -102,7 +102,7 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
       'Set the repeat cadence directly inside the checkout review lane.',
       'Choose the recurring start date and service time without leaving the order.',
       'Preview the next deliveries before submitting so the plan feels concrete.',
-      'Push the same schedule into the merchant dashboard for follow-up and confirmation.',
+      'Push the same schedule into the merchant dashboard for follow up and confirmation.',
     ],
     workflowPanelTitle: 'Recurring schedule preview',
     workflowPanelRows: [
@@ -113,7 +113,7 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
     ],
     workflowPanelNote: 'Customers see the future schedule before submitting. Operators receive the same plan in the order record.',
     includedIn: 'Momentum',
-    planReason: 'Momentum is where repeat revenue starts becoming a system instead of a one-off success.',
+    planReason: 'Momentum is where repeat revenue starts becoming a system instead of a one off success.',
     nextUnlock: 'Engine layers AI campaigns and reactivation on top of the recurring base.',
     closingTitle: 'Make repeat catering part of the operating model.',
     closingSummary:
@@ -124,11 +124,11 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
     href: '/product/merchant-portal',
     metaTitle: 'Merchant Portal | TrayLoop',
     metaDescription:
-      'A merchant portal built for catering operators who need one place to review orders, deposits, follow-up, and growth signals.',
+      'A merchant portal built for catering operators who need one place to review orders, deposits, follow up, and growth signals.',
     eyebrow: 'Product · Operator workspace',
     heroTitle: 'A merchant portal built like an operating system for catering.',
     heroSummary:
-      'TrayLoop keeps storefront, orders, billing, launch, follow-up, and revenue signals in one merchant workspace so operators do not lose the thread between booking and growth.',
+      'TrayLoop keeps storefront, orders, billing, launch, follow up, and revenue signals in one merchant workspace so operators do not lose the thread between booking and growth.',
     heroMetrics: [
       { label: 'Best tier', value: 'Launch' },
       { label: 'Core result', value: 'Faster operator action' },
@@ -149,7 +149,7 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
     leversEyebrow: 'Why it matters',
     leversTitle: 'The portal keeps operations and revenue in the same frame.',
     leversSummary:
-      'A catering team moves faster when pricing, fulfillment, follow-up, and billing are not stitched together from separate tools.',
+      'A catering team moves faster when pricing, fulfillment, follow up, and billing are not stitched together from separate tools.',
     levers: [
       {
         title: 'Clear daily priorities',
@@ -159,7 +159,7 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
       {
         title: 'A stronger billing story',
         summary:
-          'Plan state, upgrades, and add-ons live inside the same workspace where the merchant feels the value of the product.',
+          'Plan state, upgrades, and extras live inside the same workspace where the merchant feels the value of the product.',
       },
       {
         title: 'A better upgrade path',
@@ -168,7 +168,7 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
       },
     ],
     workflowEyebrow: 'Inside the workflow',
-    workflowTitle: 'Orders, launch, follow-up, and growth all stay in one operator rhythm.',
+    workflowTitle: 'Orders, launch, follow up, and growth all stay in one operator rhythm.',
     workflowSummary:
       'The merchant portal is less about dashboards and more about preserving context so nothing gets lost between the first order and the next.',
     workflowSteps: [
@@ -211,7 +211,7 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
       eyebrow: 'Pricing layer',
       title: 'The storefront shows one clean offer. The merchant keeps the guardrails.',
       summary:
-        'Customers see a simple ordering flow while the business keeps control over deposits, lead times, minimums, and premium add-ons.',
+        'Customers see a simple ordering flow while the business keeps control over deposits, lead times, minimums, and premium extras.',
       chips: ['Order minimums', 'Deposits', 'Lead times'],
       rail: [
         { label: 'Minimum order', value: '$200' },
@@ -259,7 +259,7 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
     ],
     workflowPanelNote: 'Operators keep one pricing source of truth while the storefront stays simple for the customer.',
     includedIn: 'Launch',
-    planReason: 'Launch needs strong pricing controls because direct orders only work when the front-end promise and back-end economics agree.',
+    planReason: 'Launch needs strong pricing controls because direct orders only work when the storefront promise and kitchen economics agree.',
     nextUnlock: 'Momentum adds incentives, recurring discounts, and smarter offer shaping on top of the pricing base.',
     closingTitle: 'Make every order fit the business before it reaches the kitchen.',
     closingSummary:
@@ -270,22 +270,22 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
     href: '/product/smart-upsell',
     metaTitle: 'Smart Upsell | TrayLoop',
     metaDescription:
-      'Smart upsells increase catering order size with contextual add-ons, package upgrades, and AI-ready merchandising inside checkout.',
+      'Smart upsells increase catering order size with contextual extras, package upgrades, and merchandising that is ready for AI inside checkout.',
     eyebrow: 'Product · Bigger baskets',
     heroTitle: 'Upsells that feel useful to the customer and profitable to the merchant.',
     heroSummary:
-      'TrayLoop places add-ons and package upgrades at the right moment in the checkout flow so average order value grows without turning the experience into clutter.',
+      'TrayLoop places extras and package upgrades at the right moment in the checkout flow so average order value grows without turning the experience into clutter.',
     heroMetrics: [
       { label: 'Best tier', value: 'Momentum' },
       { label: 'Core result', value: 'Higher order value' },
-      { label: 'Operator lift', value: 'Better add-on placement' },
+      { label: 'Operator lift', value: 'Better upsell placement' },
     ],
     spotlight: {
       eyebrow: 'Upsell lane',
       title: 'The second page of checkout becomes a revenue moment.',
       summary:
-        'The customer reviews the order, then sees add-ons that fit the event instead of a generic pile of extras.',
-      chips: ['Suggested add-ons', 'Package upgrade', 'AI-ready placement'],
+        'The customer reviews the order, then sees extras that fit the event instead of a generic pile of extras.',
+      chips: ['Suggested extras', 'Package upgrade', 'Placement ready for AI'],
       rail: [
         { label: 'Dessert tray', value: '+$85' },
         { label: 'Coffee service', value: '+$120' },
@@ -300,7 +300,7 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
       {
         title: 'Lift the basket without adding friction',
         summary:
-          'Relevant add-ons increase total spend while keeping the checkout flow short and clear.',
+          'Relevant extras increase total spend while keeping the checkout flow short and clear.',
       },
       {
         title: 'Turn common extras into a repeatable system',
@@ -310,18 +310,18 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
       {
         title: 'Prepare the stack for AI',
         summary:
-          'Momentum introduces the placement. Engine later adds AI-driven recommendations and more intelligent sequencing.',
+          'Momentum introduces the placement. Engine later adds AI powered recommendations and more intelligent sequencing.',
       },
     ],
     workflowEyebrow: 'Inside the workflow',
     workflowTitle: 'Upsells sit in the review step where they make sense.',
     workflowSummary:
-      'The same checkout page that handles recurring schedules and event details can also carry high-converting add-on prompts.',
+      'The same checkout page that handles recurring schedules and event details can also carry high converting extra prompts.',
     workflowSteps: [
-      'Show package-aware add-ons on the second page of checkout.',
+      'Show package aware extras on the second page of checkout.',
       'Keep the order summary visible while customers decide.',
       'Use event context to make the upsell feel like planning help, not pressure.',
-      'Push accepted add-ons into the merchant ticket and email automatically.',
+      'Push accepted extras into the merchant ticket and email automatically.',
     ],
     workflowPanelTitle: 'Upsell snapshot',
     workflowPanelRows: [
@@ -333,7 +333,7 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
     workflowPanelNote: 'The order review step stays centered on conversion while upsells sit naturally beside the cart.',
     includedIn: 'Momentum',
     planReason: 'Momentum is where order growth starts to matter as much as simple order capture.',
-    nextUnlock: 'Engine adds AI-driven recommendations and more adaptive merchandising logic.',
+    nextUnlock: 'Engine adds AI powered recommendations and more adaptive merchandising logic.',
     closingTitle: 'Use the checkout page to increase order size with intention.',
     closingSummary:
       'Smart upsells give merchants a clean way to grow basket size without asking the team to push extras by hand.',
@@ -378,7 +378,7 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
       {
         title: 'Match the promise to the team',
         summary:
-          'Capacity management keeps the customer-facing schedule and the back-of-house reality aligned.',
+          'Capacity management keeps the customer schedule and the kitchen reality aligned.',
       },
       {
         title: 'Create cleaner repeat demand',
@@ -430,8 +430,8 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
       eyebrow: 'Revenue intelligence',
       title: 'Not just numbers. A read on the business and what to do about it.',
       summary:
-        'The dashboard connects repeat customers, plan state, at-risk accounts, and campaign outcomes so the operator sees the business clearly.',
-      chips: ['Repeat mix', 'At-risk accounts', 'AI next steps'],
+        'The dashboard connects repeat customers, plan state, at risk accounts, and campaign outcomes so the operator sees the business clearly.',
+      chips: ['Repeat mix', 'At risk accounts', 'AI next steps'],
       rail: [
         { label: 'Last 30 days', value: '$0' },
         { label: 'Repeat customers', value: '0' },
@@ -451,12 +451,12 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
       {
         title: 'Catch churn before it lands',
         summary:
-          'At-risk signals give the team a chance to follow up before a valuable account disappears.',
+          'At risk signals give the team a chance to follow up before a valuable account disappears.',
       },
       {
         title: 'Connect analytics to action',
         summary:
-          'The dashboard points back into campaigns, follow-up, and pricing decisions instead of ending at a graph.',
+          'The dashboard points back into campaigns, follow up, and pricing decisions instead of ending at a graph.',
       },
     ],
     workflowEyebrow: 'Inside the workflow',
@@ -465,7 +465,7 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
       'The team can read the trend, identify the account, and move directly into the next action without losing context.',
     workflowSteps: [
       'Track repeat rate, order mix, and average order value in one surface.',
-      'See at-risk and dormant customers as part of the revenue narrative.',
+      'See at risk and dormant customers as part of the revenue narrative.',
       'Use AI surfaces to translate the signal into a suggested next move.',
       'Keep the plan ladder visible so upgrade value stays obvious.',
     ],
@@ -474,9 +474,9 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
       { label: 'Last 30 days', value: '$0' },
       { label: 'Upsell lift', value: 'No data yet' },
       { label: 'Top location', value: 'No location data' },
-      { label: 'At-risk accounts', value: 'Locked on Engine' },
+      { label: 'At risk accounts', value: 'Locked on Engine' },
     ],
-    workflowPanelNote: 'Engine makes the revenue page useful by tying signals to follow-up, campaigns, and customer health.',
+    workflowPanelNote: 'Engine makes the revenue page useful by tying signals to follow up, campaigns, and customer health.',
     includedIn: 'Engine',
     planReason: 'Advanced revenue intelligence is the layer that turns the product from operational software into a growth engine.',
     nextUnlock: 'Growth Advisor can sit beside the dashboard when the team wants strategy on top of the data.',
@@ -514,7 +514,7 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
     leversEyebrow: 'Why it matters',
     leversTitle: 'Direct ordering fixes the first leak in the revenue system.',
     leversSummary:
-      'Before repeat revenue, AI, or follow-up can matter, the restaurant has to own the transaction and the customer relationship.',
+      'Before repeat revenue, AI, or follow up can matter, the restaurant has to own the transaction and the customer relationship.',
     levers: [
       {
         title: 'Keep the margin',
@@ -524,7 +524,7 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
       {
         title: 'Keep the customer',
         summary:
-          'Direct ordering means the restaurant owns the order history, contact details, and future follow-up opportunity.',
+          'Direct ordering means the restaurant owns the order history, contact details, and future follow up opportunity.',
       },
       {
         title: 'Build the next layer on top',
@@ -539,7 +539,7 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
     workflowSteps: [
       'Publish a branded storefront with clear delivery, pickup, and deposit rules.',
       'Capture the order directly into the merchant workspace and email flow.',
-      'Use the direct channel to seed reorders, recurring plans, and follow-up.',
+      'Use the direct channel to seed reorders, recurring plans, and follow up.',
       'Upgrade into higher tiers without making the customer relearn the ordering flow.',
     ],
     workflowPanelTitle: 'Storefront snapshot',
@@ -560,34 +560,34 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
   'automated-follow-up': {
     key: 'automated-follow-up',
     href: '/solutions/automated-follow-up',
-    metaTitle: 'Automated Follow-Up | TrayLoop',
+    metaTitle: 'Automated Follow Up | TrayLoop',
     metaDescription:
-      'Automated follow-up helps restaurants keep catering customers warm after fulfillment, deposits, and completed events.',
+      'Automated follow up helps restaurants keep catering customers warm after fulfillment, deposits, and completed events.',
     eyebrow: 'Grow catering revenue',
-    heroTitle: 'Automated follow-up keeps the relationship moving after the order is done.',
+    heroTitle: 'Automated follow up keeps the relationship moving after the order is done.',
     heroSummary:
-      'TrayLoop helps restaurants send the right reminder, reorder nudge, or event follow-up at the right moment so completed catering jobs can turn into repeat demand.',
+      'TrayLoop helps restaurants send the right reminder, reorder nudge, or event follow up at the right moment so completed catering jobs can turn into repeat demand.',
     heroMetrics: [
       { label: 'Best tier', value: 'Momentum' },
       { label: 'Core result', value: 'Warmer accounts' },
       { label: 'Operator lift', value: 'Less chasing by hand' },
     ],
     spotlight: {
-      eyebrow: 'Follow-up engine',
+      eyebrow: 'Follow up engine',
       title: 'The order closes, but the system keeps the account open.',
       summary:
-        'Post-order reminders, reorder prompts, and event follow-up keep the next conversation from depending on memory or manual hustle.',
+        'Post order reminders, reorder prompts, and event follow up keep the next conversation from depending on memory or manual hustle.',
       chips: ['Deposit reminders', 'Reorder prompts', 'No-response visibility'],
       rail: [
         { label: 'Deposit reminder', value: 'Scheduled' },
-        { label: 'Day-before note', value: 'Ready' },
-        { label: 'Post-order nudge', value: 'Queued' },
+        { label: 'Day before note', value: 'Ready' },
+        { label: 'Post order nudge', value: 'Queued' },
       ],
     },
     leversEyebrow: 'Why it matters',
-    leversTitle: 'Follow-up is where catering relationships are either nurtured or lost.',
+    leversTitle: 'Follow up is where catering relationships are either nurtured or lost.',
     leversSummary:
-      'Restaurants often deliver a great order and then go silent. Automated follow-up keeps momentum alive after the event.',
+      'Restaurants often deliver a great order and then go silent. Automated follow up keeps momentum alive after the event.',
     levers: [
       {
         title: 'Protect the active order',
@@ -597,16 +597,16 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
       {
         title: 'Create a repeat habit',
         summary:
-          'Post-order follow-up gives happy customers a clean path back into the storefront before they forget the experience.',
+          'Post order follow up gives happy customers a clean path back into the storefront before they forget the experience.',
       },
       {
         title: 'Prepare for full retention automation',
         summary:
-          'Momentum introduces the cadence. Engine turns it into AI-assisted reactivation and campaign logic.',
+          'Momentum introduces the cadence. Engine turns it into AI assisted reactivation and campaign logic.',
       },
     ],
     workflowEyebrow: 'Inside the workflow',
-    workflowTitle: 'Follow-up belongs in the order lifecycle, not in a manual side process.',
+    workflowTitle: 'Follow up belongs in the order lifecycle, not in a manual side process.',
     workflowSummary:
       'TrayLoop lets the operator manage fulfillment and the next-touch program from the same system.',
     workflowSteps: [
@@ -615,29 +615,29 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
       'Keep the order, the merchant dashboard, and the email flow in sync.',
       'Use the resulting data to decide who should move into recurring or reactivation.',
     ],
-    workflowPanelTitle: 'Follow-up cadence',
+    workflowPanelTitle: 'Follow up cadence',
     workflowPanelRows: [
       { label: 'Deposit reminder', value: '24h before due' },
       { label: 'Event reminder', value: 'Day before service' },
       { label: 'Completion email', value: 'Sent after order closes' },
       { label: 'Reorder nudge', value: 'Timed to account pattern' },
     ],
-    workflowPanelNote: 'Operators keep the next conversation alive without turning follow-up into a manual task list.',
+    workflowPanelNote: 'Operators keep the next conversation alive without turning follow up into a manual task list.',
     includedIn: 'Momentum',
-    planReason: 'Momentum is designed to help restaurants turn fulfilled orders into repeat revenue through better follow-up.',
+    planReason: 'Momentum is designed to help restaurants turn fulfilled orders into repeat revenue through better follow up.',
     nextUnlock: 'Engine adds AI-generated outreach, segmentation, and reactivation workflows.',
     closingTitle: 'Keep the account warm after the event, not just during it.',
     closingSummary:
-      'Automated follow-up helps merchants stop losing customers in the quiet period after a successful order.',
+      'Automated follow up helps merchants stop losing customers in the quiet period after a successful order.',
   },
   'ai-reengagement': {
     key: 'ai-reengagement',
     href: '/solutions/ai-reengagement',
-    metaTitle: 'AI Re-engagement | TrayLoop',
+    metaTitle: 'AI Reengagement | TrayLoop',
     metaDescription:
-      'AI re-engagement helps restaurants find dormant catering customers, generate outreach, and win back repeat revenue.',
+      'AI reengagement helps restaurants find dormant catering customers, generate outreach, and win back repeat revenue.',
     eyebrow: 'Grow catering revenue',
-    heroTitle: 'AI re-engagement brings dormant catering customers back into the loop.',
+    heroTitle: 'AI reengagement brings dormant catering customers back into the loop.',
     heroSummary:
       'TrayLoop spots the accounts that used to order, estimates their recovery value, and gives the operator AI-generated outreach ready to send.',
     heroMetrics: [
@@ -647,7 +647,7 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
     ],
     spotlight: {
       eyebrow: 'Retention moat',
-      title: 'At-risk and dormant customers stop being invisible.',
+      title: 'At risk and dormant customers stop being invisible.',
       summary:
         'Engine surfaces the right customers, recommends the angle, and turns reactivation into a repeatable motion.',
       chips: ['Dormant accounts', 'AI campaigns', 'Recovery value'],
@@ -660,12 +660,12 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
     leversEyebrow: 'Why it matters',
     leversTitle: 'Reactivation is one of the highest-leverage growth motions in catering.',
     leversSummary:
-      'Winning back a past customer is often faster and cheaper than finding a new one. AI re-engagement helps restaurants act before the account is fully gone.',
+      'Winning back a past customer is often faster and cheaper than finding a new one. AI reengagement helps restaurants act before the account is fully gone.',
     levers: [
       {
         title: 'Find the right customers faster',
         summary:
-          'The system ranks dormant and at-risk accounts instead of forcing the team to guess who might be worth contacting.',
+          'The system ranks dormant and at risk accounts instead of forcing the team to guess who might be worth contacting.',
       },
       {
         title: 'Generate the first draft automatically',
@@ -681,12 +681,12 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
     workflowEyebrow: 'Inside the workflow',
     workflowTitle: 'The system identifies the account, suggests the message, and points to the value.',
     workflowSummary:
-      'AI re-engagement connects customer intelligence, campaign generation, and revenue scoring in one surface.',
+      'AI reengagement connects customer intelligence, campaign generation, and revenue scoring in one surface.',
     workflowSteps: [
       'Rank dormant accounts by likely value and recency.',
       'Draft the reactivation message in the merchant workspace.',
       'Keep the campaign outcome tied to the customer and order history.',
-      'Use the results to sharpen future follow-up and retention logic.',
+      'Use the results to sharpen future follow up and retention logic.',
     ],
     workflowPanelTitle: 'Reactivation view',
     workflowPanelRows: [
@@ -697,22 +697,22 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
     ],
     workflowPanelNote: 'Engine ties customer health, AI outreach, and expected revenue into one retention surface.',
     includedIn: 'Engine',
-    planReason: 'AI re-engagement is a true Engine capability because it relies on AI, segmentation, and customer intelligence together.',
-    nextUnlock: 'Growth Advisor can sit beside re-engagement when the team wants more strategic guidance on which offers to push.',
+    planReason: 'AI reengagement is a true Engine capability because it relies on AI, segmentation, and customer intelligence together.',
+    nextUnlock: 'Growth Advisor can sit beside reengagement when the team wants more strategic guidance on which offers to push.',
     closingTitle: 'Use AI to bring back revenue that already knows your brand.',
     closingSummary:
-      'AI re-engagement gives restaurants a stronger retention moat by turning dormant customers into actionable growth targets.',
+      'AI reengagement gives restaurants a stronger retention moat by turning dormant customers into actionable growth targets.',
   },
   'smart-upsells': {
     key: 'smart-upsells',
     href: '/solutions/smart-upsells',
     metaTitle: 'Smart Upsells | TrayLoop',
     metaDescription:
-      'Smart upsells help restaurants increase catering order size with cleaner add-on placement and stronger package merchandising.',
+      'Smart upsells help restaurants increase catering order size with cleaner upsell placement and stronger package merchandising.',
     eyebrow: 'Grow catering revenue',
     heroTitle: 'Smart upsells help every direct order do more work.',
     heroSummary:
-      'TrayLoop uses better package placement, add-on sequencing, and checkout context to increase catering order value without making the customer fight the order flow.',
+      'TrayLoop uses better package placement, upsell sequencing, and checkout context to increase catering order value without making the customer fight the order flow.',
     heroMetrics: [
       { label: 'Best tier', value: 'Momentum' },
       { label: 'Core result', value: 'Bigger baskets' },
@@ -720,10 +720,10 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
     ],
     spotlight: {
       eyebrow: 'Order value',
-      title: 'Upsells look like planning help, not a random add-on dump.',
+      title: 'Upsells look like planning help, not a random extras dump.',
       summary:
         'Customers see the extras that fit the event while the merchant gets a cleaner path to higher average order value.',
-      chips: ['Featured packages', 'Add-on logic', 'Checkout placement'],
+      chips: ['Featured packages', 'Upsell logic', 'Checkout placement'],
       rail: [
         { label: 'Primary upsell', value: 'Dessert tray' },
         { label: 'Order size impact', value: '+$85' },
@@ -738,7 +738,7 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
       {
         title: 'Increase spend inside the existing order',
         summary:
-          'Well-placed add-ons and package upgrades increase revenue without requiring new customer acquisition.',
+          'Well placed extras and package upgrades increase revenue without requiring new customer acquisition.',
       },
       {
         title: 'Merchandise like a stronger storefront',
@@ -746,7 +746,7 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
           'Better category ordering and featured items make the menu feel more intentional and premium.',
       },
       {
-        title: 'Build toward AI-driven personalization',
+        title: 'Build toward AI powered personalization',
         summary:
           'Momentum starts the upsell system. Engine makes it more dynamic and behavior-aware.',
       },
@@ -757,21 +757,21 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
       'TrayLoop uses menu presentation and checkout review to create two strong moments for order-value growth.',
     workflowSteps: [
       'Feature the strongest packages at the right point in the menu.',
-      'Use checkout step 2 for final add-on recommendations.',
+      'Use checkout step 2 for final extra recommendations.',
       'Keep the order summary visible so the customer understands the tradeoff.',
-      'Send the same add-on detail into the merchant ticket for preparation.',
+      'Send the same extra detail into the merchant ticket for preparation.',
     ],
     workflowPanelTitle: 'Upsell sequence',
     workflowPanelRows: [
       { label: 'Menu feature', value: 'Executive lunch buffet' },
-      { label: 'Checkout add-on', value: 'Coffee service' },
+      { label: 'Checkout extra', value: 'Coffee service' },
       { label: 'Dessert prompt', value: 'Visible' },
       { label: 'Average lift', value: 'Per order value up' },
     ],
     workflowPanelNote: 'The upsell flow works best when the experience stays simple and the choices feel event-aware.',
     includedIn: 'Momentum',
     planReason: 'Momentum is where the product starts actively improving order value, not just capturing demand.',
-    nextUnlock: 'Engine adds AI-driven recommendation logic on top of the merchandising layer.',
+    nextUnlock: 'Engine adds AI powered recommendation logic on top of the merchandising layer.',
     closingTitle: 'Use your direct ordering flow to increase order value, not just capture demand.',
     closingSummary:
       'Smart upsells are one of the fastest ways to make the storefront feel more profitable without making it feel heavier.',
@@ -800,7 +800,7 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
       rail: [
         { label: 'Deposit rule', value: '25% required' },
         { label: 'Collection point', value: 'Checkout flow' },
-        { label: 'Follow-up', value: 'Reminder ready' },
+        { label: 'Follow up', value: 'Reminder ready' },
       ],
     },
     leversEyebrow: 'Why it matters',
@@ -819,9 +819,9 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
           'Deposit state is visible in the dashboard so the team knows what needs attention and what is truly ready.',
       },
       {
-        title: 'Support follow-up and reminders later',
+        title: 'Support follow up and reminders later',
         summary:
-          'Once deposit state is structured, the system can power reminder emails and operational follow-up more cleanly.',
+          'Once deposit state is structured, the system can power reminder emails and operational follow up more cleanly.',
       },
     ],
     workflowEyebrow: 'Inside the workflow',
@@ -844,7 +844,7 @@ export const featurePageStories: Record<FeatureStoryKey, FeatureStory> = {
     workflowPanelNote: 'Deposit collection creates a cleaner path from checkout to real operator confidence.',
     includedIn: 'Launch',
     planReason: 'Launch includes deposit collection because direct catering needs a serious commitment layer from day one.',
-    nextUnlock: 'Momentum and Engine use the structured deposit state as part of richer follow-up and growth workflows.',
+    nextUnlock: 'Momentum and Engine use the structured deposit state as part of richer follow up and growth workflows.',
     closingTitle: 'Protect the order before the kitchen starts absorbing the cost.',
     closingSummary:
       'Deposit collection helps merchants feel safer saying yes to valuable catering work while keeping the storefront flow professional for the customer.',

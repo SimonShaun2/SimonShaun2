@@ -27,12 +27,12 @@ export const plans: PlanStory[] = [
     badge: 'Get live',
     bestFor: 'Restaurants ready to own direct catering',
     summary: 'A branded storefront that gets the first direct orders moving.',
-    detail: 'Launch gives you the storefront, intake, and guardrails to bring catering demand in-house.',
+    detail: 'Launch gives you the storefront, intake, and guardrails to bring catering demand direct.',
     highlights: [
       'Branded catering storefront',
       'Delivery and pickup selection',
       'Lead times, minimums, and deposits',
-      'One-time future scheduling',
+      'Future scheduling',
       'Basic reporting and order history',
     ],
   },
@@ -43,11 +43,11 @@ export const plans: PlanStory[] = [
     badge: 'Repeat revenue',
     bestFor: 'Teams that want recurring orders and bigger baskets',
     summary: 'Recurring scheduling, upsells, and reorder flows that keep accounts warm.',
-    detail: 'Momentum turns one-off catering into repeat business with scheduling, incentives, and reorder tools.',
+    detail: 'Momentum turns one off catering into repeat business with scheduling, incentives, and reorder tools.',
     highlights: [
       'Recurring scheduling',
       'Booking incentives and reorder flows',
-      'Basic upsells and add-on prompts',
+      'Basic upsells and extra item prompts',
       'Saved event templates',
       'Basic customer insights',
     ],
@@ -62,7 +62,7 @@ export const plans: PlanStory[] = [
     detail: 'Engine adds AI on top of direct catering so the system can recommend, re-engage, and prioritize work.',
     highlights: [
       'AI upsells and campaign generation',
-      'Reactivation and follow-up workflows',
+      'Reactivation and follow up workflows',
       'Lead scoring and segmentation',
       'Advanced analytics and churn risk',
       'Corporate growth intelligence',
@@ -74,7 +74,7 @@ export const growthAdvisor: AddOnStory = {
   name: 'Growth Advisor',
   price: '$99',
   cadence: '/month',
-  badge: 'Premium add-on',
+  badge: 'Premium addition',
   summary: 'A strategic layer for pricing, launch coaching, menu decisions, and repeat revenue planning.',
   detail: 'Growth Advisor turns live storefront signals into a clear 30-day plan the team can act on.',
   highlights: [
@@ -92,7 +92,7 @@ export const revenuePillars = [
   },
   {
     title: 'Grow repeat revenue',
-    summary: 'Momentum schedules the next order, suggests add-ons, and makes repeat business easier.',
+    summary: 'Momentum schedules the next order, suggests extras, and makes repeat business easier.',
   },
   {
     title: 'Compound with AI',
@@ -107,7 +107,7 @@ export const howItWorksSteps = [
     summary: 'Launch gets you live, Momentum adds repeat revenue tools, and Engine layers in AI.',
     bullets: [
       'Every tier starts with a branded direct catering channel.',
-      'Momentum and Engine are the repeat-revenue layers.',
+      'Momentum and Engine are the repeat revenue layers.',
       'Growth Advisor can be added when strategy matters as much as execution.',
     ],
   },
@@ -127,7 +127,7 @@ export const howItWorksSteps = [
     summary: 'The order flows through the storefront, lands in the dashboard, and the team can act quickly.',
     bullets: [
       'Customer and merchant emails show the same order details.',
-      'The kitchen can use a standard ticket-style order summary.',
+      'The kitchen can use a standard kitchen ticket order summary.',
       'Deposit and fulfillment state stay visible in one workflow.',
     ],
   },
@@ -159,7 +159,7 @@ export const featureAtlas = [
       'Recurring scheduling',
       'Order templates and rebook flows',
       'Booking incentives',
-      'Upsells and add-on prompts',
+      'Upsells and extra item prompts',
     ],
   },
   {
@@ -190,7 +190,7 @@ export const pricingRows = [
     engine: true,
   },
   {
-    feature: 'One-time future scheduling',
+    feature: 'Future scheduling',
     launch: true,
     momentum: true,
     engine: true,
@@ -234,7 +234,7 @@ export const pricingFaqs = [
   },
   {
     q: 'Can I add Growth Advisor to any tier?',
-    a: 'Yes. Growth Advisor is a premium add-on that can be paired with any base plan when you want strategy and launch guidance.',
+    a: 'Yes. Growth Advisor is a premium addition that can be paired with any base plan when you want strategy and launch guidance.',
   },
   {
     q: 'What is the difference between Momentum and Engine?',

@@ -504,7 +504,7 @@ export default function FeatureStoryPage({ story }: { story: FeatureStory }) {
               <span style={{ fontSize: 14, fontWeight: 700, color: 'rgba(254,252,250,0.68)' }}>{growthAdvisor.cadence}</span>
             </div>
             <div style={{ marginTop: 14, padding: '10px 12px', borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.06)', color: C.teal, fontSize: 13, fontWeight: 700 }}>
-              Strategy add-on
+              Strategy addition
             </div>
             <p style={{ fontSize: 14, lineHeight: 1.6, color: 'rgba(254,252,250,0.78)', marginTop: 14 }}>
               Strategy, pricing guidance, and launch coaching can sit beside any plan when the operator wants more leverage.

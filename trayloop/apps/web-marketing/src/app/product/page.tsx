@@ -235,7 +235,7 @@ function StageMock({
           ? ['Brand', 'Minimums', 'Deposit'].map((label) => <MetricChip key={label} label={label} value="Configured" dark={dark} />)
           : planName === 'Momentum'
             ? ['Repeat', 'Upsell', 'Templates'].map((label) => <MetricChip key={label} label={label} value="On" dark={dark} />)
-            : ['AI', 'Signals', 'Follow-up'].map((label) => <MetricChip key={label} label={label} value="Active" dark={dark} />)}
+            : ['AI', 'Signals', 'Follow up'].map((label) => <MetricChip key={label} label={label} value="Active" dark={dark} />)}
       </div>
     </div>
   );
@@ -399,12 +399,12 @@ function AdvisorPreview() {
     },
     {
       label: 'Upsell next',
-      value: 'Add the right add-on at checkout',
+      value: 'Add the right extra at checkout',
       detail: 'Use premium sides, beverages, or service upgrades.',
     },
     {
       label: 'Reorder next',
-      value: 'Time the follow-up after fulfillment',
+      value: 'Time the follow up after fulfillment',
       detail: 'Turn the last order into the next one.',
     },
     {
@@ -843,7 +843,7 @@ export default function ProductPage() {
               }}
             >
               <div style={{ fontSize: 12, fontWeight: 800, color: C.orange, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                Premium add-on
+                Premium addition
               </div>
               <div style={{ fontSize: 24, fontWeight: 800, color: C.ink, marginTop: 8 }}>{growthAdvisor.name}</div>
               <p style={{ fontSize: 15, lineHeight: 1.6, color: C.muted, marginTop: 8 }}>
