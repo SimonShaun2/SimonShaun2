@@ -1,3 +1,20 @@
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+    title: 'Automated Catering Follow-Up for Restaurants | TrayLoop',
+    description: 'Automate every catering follow-up. TrayLoop sends order confirmations, pre-delivery reminders, and post-delivery thank-yous automatically so you never miss a reorder.',
+    alternates: {
+          canonical: 'https://trayloophq.com/solutions/automated-follow-up',
+    },
+    openGraph: {
+          title: 'Automated Catering Follow-Up for Restaurants | TrayLoop',
+          description: 'Automate every catering follow-up. Order confirmations, reminders, and reorder triggers run automatically.',
+          url: 'https://trayloophq.com/solutions/automated-follow-up',
+          siteName: 'TrayLoop',
+          type: 'website',
+    },
+};
+
 import type { CSSProperties } from 'react';
 /* ── Design tokens ── */
 const color = {
