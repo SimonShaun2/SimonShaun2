@@ -1,3 +1,24 @@
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+    title: 'Terms of Service | TrayLoop',
+    description: 'Review the TrayLoop Terms of Service governing your use of our restaurant catering software, direct ordering platform, and related services.',
+    alternates: {
+          canonical: 'https://trayloophq.com/terms',
+    },
+    openGraph: {
+          title: 'Terms of Service | TrayLoop',
+          description: 'Review the TrayLoop Terms of Service governing your use of our restaurant catering software.',
+          url: 'https://trayloophq.com/terms',
+          siteName: 'TrayLoop',
+          type: 'website',
+    },
+    robots: {
+          index: true,
+          follow: false,
+    },
+};
+
 import type { CSSProperties } from 'react';
 
 const color = {
