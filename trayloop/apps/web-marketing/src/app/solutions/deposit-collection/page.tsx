@@ -1,3 +1,20 @@
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+    title: 'Catering Deposit Collection for Restaurants | TrayLoop',
+    description: 'Collect catering deposits automatically at checkout. TrayLoop handles upfront deposit collection so your revenue is secured before every event delivery.',
+    alternates: {
+          canonical: 'https://trayloophq.com/solutions/deposit-collection',
+    },
+    openGraph: {
+          title: 'Catering Deposit Collection for Restaurants | TrayLoop',
+          description: 'Collect catering deposits automatically at checkout. Revenue secured before every delivery.',
+          url: 'https://trayloophq.com/solutions/deposit-collection',
+          siteName: 'TrayLoop',
+          type: 'website',
+    },
+};
+
 import type { CSSProperties } from 'react';
 /* ── Design tokens ── */
 const color = {
