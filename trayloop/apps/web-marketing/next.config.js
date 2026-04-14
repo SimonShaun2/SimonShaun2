@@ -1,15 +1,51 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ['@trayloop/ui'],
-  output: 'standalone',
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
-      },
-    ],
-  },
+    transpilePackages: ['@trayloop/ui'],
+    output: 'standalone',
+    images: {
+          remotePatterns: [
+            {
+                      protocol: 'https',
+                      hostname: 'images.unsplash.com',
+            },
+                ],
+    },
+    async redirects() {
+          return [
+            {
+                      source: '/:path*',
+                      has: [
+                        {
+                                      type: 'host',
+                                      value: 'www.trayloophq.com',
+                        },
+                                ],
+                      destination: 'https://trayloophq.com/:path*',
+                      permanent: true,
+            },
+                ];
+    },
+    async headers() {
+          return [
+            {
+                      source: '/(.*)',
+                      headers: [
+                        {
+                                      key: 'X-Content-Type-Options',
+                                      value: 'nosniff',
+                        },
+                        {
+                                      key: 'X-Frame-Options',
+                                      value: 'DENY',
+                        },
+                        {
+                                      key: 'Referrer-Policy',
+                                      value: 'strict-origin-when-cross-origin',
+                        },
+                                ],
+            },
+                ];
+    },
 };
 
 module.exports = nextConfig;
