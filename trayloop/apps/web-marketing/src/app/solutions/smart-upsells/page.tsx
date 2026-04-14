@@ -1,3 +1,20 @@
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+    title: 'Smart Catering Upsells for Restaurants | TrayLoop',
+    description: 'Increase average catering order value with contextual add-on upsells at checkout. TrayLoop AI suggests relevant additions that customers actually want.',
+    alternates: {
+          canonical: 'https://trayloophq.com/solutions/smart-upsells',
+    },
+    openGraph: {
+          title: 'Smart Catering Upsells for Restaurants | TrayLoop',
+          description: 'Increase average catering order value with AI-powered contextual upsells at checkout.',
+          url: 'https://trayloophq.com/solutions/smart-upsells',
+          siteName: 'TrayLoop',
+          type: 'website',
+    },
+};
+
 import type { CSSProperties } from 'react';
 import PillButton from '@/components/pill-button';
 
