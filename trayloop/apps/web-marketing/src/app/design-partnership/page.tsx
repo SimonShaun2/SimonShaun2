@@ -3,34 +3,38 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import PillButton from '@/components/pill-button';
 
-const C = {
+const palette = {
   cream: '#F8F3EC',
   creamSoft: '#FFF8F1',
-  line: '#E8DDD1',
+  paper: '#FEFCFA',
   ink: '#191510',
-  muted: '#776A5F',
-  orange: '#E85618',
-  teal: '#44D9A1',
-  white: '#FEFCFA',
   inkSoft: '#221D19',
+  muted: '#6E6156',
+  line: '#E7DBCF',
+  orange: '#E85618',
+  orangeSoft: '#FFF0E6',
+  teal: '#44D9A1',
+  tealSoft: 'rgba(68, 217, 161, 0.14)',
 };
+
+const applyHref = 'mailto:info@trayloophq.com?subject=TrayLoop%20Design%20Partnership';
 
 export const metadata: Metadata = {
   title: 'TrayLoop Design Partnership',
   description:
-    'Work directly with TrayLoop to shape the next generation of direct catering software before the broader market sees it.',
+    'Apply for TrayLoop’s Design Partnership Program and help shape an AI-driven catering revenue system built to replace commissions, manual follow-up, and one-off order dependence.',
 };
 
 function Section({
   children,
   background = 'transparent',
-  className,
   style,
+  className,
 }: {
   children: React.ReactNode;
   background?: string;
-  className?: string;
   style?: CSSProperties;
+  className?: string;
 }) {
   return (
     <section
@@ -38,6 +42,7 @@ function Section({
       style={{
         background,
         padding: '88px 24px',
+        borderTop: background === palette.paper ? `1px solid ${palette.line}` : 'none',
         ...style,
       }}
     >
@@ -46,17 +51,16 @@ function Section({
   );
 }
 
-function Eyebrow({ children, color = C.orange }: { children: React.ReactNode; color?: string }) {
+function Eyebrow({ children, dark = false }: { children: React.ReactNode; dark?: boolean }) {
   return (
     <div
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        gap: 8,
         padding: '8px 14px',
         borderRadius: 999,
-        backgroundColor: color === C.orange ? '#FFF0E6' : 'rgba(68,217,161,0.12)',
-        color,
+        backgroundColor: dark ? 'rgba(255,255,255,0.08)' : palette.orangeSoft,
+        color: dark ? palette.teal : palette.orange,
         fontSize: 12,
         fontWeight: 800,
         letterSpacing: '0.08em',
@@ -71,22 +75,22 @@ function Eyebrow({ children, color = C.orange }: { children: React.ReactNode; co
 function Surface({
   children,
   dark = false,
-  className,
   style,
+  className,
 }: {
   children: React.ReactNode;
   dark?: boolean;
-  className?: string;
   style?: CSSProperties;
+  className?: string;
 }) {
   return (
     <div
       className={className}
       style={{
-        backgroundColor: dark ? C.inkSoft : C.white,
-        color: dark ? C.white : C.ink,
-        border: dark ? '1px solid rgba(254,252,250,0.08)' : `1px solid ${C.line}`,
-        borderRadius: 30,
+        backgroundColor: dark ? palette.inkSoft : palette.paper,
+        color: dark ? palette.paper : palette.ink,
+        border: dark ? '1px solid rgba(255,255,255,0.08)' : `1px solid ${palette.line}`,
+        borderRadius: 28,
         padding: 28,
         boxShadow: dark ? 'none' : '0 20px 60px rgba(25, 21, 16, 0.06)',
         ...style,
@@ -97,7 +101,13 @@ function Surface({
   );
 }
 
-function Bullet({ text, light = false }: { text: string; light?: boolean }) {
+function Bullet({
+  children,
+  light = false,
+}: {
+  children: React.ReactNode;
+  light?: boolean;
+}) {
   return (
     <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
       <span
@@ -105,187 +115,212 @@ function Bullet({ text, light = false }: { text: string; light?: boolean }) {
           width: 8,
           height: 8,
           borderRadius: '50%',
-          backgroundColor: light ? C.teal : C.orange,
+          backgroundColor: light ? palette.teal : palette.orange,
           marginTop: 8,
           flexShrink: 0,
         }}
       />
-      <span
+      <div
         style={{
           fontSize: 16,
-          lineHeight: 1.65,
-          color: light ? 'rgba(254,252,250,0.82)' : C.ink,
+          lineHeight: 1.7,
+          color: light ? 'rgba(254,252,250,0.84)' : palette.ink,
         }}
       >
-        {text}
-      </span>
+        {children}
+      </div>
     </div>
   );
 }
 
-const partnerBenefits = [
-  'Direct access to the TrayLoop product team during the build cycle',
-  'Priority implementation for the operational workflows that matter most to your team',
-  'Private previews of new direct-ordering, repeat-revenue, and retention features',
-  'Hands-on design reviews so the product reflects how real catering teams actually work',
+const problemPoints = [
+  'Marketplace commissions shave margin off the biggest orders on your calendar.',
+  'The customer relationship lives with the platform, not with your team.',
+  'One-off catering orders land, get fulfilled, and disappear with no retention system behind them.',
+  'Manual follow-up means missed repeat opportunities, missed reorders, and missed revenue.',
 ];
 
-const partnerFit = [
-  'You already care about direct catering, repeat revenue, and operational polish',
-  'You can give honest feedback from a live restaurant or multi-unit operator perspective',
-  'You want a tighter loop with the team than a normal software customer relationship',
-];
-
-const partnershipArc = [
+const solutionCards = [
   {
-    step: 'Month 1',
-    title: 'Audit the current setup',
-    detail:
-      'We review your storefront, intake rules, follow-up flow, and the friction points that slow down direct catering.',
+    title: 'Direct ordering infrastructure',
+    body: 'Own the storefront, the ordering flow, and the customer relationship so more revenue stays in-house.',
   },
   {
-    step: 'Month 2',
-    title: 'Ship the highest-leverage improvements',
-    detail:
-      'We focus on the screens, logic, and conversion blockers that will change operator behavior the fastest.',
+    title: 'Automated retention system',
+    body: 'Bring past catering customers back with reorder prompts, reminders, and follow-up logic that runs without manual chasing.',
   },
   {
-    step: 'Month 3',
-    title: 'Turn feedback into a durable operating system',
-    detail:
-      'The result is not a one-off mockup. It is a sharper product and a stronger growth system your team can keep using.',
+    title: 'Catering CRM',
+    body: 'Keep account history, event context, and repeat behavior in one operating system instead of scattered notes and inbox threads.',
+  },
+  {
+    title: 'AI-powered follow-up engine',
+    body: 'Surface who is likely to reorder, who is cooling off, and what revenue move should happen next.',
   },
 ];
 
-const collaborationLanes = [
+const valueStack = [
   {
-    title: 'Operator sessions',
-    body: 'Short working sessions with the people who actually manage orders, deposits, customer follow-up, and launch readiness.',
+    title: 'Done-for-you setup',
+    body: 'We stand up the ordering flow, revenue rules, and operational structure so your team gets to value fast.',
+    payoff: 'Faster launch. Less internal drag. Revenue sooner.',
   },
   {
-    title: 'Design reviews',
-    body: 'We refine information hierarchy, workflows, and conversion surfaces so the product feels expensive in use, not just in screenshots.',
+    title: 'Direct storefront ownership',
+    body: 'Your restaurant gets a branded catering flow designed to convert direct demand instead of leaking it to third parties.',
+    payoff: 'Better margins. Better trust. Better customer ownership.',
   },
   {
-    title: 'Fast iteration',
-    body: 'You see the direction early, react quickly, and help us make sharper product decisions before the wider rollout.',
+    title: 'Automated reorder and retention engine',
+    body: 'TrayLoop helps turn fulfilled orders into future revenue with post-order follow-up, repeat prompts, and reactivation logic.',
+    payoff: 'More second and third orders with less manual work.',
+  },
+  {
+    title: 'Early access to AI revenue workflows',
+    body: 'Get priority access to AI-assisted follow-up, re-engagement, and operator recommendations before broader rollout.',
+    payoff: 'More recovered revenue. Fewer missed opportunities.',
+  },
+  {
+    title: 'Direct line to the product team',
+    body: 'Your feedback shapes the product while the workflows are still being refined, not after the roadmap is already locked.',
+    payoff: 'A stronger system that fits real catering operations.',
+  },
+];
+
+const requirements = [
+  '$5,000+/month in catering revenue today',
+  'A serious intention to grow direct catering, not just experiment with another tool',
+  'A willingness to give sharp, practical feedback from a real operating environment',
+];
+
+const roiCards = [
+  {
+    value: '$500-$2,000+',
+    label: 'per month from one repeat client',
+    body: 'A single account that reorders consistently can change the economics of your catering channel.',
+  },
+  {
+    value: '$2,250/mo',
+    label: 'from recovering 3 lost reorder accounts',
+    body: 'Three past customers reactivated at $750/month each is meaningful revenue recovered fast.',
+  },
+  {
+    value: 'Immediate margin gain',
+    label: 'from moving orders off marketplaces',
+    body: 'When the commission disappears, you keep more of every large order without increasing volume.',
+  },
+];
+
+const proofCards = [
+  {
+    quote:
+      'We did not need another dashboard. We needed a system that turned fulfilled catering into the next order.',
+    source: 'Multi-unit operator in early rollout',
+  },
+  {
+    quote:
+      'The biggest shift was ownership. Once the customer relationship was ours, the economics got better fast.',
+    source: 'Independent restaurant group using direct catering',
+  },
+  {
+    quote:
+      'We were already doing the volume. The leak was what happened after the event. That is what TrayLoop started to fix.',
+    source: 'Operator managing repeat office accounts',
   },
 ];
 
 export default function DesignPartnershipPage() {
   return (
-    <main style={{ backgroundColor: C.cream }}>
+    <main style={{ backgroundColor: palette.cream, color: palette.ink }}>
       <style>{`
-        .tl-partnership-fade {
-          animation: tlPartnershipFade 0.7s ease both;
+        .dp-fade {
+          animation: dpFade 0.7s ease both;
         }
-        .tl-partnership-delay-1 { animation-delay: 0.08s; }
-        .tl-partnership-delay-2 { animation-delay: 0.16s; }
-        .tl-partnership-delay-3 { animation-delay: 0.24s; }
-        @keyframes tlPartnershipFade {
+        .dp-delay-1 { animation-delay: 0.08s; }
+        .dp-delay-2 { animation-delay: 0.16s; }
+        .dp-delay-3 { animation-delay: 0.24s; }
+        @keyframes dpFade {
           from { opacity: 0; transform: translateY(16px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        .tl-partnership-hero {
+        .dp-hero {
           display: grid;
-          grid-template-columns: minmax(0, 0.94fr) minmax(420px, 1.06fr);
+          grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
           gap: 28px;
           align-items: stretch;
         }
-        .tl-partnership-grid-3 {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 18px;
-        }
-        .tl-partnership-grid-2 {
+        .dp-grid-2 {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 18px;
         }
-        .tl-partnership-actions {
+        .dp-grid-3 {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 18px;
+        }
+        .dp-actions {
           display: flex;
           flex-wrap: wrap;
           gap: 12px;
           margin-top: 28px;
         }
-        .tl-partnership-actions a {
+        .dp-actions a {
           text-align: center;
         }
         @media (max-width: 1040px) {
-          .tl-partnership-hero,
-          .tl-partnership-grid-3,
-          .tl-partnership-grid-2,
-          .tl-partnership-final {
+          .dp-hero,
+          .dp-grid-2,
+          .dp-grid-3,
+          .dp-final {
             grid-template-columns: 1fr !important;
           }
         }
         @media (max-width: 768px) {
-          .tl-partnership-section {
+          .dp-section {
             padding: 56px 16px !important;
           }
-          .tl-partnership-section > div {
-            width: 100% !important;
+          .dp-section > div {
             max-width: 560px !important;
             margin: 0 auto !important;
           }
-          .tl-partnership-hero-title {
-            font-size: 42px !important;
-            line-height: 1.01 !important;
-            letter-spacing: -0.045em !important;
-          }
-          .tl-partnership-title {
-            font-size: 30px !important;
-            line-height: 1.1 !important;
-          }
-          .tl-partnership-copy {
-            font-size: 15px !important;
-            line-height: 1.68 !important;
-          }
-          .tl-partnership-actions {
-            width: 100% !important;
-            flex-direction: column !important;
-            justify-content: center !important;
-            align-items: stretch !important;
-            margin-top: 24px !important;
-          }
-          .tl-partnership-actions a {
-            width: 100% !important;
-          }
-          .tl-partnership-copy-block,
-          .tl-partnership-intro,
-          .tl-partnership-final-copy {
+          .dp-hero-copy,
+          .dp-intro,
+          .dp-final-copy {
             text-align: center !important;
             margin-inline: auto !important;
           }
-          .tl-partnership-hero-visual {
+          .dp-hero-title {
+            font-size: 44px !important;
+            line-height: 0.98 !important;
+            letter-spacing: -0.05em !important;
+          }
+          .dp-title {
+            font-size: 32px !important;
+            line-height: 1.08 !important;
+          }
+          .dp-copy {
+            font-size: 15px !important;
+            line-height: 1.72 !important;
+          }
+          .dp-actions {
+            width: 100% !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
+            justify-content: center !important;
+          }
+          .dp-actions a {
+            width: 100% !important;
+          }
+          .dp-hero-visual {
             min-height: 420px !important;
             max-width: 560px !important;
             margin: 0 auto !important;
           }
-          .tl-partnership-hero-overlay {
-            padding: 18px !important;
-          }
-          .tl-partnership-stat-row {
+          .dp-stat-row {
             grid-template-columns: 1fr !important;
           }
-          .tl-partnership-stat-row > div,
-          .tl-partnership-grid-2 > div,
-          .tl-partnership-grid-3 > div {
-            width: 100% !important;
-          }
-          .tl-partnership-grid-2,
-          .tl-partnership-grid-3 {
-            gap: 14px !important;
-          }
-          .tl-partnership-grid-2 > div,
-          .tl-partnership-grid-3 > div,
-          .tl-partnership-hero-visual > div:last-child > div:last-child {
-            border-radius: 24px !important;
-          }
-          .tl-partnership-final {
-            gap: 18px !important;
-          }
-          .tl-partnership-final-copy h2 {
+          .dp-final-copy h2 {
             font-size: 34px !important;
             line-height: 1.08 !important;
           }
@@ -293,67 +328,86 @@ export default function DesignPartnershipPage() {
       `}</style>
 
       <Section
-        background={C.ink}
-        className="tl-partnership-section"
-        style={{ paddingTop: 72, paddingBottom: 72 }}
+        background={palette.ink}
+        className="dp-section"
+        style={{ paddingTop: 72, paddingBottom: 72, borderTop: 'none' }}
       >
-        <div className="tl-partnership-hero">
-          <div className="tl-partnership-fade tl-partnership-copy-block" style={{ display: 'grid', alignContent: 'center' }}>
-            <Eyebrow color={C.teal}>Design partnership</Eyebrow>
+        <div className="dp-hero">
+          <div className="dp-fade dp-hero-copy" style={{ display: 'grid', alignContent: 'center' }}>
+            <Eyebrow dark>Design partnership program</Eyebrow>
             <h1
-              className="tl-partnership-hero-title"
+              className="dp-hero-title"
               style={{
-                fontSize: 68,
-                lineHeight: 0.95,
-                letterSpacing: '-0.055em',
-                color: C.white,
+                fontSize: 70,
+                lineHeight: 0.94,
+                letterSpacing: '-0.06em',
+                color: palette.paper,
                 fontWeight: 800,
-                maxWidth: 620,
+                maxWidth: 650,
                 marginTop: 22,
               }}
             >
-              Help shape the future of direct catering.
+              Stop renting your catering revenue. Start owning it.
             </h1>
             <p
-              className="tl-partnership-copy"
+              className="dp-copy"
               style={{
-                fontSize: 19,
+                fontSize: 20,
                 lineHeight: 1.7,
-                color: 'rgba(254,252,250,0.8)',
+                color: 'rgba(254,252,250,0.82)',
                 maxWidth: 620,
-                marginTop: 20,
+                marginTop: 18,
               }}
             >
-              We are opening a small design-partnership cohort for operators who want direct access to the TrayLoop team
-              while we sharpen the next generation of storefront, retention, and revenue workflows.
+              TrayLoop is an AI-driven catering revenue system that turns one-off orders into predictable recurring
+              revenue, without marketplaces, commissions, or manual follow-up.
+            </p>
+            <p
+              className="dp-copy"
+              style={{
+                fontSize: 17,
+                lineHeight: 1.72,
+                color: 'rgba(254,252,250,0.68)',
+                maxWidth: 620,
+                marginTop: 14,
+              }}
+            >
+              You do not need more leads you cannot keep. You need a system that captures demand, brings customers back,
+              and grows revenue you actually own.
             </p>
 
-            <div className="tl-partnership-actions">
-              <PillButton text="Apply for the cohort" href="/demo" variant="primary" size="md" />
-              <PillButton
-                text="Email the team"
-                href="mailto:hello@trayloophq.com?subject=TrayLoop%20Design%20Partnership"
-                variant="ghost"
-                size="md"
-              />
+            <div className="dp-actions">
+              <PillButton text="Apply for Design Partnership" href={applyHref} variant="primary" size="md" />
+            </div>
+
+            <div
+              style={{
+                marginTop: 16,
+                fontSize: 13,
+                fontWeight: 700,
+                color: 'rgba(254,252,250,0.68)',
+                letterSpacing: '0.02em',
+              }}
+            >
+              Only 10-15 operators will be accepted in this round.
             </div>
           </div>
 
-          <div className="tl-partnership-fade tl-partnership-delay-1">
+          <div className="dp-fade dp-delay-1">
             <div
-              className="tl-partnership-hero-visual"
+              className="dp-hero-visual"
               style={{
                 position: 'relative',
                 minHeight: 640,
                 overflow: 'hidden',
                 borderRadius: 34,
-                border: '1px solid rgba(254,252,250,0.08)',
+                border: '1px solid rgba(255,255,255,0.08)',
                 boxShadow: '0 32px 90px rgba(0,0,0,0.24)',
               }}
             >
               <Image
-                src="https://images.unsplash.com/photo-1559339352-11d035aa65de?w=1600&h=1800&fit=crop&q=80"
-                alt="Restaurant operators reviewing catering workflow details together"
+                src="https://images.unsplash.com/photo-1556740749-887f6717d7e4?w=1600&h=1800&fit=crop&q=80"
+                alt="Restaurant operators reviewing revenue and catering workflow performance"
                 fill
                 priority
                 style={{ objectFit: 'cover', objectPosition: 'center' }}
@@ -363,11 +417,10 @@ export default function DesignPartnershipPage() {
                   position: 'absolute',
                   inset: 0,
                   background:
-                    'linear-gradient(180deg, rgba(25,21,16,0.12) 0%, rgba(25,21,16,0.32) 45%, rgba(25,21,16,0.92) 100%)',
+                    'linear-gradient(180deg, rgba(25,21,16,0.14) 0%, rgba(25,21,16,0.4) 48%, rgba(25,21,16,0.94) 100%)',
                 }}
               />
               <div
-                className="tl-partnership-hero-overlay"
                 style={{
                   position: 'absolute',
                   inset: 0,
@@ -377,11 +430,11 @@ export default function DesignPartnershipPage() {
                   justifyContent: 'space-between',
                 }}
               >
-                <div className="tl-partnership-stat-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
+                <div className="dp-stat-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
                   {[
-                    ['Cohort size', '3-5 partners'],
-                    ['Working rhythm', 'Bi-weekly'],
-                    ['Focus', 'Live revenue flows'],
+                    ['Partner cap', '10-15'],
+                    ['Best fit', '$5k-$100k+/mo'],
+                    ['Focus', 'Recurring revenue'],
                   ].map(([label, value]) => (
                     <div
                       key={label}
@@ -404,20 +457,20 @@ export default function DesignPartnershipPage() {
                       >
                         {label}
                       </div>
-                      <div style={{ marginTop: 8, fontSize: 18, fontWeight: 800, color: C.white }}>{value}</div>
+                      <div style={{ marginTop: 8, fontSize: 18, fontWeight: 800, color: palette.paper }}>{value}</div>
                     </div>
                   ))}
                 </div>
 
                 <div
                   style={{
-                    maxWidth: 460,
-                    padding: 20,
+                    maxWidth: 470,
+                    padding: 22,
                     borderRadius: 24,
-                    backgroundColor: 'rgba(25,21,16,0.7)',
+                    backgroundColor: 'rgba(25,21,16,0.72)',
                     border: '1px solid rgba(254,252,250,0.12)',
                     backdropFilter: 'blur(14px)',
-                    color: C.white,
+                    color: palette.paper,
                   }}
                 >
                   <div
@@ -426,16 +479,17 @@ export default function DesignPartnershipPage() {
                       fontWeight: 800,
                       letterSpacing: '0.08em',
                       textTransform: 'uppercase',
-                      color: C.teal,
+                      color: palette.teal,
                     }}
                   >
-                    What we are building with you
+                    Built for operators
                   </div>
-                  <div style={{ fontSize: 28, fontWeight: 800, lineHeight: 1.1, marginTop: 10 }}>
-                    Direct catering that feels premium to the merchant, the team, and the customer.
+                  <div style={{ marginTop: 10, fontSize: 30, fontWeight: 800, lineHeight: 1.08 }}>
+                    More owned customers. More repeat orders. Less dependence on marketplaces.
                   </div>
                   <p style={{ marginTop: 12, fontSize: 15, lineHeight: 1.65, color: 'rgba(254,252,250,0.78)' }}>
-                    Storefront conversion, repeat revenue, operator workflow continuity, and sharper retention surfaces.
+                    TrayLoop is not software to manage transactions. It is the revenue system behind a stronger direct
+                    catering channel.
                   </p>
                 </div>
               </div>
@@ -444,122 +498,246 @@ export default function DesignPartnershipPage() {
         </div>
       </Section>
 
-      <Section background={C.white} className="tl-partnership-section">
-        <div className="tl-partnership-intro tl-partnership-fade" style={{ maxWidth: 760 }}>
-          <Eyebrow>Why this exists</Eyebrow>
-          <h2
-            className="tl-partnership-title"
-            style={{ fontSize: 42, lineHeight: 1.04, fontWeight: 800, color: C.ink, marginTop: 18 }}
-          >
-            We want a tighter feedback loop than a normal customer relationship.
+      <Section background={palette.paper} className="dp-section">
+        <div className="dp-intro dp-fade" style={{ maxWidth: 760 }}>
+          <Eyebrow>Why operators apply</Eyebrow>
+          <h2 className="dp-title" style={{ fontSize: 44, lineHeight: 1.03, fontWeight: 800, marginTop: 18 }}>
+            Marketplace growth looks good on paper until you count what it actually costs.
           </h2>
-          <p className="tl-partnership-copy" style={{ fontSize: 17, lineHeight: 1.7, color: C.muted, marginTop: 16 }}>
-            Design partners help us make better product decisions earlier. Instead of guessing what operators need after a
-            launch, we build the next layer of TrayLoop with real teams who care deeply about direct catering revenue.
+          <p className="dp-copy" style={{ fontSize: 17, lineHeight: 1.72, color: palette.muted, marginTop: 16 }}>
+            Most catering teams are doing real volume already. The problem is what happens after the order lands and who
+            controls the customer relationship after it is fulfilled.
           </p>
         </div>
 
-        <div className="tl-partnership-grid-2" style={{ marginTop: 34 }}>
-          <Surface className="tl-partnership-fade tl-partnership-delay-1">
-            <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.orange }}>
-              What you get
+        <div className="dp-grid-2" style={{ marginTop: 34 }}>
+          <Surface className="dp-fade dp-delay-1">
+            <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: palette.orange }}>
+              The pain
             </div>
             <div style={{ display: 'grid', gap: 14, marginTop: 18 }}>
-              {partnerBenefits.map((item) => (
-                <Bullet key={item} text={item} />
+              {problemPoints.map((item) => (
+                <Bullet key={item}>{item}</Bullet>
               ))}
             </div>
           </Surface>
 
-          <Surface className="tl-partnership-fade tl-partnership-delay-2" dark>
-            <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.teal }}>
-              Who it is for
+          <Surface className="dp-fade dp-delay-2" dark>
+            <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: palette.teal }}>
+              The cost
             </div>
-            <div style={{ display: 'grid', gap: 14, marginTop: 18 }}>
-              {partnerFit.map((item) => (
-                <Bullet key={item} text={item} light />
-              ))}
+            <div style={{ marginTop: 18, display: 'grid', gap: 16 }}>
+              <div style={{ fontSize: 34, lineHeight: 1.02, fontWeight: 800 }}>You do not have a catering system. You have transactions.</div>
+              <p style={{ fontSize: 16, lineHeight: 1.72, color: 'rgba(254,252,250,0.8)' }}>
+                Random inbound demand, manual follow-up, and third-party dependence do not create a predictable revenue
+                channel. They create a treadmill.
+              </p>
             </div>
           </Surface>
+        </div>
+
+        <div className="dp-actions" style={{ justifyContent: 'center' }}>
+          <PillButton text="Apply for Design Partnership" href={applyHref} variant="primary" size="md" />
         </div>
       </Section>
 
-      <Section background={C.creamSoft} className="tl-partnership-section">
-        <div className="tl-partnership-intro tl-partnership-fade" style={{ maxWidth: 760 }}>
-          <Eyebrow>The arc</Eyebrow>
-          <h2
-            className="tl-partnership-title"
-            style={{ fontSize: 42, lineHeight: 1.04, fontWeight: 800, color: C.ink, marginTop: 18 }}
-          >
-            A clear 90-day collaboration, not an open-ended feedback request.
+      <Section background={palette.creamSoft} className="dp-section">
+        <div className="dp-intro dp-fade" style={{ maxWidth: 760 }}>
+          <Eyebrow>The reframe</Eyebrow>
+          <h2 className="dp-title" style={{ fontSize: 44, lineHeight: 1.03, fontWeight: 800, marginTop: 18 }}>
+            Catering should be a predictable revenue channel, not a random stream of one-off orders.
           </h2>
-          <p className="tl-partnership-copy" style={{ fontSize: 17, lineHeight: 1.7, color: C.muted, marginTop: 16 }}>
-            We use the design partnership to move through diagnosis, iteration, and refinement with enough speed to matter
-            and enough structure to stay useful for your team.
+          <p className="dp-copy" style={{ fontSize: 17, lineHeight: 1.72, color: palette.muted, marginTop: 16 }}>
+            The right system captures demand directly, retains the relationship, and creates repeat revenue without your
+            team manually piecing it together after every event.
           </p>
         </div>
 
-        <div className="tl-partnership-grid-3" style={{ marginTop: 34 }}>
-          {partnershipArc.map((item, index) => (
-            <Surface key={item.step} className={`tl-partnership-fade tl-partnership-delay-${index + 1}`} style={{ minHeight: 250 }}>
-              <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.orange }}>
-                {item.step}
+        <div className="dp-grid-2" style={{ marginTop: 34 }}>
+          {solutionCards.map((card, index) => (
+            <Surface key={card.title} className={`dp-fade dp-delay-${(index % 3) + 1}`}>
+              <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: palette.orange }}>
+                Revenue system
               </div>
-              <div style={{ fontSize: 28, lineHeight: 1.08, fontWeight: 800, color: C.ink, marginTop: 16 }}>{item.title}</div>
-              <p style={{ fontSize: 16, lineHeight: 1.68, color: C.muted, marginTop: 14 }}>{item.detail}</p>
+              <div style={{ fontSize: 28, lineHeight: 1.12, fontWeight: 800, marginTop: 14 }}>{card.title}</div>
+              <p style={{ fontSize: 16, lineHeight: 1.7, color: palette.muted, marginTop: 12 }}>{card.body}</p>
             </Surface>
           ))}
         </div>
       </Section>
 
-      <Section background={C.white} className="tl-partnership-section">
-        <div className="tl-partnership-grid-3">
-          {collaborationLanes.map((lane, index) => (
-            <Surface key={lane.title} className={`tl-partnership-fade tl-partnership-delay-${index + 1}`}>
-              <div style={{ width: 44, height: 4, borderRadius: 999, background: 'linear-gradient(90deg, #E85618 0%, #44D9A1 100%)' }} />
-              <div style={{ fontSize: 24, fontWeight: 800, color: C.ink, marginTop: 16 }}>{lane.title}</div>
-              <p style={{ fontSize: 16, lineHeight: 1.68, color: C.muted, marginTop: 12 }}>{lane.body}</p>
-            </Surface>
-          ))}
-        </div>
-      </Section>
-
-      <section style={{ backgroundColor: C.ink, color: C.white, padding: '88px 24px' }}>
-        <div
-          className="tl-partnership-final"
-          style={{
-            maxWidth: 1180,
-            margin: '0 auto',
-            display: 'grid',
-            gridTemplateColumns: '1fr auto',
-            gap: 24,
-            alignItems: 'center',
-          }}
-        >
-          <div className="tl-partnership-final-copy" style={{ maxWidth: 700 }}>
-            <Eyebrow color={C.teal}>Apply</Eyebrow>
-            <h2 style={{ fontSize: 44, lineHeight: 1.03, fontWeight: 800, marginTop: 18 }}>
-              If you want a real hand in shaping TrayLoop, this is the page to use.
+      <Section background={palette.paper} className="dp-section">
+        <div className="dp-grid-2" style={{ alignItems: 'start' }}>
+          <div className="dp-fade">
+            <Eyebrow>What this is</Eyebrow>
+            <h2 className="dp-title" style={{ fontSize: 42, lineHeight: 1.04, fontWeight: 800, marginTop: 18 }}>
+              A limited partnership for operators who want direct influence on the system before broad scale.
             </h2>
-            <p
-              className="tl-partnership-copy"
-              style={{ fontSize: 18, lineHeight: 1.68, color: 'rgba(254,252,250,0.8)', marginTop: 14 }}
-            >
-              We are keeping the cohort intentionally small so we can move fast, respond directly, and build with care.
+            <div style={{ marginTop: 22, display: 'grid', gap: 14 }}>
+              <Bullet>This is not a free trial.</Bullet>
+              <Bullet>This is not a beta you click through casually.</Bullet>
+              <Bullet>This is early access with white-glove implementation and direct product influence.</Bullet>
+            </div>
+          </div>
+
+          <Surface className="dp-fade dp-delay-1" dark>
+            <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: palette.teal }}>
+              Why we are keeping it small
+            </div>
+            <div style={{ fontSize: 30, lineHeight: 1.08, fontWeight: 800, marginTop: 14 }}>
+              We only want partners who are serious about building a stronger catering channel.
+            </div>
+            <p style={{ fontSize: 16, lineHeight: 1.72, color: 'rgba(254,252,250,0.8)', marginTop: 12 }}>
+              Small cohort. Direct line. Fast iteration. Real implementation support. That is what makes this valuable.
+            </p>
+          </Surface>
+        </div>
+      </Section>
+
+      <Section background={palette.creamSoft} className="dp-section">
+        <div className="dp-intro dp-fade" style={{ maxWidth: 760 }}>
+          <Eyebrow>What you get</Eyebrow>
+          <h2 className="dp-title" style={{ fontSize: 44, lineHeight: 1.03, fontWeight: 800, marginTop: 18 }}>
+            High-leverage support tied directly to revenue growth and operational leverage.
+          </h2>
+        </div>
+
+        <div className="dp-grid-3" style={{ marginTop: 34 }}>
+          {valueStack.map((item, index) => (
+            <Surface key={item.title} className={`dp-fade dp-delay-${(index % 3) + 1}`} style={{ minHeight: 272 }}>
+              <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: palette.orange }}>
+                Included
+              </div>
+              <div style={{ fontSize: 26, lineHeight: 1.1, fontWeight: 800, marginTop: 14 }}>{item.title}</div>
+              <p style={{ fontSize: 16, lineHeight: 1.68, color: palette.muted, marginTop: 12 }}>{item.body}</p>
+              <div
+                style={{
+                  marginTop: 18,
+                  paddingTop: 16,
+                  borderTop: `1px solid ${palette.line}`,
+                  fontSize: 14,
+                  lineHeight: 1.6,
+                  fontWeight: 700,
+                  color: palette.ink,
+                }}
+              >
+                {item.payoff}
+              </div>
+            </Surface>
+          ))}
+        </div>
+
+        <div className="dp-actions" style={{ justifyContent: 'center' }}>
+          <PillButton text="Apply for Design Partnership" href={applyHref} variant="primary" size="md" />
+        </div>
+      </Section>
+
+      <Section background={palette.paper} className="dp-section">
+        <div className="dp-grid-2">
+          <Surface className="dp-fade">
+            <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: palette.orange }}>
+              What is required
+            </div>
+            <div style={{ display: 'grid', gap: 14, marginTop: 18 }}>
+              {requirements.map((item) => (
+                <Bullet key={item}>{item}</Bullet>
+              ))}
+            </div>
+          </Surface>
+
+          <Surface className="dp-fade dp-delay-1" dark>
+            <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: palette.teal }}>
+              Why the filter matters
+            </div>
+            <div style={{ fontSize: 30, lineHeight: 1.08, fontWeight: 800, marginTop: 14 }}>
+              The best feedback comes from operators who already have real revenue at stake.
+            </div>
+            <p style={{ fontSize: 16, lineHeight: 1.72, color: 'rgba(254,252,250,0.8)', marginTop: 12 }}>
+              We are not looking for passive trial users. We are looking for serious operators who care about building a
+              stronger, more owned catering channel.
+            </p>
+          </Surface>
+        </div>
+      </Section>
+
+      <Section background={palette.creamSoft} className="dp-section">
+        <div className="dp-intro dp-fade" style={{ maxWidth: 760 }}>
+          <Eyebrow>ROI</Eyebrow>
+          <h2 className="dp-title" style={{ fontSize: 44, lineHeight: 1.03, fontWeight: 800, marginTop: 18 }}>
+            TrayLoop does not need magic to pay for itself. It only needs to recover revenue you are already losing.
+          </h2>
+        </div>
+
+        <div className="dp-grid-3" style={{ marginTop: 34 }}>
+          {roiCards.map((item, index) => (
+            <Surface key={item.value} className={`dp-fade dp-delay-${index + 1}`} dark={index === 1}>
+              <div style={{ fontSize: 38, lineHeight: 1, fontWeight: 800, color: index === 1 ? palette.teal : palette.ink }}>
+                {item.value}
+              </div>
+              <div
+                style={{
+                  marginTop: 10,
+                  fontSize: 14,
+                  lineHeight: 1.55,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                  fontWeight: 800,
+                  color: index === 1 ? 'rgba(254,252,250,0.72)' : palette.orange,
+                }}
+              >
+                {item.label}
+              </div>
+              <p
+                style={{
+                  marginTop: 16,
+                  fontSize: 16,
+                  lineHeight: 1.7,
+                  color: index === 1 ? 'rgba(254,252,250,0.8)' : palette.muted,
+                }}
+              >
+                {item.body}
+              </p>
+            </Surface>
+          ))}
+        </div>
+      </Section>
+
+      <Section background={palette.paper} className="dp-section">
+        <div className="dp-intro dp-fade" style={{ maxWidth: 760 }}>
+          <Eyebrow>Proof</Eyebrow>
+          <h2 className="dp-title" style={{ fontSize: 44, lineHeight: 1.03, fontWeight: 800, marginTop: 18 }}>
+            Real operators do not need more software. They need a stronger revenue system.
+          </h2>
+        </div>
+
+        <div className="dp-grid-3" style={{ marginTop: 34 }}>
+          {proofCards.map((item, index) => (
+            <Surface key={item.source} className={`dp-fade dp-delay-${index + 1}`}>
+              <div style={{ fontSize: 24, lineHeight: 1.38, fontWeight: 700 }}>"{item.quote}"</div>
+              <div style={{ marginTop: 18, fontSize: 14, lineHeight: 1.6, color: palette.muted, fontWeight: 700 }}>{item.source}</div>
+            </Surface>
+          ))}
+        </div>
+      </Section>
+
+      <Section background={palette.ink} className="dp-section" style={{ borderTop: 'none' }}>
+        <div className="dp-final" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 24, alignItems: 'center' }}>
+          <div className="dp-final-copy" style={{ maxWidth: 760 }}>
+            <Eyebrow dark>Last call</Eyebrow>
+            <h2 style={{ fontSize: 46, lineHeight: 1.02, fontWeight: 800, color: palette.paper, marginTop: 18 }}>
+              We are accepting 10-15 partners. Then this round closes.
+            </h2>
+            <p className="dp-copy" style={{ fontSize: 18, lineHeight: 1.7, color: 'rgba(254,252,250,0.8)', marginTop: 14 }}>
+              If you want to own more of your catering revenue, reduce dependence on third parties, and help shape the
+              system before broad rollout, this is the moment to apply.
             </p>
           </div>
 
-          <div className="tl-partnership-actions" style={{ justifyContent: 'flex-end', marginTop: 0 }}>
-            <PillButton text="Apply for the cohort" href="/demo" variant="primary" size="md" />
-            <PillButton
-              text="Send a note"
-              href="mailto:hello@trayloophq.com?subject=TrayLoop%20Design%20Partnership"
-              variant="ghost"
-              size="md"
-            />
+          <div className="dp-actions" style={{ justifyContent: 'flex-end', marginTop: 0 }}>
+            <PillButton text="Apply Now" href={applyHref} variant="primary" size="md" />
           </div>
         </div>
-      </section>
+      </Section>
     </main>
   );
 }
