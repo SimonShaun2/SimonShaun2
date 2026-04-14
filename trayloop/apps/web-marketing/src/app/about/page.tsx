@@ -1,3 +1,25 @@
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+    title: 'About TrayLoop — Commission-Free Catering Platform for Restaurants',
+    description: 'Learn how TrayLoop helps restaurants own their catering revenue with a branded storefront, zero commissions, and AI-powered reorder tools. Built for growth.',
+    alternates: {
+          canonical: 'https://trayloophq.com/about',
+    },
+    openGraph: {
+          title: 'About TrayLoop — Commission-Free Catering Platform for Restaurants',
+          description: 'Learn how TrayLoop helps restaurants own their catering revenue with a branded storefront, zero commissions, and AI-powered reorder tools.',
+          url: 'https://trayloophq.com/about',
+          siteName: 'TrayLoop',
+          type: 'website',
+    },
+    twitter: {
+          card: 'summary_large_image',
+          title: 'About TrayLoop — Commission-Free Catering Platform for Restaurants',
+          description: 'Learn how TrayLoop helps restaurants own their catering revenue with a branded storefront, zero commissions, and AI-powered reorder tools.',
+    },
+};
+
 import type { CSSProperties } from 'react';
 const color = {
   cream: '#F9F5EF',
