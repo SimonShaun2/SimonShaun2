@@ -1,3 +1,25 @@
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+    title: 'TrayLoop Product — Restaurant Catering Storefront & Management Tools',
+    description: 'Explore TrayLoop\'s full product suite: branded catering storefront, automated order management, AI reorder triggers, and revenue dashboard — built for restaurants.',
+    alternates: {
+          canonical: 'https://trayloophq.com/product',
+    },
+    openGraph: {
+          title: 'TrayLoop Product — Restaurant Catering Storefront & Management Tools',
+          description: 'Branded catering storefront, automated order management, AI reorder triggers, and revenue dashboard — built for restaurants.',
+          url: 'https://trayloophq.com/product',
+          siteName: 'TrayLoop',
+          type: 'website',
+    },
+    twitter: {
+          card: 'summary_large_image',
+          title: 'TrayLoop Product — Restaurant Catering Storefront & Management Tools',
+          description: 'Branded catering storefront, automated order management, AI reorder triggers, and revenue dashboard — built for restaurants.',
+    },
+};
+
 import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
