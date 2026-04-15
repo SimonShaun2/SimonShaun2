@@ -390,12 +390,6 @@ function ArticleCard({
 
 /* ── Page ── */
 
-export const metadata = {
-  title: 'Blog | TrayLoop - Catering Growth Insights',
-  description:
-    'Actionable tips, strategies, and data to help restaurants grow their catering revenue with direct ordering.',
-};
-
 export default async function BlogPage() {
   const articles = await getArticles();
   const [featured, ...rest] = articles;

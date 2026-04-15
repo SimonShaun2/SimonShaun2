@@ -149,10 +149,10 @@ export default function RootLayout({
                                                 __html: JSON.stringify(softwareJsonLd),
                                   }}
                                 />
-              </head>head>
+              </head>
               <body>
                       <Nav />
-                      <main>{children}</main>main>
+                      <main>{children}</main>
                       <Footer />
               
                       <AnalyticsProvider appName="marketing" />
@@ -182,7 +182,7 @@ export default function RootLayout({
                                                 }}
                                               />
                                 <noscript>
-                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                              {/* eslint-disable-next-line */}
                                               <img
                                                                 height="1"
                                                                 width="1"
@@ -190,10 +190,10 @@ export default function RootLayout({
                                                                 src={`https://www.facebook.com/tr?id=${fbPixelId}&ev=PageView&noscript=1`}
                                                                 alt=""
                                                               />
-                                </noscript>noscript>
-                    </>>
+                                </noscript>
+                    </>
                   ) : null}
-              </body>body>
-        </html>html>
+              </body>
+        </html>
       );
-}</></html>
+}

@@ -18,8 +18,8 @@ const C = {
 function Section({ children, bg = 'transparent', style }: { children: React.ReactNode; bg?: string; style?: CSSProperties }) {
     return (
           <section style={{ backgroundColor: bg, padding: '80px 24px', ...style }}>
-                  <div style={{ maxWidth: 1120, margin: '0 auto' }}>{children}</div>div>
-          </section>section>
+                  <div style={{ maxWidth: 1120, margin: '0 auto' }}>{children}</div>
+          </section>
         );
 }
 
@@ -27,7 +27,7 @@ function Label({ text, color = C.orange }: { text: string; color?: string }) {
     return (
           <div style={{ fontSize: 13, fontWeight: 600, color, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 12 }}>
             {text}
-          </div>div>
+          </div>
         );
 }
 
@@ -39,8 +39,8 @@ function BulletItem({ text }: { text: string }) {
     return (
           <li style={{ display: 'flex', alignItems: 'flex-start', marginBottom: 12, listStyle: 'none' }}>
                   <TealDot />
-                  <span style={{ color: C.ink, fontSize: 15, lineHeight: 1.5 }}>{text}</span>span>
-          </li>li>
+                  <span style={{ color: C.ink, fontSize: 15, lineHeight: 1.5 }}>{text}</span>
+          </li>
         );
 }
 
@@ -49,11 +49,11 @@ function FaqItem({ q, a }: { q: string; a: string }) {
     return (
           <div style={{ backgroundColor: C.white, borderRadius: 12, padding: '20px 24px', cursor: 'pointer' }} onClick={() => setOpen(!open)}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <p style={{ fontSize: 16, fontWeight: 600, color: C.ink }}>{q}</p>p>
-                            <span style={{ fontSize: 20, color: C.muted, transform: open ? 'rotate(45deg)' : 'rotate(0deg)', flexShrink: 0, marginLeft: 16 }}>+</span>span>
-                  </div>div>
-            {open && <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.7, marginTop: 12 }}>{a}</p>p>}
-          </div>div>
+                            <p style={{ fontSize: 16, fontWeight: 600, color: C.ink }}>{q}</p>
+                            <span style={{ fontSize: 20, color: C.muted, transform: open ? 'rotate(45deg)' : 'rotate(0deg)', flexShrink: 0, marginLeft: 16 }}>+</span>
+                  </div>
+            {open && <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.7, marginTop: 12 }}>{a}</p>}
+          </div>
         );
 }
 
@@ -75,32 +75,32 @@ export default function HowItWorksContent() {
                                   <Label text="Product" />
                                   <h1 style={{ fontSize: 46, fontWeight: 800, color: C.ink, lineHeight: 1.15, marginBottom: 20 }}>
                                               The System Behind Every High-Performing Catering Program
-                                  </h1>h1>
+                                  </h1>
                                   <p style={{ fontSize: 18, lineHeight: 1.6, color: C.muted, marginBottom: 48 }}>
                                               Most restaurants have catering orders. Few have catering infrastructure. TrayLoop is the operating system that turns scattered orders into a predictable, growing revenue stream.
-                                  </p>p>
+                                  </p>
                                   <div style={{ display: 'flex', gap: 32, justifyContent: 'center', flexWrap: 'wrap' }}>
                                     {[{ value: '100%', label: 'of revenue stays yours' }, { value: '3x', label: 'repeat order rate' }, { value: '100%', label: 'done-for-you setup' }].map((s) => (
                           <div key={s.label} style={{ textAlign: 'center', flex: '0 1 200px' }}>
-                                          <div style={{ fontSize: 40, fontWeight: 800, color: C.ink }}>{s.value}</div>div>
-                                          <div style={{ fontSize: 14, color: C.muted, marginTop: 4 }}>{s.label}</div>div>
-                          </div>div>
+                                          <div style={{ fontSize: 40, fontWeight: 800, color: C.ink }}>{s.value}</div>
+                                          <div style={{ fontSize: 14, color: C.muted, marginTop: 4 }}>{s.label}</div>
+                          </div>
                         ))}
-                                  </div>div>
-                        </div>div>
-                </Section>Section>
+                                  </div>
+                        </div>
+                </Section>
                 <Section bg={C.cream} style={{ paddingTop: 40 }}>
                         <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
                                   <PillButton text="Book a free Demo" href="/demo" variant="primary" />
                                   <PillButton text="See pricing" href="/pricing" variant="ghost" />
-                        </div>div>
-                </Section>Section>
+                        </div>
+                </Section>
                 <Section bg={C.cream}>
                         <div style={{ maxWidth: 720, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
                                   <Label text="FAQ" />
                           {faqs.map((faq) => <FaqItem key={faq.q} q={faq.q} a={faq.a} />)}
-                        </div>div>
-                </Section>Section>
-          </>>
+                        </div>
+                </Section>
+          </>
         );
-}</>
+}
