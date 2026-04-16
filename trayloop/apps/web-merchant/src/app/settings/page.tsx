@@ -1286,7 +1286,7 @@ function TeamSection({ isMobile }: { isMobile: boolean }) {
                       flexShrink: 0,
                     }}
                   >
-                    {(member.userName || member.userEmail).charAt(0).toUpperCase()}
+                    {(member.userName || member.userEmail || '?').charAt(0).toUpperCase()}
                   </div>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ fontSize: 14, fontWeight: 600, color: '#1C1917', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
