@@ -1,6 +1,5 @@
 'use client';
 
-import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState } from 'react';
 import {
   apiFetch,
@@ -8,20 +7,13 @@ import {
   type MerchantStorefrontContext,
 } from '../lib/api';
 import SetupChecklist from '../components/setup-checklist';
-import AiSalesPanel from '../components/ai-sales-panel';
-import RevenueIntelligencePanel from '../components/revenue-intelligence-panel';
 import { usePlanAccess } from '../components/plan-access-provider';
-import { automationsEnabled } from '../lib/features';
 import { hasMerchantSession } from '../lib/session';
 import { useMobile } from '../lib/use-mobile';
 import {
   getMerchantPlanDisplay,
   getMerchantPlanPriceLabel,
 } from '../lib/plan-copy';
-
-const AutomationSummaryPanel = dynamic(
-  () => import('../components/automation-summary-panel'),
-);
 
 interface Order {
   id: string;
@@ -1089,22 +1081,93 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* AI Sales + Revenue Intelligence row */}
+      {/* Quick-access row */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-          gap: 20,
-          alignItems: 'start',
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+          gap: 16,
         }}
       >
-        <AiSalesPanel />
-        <div style={{ display: 'grid', gap: 20 }}>
-          <RevenueIntelligencePanel />
-          {automationsEnabled ? <AutomationSummaryPanel /> : null}
-        </div>
+        <QuickAccessCard
+          eyebrow="AI Sales Engine"
+          title="Re-engage catering customers"
+          href="/follow-ups"
+          linkText="Open Follow-Ups →"
+          stats={[
+            { label: 'Total customers', value: String(stats?.totalCustomers ?? 0) },
+            { label: 'Repeat customers', value: String(stats?.repeatCustomers ?? 0) },
+          ]}
+        />
+        <QuickAccessCard
+          eyebrow="Revenue Intelligence"
+          title="Revenue trends and actions"
+          href="/revenue-intelligence"
+          linkText="Open Revenue Report →"
+          stats={[
+            { label: '30-day revenue', value: stats ? money(stats.last30DaysRevenue) : '$0' },
+            { label: 'Avg order value', value: stats ? money(stats.avgOrderValue) : '$0' },
+          ]}
+        />
+        <QuickAccessCard
+          eyebrow="Customers"
+          title="Customer intelligence"
+          href="/customers"
+          linkText="Open Customers →"
+          stats={[
+            { label: 'Total customers', value: String(stats?.totalCustomers ?? 0) },
+            { label: 'Repeat customers', value: String(stats?.repeatCustomers ?? 0) },
+          ]}
+        />
       </div>
     </div>
+  );
+}
+
+function QuickAccessCard({
+  eyebrow,
+  title,
+  href,
+  linkText,
+  stats,
+}: {
+  eyebrow: string;
+  title: string;
+  href: string;
+  linkText: string;
+  stats: Array<{ label: string; value: string }>;
+}) {
+  return (
+    <a
+      href={href}
+      style={{
+        display: 'block',
+        textDecoration: 'none',
+        color: 'inherit',
+        border: '1px solid #E7E5E4',
+        borderRadius: 16,
+        background: '#FFFFFF',
+        padding: 20,
+      }}
+    >
+      <div style={{ fontSize: 11, fontWeight: 700, color: '#D4A853', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+        {eyebrow}
+      </div>
+      <div style={{ fontSize: 18, fontWeight: 800, color: '#1C1917', lineHeight: 1.3, marginBottom: 16 }}>
+        {title}
+      </div>
+      <div style={{ display: 'flex', gap: 20, marginBottom: 16 }}>
+        {stats.map((s) => (
+          <div key={s.label}>
+            <div style={{ fontSize: 22, fontWeight: 800, color: '#1C1917' }}>{s.value}</div>
+            <div style={{ fontSize: 12, color: '#78716C', marginTop: 2 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ fontSize: 13, fontWeight: 700, color: '#E85618' }}>
+        {linkText}
+      </div>
+    </a>
   );
 }
 
