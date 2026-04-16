@@ -113,14 +113,14 @@ export function registerRoutes(app: FastifyInstance) {
 
   app.patch('/organizations/:id/status', { preHandler: [validateBody(adminStatusBodySchema)] }, async (request, reply) => {
     const { id } = adminStatusParamsSchema.parse(request.params);
-    const { status } = request.validatedBody as { status: string };
+    const { status } = request.validatedBody as z.infer<typeof adminStatusBodySchema>;
     const result = await service.updateOrgStatus(id, status);
     return reply.send({ data: result });
   });
 
   app.patch('/users/:id/status', { preHandler: [validateBody(adminStatusBodySchema)] }, async (request, reply) => {
     const { id } = adminStatusParamsSchema.parse(request.params);
-    const { status } = request.validatedBody as { status: string };
+    const { status } = request.validatedBody as z.infer<typeof adminStatusBodySchema>;
     const result = await service.updateUserStatus(id, status);
     return reply.send({ data: result });
   });

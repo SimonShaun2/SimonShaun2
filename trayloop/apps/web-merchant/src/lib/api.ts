@@ -7,6 +7,12 @@ import type {
 import type { PaginationMeta } from '@trayloop/types';
 import { clearMerchantSession, ensureMerchantSession } from './session';
 
+declare global {
+  interface Window {
+    __trayloop_auth_redirect?: boolean;
+  }
+}
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export interface MerchantStorefrontContext {
@@ -520,9 +526,9 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
     if (typeof window !== 'undefined') {
       // Only redirect once — avoid cascade where concurrent requests all
       // nuke the token and trigger multiple redirects.
-      const alreadyRedirecting = (window as any).__trayloop_auth_redirect;
+      const alreadyRedirecting = window.__trayloop_auth_redirect;
       if (!alreadyRedirecting) {
-        (window as any).__trayloop_auth_redirect = true;
+        window.__trayloop_auth_redirect = true;
         clearMerchantSession();
         window.location.href = '/login';
       }

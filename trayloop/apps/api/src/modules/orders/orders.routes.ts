@@ -1,10 +1,10 @@
 import type { FastifyInstance } from 'fastify';
+import type { z } from 'zod';
 import { requireAuth } from '../../lib/middleware/auth.js';
 import { requireTenant } from '../../lib/middleware/tenant.js';
 import { validateBody, validateParams } from '../../lib/middleware/validate.js';
 import { requireIdempotency } from '../../lib/middleware/idempotency.js';
 import { customerIdParamsSchema, idParamsSchema } from '../../lib/params.js';
-import type { z } from 'zod';
 import {
   createOrderSchema,
   updateOrderStatusSchema,
@@ -27,7 +27,7 @@ export function registerRoutes(app: FastifyInstance) {
 
   // List orders by customer
   app.get('/customer/:customerId', { preHandler: [validateParams(customerIdParamsSchema)] }, async (request) => {
-    const { customerId } = request.validatedParams as { customerId: string };
+    const { customerId } = request.validatedParams as z.infer<typeof customerIdParamsSchema>;
     const result = await service.listByCustomer(customerId);
     return { data: result };
   });
@@ -41,7 +41,7 @@ export function registerRoutes(app: FastifyInstance) {
 
   // Get order detail
   app.get('/:id', { preHandler: [validateParams(idParamsSchema)] }, async (request) => {
-    const { id } = request.validatedParams as { id: string };
+    const { id } = request.validatedParams as z.infer<typeof idParamsSchema>;
     const order = await service.getById(id, request.ctx.tenant!.organizationId);
     return { data: order };
   });
@@ -58,7 +58,7 @@ export function registerRoutes(app: FastifyInstance) {
 
   // Update order status
   app.patch('/:id/status', { preHandler: [validateParams(idParamsSchema), validateBody(updateOrderStatusSchema)] }, async (request, reply) => {
-    const { id } = request.validatedParams as { id: string };
+    const { id } = request.validatedParams as z.infer<typeof idParamsSchema>;
     const result = await service.updateStatus(
       id,
       request.ctx.tenant!.organizationId,
@@ -70,7 +70,7 @@ export function registerRoutes(app: FastifyInstance) {
 
   // Send deposit link
   app.post('/:id/send-deposit-link', { preHandler: [validateParams(idParamsSchema)] }, async (request, reply) => {
-    const { id } = request.validatedParams as { id: string };
+    const { id } = request.validatedParams as z.infer<typeof idParamsSchema>;
     const body = sendDepositLinkSchema.parse(request.body ?? {});
     const result = await service.sendDepositLink(
       id,
@@ -83,7 +83,7 @@ export function registerRoutes(app: FastifyInstance) {
 
   // Mark order as paid
   app.patch('/:id/mark-paid', { preHandler: [validateParams(idParamsSchema)] }, async (request, reply) => {
-    const { id } = request.validatedParams as { id: string };
+    const { id } = request.validatedParams as z.infer<typeof idParamsSchema>;
     const result = await service.markPaid(
       id,
       request.ctx.tenant!.organizationId,
@@ -94,7 +94,7 @@ export function registerRoutes(app: FastifyInstance) {
 
   // Reorder from existing order (idempotent)
   app.post('/:id/reorder', { preHandler: [validateParams(idParamsSchema), requireIdempotency()] }, async (request, reply) => {
-    const { id } = request.validatedParams as { id: string };
+    const { id } = request.validatedParams as z.infer<typeof idParamsSchema>;
     const body = reorderSchema.parse(request.body);
     const result = await service.reorder(
       id,
@@ -107,7 +107,7 @@ export function registerRoutes(app: FastifyInstance) {
 
   // Refund deposit
   app.post('/:id/refund-deposit', { preHandler: [validateParams(idParamsSchema)] }, async (request, reply) => {
-    const { id } = request.validatedParams as { id: string };
+    const { id } = request.validatedParams as z.infer<typeof idParamsSchema>;
     const result = await service.refundDeposit(
       id,
       request.ctx.tenant!.organizationId,
