@@ -163,7 +163,7 @@ function BrandPreview({
 }
 
 export default function StorefrontCustomizePage() {
-  const isMobile = useMobile(980);
+  const isMobile = useMobile();
   const [organization, setOrganization] = useState<MerchantOrganization | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

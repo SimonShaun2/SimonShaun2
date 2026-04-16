@@ -19,7 +19,7 @@ import {
 
 function MerchantBillingPageContent() {
   const searchParams = useSearchParams();
-  const isMobile = useMobile(900);
+  const isMobile = useMobile();
   const [data, setData] = useState<MerchantOnboardingStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

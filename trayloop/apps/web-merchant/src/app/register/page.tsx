@@ -27,7 +27,7 @@ export default function RegisterPage() {
 
 function RegisterContent() {
   const searchParams = useSearchParams();
-  const isMobile = useMobile(900);
+  const isMobile = useMobile();
   const existingMerchant = searchParams.get('step') === 'org';
   const [step, setStep] = useState<Step>(existingMerchant ? 'details' : 'plan');
   const [selectedPlan, setSelectedPlan] = useState<PlanKey>(DEFAULT_PLAN);

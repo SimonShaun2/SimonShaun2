@@ -13,6 +13,7 @@ import RevenueIntelligencePanel from '../components/revenue-intelligence-panel';
 import { usePlanAccess } from '../components/plan-access-provider';
 import { automationsEnabled } from '../lib/features';
 import { hasMerchantSession } from '../lib/session';
+import { useMobile } from '../lib/use-mobile';
 import {
   getMerchantPlanDisplay,
   getMerchantPlanPriceLabel,
@@ -304,6 +305,7 @@ function buildCopilotInsights({
 }
 
 export default function DashboardPage() {
+  const isMobile = useMobile();
   const planAccess = usePlanAccess();
   const [orders, setOrders] = useState<Order[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
@@ -508,9 +510,9 @@ export default function DashboardPage() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1.5fr) minmax(320px, 0.95fr)',
+            gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1.5fr) minmax(0, 0.95fr)',
             gap: 18,
-            padding: '28px 28px 24px',
+            padding: isMobile ? '20px 16px' : '28px 28px 24px',
           }}
         >
           <div>
@@ -695,7 +697,7 @@ export default function DashboardPage() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+            gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))',
             gap: 1,
             background: 'rgba(255,255,255,0.08)',
           }}
@@ -749,7 +751,7 @@ export default function DashboardPage() {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1.45fr) minmax(320px, 0.95fr)',
+          gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1.45fr) minmax(0, 0.95fr)',
           gap: 20,
           alignItems: 'start',
         }}
@@ -901,7 +903,7 @@ export default function DashboardPage() {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+                gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))',
                 gap: 12,
               }}
             >
@@ -1000,7 +1002,7 @@ export default function DashboardPage() {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+                gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))',
                 gap: 12,
                 marginBottom: 18,
               }}

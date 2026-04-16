@@ -23,7 +23,7 @@ type BannerTone = 'success' | 'warning' | 'error';
 
 function MerchantOnboardingPageContent() {
   const searchParams = useSearchParams();
-  const isMobile = useMobile(900);
+  const isMobile = useMobile();
   const stripeState = searchParams.get('stripe');
   const billingStateParam = searchParams.get('billing');
   const welcomeState = searchParams.get('welcome');
