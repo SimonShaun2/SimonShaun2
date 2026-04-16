@@ -740,7 +740,100 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* Operator Board — primary work area, right below the header */}
+      {/* Quick-access row — top of the working area */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+          gap: 16,
+        }}
+      >
+        <QuickAccessCard
+          eyebrow="AI Sales Engine"
+          title="Re-engage catering customers"
+          href="/follow-ups"
+          linkText="Open Follow-Ups →"
+          stats={[
+            { label: 'Total customers', value: String(stats?.totalCustomers ?? 0) },
+            { label: 'Repeat customers', value: String(stats?.repeatCustomers ?? 0) },
+          ]}
+        />
+        <QuickAccessCard
+          eyebrow="Revenue Intelligence"
+          title="Revenue trends and actions"
+          href="/revenue-intelligence"
+          linkText="Open Revenue Report →"
+          stats={[
+            { label: '30-day revenue', value: stats ? money(stats.last30DaysRevenue) : '$0' },
+            { label: 'Avg order value', value: stats ? money(stats.avgOrderValue) : '$0' },
+          ]}
+        />
+        <QuickAccessCard
+          eyebrow="Customers"
+          title="Customer intelligence"
+          href="/customers"
+          linkText="Open Customers →"
+          stats={[
+            { label: 'Total customers', value: String(stats?.totalCustomers ?? 0) },
+            { label: 'Repeat customers', value: String(stats?.repeatCustomers ?? 0) },
+          ]}
+        />
+      </div>
+
+      {/* Storefront + Plan | Command Shelf row */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1fr) minmax(0, 1.4fr)',
+          gap: 16,
+          alignItems: 'start',
+        }}
+      >
+        <div style={{ display: 'grid', gap: 16 }}>
+          <ActionShelf
+            storefrontUrl={storefrontContext?.storefrontUrl ?? null}
+            totalRevenue={stats?.last30DaysRevenue ?? 0}
+            last7DaysOrders={stats?.last7DaysOrders ?? 0}
+            repeatCustomers={stats?.repeatCustomers ?? 0}
+          />
+          {currentPlanDisplay ? (
+            <section style={{ border: '1px solid #E7E5E4', borderRadius: 16, background: '#FFFFFF', padding: 20 }}>
+              <div style={sectionEyebrowStyle}>Plan lane</div>
+              <h2 style={{ fontSize: 18, fontWeight: 800, color: '#1C1917', margin: '4px 0 6px' }}>
+                {currentPlanDisplay.label} is active
+              </h2>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8, marginTop: 12 }}>
+                <PlanSummaryCard label="Included now" title={currentPlanDisplay.label} body={currentPlanDisplay.highlights.join(' | ')} />
+                <PlanSummaryCard label="Next unlock" title={nextPlanDisplay?.label ?? 'Top plan active'} body={nextPlanDisplay ? nextPlanDisplay.highlights.join(' | ') : 'Highest plan features available.'} />
+              </div>
+              <a href="/billing" style={{ ...inlineLinkStyle, display: 'inline-block', marginTop: 12 }}>Open billing and plan</a>
+            </section>
+          ) : null}
+        </div>
+        <SetupChecklist />
+      </div>
+
+      {/* Growth Copilot — horizontal bar with 4 insight cards */}
+      <section style={{ border: '1px solid #E7E5E4', borderRadius: 16, background: 'linear-gradient(135deg, #1C1917 0%, #292524 55%, #44403C 100%)', color: '#FAFAF9', padding: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
+          <div>
+            <div style={sectionEyebrowStyle}>Growth Copilot</div>
+            <h2 style={{ fontSize: 20, fontWeight: 800, color: '#FAFAF9', margin: '4px 0 0' }}>
+              What to price, upsell, reorder, and fix next
+            </h2>
+          </div>
+          <a href="/growth-advisor" style={{ display: 'inline-flex', alignItems: 'center', padding: '10px 16px', borderRadius: 12, background: '#D4A853', color: '#1C1917', fontSize: 13, fontWeight: 800, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+            {growthAdvisorUnlocked ? 'Open Growth Copilot' : 'Unlock Growth Advisor'}
+          </a>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 12 }}>
+          {copilotInsights.map((insight) => (
+            <CopilotInsightCard key={insight.key} insight={insight} unlocked={growthAdvisorUnlocked} />
+          ))}
+        </div>
+      </section>
+
+      {/* Operator Board */}
       <section
             style={{
               border: '1px solid #E7E5E4',
@@ -976,102 +1069,6 @@ export default function DashboardPage() {
             ) : null}
       </section>
 
-      {/* Intelligence row: Plan + Copilot */}
-      {currentPlanDisplay ? (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-            gap: 16,
-            alignItems: 'start',
-          }}
-        >
-          <section style={{ border: '1px solid #E7E5E4', borderRadius: 16, background: '#FFFFFF', padding: 20 }}>
-            <div style={sectionEyebrowStyle}>Plan lane</div>
-            <h2 style={{ fontSize: 20, fontWeight: 800, color: '#1C1917', margin: '4px 0 6px' }}>
-              {currentPlanDisplay.label} is active
-            </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginTop: 14 }}>
-              <PlanSummaryCard label="Included now" title={currentPlanDisplay.label} body={currentPlanDisplay.highlights.join(' | ')} />
-              <PlanSummaryCard label="Next unlock" title={nextPlanDisplay?.label ?? 'Top plan active'} body={nextPlanDisplay ? nextPlanDisplay.highlights.join(' | ') : 'Highest plan features available.'} />
-            </div>
-            <a href="/billing" style={{ ...inlineLinkStyle, display: 'inline-block', marginTop: 14 }}>Open billing and plan</a>
-          </section>
-
-          <section style={{ border: '1px solid #E7E5E4', borderRadius: 16, background: 'linear-gradient(135deg, #1C1917 0%, #292524 55%, #44403C 100%)', color: '#FAFAF9', padding: 20 }}>
-            <div style={sectionEyebrowStyle}>Growth Copilot</div>
-            <h2 style={{ fontSize: 20, fontWeight: 800, color: '#FAFAF9', margin: '4px 0 6px' }}>
-              What to price, upsell, reorder, and fix next
-            </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10, marginTop: 14 }}>
-              {copilotInsights.map((insight) => (
-                <CopilotInsightCard key={insight.key} insight={insight} unlocked={growthAdvisorUnlocked} />
-              ))}
-            </div>
-            <a href="/growth-advisor" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '10px 16px', borderRadius: 12, background: '#D4A853', color: '#1C1917', fontSize: 13, fontWeight: 800, textDecoration: 'none', marginTop: 14 }}>
-              {growthAdvisorUnlocked ? 'Open Growth Copilot' : 'Unlock Growth Advisor'}
-            </a>
-          </section>
-        </div>
-      ) : null}
-
-      {/* Setup + Storefront row */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-          gap: 16,
-          alignItems: 'start',
-        }}
-      >
-        <SetupChecklist />
-        <ActionShelf
-          storefrontUrl={storefrontContext?.storefrontUrl ?? null}
-          totalRevenue={stats?.last30DaysRevenue ?? 0}
-          last7DaysOrders={stats?.last7DaysOrders ?? 0}
-          repeatCustomers={stats?.repeatCustomers ?? 0}
-        />
-      </div>
-
-      {/* Quick-access row */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
-          gap: 16,
-        }}
-      >
-        <QuickAccessCard
-          eyebrow="AI Sales Engine"
-          title="Re-engage catering customers"
-          href="/follow-ups"
-          linkText="Open Follow-Ups →"
-          stats={[
-            { label: 'Total customers', value: String(stats?.totalCustomers ?? 0) },
-            { label: 'Repeat customers', value: String(stats?.repeatCustomers ?? 0) },
-          ]}
-        />
-        <QuickAccessCard
-          eyebrow="Revenue Intelligence"
-          title="Revenue trends and actions"
-          href="/revenue-intelligence"
-          linkText="Open Revenue Report →"
-          stats={[
-            { label: '30-day revenue', value: stats ? money(stats.last30DaysRevenue) : '$0' },
-            { label: 'Avg order value', value: stats ? money(stats.avgOrderValue) : '$0' },
-          ]}
-        />
-        <QuickAccessCard
-          eyebrow="Customers"
-          title="Customer intelligence"
-          href="/customers"
-          linkText="Open Customers →"
-          stats={[
-            { label: 'Total customers', value: String(stats?.totalCustomers ?? 0) },
-            { label: 'Repeat customers', value: String(stats?.repeatCustomers ?? 0) },
-          ]}
-        />
-      </div>
     </div>
   );
 }
