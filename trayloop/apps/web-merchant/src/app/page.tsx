@@ -759,199 +759,6 @@ export default function DashboardPage() {
         <div style={{ display: 'grid', gap: 20 }}>
           <SetupChecklist />
 
-          {currentPlanDisplay ? (
-            <section
-              style={{
-                border: '1px solid #E7E5E4',
-                borderRadius: 18,
-                background: '#FFFFFF',
-                padding: 20,
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                  gap: 12,
-                  flexWrap: 'wrap',
-                  marginBottom: 16,
-                }}
-              >
-                <div>
-                  <div style={sectionEyebrowStyle}>Plan lane</div>
-                  <h2
-                    style={{
-                      fontSize: 24,
-                      fontWeight: 800,
-                      color: '#1C1917',
-                      margin: '4px 0 6px',
-                    }}
-                  >
-                    {currentPlanDisplay.label} is active
-                  </h2>
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: 13,
-                      color: '#57534E',
-                      lineHeight: 1.6,
-                    }}
-                  >
-                    The dashboard now reflects what is unlocked today and where the
-                    next upgrade creates leverage.
-                  </p>
-                </div>
-                <a href="/billing" style={inlineLinkStyle}>
-                  Open billing and plan
-                </a>
-              </div>
-
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
-                  gap: 12,
-                }}
-              >
-                <PlanSummaryCard
-                  label="Included now"
-                  title={currentPlanDisplay.label}
-                  body={currentPlanDisplay.highlights.join(' | ')}
-                />
-                <PlanSummaryCard
-                  label="Next unlock"
-                  title={nextPlanDisplay?.label ?? 'Top plan active'}
-                  body={
-                    nextPlanDisplay
-                      ? nextPlanDisplay.highlights.join(' | ')
-                      : 'You already have the highest plan features available.'
-                  }
-                />
-                <PlanSummaryCard
-                  label="Plan price"
-                  title={currentPlanPriceLabel}
-                  body="Billing controls upgrades, downgrades, and add-on access from one place."
-                />
-              </div>
-            </section>
-          ) : null}
-
-          <section
-            style={{
-              border: '1px solid #E7E5E4',
-              borderRadius: 18,
-              background:
-                'linear-gradient(135deg, rgba(28,25,23,0.98) 0%, rgba(41,37,36,0.98) 55%, rgba(68,64,60,0.98) 100%)',
-              color: '#FAFAF9',
-              padding: 20,
-              display: 'grid',
-              gap: 16,
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                gap: 12,
-                alignItems: 'flex-start',
-                flexWrap: 'wrap',
-              }}
-            >
-              <div>
-                <div style={sectionEyebrowStyle}>Growth Copilot</div>
-                <h2
-                  style={{
-                    fontSize: 24,
-                    fontWeight: 800,
-                    color: '#FAFAF9',
-                    margin: '4px 0 6px',
-                  }}
-                >
-                  What to price higher, upsell, reorder, and fix next
-                </h2>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: 13,
-                    color: 'rgba(250,250,249,0.78)',
-                    lineHeight: 1.6,
-                    maxWidth: 780,
-                  }}
-                >
-                  The copilot reads the same live signal as the operator board, then turns it into
-                  a short list of moves the team can act on immediately.
-                </p>
-              </div>
-              <div
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: 999,
-                  background: growthAdvisorUnlocked ? 'rgba(34,197,94,0.14)' : 'rgba(212,168,83,0.16)',
-                  border: growthAdvisorUnlocked ? '1px solid rgba(34,197,94,0.35)' : '1px solid rgba(212,168,83,0.35)',
-                  color: growthAdvisorUnlocked ? '#BBF7D0' : '#FDE68A',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                }}
-              >
-                {growthAdvisorUnlocked ? 'Copilot live on this plan' : 'Copilot preview locked'}
-              </div>
-            </div>
-
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))',
-                gap: 12,
-              }}
-            >
-              {copilotInsights.map((insight) => (
-                <CopilotInsightCard
-                  key={insight.key}
-                  insight={insight}
-                  unlocked={growthAdvisorUnlocked}
-                />
-              ))}
-            </div>
-
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                gap: 12,
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                paddingTop: 2,
-              }}
-            >
-              <div style={{ fontSize: 12, color: 'rgba(250,250,249,0.72)', lineHeight: 1.6 }}>
-                {growthAdvisorUnlocked
-                  ? 'Unlocks stay intact through billing, and the advisor links directly into the catalog, customers, orders, and launch surfaces.'
-                  : 'Unlock Growth Advisor to turn these previews into live, data-backed actions tied to the current plan.'}
-              </div>
-              <a
-                href="/growth-advisor"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '11px 16px',
-                  borderRadius: 12,
-                  background: '#D4A853',
-                  color: '#1C1917',
-                  fontSize: 13,
-                  fontWeight: 800,
-                  textDecoration: 'none',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {growthAdvisorUnlocked ? 'Open Growth Copilot' : 'Unlock Growth Advisor'}
-              </a>
-            </div>
-          </section>
-
           <section
             style={{
               border: '1px solid #E7E5E4',
@@ -1195,6 +1002,155 @@ export default function DashboardPage() {
             last7DaysOrders={stats?.last7DaysOrders ?? 0}
             repeatCustomers={stats?.repeatCustomers ?? 0}
           />
+
+          {currentPlanDisplay ? (
+            <section
+              style={{
+                border: '1px solid #E7E5E4',
+                borderRadius: 18,
+                background: '#FFFFFF',
+                padding: 20,
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  gap: 12,
+                  flexWrap: 'wrap',
+                  marginBottom: 16,
+                }}
+              >
+                <div>
+                  <div style={sectionEyebrowStyle}>Plan lane</div>
+                  <h2
+                    style={{
+                      fontSize: 20,
+                      fontWeight: 800,
+                      color: '#1C1917',
+                      margin: '4px 0 6px',
+                    }}
+                  >
+                    {currentPlanDisplay.label} is active
+                  </h2>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 13,
+                      color: '#57534E',
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    The dashboard now reflects what is unlocked today and where the
+                    next upgrade creates leverage.
+                  </p>
+                </div>
+                <a href="/billing" style={inlineLinkStyle}>
+                  Open billing and plan
+                </a>
+              </div>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                  gap: 10,
+                }}
+              >
+                <PlanSummaryCard
+                  label="Included now"
+                  title={currentPlanDisplay.label}
+                  body={currentPlanDisplay.highlights.join(' | ')}
+                />
+                <PlanSummaryCard
+                  label="Next unlock"
+                  title={nextPlanDisplay?.label ?? 'Top plan active'}
+                  body={
+                    nextPlanDisplay
+                      ? nextPlanDisplay.highlights.join(' | ')
+                      : 'You already have the highest plan features available.'
+                  }
+                />
+                <PlanSummaryCard
+                  label="Plan price"
+                  title={currentPlanPriceLabel}
+                  body="Billing controls upgrades, downgrades, and add-on access from one place."
+                />
+              </div>
+            </section>
+          ) : null}
+
+          <section
+            style={{
+              border: '1px solid #E7E5E4',
+              borderRadius: 18,
+              background:
+                'linear-gradient(135deg, rgba(28,25,23,0.98) 0%, rgba(41,37,36,0.98) 55%, rgba(68,64,60,0.98) 100%)',
+              color: '#FAFAF9',
+              padding: 20,
+              display: 'grid',
+              gap: 16,
+            }}
+          >
+            <div>
+              <div style={sectionEyebrowStyle}>Growth Copilot</div>
+              <h2
+                style={{
+                  fontSize: 20,
+                  fontWeight: 800,
+                  color: '#FAFAF9',
+                  margin: '4px 0 6px',
+                }}
+              >
+                What to price higher, upsell, reorder, and fix next
+              </h2>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 13,
+                  color: 'rgba(250,250,249,0.78)',
+                  lineHeight: 1.6,
+                }}
+              >
+                The copilot reads the same live signal as the operator board, then turns it into
+                a short list of moves the team can act on immediately.
+              </p>
+            </div>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                gap: 10,
+              }}
+            >
+              {copilotInsights.map((insight) => (
+                <CopilotInsightCard
+                  key={insight.key}
+                  insight={insight}
+                  unlocked={growthAdvisorUnlocked}
+                />
+              ))}
+            </div>
+            <a
+              href="/growth-advisor"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '11px 16px',
+                borderRadius: 12,
+                background: '#D4A853',
+                color: '#1C1917',
+                fontSize: 13,
+                fontWeight: 800,
+                textDecoration: 'none',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {growthAdvisorUnlocked ? 'Open Growth Copilot' : 'Unlock Growth Advisor'}
+            </a>
+          </section>
+
           <AiSalesPanel />
           {automationsEnabled ? <AutomationSummaryPanel /> : null}
           <RevenueIntelligencePanel />
