@@ -11,6 +11,7 @@ import {
 } from '../../lib/api';
 import { hasMerchantSession } from '../../lib/session';
 import { formatCurrency } from '../../lib/format';
+import { useMobile } from '@trayloop/ui';
 
 type QueueFilter = 'all' | 'pending' | 'overdue' | 'completed';
 
@@ -47,6 +48,7 @@ function buildReminderCopy(item: MerchantFollowUpSummary) {
 }
 
 export default function FollowUpsPage() {
+  const isMobile = useMobile();
   const [followUps, setFollowUps] = useState<MerchantFollowUpSummary[]>([]);
   const [customers, setCustomers] = useState<MerchantCustomerSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -224,7 +226,7 @@ export default function FollowUpsPage() {
         </div>
       ) : null}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20, alignItems: 'start' }}>
         <section
           style={{
             border: '1px solid #E7E5E4',

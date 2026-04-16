@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useMobile } from '@trayloop/ui';
 import {
   createBillingCheckout,
   fetchBillingSubscription,
@@ -222,6 +223,7 @@ function AnalysisPanel({
   copilotMoves: CopilotMove[];
   lastRunAt: string | null;
 }) {
+  const isMobile = useMobile();
   return (
     <div style={{ display: 'grid', gap: 16 }}>
       <SectionCard
@@ -279,7 +281,7 @@ function AnalysisPanel({
         <SnapshotPanel snapshot={snapshot} />
       </SectionCard>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.05fr 0.95fr', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.05fr 0.95fr', gap: 16 }}>
         <SectionCard eyebrow="Stage" title={analysis.businessStage}>
           <div style={{ fontSize: 14, lineHeight: 1.6, color: '#44403C' }}>
             {analysis.biggestOpportunity}
@@ -293,7 +295,7 @@ function AnalysisPanel({
         </SectionCard>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
         <SectionCard eyebrow="Recommended offer" title={analysis.recommendedOffer.name}>
           <div style={{ fontSize: 13, color: '#57534E', lineHeight: 1.55, marginBottom: 14 }}>
             {analysis.recommendedOffer.description}
@@ -323,7 +325,7 @@ function AnalysisPanel({
         </SectionCard>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
         <SectionCard eyebrow="Channels" title="Where to drive demand first">
           <StrategyList items={analysis.channelStrategy} tone="light" />
         </SectionCard>
@@ -355,6 +357,7 @@ function AnalysisPanel({
 }
 
 export default function GrowthAdvisorPage() {
+  const isMobile = useMobile();
   const [billing, setBilling] = useState<MerchantBillingSubscription | null>(null);
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
@@ -574,7 +577,7 @@ export default function GrowthAdvisorPage() {
         <SnapshotStat label="Best owner" value="Operator + onboarding" sub="Built for teams helping merchants go live" />
       </div>
 
-      <div className="growth-advisor-grid" style={{ display: 'grid', gridTemplateColumns: '0.92fr 1.08fr', gap: 18, alignItems: 'start' }}>
+      <div className="growth-advisor-grid" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '0.92fr 1.08fr', gap: 18, alignItems: 'start' }}>
         <section style={{ border: '1px solid #E7E5E4', borderRadius: 20, background: '#FFFFFF', padding: 20, position: 'sticky', top: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 14 }}>
             <div>
@@ -699,7 +702,7 @@ export default function GrowthAdvisorPage() {
               </SectionCard>
 
               <SectionCard eyebrow="Ideal use cases" title="Best for merchants who need help launching or growing">
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
                   {[
                     ['New to catering', 'Create the first three offers and get pricing right.'],
                     ['Low repeat orders', 'Fix the offer mix, lead time, and reorder flow.'],

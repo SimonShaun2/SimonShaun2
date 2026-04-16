@@ -833,6 +833,10 @@ export interface MerchantOrderStats {
   avgOrderValue: number;
   totalCustomers: number;
   repeatCustomers: number;
+  upsellShown: number;
+  upsellAccepted: number;
+  upsellRevenue: number;
+  upsellAttachRate: number;
   dailyRevenue: Array<{
     date: string;
     revenue: number;
