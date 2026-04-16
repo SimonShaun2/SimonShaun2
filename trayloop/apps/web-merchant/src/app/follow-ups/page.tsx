@@ -9,6 +9,7 @@ import {
   type MerchantCustomerSummary,
   type MerchantFollowUpSummary,
 } from '../../lib/api';
+import { hasMerchantSession } from '../../lib/session';
 
 type QueueFilter = 'all' | 'pending' | 'overdue' | 'completed';
 
@@ -62,8 +63,7 @@ export default function FollowUpsPage() {
   const [paginationTotal, setPaginationTotal] = useState(0);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
+    if (!hasMerchantSession()) {
       window.location.href = '/login';
       return;
     }

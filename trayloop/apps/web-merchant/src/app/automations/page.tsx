@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import AutomationEnginePanel, { type SummaryMetric } from '../../components/automation-engine-panel';
 import AiCampaignSuggestionsPanel, { type AiSalesSuggestion } from '../../components/ai-campaign-suggestions-panel';
 import { fetchMerchantCustomers, fetchMerchantFollowUps, type MerchantCustomerSummary } from '../../lib/api';
+import { hasMerchantSession } from '../../lib/session';
 
 function formatCurrency(cents: number) {
   return new Intl.NumberFormat('en-US', {
@@ -29,8 +30,7 @@ export default function AutomationsPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
+    if (!hasMerchantSession()) {
       window.location.href = '/login';
       return;
     }

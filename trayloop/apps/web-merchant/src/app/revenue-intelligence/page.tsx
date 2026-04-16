@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { fetchCustomers, fetchOrderStats, type MerchantCustomerSummary, type MerchantOrderStats } from '../../lib/api';
+import { hasMerchantSession } from '../../lib/session';
 
 export default function RevenueIntelligencePage() {
   const [customers, setCustomers] = useState<MerchantCustomerSummary[]>([]);
@@ -11,8 +12,7 @@ export default function RevenueIntelligencePage() {
   const [refreshedAt, setRefreshedAt] = useState('');
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
+    if (!hasMerchantSession()) {
       window.location.href = '/login';
       return;
     }

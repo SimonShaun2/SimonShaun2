@@ -9,6 +9,7 @@ import {
   type MerchantCustomerSummary,
   type MerchantOrderStats,
 } from '../../lib/api';
+import { hasMerchantSession } from '../../lib/session';
 
 type View = 'reorder' | 'risk' | 'value' | 'all';
 
@@ -32,8 +33,7 @@ export default function CustomersPage() {
   const [refreshedAt, setRefreshedAt] = useState<string>('');
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
+    if (!hasMerchantSession()) {
       window.location.href = '/login';
       return;
     }
