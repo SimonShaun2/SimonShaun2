@@ -5,14 +5,14 @@ import crypto from 'crypto';
 export function registerRequestLogger(app: FastifyInstance) {
   // Assign request ID and start timer
   app.addHook('onRequest', async (request) => {
-    (request as any).requestId = request.headers['x-request-id'] as string ?? crypto.randomUUID();
-    (request as any).startTime = Date.now();
+    request.requestId = request.headers['x-request-id'] as string ?? crypto.randomUUID();
+    request.startTime = Date.now();
   });
 
   // Log after response is sent
   app.addHook('onResponse', async (request, reply) => {
-    const durationMs = Date.now() - ((request as any).startTime ?? Date.now());
-    const requestId = (request as any).requestId;
+    const durationMs = Date.now() - (request.startTime ?? Date.now());
+    const requestId = request.requestId;
 
     logger.info('request completed', {
       requestId,
@@ -25,7 +25,7 @@ export function registerRequestLogger(app: FastifyInstance) {
 
   // Log errors with request context
   app.addHook('onError', async (request, _reply, error) => {
-    const requestId = (request as any).requestId;
+    const requestId = request.requestId;
 
     logger.error('request error', {
       requestId,

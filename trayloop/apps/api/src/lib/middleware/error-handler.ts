@@ -3,7 +3,7 @@ import { AppError } from '../errors.js';
 import { ZodError } from 'zod';
 
 export function errorHandler(error: FastifyError, request: FastifyRequest, reply: FastifyReply) {
-  const requestId = (request as any).requestId;
+  const requestId = request.requestId;
 
   // Known application errors
   if (error instanceof AppError) {
