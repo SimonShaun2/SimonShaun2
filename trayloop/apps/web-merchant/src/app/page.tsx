@@ -985,9 +985,8 @@ export default function DashboardPage() {
 
       {/* 4. Command Shelf | Storefront Live + Plan Lane */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1.4fr) minmax(0, 1fr)', gap: 16, alignItems: 'start' }}>
-        <SetupChecklist />
         <div style={{ display: 'grid', gap: 16 }}>
-          <ActionShelf storefrontUrl={storefrontContext?.storefrontUrl ?? null} totalRevenue={stats?.last30DaysRevenue ?? 0} last7DaysOrders={stats?.last7DaysOrders ?? 0} repeatCustomers={stats?.repeatCustomers ?? 0} />
+          <SetupChecklist />
           {currentPlanDisplay ? (
             <section style={{ border: '1px solid #E7E5E4', borderRadius: 16, background: '#FFFFFF', padding: 20 }}>
               <div style={sectionEyebrowStyle}>Plan lane</div>
@@ -1000,6 +999,7 @@ export default function DashboardPage() {
             </section>
           ) : null}
         </div>
+        <ActionShelf storefrontUrl={storefrontContext?.storefrontUrl ?? null} totalRevenue={stats?.last30DaysRevenue ?? 0} last7DaysOrders={stats?.last7DaysOrders ?? 0} repeatCustomers={stats?.repeatCustomers ?? 0} />
       </div>
 
       {/* 5. Growth Copilot — horizontal bar */}
