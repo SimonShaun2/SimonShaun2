@@ -21,14 +21,15 @@ const columns = [
       { label: 'Smart Upsell', href: '/product/smart-upsell' },
       { label: 'Capacity Management', href: '/product/capacity-management' },
       { label: 'Revenue Dashboard', href: '/product/revenue-dashboard' },
+      { label: 'Growth Advisor', href: '/product/growth-advisor' },
     ],
   },
   {
     title: 'Grow Catering Revenue',
     links: [
       { label: 'Direct Ordering', href: '/solutions/direct-ordering' },
-      { label: 'Automated Follow-Up', href: '/solutions/automated-follow-up' },
-      { label: 'AI Re-engagement', href: '/solutions/ai-reengagement' },
+      { label: 'Automated Follow Up', href: '/solutions/automated-follow-up' },
+      { label: 'AI Reengagement', href: '/solutions/ai-reengagement' },
       { label: 'Smart Upsells', href: '/solutions/smart-upsells' },
       { label: 'Deposit Collection', href: '/solutions/deposit-collection' },
     ],
@@ -100,7 +101,7 @@ export default function Footer() {
               marginBottom: 32,
             }}
           >
-            $49/month. No commissions. No contracts. The longer you wait, the more you lose.
+            $29/month. No commissions. No contracts. The longer you wait, the more you lose.
           </p>
           <div
             style={{

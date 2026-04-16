@@ -53,11 +53,11 @@ const dayOneFeatures = [
     desc: 'Accept, track, and manage every catering order from one clean interface.',
   },
   {
-    title: 'Built-in payment processing',
+    title: 'Integrated payment processing',
     desc: 'Secure credit card payments powered by Stripe, included in your 5% processing fee.',
   },
   {
-    title: 'AI-powered re-engagement',
+    title: 'AI powered reengagement',
     desc: 'Automatically bring past customers back with smart, personalized outreach.',
   },
   {
@@ -99,7 +99,7 @@ export default function SignupPage() {
             }}
           >
             <span style={{ fontSize: 18, fontWeight: 700, color: C.teal }}>
-              $49/month + 5%
+              $29/month + 5%
             </span>
           </div>
 
@@ -198,7 +198,7 @@ export default function SignupPage() {
           >
             {[
               { value: '$2.4M+', label: 'Catering revenue processed' },
-              { value: '100%', label: 'Done-for-you setup' },
+              { value: '100%', label: 'We handle the setup' },
               { value: '0%', label: 'Commissions' },
             ].map((s) => (
               <div key={s.label} style={{ textAlign: 'center', flex: '1 1 120px' }}>

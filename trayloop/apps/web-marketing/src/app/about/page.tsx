@@ -101,20 +101,20 @@ export default function AboutPage() {
           </h2>
           <p style={{ fontSize: 16, lineHeight: 1.7, color: color.muted, marginBottom: 16 }}>
             The catering industry is worth $60 billion, but most of that revenue flows through
-            middlemen who take 15-30% commissions and own the customer relationship. Restaurants do
+            middlemen who take 15 to 30% commissions and own the customer relationship. Restaurants do
             the hard work — sourcing ingredients, cooking the food, delivering on time — but someone
             else captures the data, the repeat orders, and a massive cut of the revenue.
           </p>
           <p style={{ fontSize: 16, lineHeight: 1.7, color: color.muted, marginBottom: 16 }}>
             We started TrayLoop because we believe restaurants should own their catering business end
-            to end. That means owning the customer data, the ordering experience, the follow-up, and
+            to end. That means owning the customer data, the ordering experience, the follow up, and
             the revenue. No commissions. No middlemen. Just a direct line between restaurants and the
             companies that rely on them.
           </p>
           <p style={{ fontSize: 16, lineHeight: 1.7, color: color.muted }}>
             We built TrayLoop to be the infrastructure layer for restaurant catering — handling
-            everything from storefront and checkout to automated follow-up and AI-assisted
-            re-engagement. So restaurants can focus on what they do best: making great food.
+            everything from storefront and checkout to automated follow up and AI assisted
+            reengagement. So restaurants can focus on what they do best: making great food.
           </p>
         </div>
       </Section>
@@ -137,19 +137,19 @@ export default function AboutPage() {
         >
           {[
             {
-              title: 'Commission-free',
+              title: 'No commissions',
               description:
-                'Restaurants keep their revenue. We charge a flat monthly fee and a small platform fee — never a per-order commission. Your margins are yours.',
+                'Restaurants keep their revenue. We charge a flat monthly fee and a small platform fee — never a per order commission. Your margins are yours.',
               accent: color.teal,
             },
             {
-              title: 'AI-assisted',
+              title: 'AI assisted',
               description:
-                'We use AI where it actually helps — predicting reorder windows, flagging at-risk accounts, generating outreach. Not buzzwords. Real tools that save time and recover revenue.',
+                'We use AI where it actually helps — predicting reorder windows, flagging at risk accounts, generating outreach. Not buzzwords. Real tools that save time and recover revenue.',
               accent: color.orange,
             },
             {
-              title: 'Restaurant-first',
+              title: 'Restaurant focused',
               description:
                 'Every feature we build starts with a simple question: does this help the restaurant grow? If the answer is no, we don\'t build it. Our success is measured by our customers\' revenue.',
               accent: color.teal,

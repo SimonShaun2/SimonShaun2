@@ -1,244 +1,198 @@
 'use client';
 
-import type { CSSProperties } from 'react';
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect } from 'react';
 import Script from 'next/script';
 import { trackEvent } from '@trayloop/analytics';
 
-/* ── Palette ── */
 const C = {
   cream: '#F9F5EF',
-  creamDark: '#F0EBE1',
   ink: '#1A1612',
   orange: '#E85618',
-  teal: '#42D9A0',
+  orangeSoft: '#FFF0E9',
   muted: '#7B6F65',
   white: '#FEFCFA',
+  line: '#E8DDD1',
 };
 
-const tealDot: CSSProperties = {
-  width: 8,
-  height: 8,
-  borderRadius: '50%',
-  backgroundColor: C.teal,
-  flexShrink: 0,
-  marginTop: 7,
-};
-
-const HUBSPOT_PORTAL_ID = process.env.NEXT_PUBLIC_HUBSPOT_PORTAL_ID ?? '';
-const HUBSPOT_FORM_ID = process.env.NEXT_PUBLIC_HUBSPOT_FORM_ID ?? '';
+const DEMO_EMAIL = 'hello@trayloophq.com';
 
 export default function DemoPage() {
-  const formContainerRef = useRef<HTMLDivElement>(null);
-  const formCreatedRef = useRef(false);
-
-  const createForm = useCallback(() => {
-    if (
-      formCreatedRef.current
-      || !formContainerRef.current
-      || !HUBSPOT_PORTAL_ID
-      || !HUBSPOT_FORM_ID
-    ) return;
-    if (typeof window === 'undefined' || !(window as any).hbspt) return;
-
-    formCreatedRef.current = true;
-    (window as any).hbspt.forms.create({
-      portalId: HUBSPOT_PORTAL_ID,
-      formId: HUBSPOT_FORM_ID,
-      target: '#hubspot-demo-form',
-      onFormReady: () => {
-        trackEvent('marketing_demo_form_loaded', { placement: 'demo_page' });
-      },
-      onFormSubmitted: () => {
-        trackEvent('marketing_demo_form_submitted', { placement: 'demo_page' });
-      },
-    });
-  }, []);
-
   useEffect(() => {
     trackEvent('marketing_demo_page_viewed', { placement: 'demo_page' });
-    // If HubSpot script already loaded (e.g. cached), create form immediately
-    createForm();
-  }, [createForm]);
+  }, []);
 
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', minHeight: '100vh' }}>
-      <Script
-        src="https://js.hsforms.net/forms/v2.js"
-        strategy="afterInteractive"
-        onLoad={createForm}
-      />
+    <main style={{ backgroundColor: C.cream, minHeight: '100vh', padding: '72px 24px 96px' }}>
+      <style>{`
+        .tl-demo-shell {
+          max-width: 1160px;
+          margin: 0 auto;
+          display: grid;
+          grid-template-columns: 1fr 480px;
+          gap: 48px;
+          align-items: start;
+        }
+        .tl-demo-proof {
+          display: grid;
+          gap: 16px;
+          margin-top: 28px;
+        }
+        .tl-demo-card {
+          background: ${C.white};
+          border: 1px solid ${C.line};
+          border-radius: 28px;
+          padding: 38px;
+          box-shadow: 0 22px 60px rgba(26, 22, 18, 0.06);
+        }
+        .tl-demo-form-wrap :global(iframe),
+        .tl-demo-form-wrap iframe {
+          width: 100% !important;
+        }
+        .tl-demo-form-wrap {
+          min-height: 540px;
+        }
+        @media (max-width: 920px) {
+          .tl-demo-shell {
+            grid-template-columns: 1fr !important;
+            max-width: 620px !important;
+            gap: 28px !important;
+          }
+        }
+        @media (max-width: 768px) {
+          .tl-demo-page {
+            padding: 56px 18px 72px !important;
+          }
+          .tl-demo-title {
+            font-size: 44px !important;
+            line-height: 1.02 !important;
+          }
+          .tl-demo-copy {
+            font-size: 17px !important;
+            line-height: 1.65 !important;
+          }
+          .tl-demo-card {
+            padding: 24px !important;
+            border-radius: 22px !important;
+          }
+        }
+      `}</style>
 
-      {/* ── Left panel ── */}
-      <div
-        style={{
-          flex: '1 1 400px',
-          backgroundColor: C.ink,
-          padding: '80px 48px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          gap: 32,
-        }}
-      >
-        <div>
-          <p
+      <Script src="https://js-na2.hsforms.net/forms/embed/245856247.js" strategy="afterInteractive" />
+
+      <div className="tl-demo-page tl-demo-shell">
+        <section style={{ paddingTop: 36 }}>
+          <div
             style={{
-              fontSize: 13,
-              fontWeight: 600,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '8px 14px',
+              borderRadius: 999,
+              backgroundColor: C.orangeSoft,
+              color: C.orange,
+              fontSize: 12,
+              fontWeight: 800,
               textTransform: 'uppercase',
               letterSpacing: '0.08em',
-              color: C.teal,
-              marginBottom: 12,
+              marginBottom: 20,
             }}
           >
-            Book a free demo
-          </p>
+            Free 30-min demo
+          </div>
+
           <h1
+            className="tl-demo-title"
             style={{
-              fontSize: 44,
-              fontWeight: 800,
-              lineHeight: 1.1,
-              color: C.white,
-              marginBottom: 16,
-            }}
-          >
-            See TrayLoop
-            <br />
-            in action.
-          </h1>
-          <p
-            style={{
-              fontSize: 17,
-              lineHeight: 1.7,
-              color: 'rgba(254,252,250,0.7)',
-              maxWidth: 420,
-            }}
-          >
-            A 20-minute walkthrough of your branded storefront, order
-            management, and pricing — tailored to your restaurant.
-          </p>
-        </div>
-
-        {/* Bullets */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {[
-            'See your own branded catering page built live',
-            'Walk through the order dashboard and customer tools',
-            'Get transparent pricing with no surprises',
-            'Learn how AI-assisted re-engagement brings past customers back',
-          ].map((b) => (
-            <div key={b} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-              <span style={tealDot} />
-              <span
-                style={{
-                  fontSize: 15,
-                  color: 'rgba(254,252,250,0.85)',
-                  lineHeight: 1.5,
-                }}
-              >
-                {b}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        {/* Testimonial */}
-        <div
-          style={{
-            backgroundColor: 'rgba(255,255,255,0.06)',
-            borderRadius: 14,
-            padding: 24,
-            borderLeft: `3px solid ${C.teal}`,
-            marginTop: 8,
-          }}
-        >
-          <p
-            style={{
-              fontSize: 15,
-              lineHeight: 1.7,
-              color: 'rgba(254,252,250,0.85)',
-              fontStyle: 'italic',
-              marginBottom: 10,
-            }}
-          >
-            &ldquo;Our repeat catering rate doubled since we started using the
-            AI re-engagement tools. Customers come back without us lifting a
-            finger.&rdquo;
-          </p>
-          <p style={{ fontSize: 13, fontWeight: 600, color: C.teal }}>
-            Marcus T. — Southside Catering
-          </p>
-        </div>
-      </div>
-
-      {/* ── Right panel: HubSpot demo form ── */}
-      <div
-        style={{
-          flex: '1 1 500px',
-          backgroundColor: C.cream,
-          padding: '40px 24px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <div style={{ width: '100%', maxWidth: 680 }}>
-          <h2
-            style={{
-              fontSize: 24,
-              fontWeight: 800,
+              fontSize: 66,
+              lineHeight: 0.96,
+              letterSpacing: '-0.05em',
               color: C.ink,
-              marginBottom: 8,
-              textAlign: 'center',
+              fontWeight: 800,
+              maxWidth: 620,
+              marginBottom: 18,
             }}
           >
-            Request your free demo
-          </h2>
+            See how Tray.Loop stops the commission bleed.
+          </h1>
+
+          <p
+            className="tl-demo-copy"
+            style={{
+              maxWidth: 580,
+              fontSize: 18,
+              lineHeight: 1.7,
+              color: C.muted,
+            }}
+          >
+            Book a quick call and we&apos;ll show you exactly how restaurants use TrayLoop to own their
+            catering orders, without marketplace middlemen or commission drag.
+          </p>
+
+          <div className="tl-demo-proof">
+            {[
+              'Branded ordering page live within a week',
+              'Zero per-order commissions, ever',
+              'Automated reorder outreach built in',
+              'No long-term contracts required',
+            ].map((item) => (
+              <div key={item} style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                <div
+                  style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: 999,
+                    backgroundColor: C.orangeSoft,
+                    color: C.orange,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 12,
+                    fontWeight: 800,
+                    flexShrink: 0,
+                  }}
+                >
+                  {'\u2713'}
+                </div>
+                <span style={{ fontSize: 16, fontWeight: 600, color: C.ink }}>{item}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="tl-demo-card">
+          <div style={{ fontSize: 40, lineHeight: 1, marginBottom: 14 }}>Book a free Demo</div>
+          <p style={{ fontSize: 17, lineHeight: 1.65, color: C.muted, marginBottom: 24 }}>
+            We&apos;re excited to meet with you. It takes less than two minutes to book.
+          </p>
+
+          <div className="tl-demo-form-wrap">
+            <div
+              className="hs-form-frame"
+              data-region="na2"
+              data-form-id="1ace2de1-fd67-4b27-9d0b-07d724abacfc"
+              data-portal-id="245856247"
+            />
+          </div>
+
           <p
             style={{
               fontSize: 14,
               color: C.muted,
-              marginBottom: 24,
               textAlign: 'center',
+              paddingTop: 22,
             }}
           >
-            20-minute walkthrough · no prep needed
+            If the embedded form does not load,{' '}
+            <a
+              href={`mailto:${DEMO_EMAIL}`}
+              style={{ color: C.orange, textDecoration: 'none', fontWeight: 700 }}
+            >
+              email us directly
+            </a>
+            .
           </p>
-          <div
-            style={{
-              backgroundColor: C.white,
-              borderRadius: 14,
-              border: `1.5px solid ${C.creamDark}`,
-              overflow: 'hidden',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
-              padding: 32,
-              minHeight: 400,
-            }}
-          >
-            <div id="hubspot-demo-form" ref={formContainerRef} />
-            {(!HUBSPOT_PORTAL_ID || !HUBSPOT_FORM_ID) && (
-              <p
-                style={{
-                  fontSize: 14,
-                  color: C.muted,
-                  textAlign: 'center',
-                  padding: 40,
-                }}
-              >
-                Demo form loading&hellip; If it doesn&apos;t appear,{' '}
-                <a
-                  href="mailto:hello@trayloophq.com"
-                  style={{ color: C.orange, textDecoration: 'none', fontWeight: 600 }}
-                >
-                  email us directly
-                </a>
-                .
-              </p>
-            )}
-          </div>
-        </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }

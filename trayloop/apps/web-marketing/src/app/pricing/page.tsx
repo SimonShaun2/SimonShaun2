@@ -1,704 +1,625 @@
-'use client';
-
-import { useState } from 'react';
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import PillButton from '@/components/pill-button';
+import { growthAdvisor, plans, pricingFaqs, pricingRows } from '@/lib/marketing-story';
 
-/* ── Palette ── */
 const C = {
   cream: '#F9F5EF',
-  creamDark: '#F0EBE1',
+  creamDark: '#EFE7DB',
   ink: '#1A1612',
   orange: '#E85618',
   teal: '#42D9A0',
   muted: '#7B6F65',
   white: '#FEFCFA',
-  red: '#FF6243',
 };
 
-/* ── Shared helpers ── */
-const section = (extra: CSSProperties = {}): CSSProperties => ({
-  maxWidth: 1120,
-  margin: '0 auto',
-  padding: '80px 24px',
-  ...extra,
-});
-
-const label: CSSProperties = {
-  fontSize: 13,
-  fontWeight: 600,
-  textTransform: 'uppercase',
-  letterSpacing: '0.08em',
-  color: C.orange,
-  marginBottom: 12,
-};
-
-const h2: CSSProperties = {
-  fontSize: 40,
-  fontWeight: 800,
-  lineHeight: 1.15,
-  color: C.ink,
-  marginBottom: 16,
-};
-
-const sub: CSSProperties = {
-  fontSize: 18,
-  lineHeight: 1.6,
-  color: C.muted,
-  maxWidth: 600,
-};
-
-const card = (extra: CSSProperties = {}): CSSProperties => ({
-  backgroundColor: C.white,
-  borderRadius: 16,
-  padding: 32,
-  ...extra,
-});
-
-const tealDot: CSSProperties = {
-  width: 8,
-  height: 8,
-  borderRadius: '50%',
-  backgroundColor: C.teal,
-  flexShrink: 0,
-  marginTop: 7,
-};
-
-/* ── FAQ data ── */
-const faqs = [
-  {
-    q: 'Can I still use marketplaces alongside TrayLoop?',
-    a: 'Absolutely. TrayLoop is additive, not a replacement. Keep your existing marketplace presence while building a direct channel that you own and control.',
-  },
-  {
-    q: 'What is the cancellation policy?',
-    a: 'There are no contracts and no cancellation fees. You can cancel any time from your dashboard. Your storefront stays live through the end of your billing period.',
-  },
-  {
-    q: 'How fast can I go live?',
-    a: 'Most restaurants are live within 48 hours. Our team handles menu setup, branding, and technical configuration so you can focus on cooking.',
-  },
-  {
-    q: 'What does the 5% processing fee cover?',
-    a: 'The 5% covers credit card processing, payment infrastructure, and fraud protection. There are no hidden add-ons — that is the full cost.',
-  },
-  {
-    q: 'Are there any other fees?',
-    a: 'No. $49/month + 5% processing is the complete cost. No setup fees, no per-order fees, no commission, and no surprise charges.',
-  },
-  {
-    q: 'What if I have low catering volume right now?',
-    a: 'TrayLoop is designed to help you grow. Even at a few orders per month the math works in your favor versus marketplace commissions. Plus our AI re-engagement tools help bring past customers back automatically.',
-  },
-];
-
-/* ── Feature list for plan card ── */
-const features = [
-  'Branded catering storefront',
-  'Custom menu & pricing',
-  'Order management dashboard',
-  'AI-powered customer re-engagement',
-  'Built-in payment processing',
-  'Real-time order notifications',
-  'Customer database & CRM',
-  'Automated email confirmations',
-  'Analytics & reporting',
-  'White glove onboarding',
-];
-
-/* ── Component ── */
-export default function PricingPage() {
-  const [orders, setOrders] = useState(12);
-  const [avgSize, setAvgSize] = useState(500);
-  const [feePercent, setFeePercent] = useState(20);
-
-  const monthlyVolume = orders * avgSize;
-  const marketplaceLoss = monthlyVolume * (feePercent / 100);
-  const trayloopCost = 49;
-  const annualSavings = Math.max(0, (marketplaceLoss - trayloopCost) * 12);
-
-  const fmt = (n: number) =>
-    n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
-
+function Section({
+  children,
+  bg = 'transparent',
+  style,
+  className,
+}: {
+  children: ReactNode;
+  bg?: string;
+  style?: CSSProperties;
+  className?: string;
+}) {
   return (
-    <>
-      {/* Responsive style overrides for grids */}
+    <section className={className} style={{ backgroundColor: bg, padding: '88px 24px', ...style }}>
+      <div style={{ maxWidth: 1180, margin: '0 auto' }}>{children}</div>
+    </section>
+  );
+}
+
+function Eyebrow({ text }: { text: string }) {
+  return (
+    <div
+      style={{
+        fontSize: 13,
+        fontWeight: 700,
+        color: C.orange,
+        textTransform: 'uppercase',
+        letterSpacing: '0.1em',
+        marginBottom: 14,
+      }}
+    >
+      {text}
+    </div>
+  );
+}
+
+function Heading({ title, summary, className }: { title: string; summary: string; className?: string }) {
+  return (
+    <div style={{ maxWidth: 780 }}>
+      <h2
+        className={className}
+        style={{
+          fontSize: 42,
+          lineHeight: 1.08,
+          fontWeight: 800,
+          color: C.ink,
+          marginBottom: 16,
+        }}
+      >
+        {title}
+      </h2>
+      <p style={{ fontSize: 18, lineHeight: 1.65, color: C.muted }}>{summary}</p>
+    </div>
+  );
+}
+
+function Card({
+  children,
+  dark = false,
+  accent = C.creamDark,
+  style,
+  className,
+}: {
+  children: ReactNode;
+  dark?: boolean;
+  accent?: string;
+  style?: CSSProperties;
+  className?: string;
+}) {
+  return (
+    <div
+      className={className}
+      style={{
+        backgroundColor: dark ? '#231E19' : C.white,
+        borderRadius: 26,
+        border: dark ? '1px solid rgba(254,252,250,0.08)' : `1px solid ${accent}`,
+        padding: 28,
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function StatusDot({ on }: { on: boolean }) {
+  return (
+    <span
+      style={{
+        width: 10,
+        height: 10,
+        borderRadius: '50%',
+        backgroundColor: on ? C.teal : '#D8CEC0',
+        display: 'inline-block',
+      }}
+    />
+  );
+}
+
+function PlanCard({
+  plan,
+  featured = false,
+}: {
+  plan: (typeof plans)[number];
+  featured?: boolean;
+}) {
+  return (
+    <Card
+      accent={featured ? C.orange : C.creamDark}
+      style={{
+        boxShadow: featured ? '0 24px 60px rgba(232,86,24,0.12)' : '0 18px 46px rgba(26, 22, 18, 0.06)',
+        transform: featured ? 'translateY(-4px)' : 'none',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 18 }}>
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '6px 12px',
+            borderRadius: 999,
+            backgroundColor: featured ? '#FFF0E9' : '#F5EEE4',
+            color: featured ? C.orange : C.muted,
+            fontSize: 12,
+            fontWeight: 700,
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase',
+          }}
+        >
+          {plan.badge}
+        </div>
+        {featured ? (
+          <div style={{ fontSize: 12, fontWeight: 700, color: C.orange, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            Most popular
+          </div>
+        ) : null}
+      </div>
+
+      <h3 style={{ fontSize: 30, fontWeight: 800, color: C.ink, marginBottom: 8 }}>{plan.name}</h3>
+      <div style={{ fontSize: 38, fontWeight: 800, color: C.ink }}>
+        {plan.price}
+        <span style={{ fontSize: 16, fontWeight: 600, color: C.muted, marginLeft: 4 }}>{plan.cadence}</span>
+      </div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: C.orange, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 12 }}>
+        {plan.bestFor}
+      </div>
+      <p style={{ fontSize: 15, lineHeight: 1.65, color: C.muted, margin: '12px 0 18px' }}>{plan.summary}</p>
+
+      <div style={{ display: 'grid', gap: 10 }}>
+        {plan.highlights.map((item) => (
+          <div key={item} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+            <StatusDot on />
+            <span style={{ fontSize: 15, lineHeight: 1.55, color: C.ink }}>{item}</span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ marginTop: 22 }}>
+        <PillButton
+          text={featured ? 'Start with this plan' : 'Get started'}
+          href="/signup"
+          variant={featured ? 'primary' : 'secondary'}
+          size="md"
+        />
+      </div>
+    </Card>
+  );
+}
+
+function ComparisonCell({ on, label }: { on: boolean; label: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 54 }}>
+      <span className="tl-pricing-mobile-label" style={{ display: 'none', fontSize: 12, fontWeight: 800, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.08em', marginRight: 10 }}>
+        {label}
+      </span>
+      <StatusDot on={on} />
+    </div>
+  );
+}
+
+export default function PricingPage() {
+  return (
+    <main style={{ backgroundColor: C.cream }}>
       <style>{`
-        @media (max-width: 768px) {
-          .pricing-grid-2col {
+        .tl-pricing-grid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 20px;
+        }
+        .tl-pricing-compare {
+          display: grid;
+          grid-template-columns: minmax(260px, 1.2fr) repeat(3, minmax(110px, 0.8fr));
+          gap: 0;
+          align-items: stretch;
+        }
+        .tl-pricing-row {
+          display: grid;
+          grid-template-columns: minmax(260px, 1.2fr) repeat(3, minmax(110px, 0.8fr));
+          border-top: 1px solid #E5DCCD;
+        }
+        .tl-pricing-row > div {
+          padding: 16px 18px;
+        }
+        .tl-pricing-row:nth-child(odd) {
+          background: rgba(255,255,255,0.65);
+        }
+        @media (max-width: 960px) {
+          .tl-pricing-hero,
+          .tl-pricing-addon-header,
+          .tl-pricing-addon-grid,
+          .tl-pricing-addon-cards,
+          .tl-pricing-closing {
             grid-template-columns: 1fr !important;
           }
-          .pricing-grid-4col {
-            grid-template-columns: 1fr 1fr !important;
+          .tl-pricing-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .tl-pricing-compare,
+          .tl-pricing-row {
+            grid-template-columns: 1fr !important;
+          }
+          .tl-pricing-row > div {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+          }
+          .tl-pricing-mobile-label {
+            display: inline-block !important;
           }
         }
-        @media (max-width: 480px) {
-          .pricing-grid-4col {
-            grid-template-columns: 1fr !important;
+        @media (max-width: 768px) {
+          .tl-pricing-section {
+            padding: 64px 18px !important;
+          }
+          .tl-pricing-section > div {
+            max-width: 560px !important;
+            margin: 0 auto !important;
+          }
+          .tl-pricing-hero-title {
+            font-size: 42px !important;
+            line-height: 1.02 !important;
+          }
+          .tl-pricing-section-title {
+            font-size: 32px !important;
+            line-height: 1.08 !important;
+          }
+          .tl-pricing-body-copy {
+            font-size: 16px !important;
+            line-height: 1.65 !important;
+          }
+          .tl-pricing-grid,
+          .tl-pricing-addon-cards {
+            max-width: 560px !important;
+            margin-inline: auto !important;
+          }
+          .tl-pricing-hero > div:first-child,
+          .tl-pricing-heading-block,
+          .tl-pricing-addon-header > div:first-child,
+          .tl-pricing-closing > div:first-child {
+            text-align: center !important;
+            margin-inline: auto !important;
+          }
+          .tl-pricing-hero-actions,
+          .tl-pricing-closing-actions {
+            justify-content: center !important;
+          }
+          .tl-pricing-addon-header > div:last-child {
+            text-align: center !important;
+          }
+          .tl-pricing-header-cell {
+            display: none !important;
+          }
+          .tl-pricing-header-feature {
+            border-bottom: 1px solid #E5DCCD;
           }
         }
       `}</style>
 
-      {/* ── Hero ── */}
-      <section style={{ ...section(), textAlign: 'center' }}>
-        <p style={label}>Pricing</p>
-        <h1
-          style={{
-            fontSize: 48,
-            fontWeight: 800,
-            lineHeight: 1.1,
-            color: C.ink,
-            marginBottom: 20,
-            maxWidth: 720,
-            margin: '0 auto 20px',
-          }}
-        >
-          One plan. One price.
-          <br />
-          No commissions. Ever.
-        </h1>
-        <p style={{ ...sub, margin: '0 auto', maxWidth: 520 }}>
-          <span style={{ fontWeight: 700, color: C.ink }}>$49/month</span> +{' '}
-          <span style={{ fontWeight: 700, color: C.ink }}>5% processing</span>.
-          That&apos;s it. Keep the rest.
-        </p>
-      </section>
-
-      {/* ── Math Comparison ── */}
-      <section style={section()}>
+      <Section bg={C.cream} className="tl-pricing-section">
         <div
-          className="pricing-grid-2col"
+          className="tl-pricing-hero"
           style={{
             display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: 24,
-            maxWidth: 800,
-            margin: '0 auto',
+            gridTemplateColumns: '1.05fr 0.95fr',
+            gap: 36,
+            alignItems: 'center',
           }}
         >
-          {/* Left – Marketplace */}
-          <div
-            style={{
-              ...card({ borderTop: `4px solid ${C.red}` }),
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 16,
-            }}
-          >
-            <p
+          <div>
+            <Eyebrow text="Pricing" />
+            <h1
+              className="tl-pricing-hero-title"
               style={{
-                fontSize: 13,
-                fontWeight: 600,
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                color: C.red,
+                fontSize: 68,
+                lineHeight: 0.98,
+                fontWeight: 800,
+                color: C.ink,
+                letterSpacing: '-0.04em',
+                maxWidth: 680,
+                marginBottom: 18,
               }}
             >
-              Marketplace Platform
+              Choose the tier that matches the growth engine you want to build.
+            </h1>
+            <p className="tl-pricing-body-copy" style={{ fontSize: 18, lineHeight: 1.7, color: C.muted, maxWidth: 620 }}>
+              Launch gets the storefront live. Momentum turns orders into repeat revenue. Engine layers in AI,
+              campaigns, and retention intelligence.
             </p>
-            <p style={{ fontSize: 14, color: C.muted }}>
-              Average commission on a $4,000 catering order
-            </p>
-            <p style={{ fontSize: 36, fontWeight: 800, color: C.red }}>
-              -$1,000
-            </p>
-            <p style={{ fontSize: 14, color: C.muted }}>
-              25% commission lost per order
-            </p>
-            <div
-              style={{
-                backgroundColor: '#FFF0ED',
-                borderRadius: 8,
-                padding: '10px 16px',
-                fontSize: 14,
-                fontWeight: 600,
-                color: C.red,
-                textAlign: 'center',
-              }}
-            >
-              $12,000/year lost to commissions
+
+            <div className="tl-pricing-hero-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 28 }}>
+              <PillButton text="Start with Momentum" href="/signup" variant="primary" size="md" />
+              <PillButton text="See how it works" href="/how-it-works" variant="ghost" size="md" />
             </div>
           </div>
 
-          {/* Right – TrayLoop */}
-          <div
+          <Card
+            dark
             style={{
-              ...card({ border: `2px solid ${C.teal}` }),
-              display: 'flex',
-              flexDirection: 'column',
+              color: C.white,
+              padding: 30,
+              display: 'grid',
               gap: 16,
+              boxShadow: '0 24px 60px rgba(26, 22, 18, 0.2)',
             }}
           >
-            <p
+            <div
               style={{
-                fontSize: 13,
-                fontWeight: 600,
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '8px 14px',
+                borderRadius: 999,
+                backgroundColor: 'rgba(66,217,160,0.14)',
                 color: C.teal,
-              }}
-            >
-              TrayLoop Direct
-            </p>
-            <p style={{ fontSize: 14, color: C.muted }}>
-              Same $4,000 order — processing fee only
-            </p>
-            <p style={{ fontSize: 36, fontWeight: 800, color: C.ink }}>
-              -$299
-            </p>
-            <p style={{ fontSize: 14, color: C.muted }}>
-              $49 subscription + $200 processing (5%)
-            </p>
-            <div
-              style={{
-                backgroundColor: '#EAFAF3',
-                borderRadius: 8,
-                padding: '10px 16px',
-                fontSize: 14,
-                fontWeight: 600,
-                color: '#1D7A55',
-                textAlign: 'center',
-              }}
-            >
-              Save $8,412/year
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Plan + Social Proof ── */}
-      <section style={{ backgroundColor: C.creamDark }}>
-        <div
-          className="pricing-grid-2col"
-          style={{
-            ...section(),
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: 32,
-            alignItems: 'start',
-          }}
-        >
-          {/* Plan card */}
-          <div
-            style={{
-              ...card({ border: `2px solid ${C.orange}` }),
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 24,
-            }}
-          >
-            <div
-              style={{
-                display: 'inline-block',
-                backgroundColor: '#FFF3ED',
-                color: C.orange,
                 fontSize: 12,
                 fontWeight: 700,
-                padding: '4px 12px',
-                borderRadius: 999,
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
                 alignSelf: 'flex-start',
               }}
             >
-              Everything included
+              Revenue ladder
             </div>
-            <div>
-              <span style={{ fontSize: 48, fontWeight: 800, color: C.ink }}>
-                $49
-              </span>
-              <span
-                style={{ fontSize: 18, fontWeight: 500, color: C.muted, marginLeft: 4 }}
-              >
-                /month
-              </span>
-              <span
-                style={{
-                  fontSize: 14,
-                  color: C.muted,
-                  display: 'block',
-                  marginTop: 4,
-                }}
-              >
-                + 5% payment processing
-              </span>
-            </div>
+            <div style={{ fontSize: 28, fontWeight: 800, lineHeight: 1.1 }}>Three tiers, one compounding story.</div>
+            <p style={{ fontSize: 15, lineHeight: 1.65, color: 'rgba(254,252,250,0.88)' }}>
+              Every tier is built to move the same account forward: Launch gets the order live, Momentum repeats it,
+              and Engine automates what happens next.
+            </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {features.map((f) => (
-                <div key={f} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                  <span style={tealDot} />
-                  <span style={{ fontSize: 15, color: C.ink }}>{f}</span>
+            <div style={{ display: 'grid', gap: 10, marginTop: 6 }}>
+              {plans.map((plan, index) => (
+                <div
+                  key={plan.name}
+                  style={{
+                    padding: 16,
+                    borderRadius: 18,
+                    backgroundColor: index === 1 ? 'rgba(66,217,160,0.12)' : 'rgba(254,252,250,0.06)',
+                    border: index === 1 ? '1px solid rgba(66,217,160,0.24)' : '1px solid rgba(254,252,250,0.08)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                    <div style={{ fontSize: 18, fontWeight: 800 }}>{plan.name}</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: index === 1 ? C.teal : 'rgba(254,252,250,0.9)' }}>
+                      {plan.price}
+                      {plan.cadence}
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 14, lineHeight: 1.6, color: 'rgba(254,252,250,0.88)', marginTop: 8 }}>
+                    {plan.summary}
+                  </div>
                 </div>
               ))}
             </div>
+          </Card>
+        </div>
+      </Section>
 
-            <PillButton text="Get started →" href="https://dashboard.trayloophq.com/register" />
-          </div>
+      <Section bg={C.white} className="tl-pricing-section">
+        <div className="tl-pricing-heading-block" style={{ maxWidth: 980 }}>
+          <Eyebrow text="Packages" />
+          <Heading
+            className="tl-pricing-section-title"
+            title="Launch, Momentum, and Engine are built to map to the way catering revenue actually grows."
+            summary="Launch is for the first direct orders. Momentum is for recurring scheduling and upsells. Engine is for AI guided retention and growth automation."
+          />
+        </div>
 
-          {/* Social proof card */}
-          <div
-            style={{
-              backgroundColor: C.ink,
-              borderRadius: 16,
-              padding: 32,
-              color: C.white,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 28,
-            }}
-          >
-            <p
-              style={{
-                fontSize: 13,
-                fontWeight: 600,
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                color: C.teal,
-              }}
-            >
-              Why restaurants switch
+        <div className="tl-pricing-grid" style={{ marginTop: 34 }}>
+          <PlanCard plan={plans[0]} />
+          <PlanCard plan={plans[1]} featured />
+          <PlanCard plan={plans[2]} />
+        </div>
+      </Section>
+
+      <Section bg={C.creamDark} className="tl-pricing-section">
+        <div className="tl-pricing-addon-header" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 24, alignItems: 'center' }}>
+          <div>
+            <Eyebrow text="Addition" />
+            <h2 style={{ fontSize: 36, lineHeight: 1.1, fontWeight: 800, color: C.ink, marginBottom: 12 }}>
+              Growth Advisor is the strategist beside the operator.
+            </h2>
+            <p style={{ fontSize: 16, lineHeight: 1.7, color: C.muted, maxWidth: 760 }}>
+              Use it when pricing, menu mix, or follow up needs a sharper second set of eyes.
             </p>
-
-            {/* Testimonial 1 */}
-            <div
-              style={{
-                borderLeft: `3px solid ${C.teal}`,
-                paddingLeft: 16,
-              }}
-            >
-              <p
-                style={{
-                  fontSize: 15,
-                  lineHeight: 1.7,
-                  color: 'rgba(254,252,250,0.85)',
-                  fontStyle: 'italic',
-                  marginBottom: 8,
-                }}
-              >
-                &ldquo;We were giving away 25% of every catering order. TrayLoop
-                paid for itself the first week.&rdquo;
-              </p>
-              <p style={{ fontSize: 13, fontWeight: 600, color: C.teal }}>
-                Maria S. — Bella Cucina
-              </p>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 36, fontWeight: 800, color: C.ink }}>
+              {growthAdvisor.price}
+              <span style={{ fontSize: 16, color: C.muted }}>{growthAdvisor.cadence}</span>
             </div>
-
-            {/* Testimonial 2 */}
             <div
               style={{
-                borderLeft: `3px solid ${C.teal}`,
-                paddingLeft: 16,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '6px 12px',
+                borderRadius: 999,
+                backgroundColor: '#FFF0E9',
+                color: C.orange,
+                fontSize: 12,
+                fontWeight: 700,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                marginTop: 10,
               }}
             >
-              <p
-                style={{
-                  fontSize: 15,
-                  lineHeight: 1.7,
-                  color: 'rgba(254,252,250,0.85)',
-                  fontStyle: 'italic',
-                  marginBottom: 8,
-                }}
-              >
-                &ldquo;Our repeat catering rate doubled since we started using the
-                AI re-engagement tools. Customers come back without us lifting a
-                finger.&rdquo;
-              </p>
-              <p style={{ fontSize: 13, fontWeight: 600, color: C.teal }}>
-                Marcus T. — Southside Catering
-              </p>
-            </div>
-
-            {/* ROI breakdown */}
-            <div
-              style={{
-                backgroundColor: 'rgba(66,217,160,0.1)',
-                borderRadius: 12,
-                padding: 20,
-                textAlign: 'center',
-              }}
-            >
-              <p
-                style={{ fontSize: 13, color: C.teal, fontWeight: 600, marginBottom: 4 }}
-              >
-                Average ROI
-              </p>
-              <p style={{ fontSize: 22, fontWeight: 800, color: C.white }}>
-                Pays for itself with one order
-              </p>
+              {growthAdvisor.badge}
             </div>
           </div>
         </div>
-      </section>
 
-      {/* ── Guarantees ── */}
-      <section style={section()}>
-        <h2 style={{ ...h2, textAlign: 'center', marginBottom: 40 }}>
-          Our guarantees
-        </h2>
-        <div
-          className="pricing-grid-4col"
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
-            gap: 20,
-          }}
-        >
-          {[
-            {
-              title: 'No contracts',
-              desc: 'Month-to-month. Cancel any time, no questions asked.',
-            },
-            {
-              title: 'White glove onboarding',
-              desc: 'We set up your storefront, menu, and branding for you.',
-            },
-            {
-              title: 'Onboarding included',
-              desc: 'Live walkthrough and training for you and your team.',
-            },
-            {
-              title: 'No commissions',
-              desc: 'Zero percent commission on every order, forever.',
-            },
-          ].map((g) => (
-            <div
-              key={g.title}
-              style={{
-                ...card(),
-                textAlign: 'center',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 8,
-              }}
-            >
-              <p style={{ fontSize: 17, fontWeight: 700, color: C.ink }}>
-                {g.title}
-              </p>
-              <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.6 }}>
-                {g.desc}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── ROI Calculator ── */}
-      <section style={{ backgroundColor: C.creamDark }}>
-        <div style={{ ...section(), textAlign: 'center' }}>
-          <p style={label}>ROI Calculator</p>
-          <h2 style={{ ...h2, marginBottom: 40 }}>
-            See how much you could save
-          </h2>
-
-          <style>{`
-            input[type="range"].roi-slider {
-              -webkit-appearance: none;
-              appearance: none;
-              width: 100%;
-              height: 8px;
-              border-radius: 4px;
-              background: #E0D8CE;
-              outline: none;
-            }
-            input[type="range"].roi-slider::-webkit-slider-thumb {
-              -webkit-appearance: none;
-              appearance: none;
-              width: 22px;
-              height: 22px;
-              border-radius: 50%;
-              background: #E85618;
-              cursor: pointer;
-              border: 3px solid #FEFCFA;
-              box-shadow: 0 1px 4px rgba(0,0,0,0.15);
-            }
-            input[type="range"].roi-slider::-moz-range-thumb {
-              width: 22px;
-              height: 22px;
-              border-radius: 50%;
-              background: #E85618;
-              cursor: pointer;
-              border: 3px solid #FEFCFA;
-              box-shadow: 0 1px 4px rgba(0,0,0,0.15);
-            }
-          `}</style>
-          <div
-            style={{
-              maxWidth: 700,
-              margin: '0 auto',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 28,
-            }}
-          >
-            {/* Monthly orders slider */}
-            <div style={{ textAlign: 'left' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: C.ink }}>Monthly catering orders</span>
-                <span style={{ fontSize: 14, fontWeight: 700, color: C.orange }}>{orders} orders</span>
-              </div>
-              <input
-                className="roi-slider"
-                type="range"
-                min={1}
-                max={50}
-                value={orders}
-                onChange={(e) => setOrders(Number(e.target.value))}
-                style={{
-                  background: `linear-gradient(to right, #E85618 0%, #E85618 ${((orders - 1) / 49) * 100}%, #E0D8CE ${((orders - 1) / 49) * 100}%, #E0D8CE 100%)`,
-                }}
-              />
-            </div>
-
-            {/* Average order size slider */}
-            <div style={{ textAlign: 'left' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: C.ink }}>Average order size</span>
-                <span style={{ fontSize: 14, fontWeight: 700, color: C.orange }}>{fmt(avgSize)}</span>
-              </div>
-              <input
-                className="roi-slider"
-                type="range"
-                min={100}
-                max={2000}
-                step={50}
-                value={avgSize}
-                onChange={(e) => setAvgSize(Number(e.target.value))}
-                style={{
-                  background: `linear-gradient(to right, #E85618 0%, #E85618 ${((avgSize - 100) / 1900) * 100}%, #E0D8CE ${((avgSize - 100) / 1900) * 100}%, #E0D8CE 100%)`,
-                }}
-              />
-            </div>
-
-            {/* Current marketplace fee slider */}
-            <div style={{ textAlign: 'left' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: C.ink }}>Current marketplace fee</span>
-                <span style={{ fontSize: 14, fontWeight: 700, color: C.orange }}>{feePercent}%</span>
-              </div>
-              <input
-                className="roi-slider"
-                type="range"
-                min={5}
-                max={30}
-                value={feePercent}
-                onChange={(e) => setFeePercent(Number(e.target.value))}
-                style={{
-                  background: `linear-gradient(to right, #E85618 0%, #E85618 ${((feePercent - 5) / 25) * 100}%, #E0D8CE ${((feePercent - 5) / 25) * 100}%, #E0D8CE 100%)`,
-                }}
-              />
-            </div>
-
-            {/* Result */}
-            <div
-              style={{
-                backgroundColor: '#EAFAF3',
-                borderRadius: 16,
-                padding: 32,
-                marginTop: 8,
-              }}
-            >
-              <p style={{ fontSize: 14, fontWeight: 600, color: '#1D7A55', marginBottom: 4 }}>
-                Estimated annual savings
-              </p>
-              <p style={{ fontSize: 48, fontWeight: 800, color: '#1D7A55' }}>
-                {fmt(annualSavings)}
-              </p>
-              <p style={{ fontSize: 14, color: C.muted, marginTop: 4 }}>
-                vs. a {feePercent}% commission marketplace
-              </p>
+        <div style={{ marginTop: 28 }}>
+          <Card className="tl-pricing-addon-grid" style={{ display: 'grid', gridTemplateColumns: '1.05fr 0.95fr', gap: 22, alignItems: 'stretch' }}>
+            <div>
               <div
                 style={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  gap: 24,
-                  marginTop: 16,
-                  flexWrap: 'wrap',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: C.orange,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                  marginBottom: 10,
                 }}
               >
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 12, color: C.muted }}>Marketplace loss</div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: '#FF6243' }}>{fmt(marketplaceLoss)}/mo</div>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 12, color: C.muted }}>TrayLoop (flat fee)</div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: C.ink }}>$49/mo</div>
-                </div>
+                Growth Advisor
               </div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: C.ink, marginBottom: 10 }}>
+                Turns live signals into a 30-day plan.
+              </div>
+              <p style={{ fontSize: 15, lineHeight: 1.7, color: C.muted, maxWidth: 760 }}>
+                {growthAdvisor.detail}
+              </p>
             </div>
+            <div
+              style={{
+                borderRadius: 22,
+                background: 'linear-gradient(180deg, #221D19 0%, #171311 100%)',
+                padding: 18,
+                color: C.white,
+                display: 'grid',
+                gap: 12,
+              }}
+            >
+              <div style={{ fontSize: 12, fontWeight: 700, color: C.teal, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                What it surfaces
+              </div>
+              {[
+                'Price the strongest offer higher.',
+                'Keep the right extra visible at the right moment.',
+                'Time the next order before the last one cools off.',
+              ].map((item, index) => (
+                <div
+                  key={item}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '30px 1fr',
+                    gap: 12,
+                    alignItems: 'center',
+                    padding: 12,
+                    borderRadius: 16,
+                    backgroundColor: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: '50%',
+                      backgroundColor: index === 0 ? 'rgba(232,86,24,0.18)' : 'rgba(66,217,160,0.16)',
+                      color: index === 0 ? C.orange : C.teal,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 12,
+                      fontWeight: 800,
+                    }}
+                  >
+                    {index + 1}
+                  </div>
+                  <div style={{ fontSize: 14, lineHeight: 1.5, color: 'rgba(254,252,250,0.86)' }}>{item}</div>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <div className="tl-pricing-addon-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 18, marginTop: 18 }}>
+            {[
+              {
+                title: 'Pricing direction',
+                body: 'See where the first price lift should happen.',
+              },
+              {
+                title: 'Offer mix',
+                body: 'Decide what to sell first and what to bundle.',
+              },
+              {
+                title: 'Follow up timing',
+                body: 'Pick the next move before the opportunity cools off.',
+              },
+            ].map((item) => (
+              <Card key={item.title} style={{ minHeight: 120 }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: C.ink, marginBottom: 8 }}>{item.title}</div>
+                <p style={{ fontSize: 14, lineHeight: 1.6, color: C.muted }}>{item.body}</p>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </Section>
+
+      <Section bg={C.white} className="tl-pricing-section">
+        <div className="tl-pricing-heading-block">
+          <Eyebrow text="Plan comparison" />
+          <Heading
+            className="tl-pricing-section-title"
+            title="See what changes as you move from storefront to repeat revenue to AI growth."
+            summary="The base stack stays the same. Each tier simply adds the next layer of compounding capability."
+          />
+        </div>
+
+        <div style={{ marginTop: 28, border: '1px solid #E5DCCD', borderRadius: 26, overflow: 'hidden' }}>
+          <div className="tl-pricing-compare" style={{ backgroundColor: '#F5EEE4', fontSize: 13, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            <div className="tl-pricing-header-feature" style={{ padding: '16px 18px' }}>Feature</div>
+            <div className="tl-pricing-header-cell" style={{ padding: '16px 18px', textAlign: 'center' }}>Launch</div>
+            <div className="tl-pricing-header-cell" style={{ padding: '16px 18px', textAlign: 'center' }}>Momentum</div>
+            <div className="tl-pricing-header-cell" style={{ padding: '16px 18px', textAlign: 'center' }}>Engine</div>
+          </div>
+
+          {pricingRows.map((row) => (
+            <div key={row.feature} className="tl-pricing-row">
+              <div style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>{row.feature}</div>
+              <ComparisonCell on={row.launch} label="Launch" />
+              <ComparisonCell on={row.momentum} label="Momentum" />
+              <ComparisonCell on={row.engine} label="Engine" />
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      <Section bg={C.cream} className="tl-pricing-section">
+        <div className="tl-pricing-heading-block">
+          <Eyebrow text="FAQ" />
+          <Heading
+            className="tl-pricing-section-title"
+            title="A few practical questions before you choose a tier."
+            summary="The pricing ladder is meant to be simple, but merchants still need to know what unlocks what and how the added layer fits in."
+          />
+        </div>
+
+        <div style={{ display: 'grid', gap: 16, marginTop: 30 }}>
+          {pricingFaqs.map((faq) => (
+            <Card key={faq.q} style={{ padding: 24 }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: C.ink, marginBottom: 10 }}>{faq.q}</div>
+              <p style={{ fontSize: 15, lineHeight: 1.7, color: C.muted }}>{faq.a}</p>
+            </Card>
+          ))}
+        </div>
+      </Section>
+
+      <section style={{ backgroundColor: C.ink, color: C.white, padding: '96px 24px' }}>
+        <div
+          className="tl-pricing-closing"
+          style={{
+            maxWidth: 1180,
+            margin: '0 auto',
+            display: 'grid',
+            gridTemplateColumns: '1fr auto',
+            gap: 24,
+            alignItems: 'center',
+          }}
+        >
+          <div>
+            <Eyebrow text="Ready to start" />
+            <h2 style={{ fontSize: 46, lineHeight: 1.04, fontWeight: 800, marginBottom: 16, maxWidth: 650 }}>
+              Pick the tier that matches how fast you want catering to compound.
+            </h2>
+            <p style={{ fontSize: 18, lineHeight: 1.65, color: 'rgba(254,252,250,0.82)', maxWidth: 640 }}>
+              Start with Momentum if you want repeat orders and upsells, then step into Engine when AI and retention
+              become the growth moat.
+            </p>
+          </div>
+          <div className="tl-pricing-closing-actions" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 12 }}>
+            <PillButton text="Get started" href="/signup" variant="primary" size="md" />
+            <PillButton text="Book a demo" href="/demo" variant="ghost" size="md" />
           </div>
         </div>
       </section>
-
-      {/* ── FAQ ── */}
-      <section style={section()}>
-        <h2 style={{ ...h2, textAlign: 'center', marginBottom: 40 }}>
-          Frequently asked questions
-        </h2>
-        <div
-          style={{
-            maxWidth: 720,
-            margin: '0 auto',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 12,
-          }}
-        >
-          {faqs.map((faq) => (
-            <FaqItem key={faq.q} q={faq.q} a={faq.a} />
-          ))}
-        </div>
-      </section>
-
-    </>
-  );
-}
-
-/* ── FAQ accordion item ── */
-function FaqItem({ q, a }: { q: string; a: string }) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <div
-      style={{
-        backgroundColor: C.white,
-        borderRadius: 12,
-        padding: '20px 24px',
-        cursor: 'pointer',
-      }}
-      onClick={() => setOpen(!open)}
-    >
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
-        <p style={{ fontSize: 16, fontWeight: 600, color: C.ink }}>{q}</p>
-        <span
-          style={{
-            fontSize: 20,
-            color: C.muted,
-            transition: 'transform 0.2s',
-            transform: open ? 'rotate(45deg)' : 'rotate(0deg)',
-            flexShrink: 0,
-            marginLeft: 16,
-          }}
-        >
-          +
-        </span>
-      </div>
-      {open && (
-        <p
-          style={{
-            fontSize: 15,
-            color: C.muted,
-            lineHeight: 1.7,
-            marginTop: 12,
-          }}
-        >
-          {a}
-        </p>
-      )}
-    </div>
+    </main>
   );
 }

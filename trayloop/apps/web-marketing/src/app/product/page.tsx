@@ -1,563 +1,918 @@
-import type { Metadata } from 'next';
+'use client';
 
-export const metadata: Metadata = {
-    title: 'TrayLoop Product — Restaurant Catering Storefront & Management Tools',
-    description: 'Explore TrayLoop\'s full product suite: branded catering storefront, automated order management, AI reorder triggers, and revenue dashboard — built for restaurants.',
-    alternates: {
-          canonical: 'https://trayloophq.com/product',
-    },
-    openGraph: {
-          title: 'TrayLoop Product — Restaurant Catering Storefront & Management Tools',
-          description: 'Branded catering storefront, automated order management, AI reorder triggers, and revenue dashboard — built for restaurants.',
-          url: 'https://trayloophq.com/product',
-          siteName: 'TrayLoop',
-          type: 'website',
-    },
-    twitter: {
-          card: 'summary_large_image',
-          title: 'TrayLoop Product — Restaurant Catering Storefront & Management Tools',
-          description: 'Branded catering storefront, automated order management, AI reorder triggers, and revenue dashboard — built for restaurants.',
-    },
-};
-
-import type { CSSProperties } from 'react';
-import Link from 'next/link';
 import Image from 'next/image';
+import type { CSSProperties, ReactNode } from 'react';
 import PillButton from '@/components/pill-button';
+import { featureAtlas, growthAdvisor, plans } from '@/lib/marketing-story';
 
-/* ── Design tokens ── */
-const color = {
-  cream: '#F9F5EF',
-  creamDark: '#F0EBE1',
-  ink: '#1A1612',
+const C = {
+  cream: '#F8F3EC',
+  creamDark: '#EEE4D2',
+  ink: '#191510',
   orange: '#E85618',
-  teal: '#42D9A0',
-  muted: '#7B6F65',
+  teal: '#44D9A1',
+  muted: '#776A5F',
   white: '#FEFCFA',
 };
 
-/* ── Reusable section wrapper ── */
 function Section({
   children,
   bg = 'transparent',
   style,
+  className,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   bg?: string;
   style?: CSSProperties;
+  className?: string;
 }) {
   return (
-    <section style={{ backgroundColor: bg, padding: '80px 24px', ...style }}>
-      <div style={{ maxWidth: 1120, margin: '0 auto' }}>{children}</div>
+    <section className={className} style={{ backgroundColor: bg, padding: '84px 24px', ...style }}>
+      <div style={{ maxWidth: 1180, margin: '0 auto' }}>{children}</div>
     </section>
   );
 }
 
-/* ── Teal bullet helper ── */
-function TealDot() {
+function Eyebrow({ text }: { text: string }) {
   return (
-    <span
+    <div
       style={{
-        display: 'inline-block',
-        width: 8,
-        height: 8,
-        borderRadius: '50%',
-        backgroundColor: color.teal,
-        marginRight: 10,
-        flexShrink: 0,
-        marginTop: 7,
+        fontSize: 12,
+        fontWeight: 800,
+        color: C.orange,
+        textTransform: 'uppercase',
+        letterSpacing: '0.12em',
+        marginBottom: 14,
       }}
-    />
+    >
+      {text}
+    </div>
   );
 }
 
-function BulletItem({ text }: { text: string }) {
+function Heading({ title, summary, className }: { title: string; summary: string; className?: string }) {
   return (
-    <li style={{ display: 'flex', alignItems: 'flex-start', marginBottom: 12, listStyle: 'none' }}>
-      <TealDot />
-      <span style={{ color: color.ink, fontSize: 15, lineHeight: 1.5 }}>{text}</span>
-    </li>
-  );
-}
-
-/* ── Mid-section CTA banner ── */
-function MidCta() {
-  return (
-    <Section bg={color.creamDark} style={{ padding: '48px 24px' }}>
-      <div style={{ textAlign: 'center' }}>
-        <p style={{ fontSize: 20, fontWeight: 700, color: color.ink, marginBottom: 20 }}>
-          See enough? Let us walk you through it live.
-        </p>
-        <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <PillButton text="Book a free Demo →" href="/demo" variant="primary" />
-          <PillButton text="See Pricing →" href="/pricing" variant="ghost" />
-        </div>
-      </div>
-    </Section>
-  );
-}
-
-/* ── Feature data ── */
-interface Feature {
-  number: string;
-  title: string;
-  href: string;
-  subtitle: string;
-  bullets: string[];
-  visual: React.ReactNode;
-}
-
-const features: Feature[] = [
-  {
-    number: '01',
-    title: 'Recurring Order Automation',
-    href: '/product/recurring-orders',
-    subtitle: 'Turn one-time orders into a predictable revenue stream',
-    bullets: [
-      'AI detects reorder patterns',
-      'Automated outreach at the right time',
-      '$1,840/mo avg recovered',
-    ],
-    visual: (
-      <div
+    <div style={{ maxWidth: 760 }}>
+      <h2
+        className={className}
         style={{
-          backgroundColor: color.ink,
-          borderRadius: 16,
-          padding: 32,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 20,
+          fontSize: 40,
+          lineHeight: 1.06,
+          fontWeight: 800,
+          color: C.ink,
+          marginBottom: 14,
         }}
       >
-        <div style={{ fontSize: 13, color: color.muted, marginBottom: 4 }}>Impact snapshot</div>
-        {[
-          { label: '$1,840/mo recovered', accent: color.teal },
-          { label: '3\u00d7 repeat orders', accent: color.teal },
-          { label: '72% reorder rate', accent: color.teal },
-        ].map((stat) => (
-          <div
-            key={stat.label}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              padding: '14px 18px',
-              backgroundColor: 'rgba(255,255,255,0.06)',
-              borderRadius: 10,
-            }}
-          >
-            <span
+        {title}
+      </h2>
+      <p style={{ fontSize: 17, lineHeight: 1.65, color: C.muted, maxWidth: 700 }}>{summary}</p>
+    </div>
+  );
+}
+
+function Card({
+  children,
+  dark = false,
+  className,
+  style,
+}: {
+  children: ReactNode;
+  dark?: boolean;
+  className?: string;
+  style?: CSSProperties;
+}) {
+  return (
+    <div
+      className={className}
+      style={{
+        backgroundColor: dark ? '#221D19' : C.white,
+        border: dark ? '1px solid rgba(254,252,250,0.08)' : `1px solid ${C.creamDark}`,
+        borderRadius: 28,
+        padding: 26,
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function Bullet({ text, light = false }: { text: string; light?: boolean }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+      <span
+        style={{
+          width: 8,
+          height: 8,
+          borderRadius: '50%',
+          backgroundColor: light ? C.teal : C.orange,
+          flexShrink: 0,
+          marginTop: 7,
+        }}
+      />
+      <span
+        style={{
+          fontSize: 15,
+          lineHeight: 1.55,
+          color: light ? 'rgba(254,252,250,0.84)' : C.ink,
+        }}
+      >
+        {text}
+      </span>
+    </div>
+  );
+}
+
+function MetricChip({ label, value, dark = false }: { label: string; value: string; dark?: boolean }) {
+  return (
+    <div
+      style={{
+        padding: '12px 14px',
+        borderRadius: 16,
+        backgroundColor: dark ? 'rgba(255,255,255,0.06)' : '#FFF7F0',
+        border: dark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #F2E3D3',
+      }}
+    >
+      <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: dark ? 'rgba(254,252,250,0.68)' : C.muted }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 16, fontWeight: 800, color: dark ? C.white : C.ink, marginTop: 6 }}>{value}</div>
+    </div>
+  );
+}
+
+function StageMock({
+  planName,
+  dark = false,
+}: {
+  planName: (typeof plans)[number]['name'];
+  dark?: boolean;
+}) {
+  const strips: Record<(typeof plans)[number]['name'], string[]> = {
+    Launch: ['Storefront live', 'Minimums set', 'Deposit collected'],
+    Momentum: ['Recurring orders', 'Upsell prompts', 'Saved templates'],
+    Engine: ['AI campaigns', 'Lead scoring', 'Churn risk'],
+  };
+
+  return (
+    <div
+      style={{
+        borderRadius: 22,
+        border: dark ? '1px solid rgba(254,252,250,0.08)' : '1px solid #E9DED0',
+        background: dark ? 'linear-gradient(180deg, rgba(66,217,161,0.08) 0%, rgba(255,255,255,0.04) 100%)' : 'linear-gradient(180deg, #FFFDF9 0%, #FFF5E9 100%)',
+        padding: 18,
+        display: 'grid',
+        gap: 14,
+        minHeight: 232,
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '6px 10px',
+            borderRadius: 999,
+            backgroundColor: dark ? 'rgba(68,217,161,0.14)' : '#FFF0E6',
+            color: dark ? C.teal : C.orange,
+            fontSize: 11,
+            fontWeight: 800,
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+          }}
+        >
+          {planName}
+        </div>
+        <div style={{ fontSize: 12, fontWeight: 800, color: dark ? 'rgba(254,252,250,0.68)' : C.muted }}>
+          {planName === 'Launch' ? 'Sell direct' : planName === 'Momentum' ? 'Repeat revenue' : 'AI growth'}
+        </div>
+      </div>
+
+      <div
+        style={{
+          borderRadius: 18,
+          backgroundColor: dark ? 'rgba(26,22,18,0.72)' : '#FFFFFF',
+          border: dark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #EADFCF',
+          padding: 14,
+          display: 'grid',
+          gap: 10,
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: dark ? 'rgba(254,252,250,0.72)' : C.muted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            TrayLoop workspace
+          </div>
+          <div style={{ fontSize: 12, fontWeight: 800, color: dark ? C.teal : C.orange }}>
+            Live
+          </div>
+        </div>
+        {strips[planName].map((item, index) => (
+          <div key={item} style={{ display: 'grid', gridTemplateColumns: '18px 1fr', gap: 10, alignItems: 'center' }}>
+            <div
               style={{
-                width: 10,
-                height: 10,
-                borderRadius: '50%',
-                backgroundColor: stat.accent,
-                flexShrink: 0,
+                width: 18,
+                height: 18,
+                borderRadius: 999,
+                backgroundColor: index === 2 ? (dark ? 'rgba(68,217,161,0.24)' : '#FEF3C7') : dark ? 'rgba(254,252,250,0.12)' : '#F6EFE5',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: dark ? C.white : C.orange,
+                fontSize: 10,
+                fontWeight: 800,
               }}
-            />
-            <span style={{ fontSize: 16, fontWeight: 700, color: color.white }}>{stat.label}</span>
+            >
+              {index + 1}
+            </div>
+            <div style={{ height: 8, borderRadius: 999, backgroundColor: index === 2 ? (dark ? C.teal : C.orange) : dark ? 'rgba(254,252,250,0.16)' : '#E9DCCB' }} />
           </div>
         ))}
       </div>
-    ),
-  },
-  {
-    number: '02',
-    title: 'Merchant Self-Service Portal',
-    href: '/product/merchant-portal',
-    subtitle: 'Run your entire catering operation from one dashboard',
-    bullets: [
-      'Full order management',
-      'Customer database with health scores',
-      'Self-serve \u2014 no support tickets',
-    ],
-    visual: (
-      <div
+
+      <div className="tl-product-stage-metrics" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
+        {planName === 'Launch'
+          ? ['Brand', 'Minimums', 'Deposit'].map((label) => <MetricChip key={label} label={label} value="Configured" dark={dark} />)
+          : planName === 'Momentum'
+            ? ['Repeat', 'Upsell', 'Templates'].map((label) => <MetricChip key={label} label={label} value="On" dark={dark} />)
+            : ['AI', 'Signals', 'Follow up'].map((label) => <MetricChip key={label} label={label} value="Active" dark={dark} />)}
+      </div>
+    </div>
+  );
+}
+
+function StageCard({
+  plan,
+  reverse = false,
+}: {
+  plan: (typeof plans)[number];
+  reverse?: boolean;
+}) {
+  const dark = plan.name === 'Engine';
+  const accent = plan.name === 'Momentum' ? '#1D7A55' : plan.name === 'Engine' ? C.teal : C.orange;
+
+  return (
+    <div
+      className="tl-product-hover tl-product-stage-card"
+      style={{
+        display: 'grid',
+        gridTemplateColumns: reverse ? '1fr 1.05fr' : '1.05fr 1fr',
+        gap: 18,
+        alignItems: 'stretch',
+      }}
+    >
+      <Card
+        className="tl-product-stage-copy"
+        dark={dark}
         style={{
-          backgroundColor: color.white,
-          borderRadius: 16,
-          padding: 24,
-          border: `1px solid ${color.creamDark}`,
+          color: dark ? C.white : C.ink,
+          display: 'grid',
+          gap: 18,
+          minHeight: 340,
         }}
       >
-        <div style={{ fontSize: 14, fontWeight: 600, color: color.ink, marginBottom: 16 }}>
-          Portal Modules
-        </div>
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: 10,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '6px 12px',
+            borderRadius: 999,
+            backgroundColor: dark ? 'rgba(68,217,161,0.14)' : plan.name === 'Momentum' ? '#E9FBF3' : '#FFF0E6',
+            color: accent,
+            fontSize: 12,
+            fontWeight: 800,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            alignSelf: 'flex-start',
           }}
         >
-          {[
-            'Dashboard',
-            'Orders',
-            'Customers',
-            'Offerings',
-            'Locations',
-            'Follow-Ups',
-            'Revenue',
-            'Automations',
-            'Settings',
-          ].map((mod) => (
-            <div
-              key={mod}
-              style={{
-                padding: '12px 10px',
-                fontSize: 13,
-                fontWeight: 600,
-                color: color.ink,
-                backgroundColor: color.cream,
-                borderRadius: 8,
-                textAlign: 'center',
-              }}
-            >
-              {mod}
-            </div>
+          {plan.badge}
+        </div>
+
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 800, color: accent, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+            {plan.name}
+          </div>
+          <h3 style={{ fontSize: 32, lineHeight: 1.02, fontWeight: 800, marginBottom: 10 }}>
+            {plan.summary}
+          </h3>
+          <p style={{ fontSize: 16, lineHeight: 1.65, color: dark ? 'rgba(254,252,250,0.76)' : C.muted, maxWidth: 560 }}>
+            {plan.detail}
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'baseline' }}>
+          <div style={{ fontSize: 40, fontWeight: 800 }}>{plan.price}</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: dark ? 'rgba(254,252,250,0.72)' : C.muted }}>{plan.cadence}</div>
+        </div>
+      </Card>
+
+      <Card
+        className="tl-product-stage-preview"
+        style={{
+          display: 'grid',
+          gap: 18,
+          background: dark
+            ? 'linear-gradient(180deg, #2A241F 0%, #221D19 100%)'
+            : plan.name === 'Launch'
+              ? 'linear-gradient(180deg, #FFFDF9 0%, #FFF5E8 100%)'
+              : 'linear-gradient(180deg, #FFFFFF 0%, #F0FBF6 100%)',
+          color: dark ? C.white : C.ink,
+        }}
+      >
+        <StageMock planName={plan.name} dark={dark} />
+
+        <div style={{ display: 'grid', gap: 10 }}>
+          {plan.highlights.slice(0, 3).map((item) => (
+            <Bullet key={item} text={item} light={dark} />
           ))}
         </div>
-      </div>
-    ),
-  },
-  {
-    number: '03',
-    title: 'Smart Pricing',
-    href: '/product/smart-pricing',
-    subtitle: 'Price catering based on what actually drives margin',
-    bullets: [
-      'Per-head, flat-rate, or hybrid models',
-      'Minimums and deposits enforced',
-      'Location-specific rules',
-    ],
-    visual: (
+      </Card>
+    </div>
+  );
+}
+
+function MobileStageCard({ plan }: { plan: (typeof plans)[number] }) {
+  const dark = plan.name === 'Engine';
+  const accent = plan.name === 'Momentum' ? '#1D7A55' : plan.name === 'Engine' ? C.teal : C.orange;
+
+  return (
+    <Card
+      className="tl-product-mobile-stage-card"
+      dark={dark}
+      style={{
+        display: 'grid',
+        gap: 18,
+        color: dark ? C.white : C.ink,
+      }}
+    >
       <div
         style={{
-          backgroundColor: color.white,
-          borderRadius: 16,
-          padding: 24,
-          border: `1px solid ${color.creamDark}`,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '6px 12px',
+          borderRadius: 999,
+          backgroundColor: dark ? 'rgba(68,217,161,0.14)' : plan.name === 'Momentum' ? '#E9FBF3' : '#FFF0E6',
+          color: accent,
+          fontSize: 12,
+          fontWeight: 800,
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+          alignSelf: 'flex-start',
         }}
       >
-        <div style={{ fontSize: 14, fontWeight: 600, color: color.ink, marginBottom: 16 }}>
-          Package Example
+        {plan.badge}
+      </div>
+
+      <div style={{ display: 'grid', gap: 12 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: accent, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          {plan.name}
+        </div>
+        <h3 style={{ fontSize: 42, lineHeight: 0.96, fontWeight: 800 }}>{plan.summary}</h3>
+        <p style={{ fontSize: 17, lineHeight: 1.65, color: dark ? 'rgba(254,252,250,0.76)' : C.muted }}>{plan.detail}</p>
+      </div>
+
+      <StageMock planName={plan.name} dark={dark} />
+
+      <div style={{ display: 'grid', gap: 10 }}>
+        {plan.highlights.slice(0, 4).map((item) => (
+          <Bullet key={item} text={item} light={dark} />
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+        <div style={{ fontSize: 42, fontWeight: 800 }}>{plan.price}</div>
+        <div style={{ fontSize: 17, fontWeight: 700, color: dark ? 'rgba(254,252,250,0.72)' : C.muted }}>{plan.cadence}</div>
+      </div>
+    </Card>
+  );
+}
+
+function AdvisorPreview() {
+  const moves = [
+    {
+      label: 'Price higher',
+      value: 'Start with the strongest package',
+      detail: 'Raise the offer that already wins the most intent.',
+    },
+    {
+      label: 'Upsell next',
+      value: 'Add the right extra at checkout',
+      detail: 'Use premium sides, beverages, or service upgrades.',
+    },
+    {
+      label: 'Reorder next',
+      value: 'Time the follow up after fulfillment',
+      detail: 'Turn the last order into the next one.',
+    },
+    {
+      label: 'Fix next',
+      value: 'Clear the blocker before scaling traffic',
+      detail: 'Lead time, minimums, and deposit policy first.',
+    },
+  ] as const;
+
+  return (
+    <div
+      style={{
+        borderRadius: 28,
+        background: 'linear-gradient(180deg, #221D19 0%, #181411 100%)',
+        color: C.white,
+        border: '1px solid rgba(254,252,250,0.08)',
+        padding: 20,
+        boxShadow: '0 28px 70px rgba(15, 12, 10, 0.18)',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 16 }}>
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 800, color: C.teal, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            Growth Advisor
+          </div>
+          <div style={{ fontSize: 24, fontWeight: 800, marginTop: 6 }}>A strategy layer, not a upsell banner.</div>
         </div>
         <div
           style={{
-            padding: '20px 18px',
-            backgroundColor: '#FFF7F0',
-            border: `1.5px solid ${color.orange}`,
-            borderRadius: 12,
+            padding: '8px 12px',
+            borderRadius: 999,
+            backgroundColor: 'rgba(68,217,161,0.12)',
+            color: C.teal,
+            fontSize: 11,
+            fontWeight: 800,
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
           }}
         >
-          <div style={{ fontSize: 18, fontWeight: 700, color: color.ink, marginBottom: 12 }}>
-            Executive Lunch
-          </div>
+          Live snapshot
+        </div>
+      </div>
+
+      <div className="tl-product-advisor-preview-grid" style={{ display: 'grid', gap: 12 }}>
+        {moves.map((move, index) => (
           <div
+            key={move.label}
             style={{
               display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: 10,
+              gridTemplateColumns: '1.2fr 0.8fr',
+              gap: 12,
+              padding: 14,
+              borderRadius: 18,
+              backgroundColor: index === 0 ? 'rgba(232,86,24,0.12)' : 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(254,252,250,0.08)',
             }}
           >
-            {[
-              { label: 'Price', value: '$28/pp' },
-              { label: 'Min headcount', value: '15' },
-              { label: 'Max headcount', value: '200' },
-              { label: 'Deposit', value: '25%' },
-            ].map((row) => (
-              <div key={row.label}>
-                <div style={{ fontSize: 11, color: color.muted }}>{row.label}</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: color.ink, marginTop: 2 }}>
-                  {row.value}
-                </div>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: index === 0 ? '#FFD2BE' : C.teal, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                {move.label}
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    ),
-  },
-  {
-    number: '04',
-    title: 'Smart Upsell',
-    href: '/product/smart-upsell',
-    subtitle: 'Every checkout suggests the right add-ons',
-    bullets: [
-      'Contextual recommendations',
-      '+15% avg order value',
-      'Upsell tracking in dashboard',
-    ],
-    visual: (
-      <div
-        style={{
-          backgroundColor: color.white,
-          borderRadius: 16,
-          padding: 24,
-          border: `1px solid ${color.creamDark}`,
-        }}
-      >
-        <div style={{ fontSize: 14, fontWeight: 600, color: color.ink, marginBottom: 16 }}>
-          Suggested Add-ons
-        </div>
-        {[
-          { item: 'Fresh Fruit Platter', price: '+$4.50/pp' },
-          { item: 'Coffee Service', price: '+$3/pp' },
-          { item: 'Dessert Tray', price: '+$45' },
-        ].map((addon) => (
-          <div
-            key={addon.item}
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '14px 16px',
-              marginBottom: 8,
-              borderRadius: 10,
-              backgroundColor: '#F0FBF5',
-              border: `1.5px solid ${color.teal}`,
-            }}
-          >
-            <span style={{ fontSize: 14, fontWeight: 500, color: color.ink }}>{addon.item}</span>
-            <span style={{ fontSize: 14, fontWeight: 700, color: color.teal }}>{addon.price}</span>
+              <div style={{ fontSize: 16, fontWeight: 800, marginTop: 6 }}>{move.value}</div>
+            </div>
+            <div style={{ fontSize: 13, lineHeight: 1.5, color: 'rgba(254,252,250,0.74)' }}>{move.detail}</div>
           </div>
         ))}
       </div>
-    ),
-  },
-  {
-    number: '05',
-    title: 'Capacity Management',
-    href: '/product/capacity-management',
-    subtitle: 'Never overcommit your kitchen',
-    bullets: [
-      'Lead time requirements enforced',
-      'Delivery radius and zones',
-      'Multi-location support',
-    ],
-    visual: (
-      <div
-        style={{
-          backgroundColor: color.white,
-          borderRadius: 16,
-          padding: 24,
-          border: `1px solid ${color.creamDark}`,
-        }}
-      >
-        <div style={{ fontSize: 14, fontWeight: 600, color: color.ink, marginBottom: 16 }}>
-          Location Settings — Main Kitchen
-        </div>
-        {[
-          { label: 'Max daily catering orders', value: '8' },
-          { label: 'Lead time required', value: '24 hours' },
-          { label: 'Delivery radius', value: '15 miles' },
-          { label: 'Max headcount per order', value: '150' },
-        ].map((s) => (
-          <div
-            key={s.label}
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '14px 16px',
-              marginBottom: 8,
-              borderRadius: 10,
-              backgroundColor: color.cream,
-            }}
-          >
-            <span style={{ fontSize: 14, color: color.ink }}>{s.label}</span>
-            <span style={{ fontWeight: 700, color: color.ink, fontSize: 15 }}>{s.value}</span>
-          </div>
-        ))}
-      </div>
-    ),
-  },
-];
+    </div>
+  );
+}
 
-/* ══════════════════════════════════════════════
-   PRODUCT PAGE — V2
-   ══════════════════════════════════════════════ */
+function FeatureTile({
+  title,
+  items,
+}: {
+  title: string;
+  items: string[];
+}) {
+  return (
+    <Card className="tl-product-hover" style={{ minHeight: 220 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 14 }}>
+        <div style={{ fontSize: 12, fontWeight: 800, color: C.orange, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          {title}
+        </div>
+        <div style={{ width: 52, height: 4, borderRadius: 999, background: 'linear-gradient(90deg, #E85618 0%, #44D9A1 100%)' }} />
+      </div>
+      <div style={{ display: 'grid', gap: 10 }}>
+        {items.map((item) => (
+          <Bullet key={item} text={item} />
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 export default function ProductPage() {
   return (
-    <main>
-      {/* ── HERO ── */}
-      <Section bg={color.cream} style={{ paddingTop: 100, paddingBottom: 60 }}>
-        <div style={{ textAlign: 'center', maxWidth: 720, margin: '0 auto' }}>
-          <div
-            style={{
-              fontSize: 13,
-              fontWeight: 600,
-              color: color.orange,
-              textTransform: 'uppercase' as const,
-              letterSpacing: 1.5,
-              marginBottom: 12,
-            }}
-          >
-            The Product
+    <main style={{ backgroundColor: C.cream }}>
+      <style>{`
+        .tl-product-fade {
+          animation: tlFadeUp 0.7s ease both;
+        }
+        .tl-product-delay-1 { animation-delay: 0.1s; }
+        .tl-product-delay-2 { animation-delay: 0.2s; }
+        .tl-product-delay-3 { animation-delay: 0.3s; }
+        .tl-product-hover {
+          transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+        }
+        .tl-product-hover:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 18px 50px rgba(26, 22, 18, 0.08);
+        }
+        .tl-product-stage-desktop {
+          display: grid;
+          gap: 18px;
+          margin-top: 34px;
+        }
+        .tl-product-stage-mobile {
+          display: none;
+        }
+        @keyframes tlFadeUp {
+          from { opacity: 0; transform: translateY(14px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @media (max-width: 1024px) {
+          .tl-product-hero,
+          .tl-product-stage,
+          .tl-product-advisor {
+            grid-template-columns: 1fr !important;
+          }
+        }
+        @media (max-width: 960px) {
+          .tl-product-feature-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+        @media (max-width: 768px) {
+          .tl-product-section {
+            padding: 64px 18px !important;
+            overflow-x: clip !important;
+          }
+          .tl-product-section > div {
+            width: 100% !important;
+            max-width: 560px !important;
+            margin: 0 auto !important;
+          }
+          .tl-product-hero-title {
+            font-size: 42px !important;
+            line-height: 1.02 !important;
+          }
+          .tl-product-section-title {
+            font-size: 32px !important;
+            line-height: 1.08 !important;
+          }
+          .tl-product-body-copy {
+            font-size: 16px !important;
+            line-height: 1.65 !important;
+          }
+          .tl-product-hero-canvas {
+            min-height: 420px !important;
+          }
+          .tl-product-advisor,
+          .tl-product-feature-grid {
+            max-width: 560px !important;
+            margin-inline: auto !important;
+          }
+          .tl-product-stage-desktop {
+            display: none !important;
+          }
+          .tl-product-stage-mobile {
+            display: grid !important;
+            gap: 16px !important;
+            margin-top: 28px !important;
+          }
+          .tl-product-mobile-stage-card,
+          .tl-product-mobile-stage-card > * {
+            min-width: 0 !important;
+          }
+          .tl-product-chip-grid,
+          .tl-product-stage-metrics {
+            grid-template-columns: 1fr !important;
+          }
+          .tl-product-hero-copy,
+          .tl-product-heading-block,
+          .tl-product-closing > div:first-child {
+            text-align: center !important;
+            margin-inline: auto !important;
+          }
+          .tl-product-actions,
+          .tl-product-closing-actions {
+            justify-content: center !important;
+          }
+          .tl-product-stage-card,
+          .tl-product-advisor {
+            grid-template-columns: 1fr !important;
+            gap: 14px !important;
+          }
+          .tl-product-stage-card,
+          .tl-product-stage-card > *,
+          .tl-product-stage-preview,
+          .tl-product-stage-copy {
+            min-width: 0 !important;
+          }
+          .tl-product-stage-copy {
+            order: 1 !important;
+            min-height: auto !important;
+          }
+          .tl-product-stage-preview {
+            order: 2 !important;
+          }
+          .tl-product-stage-copy,
+          .tl-product-stage-preview,
+          .tl-product-feature-grid > div,
+          .tl-product-advisor > div {
+            width: 100% !important;
+          }
+          .tl-product-hover {
+            transform: none !important;
+            box-shadow: none !important;
+          }
+          .tl-product-advisor-preview-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .tl-product-closing {
+            grid-template-columns: 1fr !important;
+          }
+          .tl-product-closing-actions {
+            justify-content: center !important;
+          }
+        }
+      `}</style>
+
+      <Section bg={C.ink} style={{ paddingTop: 72, paddingBottom: 72 }} className="tl-product-section">
+        <div
+          className="tl-product-hero"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1.05fr',
+            gap: 32,
+            alignItems: 'center',
+          }}
+        >
+          <div className="tl-product-fade tl-product-hero-copy">
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '8px 14px',
+                borderRadius: 999,
+                backgroundColor: 'rgba(254,252,250,0.08)',
+                color: C.teal,
+                fontSize: 12,
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                marginBottom: 20,
+              }}
+            >
+              Product overview
+            </div>
+
+            <h1
+              className="tl-product-hero-title"
+              style={{
+                fontSize: 64,
+                lineHeight: 0.98,
+                letterSpacing: '-0.045em',
+                color: C.white,
+                fontWeight: 800,
+                maxWidth: 640,
+                marginBottom: 16,
+              }}
+            >
+              Launch.
+              <br />
+              Momentum.
+              <br />
+              Engine.
+            </h1>
+            <p
+              className="tl-product-body-copy"
+              style={{
+                fontSize: 19,
+                lineHeight: 1.65,
+                color: 'rgba(254,252,250,0.82)',
+                maxWidth: 620,
+              }}
+            >
+              TrayLoop starts with a branded storefront, grows repeat revenue, and finishes with AI that keeps the next order in motion.
+            </p>
+
+            <div className="tl-product-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 26 }}>
+              <PillButton text="See pricing" href="/pricing" variant="primary" size="md" />
+              <PillButton text="How it works" href="/how-it-works" variant="ghost" size="md" />
+            </div>
+
+            <div className="tl-product-chip-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12, marginTop: 28, maxWidth: 620 }}>
+              <MetricChip label="Launch" value="Get live" dark />
+              <MetricChip label="Momentum" value="Build repeat" dark />
+              <MetricChip label="Engine" value="Compounds" dark />
+            </div>
           </div>
-          <h1
-            style={{
-              fontSize: 44,
-              fontWeight: 800,
-              color: color.ink,
-              lineHeight: 1.15,
-              marginBottom: 20,
-            }}
-          >
-            Everything your catering program needs to grow revenue on autopilot.
-          </h1>
-          <p
-            style={{
-              fontSize: 18,
-              color: color.muted,
-              lineHeight: 1.6,
-              marginBottom: 32,
-            }}
-          >
-            Five core capabilities — each designed to capture more orders, increase order value,
-            and turn one-time customers into recurring accounts.
-          </p>
-          <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 48 }}>
-            <PillButton text="Book a free Demo →" href="/demo" variant="primary" />
-            <PillButton text="See Pricing →" href="/pricing" variant="ghost" />
-          </div>
-          <div style={{ borderRadius: 16, overflow: 'hidden' }}>
-            <Image
-              src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1100&h=400&fit=crop"
-              alt="Catering spread"
-              width={1100}
-              height={400}
-              style={{ display: 'block', width: '100%', height: 'auto', objectFit: 'cover' }}
-              priority
-            />
+
+          <div className="tl-product-fade tl-product-delay-1">
+            <div
+              className="tl-product-hero-canvas"
+              style={{
+                position: 'relative',
+                minHeight: 620,
+                borderRadius: 34,
+                overflow: 'hidden',
+                border: '1px solid rgba(254,252,250,0.1)',
+                boxShadow: '0 26px 80px rgba(0, 0, 0, 0.25)',
+                backgroundColor: '#2A2520',
+              }}
+            >
+              <Image
+                src="https://images.unsplash.com/photo-1547592180-85f173990554?w=1200&h=1500&fit=crop&q=80"
+                alt="Catering team preparing a large order"
+                fill
+                priority
+                style={{ objectFit: 'cover', objectPosition: 'center' }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background:
+                    'linear-gradient(180deg, rgba(26,22,18,0.06) 0%, rgba(26,22,18,0.28) 42%, rgba(26,22,18,0.92) 100%)',
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  padding: 26,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  color: C.white,
+                }}
+              >
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                  {['Launch live', 'Momentum grows baskets', 'Engine closes the loop'].map((chip, index) => (
+                    <div
+                      key={chip}
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: 999,
+                        backgroundColor: index === 2 ? 'rgba(68,217,161,0.14)' : 'rgba(255,255,255,0.08)',
+                        color: index === 2 ? C.teal : C.white,
+                        border: '1px solid rgba(254,252,250,0.1)',
+                        fontSize: 11,
+                        fontWeight: 800,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.08em',
+                      }}
+                    >
+                      {chip}
+                    </div>
+                  ))}
+                </div>
+
+                <div
+                  style={{
+                    display: 'grid',
+                    gap: 12,
+                    padding: 18,
+                    borderRadius: 22,
+                    backgroundColor: 'rgba(26,22,18,0.72)',
+                    border: '1px solid rgba(254,252,250,0.12)',
+                    backdropFilter: 'blur(14px)',
+                    maxWidth: 420,
+                  }}
+                >
+                  <div style={{ fontSize: 12, color: C.teal, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    Product layer
+                  </div>
+                  <div style={{ fontSize: 26, fontWeight: 800 }}>One operating system for direct catering.</div>
+                  <p style={{ fontSize: 15, lineHeight: 1.6, color: 'rgba(254,252,250,0.78)' }}>
+                    Merchants launch the storefront, repeat orders start compounding, and AI takes over the next move.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </Section>
 
-      {/* ── FEATURE CARDS ── */}
-      {features.map((feature, i) => {
-        const isEven = i % 2 === 1;
-        const bg = i % 2 === 0 ? color.white : color.cream;
-
-        const textBlock = (
-          <div style={{ flex: '1 1 440px', minWidth: 300 }}>
-            <div
-              style={{
-                fontSize: 14,
-                fontWeight: 700,
-                color: color.orange,
-                marginBottom: 10,
-              }}
-            >
-              {feature.number}
-            </div>
-            <h2
-              style={{
-                fontSize: 32,
-                fontWeight: 700,
-                color: color.ink,
-                lineHeight: 1.2,
-                marginBottom: 8,
-              }}
-            >
-              {feature.title}
-            </h2>
-            <p style={{ fontSize: 18, color: color.muted, marginBottom: 24, lineHeight: 1.5 }}>
-              {feature.subtitle}
-            </p>
-            <ul style={{ padding: 0, marginBottom: 24 }}>
-              {feature.bullets.map((b) => (
-                <BulletItem key={b} text={b} />
-              ))}
-            </ul>
-            <Link
-              href={feature.href}
-              style={{
-                fontSize: 15,
-                fontWeight: 600,
-                color: color.orange,
-                textDecoration: 'none',
-              }}
-            >
-              Learn more →
-            </Link>
-          </div>
-        );
-
-        const visualBlock = (
-          <div style={{ flex: '1 1 440px', minWidth: 300 }}>{feature.visual}</div>
-        );
-
-        return (
-          <div key={feature.number}>
-            <Section bg={bg}>
-              <div
-                style={{
-                  display: 'flex',
-                  gap: 48,
-                  flexWrap: 'wrap',
-                  alignItems: 'center',
-                  flexDirection: isEven ? 'row-reverse' : 'row',
-                }}
-              >
-                {textBlock}
-                {visualBlock}
-              </div>
-            </Section>
-
-            {/* Mid-section CTA after feature 2 (index 1) and feature 4 (index 3) */}
-            {(i === 1 || i === 3) && <MidCta />}
-          </div>
-        );
-      })}
-
-      {/* ── PLATFORM OVERVIEW ── */}
-      <Section bg={color.ink}>
-        <div style={{ textAlign: 'center', maxWidth: 720, margin: '0 auto', marginBottom: 48 }}>
-          <h2
-            style={{
-              fontSize: 36,
-              fontWeight: 700,
-              color: color.white,
-              lineHeight: 1.2,
-              marginBottom: 16,
-            }}
-          >
-            One platform. Five capabilities. Zero commissions.
-          </h2>
+      <Section bg={C.white} className="tl-product-section">
+        <div className="tl-product-fade tl-product-heading-block">
+          <Eyebrow text="The ladder" />
+          <Heading
+            className="tl-product-section-title"
+            title="Three stages, one product story."
+            summary="Each tier adds a clear layer of leverage instead of resetting the account or making the merchant relearn the workflow."
+          />
         </div>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-            gap: 24,
-            maxWidth: 800,
-            margin: '0 auto',
-          }}
-        >
-          {[
-            { value: '$49/month', label: 'flat' },
-            { value: '0%', label: 'commissions' },
-            { value: '100%', label: 'done-for-you setup' },
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              style={{
-                backgroundColor: 'rgba(255,255,255,0.06)',
-                borderRadius: 16,
-                padding: '32px 24px',
-                textAlign: 'center',
-              }}
-            >
-              <div style={{ fontSize: 36, fontWeight: 800, color: color.white, marginBottom: 4 }}>
-                {stat.value}
-              </div>
-              <div style={{ fontSize: 15, color: '#C2B9AE' }}>{stat.label}</div>
+
+        <div className="tl-product-stage-desktop">
+          {plans.map((plan, index) => (
+            <div key={plan.name} className={`tl-product-fade tl-product-delay-${index + 1}`}>
+              <StageCard plan={plan} reverse={index % 2 === 1} />
+            </div>
+          ))}
+        </div>
+
+        <div className="tl-product-stage-mobile">
+          {plans.map((plan, index) => (
+            <div key={`${plan.name}-mobile`} className={`tl-product-fade tl-product-delay-${index + 1}`}>
+              <MobileStageCard plan={plan} />
             </div>
           ))}
         </div>
       </Section>
 
+      <Section bg={C.creamDark} className="tl-product-section">
+        <div className="tl-product-fade tl-product-heading-block">
+          <Eyebrow text="Growth Advisor" />
+          <Heading
+            className="tl-product-section-title"
+            title="The strategy layer feels like an operator sitting next to the merchant."
+            summary="It turns live storefront data into a short list of decisions: what to price higher, what to upsell, what to reorder, and what to fix next."
+          />
+        </div>
+
+        <div className="tl-product-advisor" style={{ display: 'grid', gridTemplateColumns: '0.9fr 1.1fr', gap: 20, alignItems: 'start', marginTop: 30 }}>
+          <Card style={{ display: 'grid', gap: 18 }}>
+            <div
+              style={{
+                padding: 16,
+                borderRadius: 20,
+                background: '#FFF8F2',
+                border: '1px solid #F3E1D1',
+              }}
+            >
+              <div style={{ fontSize: 12, fontWeight: 800, color: C.orange, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                Premium addition
+              </div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: C.ink, marginTop: 8 }}>{growthAdvisor.name}</div>
+              <p style={{ fontSize: 15, lineHeight: 1.6, color: C.muted, marginTop: 8 }}>
+                {growthAdvisor.detail}
+              </p>
+            </div>
+
+            <div style={{ display: 'grid', gap: 10 }}>
+              {growthAdvisor.highlights.map((item) => (
+                <Bullet key={item} text={item} />
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <div style={{ fontSize: 40, fontWeight: 800, color: C.ink }}>{growthAdvisor.price}</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: C.muted }}>{growthAdvisor.cadence}</div>
+            </div>
+          </Card>
+
+          <AdvisorPreview />
+        </div>
+      </Section>
+
+      <Section bg={C.white} className="tl-product-section">
+        <div className="tl-product-fade tl-product-heading-block">
+          <Eyebrow text="Capability atlas" />
+          <Heading
+            className="tl-product-section-title"
+            title="The features stay focused on direct catering."
+            summary="Every block is there to increase conversion, repeat rate, or operator confidence."
+          />
+        </div>
+
+        <div className="tl-product-feature-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 18, marginTop: 30 }}>
+          {featureAtlas.map((group, index) => (
+            <div key={group.title} className={`tl-product-fade tl-product-delay-${Math.min(index + 1, 3)}`}>
+              <FeatureTile title={group.title} items={group.items.slice(0, 3)} />
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      <section style={{ backgroundColor: C.ink, color: C.white, padding: '92px 24px' }}>
+        <div
+          className="tl-product-closing"
+          style={{
+            maxWidth: 1180,
+            margin: '0 auto',
+            display: 'grid',
+            gridTemplateColumns: '1fr auto',
+            gap: 24,
+            alignItems: 'center',
+          }}
+        >
+          <div>
+            <Eyebrow text="Ready for the loop" />
+            <h2 style={{ fontSize: 44, lineHeight: 1.04, fontWeight: 800, marginBottom: 14, maxWidth: 640 }}>
+              Launch gets the order. Momentum grows it. Engine compounds it.
+            </h2>
+            <p style={{ fontSize: 18, lineHeight: 1.65, color: 'rgba(254,252,250,0.82)', maxWidth: 640 }}>
+              That is the product story in one line, and it is the story every page should tell.
+            </p>
+          </div>
+          <div className="tl-product-closing-actions" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 12 }}>
+            <PillButton text="See pricing" href="/pricing" variant="primary" size="md" />
+            <PillButton text="How it works" href="/how-it-works" variant="ghost" size="md" />
+          </div>
+        </div>
+      </section>
     </main>
   );
 }

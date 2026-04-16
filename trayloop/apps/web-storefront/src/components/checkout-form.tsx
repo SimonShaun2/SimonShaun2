@@ -772,17 +772,28 @@ export default function CheckoutForm({ data, initialLocationSlug }: Props) {
     () => oftenAdded.filter((addOn) => (selectedAddOnIds[addOn.id] ?? 0) === 0).slice(0, 3),
     [oftenAdded, selectedAddOnIds],
   );
+  const suggestedOftenAddedPrimary = suggestedOftenAdded[0] ?? null;
+  const recommendedAddOnPrimary = recommendedAddOns[0] ?? null;
   const fallbackUpsell =
     primaryUpsell ??
-    (suggestedOftenAdded[0]
+    (suggestedOftenAddedPrimary
       ? {
-          addOnId: suggestedOftenAdded[0].id,
-          headline: `Add ${suggestedOftenAdded[0].name} to this order?`,
+          addOnId: suggestedOftenAddedPrimary.id,
+          headline: `Add ${suggestedOftenAddedPrimary.name} to this order?`,
           reason: 'Popular with similar catering orders.',
           recommendationType: 'often_added',
           suggestedQuantity: 1,
-          totalPrice: suggestedOftenAdded[0].price,
+          totalPrice: suggestedOftenAddedPrimary.price,
         }
+      : recommendedAddOnPrimary
+        ? {
+            addOnId: recommendedAddOnPrimary.id,
+            headline: `Add ${recommendedAddOnPrimary.name} to this order?`,
+            reason: 'A common pairing for this kind of order.',
+            recommendationType: 'recommended',
+            suggestedQuantity: 1,
+            totalPrice: recommendedAddOnPrimary.price,
+          }
       : null);
   const modalSuggestedAddOns = useMemo(() => {
     const excludeId = itemModal?.type === 'addon' ? itemModal.id : null;

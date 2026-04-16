@@ -410,8 +410,8 @@ export default function HomePage() {
           {[
             { label: 'Live in days', desc: 'not weeks' },
             { label: 'No migration risk', desc: 'we handle setup' },
-            { label: 'Works with your process', desc: 'POS-agnostic' },
-            { label: 'Keep existing channels', desc: 'marketplace-compatible' },
+            { label: 'Works with your process', desc: 'Works with your current stack' },
+            { label: 'Keep existing channels', desc: 'Works beside marketplace channels' },
           ].map((t) => (
             <div key={t.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span
@@ -542,7 +542,7 @@ export default function HomePage() {
             <ul style={{ padding: 0 }}>
               <XItem text="They take 15–30% of every order. Not for finding the customer. Not for cooking the food. Just for sitting in the middle." />
               <XItem text="They own your customers. That corporate account ordering $800/month? The marketplace has their data. You get a name on a ticket." />
-              <XItem text="There's no follow-up. No repeat system. No compounding. Every Monday, your catering revenue starts at zero." />
+              <XItem text="There's no follow up. No repeat system. No compounding. Every Monday, your catering revenue starts at zero." />
               <XItem text="You're too busy running service to chase reorders and send proposals manually." />
               <XItem text="The longer you wait, the more it costs. Every month is more commissions paid and more customers lost." />
             </ul>
@@ -572,7 +572,7 @@ export default function HomePage() {
               </div>
               {[
                 { label: 'Marketplace commissions (30%)', value: '$3,600' },
-                { label: 'Lost reorders (no follow-up)', value: '$640' },
+                { label: 'Lost reorders (no follow up)', value: '$640' },
                 { label: 'Missed upsell opportunities', value: '$320' },
                 { label: 'Manual process inefficiency', value: '$280' },
               ].map((item) => (
@@ -627,7 +627,7 @@ export default function HomePage() {
             You don&apos;t have a catering system. You have transactions.
           </h2>
           <p style={{ fontSize: 18, color: color.muted, maxWidth: 640, margin: '0 auto', lineHeight: 1.5 }}>
-            TrayLoop replaces one-off orders with a repeatable system that captures, converts, and compounds — automatically.
+            TrayLoop replaces one off orders with a repeatable system that captures, converts, and compounds — automatically.
           </p>
         </div>
         <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
@@ -770,7 +770,7 @@ export default function HomePage() {
           />
           <OutcomeCard
             title="Send the right message without writing a word"
-            aiNote="Generates personalized follow-ups and proposals based on order history."
+            aiNote="Generates personalized follow up and proposals based on order history."
             stat="14 hrs/week saved"
           />
         </div>
@@ -804,7 +804,7 @@ export default function HomePage() {
               <div style={{ fontSize: 13, color: color.teal }}>
                 Assisted by AI:{' '}
                 <span style={{ color: '#C2B9AE' }}>
-                  Recommends the highest-converting add-ons based on order size and customer
+                  Recommends the best converting extras based on order size and customer
                   history.
                 </span>
               </div>
@@ -820,7 +820,7 @@ export default function HomePage() {
                 }}
               >
                 <div style={{ fontSize: 13, color: color.muted, marginBottom: 12 }}>
-                  Checkout — Suggested add-ons
+                  Checkout — Suggested extras
                 </div>
                 {[
                   { item: 'Beverage Package', price: '+$85', pct: '+12%' },
@@ -1019,7 +1019,7 @@ export default function HomePage() {
               {[
                 '15–30% of every order goes to a platform you don\'t control',
                 'No idea which accounts are about to stop ordering',
-                'Follow-up happens when you remember — which is rarely',
+                'Follow up happens when you remember — which is rarely',
                 'Revenue resets to zero every Monday',
                 'No system. Just hustle.',
               ].map((t) => (
@@ -1053,8 +1053,8 @@ export default function HomePage() {
             <ul style={{ padding: 0 }}>
               {[
                 'Zero commissions — every dollar stays with your restaurant',
-                'At-risk accounts flagged before they disappear',
-                'Automated follow-up and reorder outreach runs without you',
+                'At risk accounts flagged before they disappear',
+                'Automated follow up and reorder outreach runs without you',
                 'Revenue that compounds month over month',
                 'A system that runs while you run service',
               ].map((t) => (
@@ -1129,9 +1129,9 @@ export default function HomePage() {
               alt: 'Restaurant kitchen during busy service',
             },
             {
-              title: 'The Growth-Ready Team',
+              title: 'The Ready to Grow Team',
               description:
-                "You've got a solid catering program and a team to support it. Now you need infrastructure: a portal, CRM, automated follow-ups, and data. You're ready to scale — you just need the engine.",
+                "You've got a solid catering program and a team to support it. Now you need infrastructure: a portal, customer records, automated follow up, and data. You're ready to scale — you just need the engine.",
               img: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=400&h=200&fit=crop',
               alt: 'Team meeting planning catering growth strategy',
             },
