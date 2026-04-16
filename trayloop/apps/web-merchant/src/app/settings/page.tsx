@@ -7,8 +7,13 @@ import {
   createBillingCheckout,
   createBillingPortal,
   fetchBillingSubscription,
+  fetchMembers,
   fetchStorefrontContext,
+  inviteMember,
+  removeMember,
+  updateMemberRole,
   type MerchantBillingSubscription,
+  type MerchantMembership,
   type MerchantStorefrontContext,
 } from '../../lib/api';
 import { clearMerchantSession, hasMerchantSession, merchantResetHref } from '../../lib/session';
@@ -952,23 +957,8 @@ function SettingsContent() {
             </div>
           </SectionCard>
 
-          <SectionCard id="team" title="Team & Access" subtitle="Who can access the merchant dashboard and how sessions are managed right now.">
-            <KeyValueGrid
-              items={[
-                ['Current access model', 'Owner / admin membership via the merchant account'],
-                ['Reset password flow', 'Available from the sign-in page'],
-                ['Sign out support', 'Available from the sidebar and sign-in page'],
-                ['Team invitations', 'Coming soon'],
-              ]}
-            />
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
-              <a href={merchantResetHref()} style={secondaryButtonStyle}>
-                Reset Password
-              </a>
-              <button type="button" onClick={handleMerchantSignOut} style={secondaryButtonStyle}>
-                Sign Out
-              </button>
-            </div>
+          <SectionCard id="team" title="Team & Access" subtitle="Manage who can access this merchant dashboard, invite new members, and control roles.">
+            <TeamSection isMobile={isMobile} />
           </SectionCard>
 
           <SectionCard id="notifications" title="Notifications" subtitle="What the merchant experience supports today and what’s planned next.">
@@ -1078,6 +1068,352 @@ function SettingsContent() {
           </SectionCard>
         </div>
       </div>
+    </div>
+  );
+}
+
+const ROLE_OPTIONS: Array<{ value: MerchantMembership['role']; label: string }> = [
+  { value: 'admin', label: 'Admin' },
+  { value: 'manager', label: 'Manager' },
+  { value: 'staff', label: 'Staff' },
+];
+
+const ROLE_BADGE_COLORS: Record<MerchantMembership['role'], { bg: string; color: string }> = {
+  owner: { bg: '#FEF3C7', color: '#92400E' },
+  admin: { bg: '#DBEAFE', color: '#1E40AF' },
+  manager: { bg: '#DCFCE7', color: '#166534' },
+  staff: { bg: '#F5F5F4', color: '#57534E' },
+};
+
+function TeamSection({ isMobile }: { isMobile: boolean }) {
+  const [members, setMembers] = useState<MerchantMembership[]>([]);
+  const [membersLoading, setMembersLoading] = useState(true);
+  const [membersError, setMembersError] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<MerchantMembership['role']>('staff');
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [teamMessage, setTeamMessage] = useState('');
+  const [teamMessageTone, setTeamMessageTone] = useState<'success' | 'error'>('success');
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+  const [roleChangeLoading, setRoleChangeLoading] = useState<string | null>(null);
+  const [removeLoading, setRemoveLoading] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadMembers();
+  }, []);
+
+  async function loadMembers() {
+    setMembersLoading(true);
+    setMembersError('');
+    try {
+      const data = await fetchMembers();
+      setMembers(data);
+    } catch (err) {
+      setMembersError(err instanceof Error ? err.message : 'Failed to load team members');
+    } finally {
+      setMembersLoading(false);
+    }
+  }
+
+  async function handleInvite(event: React.FormEvent) {
+    event.preventDefault();
+    const email = inviteEmail.trim();
+    if (!email) return;
+    setInviteLoading(true);
+    setTeamMessage('');
+    try {
+      await inviteMember(email, inviteRole);
+      setTeamMessage(`Invitation sent to ${email}`);
+      setTeamMessageTone('success');
+      setInviteEmail('');
+      setInviteRole('staff');
+      const data = await fetchMembers();
+      setMembers(data);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to send invitation';
+      setTeamMessage(message);
+      setTeamMessageTone('error');
+    } finally {
+      setInviteLoading(false);
+    }
+  }
+
+  async function handleRoleChange(memberId: string, newRole: string) {
+    setRoleChangeLoading(memberId);
+    setTeamMessage('');
+    try {
+      const updated = await updateMemberRole(memberId, newRole);
+      setMembers((current) =>
+        current.map((m) => (m.id === memberId ? { ...m, role: updated.role } : m)),
+      );
+      setTeamMessage(`Role updated to ${newRole}`);
+      setTeamMessageTone('success');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to update role';
+      setTeamMessage(message);
+      setTeamMessageTone('error');
+    } finally {
+      setRoleChangeLoading(null);
+    }
+  }
+
+  async function handleRemove(memberId: string) {
+    setRemoveLoading(memberId);
+    setTeamMessage('');
+    try {
+      await removeMember(memberId);
+      setMembers((current) => current.filter((m) => m.id !== memberId));
+      setTeamMessage('Member removed');
+      setTeamMessageTone('success');
+      setConfirmRemoveId(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to remove member';
+      setTeamMessage(message);
+      setTeamMessageTone('error');
+    } finally {
+      setRemoveLoading(null);
+    }
+  }
+
+  if (membersLoading) {
+    return <p style={{ color: '#78716C', fontSize: 14, margin: 0 }}>Loading team members...</p>;
+  }
+
+  if (membersError) {
+    return (
+      <div>
+        <div style={{ padding: '14px 16px', borderRadius: 10, background: '#FEF2F2', border: '1px solid #FECACA', marginBottom: 14 }}>
+          <p style={{ color: '#DC2626', fontWeight: 600, fontSize: 14, margin: 0 }}>{membersError}</p>
+        </div>
+        <button type="button" onClick={loadMembers} style={secondaryButtonStyle}>
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Invite form */}
+      <div style={{ padding: '16px 18px', borderRadius: 12, background: '#FAFAF9', border: '1px solid #E7E5E4', marginBottom: 18 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: '#78716C', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+          Invite a Team Member
+        </div>
+        <form onSubmit={handleInvite} style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <label style={{ display: 'block', flex: '1 1 220px', minWidth: 0 }}>
+            <span style={fieldLabelStyle}>Email Address</span>
+            <input
+              type="email"
+              value={inviteEmail}
+              onChange={(event) => setInviteEmail(event.target.value)}
+              style={inputStyle}
+              placeholder="teammate@example.com"
+              required
+            />
+          </label>
+          <label style={{ display: 'block', flex: '0 0 150px' }}>
+            <span style={fieldLabelStyle}>Role</span>
+            <select
+              value={inviteRole}
+              onChange={(event) => setInviteRole(event.target.value as MerchantMembership['role'])}
+              style={{ ...inputStyle, cursor: 'pointer' }}
+            >
+              {ROLE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+          <button type="submit" disabled={inviteLoading} style={{ ...primaryButtonStyle, height: 42, whiteSpace: 'nowrap' }}>
+            {inviteLoading ? 'Sending...' : 'Send Invite'}
+          </button>
+        </form>
+      </div>
+
+      {/* Team message */}
+      {teamMessage ? (
+        <div
+          style={{
+            padding: '10px 14px',
+            borderRadius: 10,
+            marginBottom: 14,
+            background: teamMessageTone === 'success' ? '#F0FDF4' : '#FEF2F2',
+            border: `1px solid ${teamMessageTone === 'success' ? '#BBF7D0' : '#FECACA'}`,
+          }}
+        >
+          <p style={{ color: teamMessageTone === 'success' ? '#166534' : '#DC2626', fontWeight: 600, fontSize: 13, margin: 0 }}>
+            {teamMessage}
+          </p>
+        </div>
+      ) : null}
+
+      {/* Members list */}
+      {members.length === 0 ? (
+        <div style={{ padding: '24px 16px', textAlign: 'center', borderRadius: 10, background: '#FAFAF9', border: '1px solid #E7E5E4' }}>
+          <p style={{ fontSize: 14, color: '#78716C', margin: 0 }}>No team members yet. Send an invitation above to get started.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {members.map((member) => {
+            const isOwner = member.role === 'owner';
+            const badgeColors = ROLE_BADGE_COLORS[member.role];
+            const isConfirmingRemove = confirmRemoveId === member.id;
+
+            return (
+              <div
+                key={member.id}
+                style={{
+                  display: 'flex',
+                  alignItems: isMobile ? 'flex-start' : 'center',
+                  flexDirection: isMobile ? 'column' : 'row',
+                  gap: isMobile ? 10 : 14,
+                  padding: '14px 16px',
+                  borderRadius: 10,
+                  border: '1px solid #E7E5E4',
+                  background: '#FFFFFF',
+                }}
+              >
+                {/* Avatar + Info */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 999,
+                      background: isOwner ? '#D4A853' : '#E7E5E4',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 14,
+                      fontWeight: 700,
+                      color: isOwner ? '#FFFFFF' : '#57534E',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {(member.userName || member.userEmail).charAt(0).toUpperCase()}
+                  </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#1C1917', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {member.userName || 'Unnamed'}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#78716C', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {member.userEmail}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Role badge */}
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    padding: '4px 10px',
+                    borderRadius: 999,
+                    background: badgeColors.bg,
+                    color: badgeColors.color,
+                    textTransform: 'capitalize',
+                    flexShrink: 0,
+                  }}
+                >
+                  {member.role}
+                </span>
+
+                {/* Status */}
+                <span style={{ fontSize: 12, color: member.status === 'active' ? '#166534' : '#78716C', flexShrink: 0 }}>
+                  {member.status === 'active' ? 'Active' : member.status === 'invited' ? 'Invited' : member.status}
+                </span>
+
+                {/* Joined date */}
+                <span style={{ fontSize: 12, color: '#A8A29E', flexShrink: 0, minWidth: 80 }}>
+                  {member.joinedAt
+                    ? new Date(member.joinedAt).toLocaleDateString()
+                    : member.createdAt
+                      ? new Date(member.createdAt).toLocaleDateString()
+                      : ''}
+                </span>
+
+                {/* Actions */}
+                {!isOwner ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                    <select
+                      value={member.role}
+                      disabled={roleChangeLoading === member.id}
+                      onChange={(event) => handleRoleChange(member.id, event.target.value)}
+                      style={{
+                        padding: '6px 8px',
+                        borderRadius: 8,
+                        border: '1px solid #D6D3D1',
+                        background: '#FFFFFF',
+                        fontSize: 12,
+                        color: '#44403C',
+                        cursor: roleChangeLoading === member.id ? 'wait' : 'pointer',
+                      }}
+                    >
+                      {ROLE_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+
+                    {isConfirmingRemove ? (
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button
+                          type="button"
+                          disabled={removeLoading === member.id}
+                          onClick={() => handleRemove(member.id)}
+                          style={{
+                            padding: '6px 10px',
+                            borderRadius: 8,
+                            border: 'none',
+                            background: '#DC2626',
+                            color: '#FFFFFF',
+                            fontSize: 11,
+                            fontWeight: 700,
+                            cursor: removeLoading === member.id ? 'wait' : 'pointer',
+                          }}
+                        >
+                          {removeLoading === member.id ? 'Removing...' : 'Confirm'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmRemoveId(null)}
+                          style={{
+                            padding: '6px 10px',
+                            borderRadius: 8,
+                            border: '1px solid #D6D3D1',
+                            background: '#FFFFFF',
+                            color: '#57534E',
+                            fontSize: 11,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmRemoveId(member.id)}
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: 8,
+                          border: '1px solid #FECACA',
+                          background: '#FEF2F2',
+                          color: '#DC2626',
+                          fontSize: 11,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

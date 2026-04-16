@@ -942,6 +942,44 @@ export async function updateMerchantFollowUp(id: string, input: MerchantFollowUp
   return response.data as MerchantFollowUpSummary;
 }
 
+export interface MerchantMembership {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  role: 'owner' | 'admin' | 'manager' | 'staff';
+  status: string;
+  joinedAt: string | null;
+  createdAt: string;
+}
+
+export async function fetchMembers(): Promise<MerchantMembership[]> {
+  const response = await apiFetch('/api/memberships');
+  return response.data;
+}
+
+export async function inviteMember(email: string, role: string): Promise<MerchantMembership> {
+  const response = await apiFetch('/api/memberships/invite', {
+    method: 'POST',
+    body: JSON.stringify({ email, role }),
+  });
+  return response.data;
+}
+
+export async function updateMemberRole(memberId: string, role: string): Promise<MerchantMembership> {
+  const response = await apiFetch(`/api/memberships/${memberId}/role`, {
+    method: 'PATCH',
+    body: JSON.stringify({ role }),
+  });
+  return response.data;
+}
+
+export async function removeMember(memberId: string): Promise<void> {
+  await apiFetch(`/api/memberships/${memberId}`, {
+    method: 'DELETE',
+  });
+}
+
 interface PaginationMeta {
   page: number;
   pageSize: number;
