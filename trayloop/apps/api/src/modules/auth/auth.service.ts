@@ -227,7 +227,6 @@ export async function login(input: LoginInput) {
     throw new ValidationError('Invalid email or password');
   }
 
-  // Update last login timestamp
   await db
     .update(users)
     .set({ lastLoginAt: new Date() })

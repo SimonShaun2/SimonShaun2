@@ -727,7 +727,6 @@ export async function updateStatus(id: string, orgId: string, input: UpdateOrder
     );
   }
 
-  // Set timestamps based on target status
   const now = new Date();
   const completedAt = input.status === 'completed' ? now : undefined;
 
@@ -769,7 +768,6 @@ export async function updateStatus(id: string, orgId: string, input: UpdateOrder
       const followUpDate = new Date();
       followUpDate.setDate(followUpDate.getDate() + 3); // 3 days after completion
 
-      // Check if follow-up already exists for this order
       const [existing_followup] = await db.select({ id: followUps.id })
         .from(followUps)
         .where(eq(followUps.orderId, id))

@@ -27,16 +27,6 @@ const hasExplicitSsl =
 
 const isTransactionPooler = port === '6543';
 
-console.log('[db] connecting to', {
-  host: hostname,
-  port,
-  user: username,
-  database,
-  ssl: hasExplicitSsl ? url.searchParams.get('sslmode') ?? url.searchParams.get('ssl') : (isSupabase ? 'require (auto)' : 'off'),
-  prepare: isTransactionPooler ? false : true,
-  hasDatabaseUrl: !!DATABASE_URL,
-});
-
 const client = postgres({
   host: hostname,
   port: Number(port),

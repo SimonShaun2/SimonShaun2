@@ -230,8 +230,8 @@ async function upsertSubscriptionSnapshot(
 
   // Stripe API versions may place period dates on the subscription or on individual items.
   // Safely extract from either location to avoid "Invalid time value" on NaN.
-  const rawPeriodStart = (subscription as any).current_period_start ?? (primaryItem as any)?.current_period_start ?? null;
-  const rawPeriodEnd = (subscription as any).current_period_end ?? (primaryItem as any)?.current_period_end ?? null;
+  const rawPeriodStart = subscription.current_period_start ?? (primaryItem as any)?.current_period_start ?? null;
+  const rawPeriodEnd = subscription.current_period_end ?? (primaryItem as any)?.current_period_end ?? null;
   const currentPeriodStart = typeof rawPeriodStart === 'number' ? new Date(rawPeriodStart * 1000) : null;
   const currentPeriodEnd = typeof rawPeriodEnd === 'number' ? new Date(rawPeriodEnd * 1000) : null;
 
@@ -559,7 +559,9 @@ async function handleDepositCheckoutCompleted(eventId: string, session: Stripe.C
     if (result.order?.status === 'confirmed') {
       await recordOrderEvent(orderId, 'status_changed', 'Status changed to confirmed (deposit received)');
     }
-  } catch {}
+  } catch (err) {
+    logger.error('Failed to record deposit_paid order event', { orderId, error: (err as Error).message });
+  }
 
   try {
     if (result.order?.status === 'confirmed') {
@@ -707,7 +709,9 @@ async function handleFullPaymentCheckoutCompleted(eventId: string, session: Stri
     if (result.order?.status === 'confirmed') {
       await recordOrderEvent(orderId, 'status_changed', 'Status changed to confirmed (payment received)');
     }
-  } catch {}
+  } catch (err) {
+    logger.error('Failed to record payment_paid order event', { orderId, error: (err as Error).message });
+  }
 
   logOrderPaymentWebhook('info', 'Full order payment completed via webhook', {
     eventId,
@@ -803,7 +807,9 @@ async function handleDepositCheckoutExpired(eventId: string, session: Stripe.Che
   if (orderId) {
     try {
       await recordOrderEvent(orderId, 'deposit_expired', 'Deposit payment link expired');
-    } catch {}
+    } catch (err) {
+      logger.error('Failed to record deposit_expired order event', { orderId, error: (err as Error).message });
+    }
   }
 
   logDepositWebhook('info', 'Checkout session expired', {

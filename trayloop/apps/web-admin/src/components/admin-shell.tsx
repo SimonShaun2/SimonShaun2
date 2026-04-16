@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { automationsEnabled } from '../lib/features';
 import { clearAdminSession, hasAdminSession } from '../lib/session';
-import { useMobile } from '../lib/use-mobile';
+import { useMobile } from '@trayloop/ui';
 
 const NAV_ITEMS = [
   { href: '/', label: 'Overview', icon: 'O', section: 'views' },

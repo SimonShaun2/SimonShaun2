@@ -46,7 +46,6 @@ export async function invite(orgId: string, input: InviteMemberInput) {
     throw new ValidationError(`No user found with email ${input.email}`);
   }
 
-  // Check if already a member
   const [existing] = await db
     .select({ id: organizationMemberships.id })
     .from(organizationMemberships)

@@ -6,7 +6,7 @@ import { identifyAnalytics, trackEvent } from '@trayloop/analytics';
 import { createBillingCheckout } from '../../lib/api';
 import { growthAdvisorEnabled } from '../../lib/features';
 import { ensureMerchantSession, hasMerchantSession, markMerchantSession } from '../../lib/session';
-import { useMobile } from '../../lib/use-mobile';
+import { useMobile } from '@trayloop/ui';
 import { type PlanKey } from '@trayloop/types/plan-access';
 import { getMerchantPlanDisplay, getMerchantPlanPriceLabel } from '../../lib/plan-copy';
 

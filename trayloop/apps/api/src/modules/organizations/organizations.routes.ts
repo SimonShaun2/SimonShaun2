@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import type { z } from 'zod';
 import { requireAuth } from '../../lib/middleware/auth.js';
 import { requireTenant, requireOrgAdmin } from '../../lib/middleware/tenant.js';
 import { validateBody } from '../../lib/middleware/validate.js';
@@ -15,7 +16,7 @@ export function registerRoutes(app: FastifyInstance) {
 
   // Create a new organization (authenticated user becomes owner)
   app.post('/', { preHandler: [requireAuth, validateBody(createOrganizationSchema)] }, async (request, reply) => {
-    const result = await service.create(request.ctx.user.id, (request as any).validatedBody);
+    const result = await service.create(request.ctx.user.id, request.validatedBody as z.infer<typeof createOrganizationSchema>);
     return reply.status(201).send({ data: result });
   });
 
@@ -45,7 +46,7 @@ export function registerRoutes(app: FastifyInstance) {
 
   // Update current organization (requires owner/admin)
   app.patch('/current', { preHandler: [requireAuth, requireTenant, requireOrgAdmin, validateBody(updateOrganizationSchema)] }, async (request, reply) => {
-    const result = await service.update(request.ctx.tenant!.organizationId, (request as any).validatedBody);
+    const result = await service.update(request.ctx.tenant!.organizationId, request.validatedBody as z.infer<typeof updateOrganizationSchema>);
     return reply.send({ data: result });
   });
 

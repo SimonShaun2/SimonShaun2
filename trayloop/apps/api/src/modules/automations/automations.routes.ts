@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import type { z } from 'zod';
 import { requireAuth } from '../../lib/middleware/auth.js';
 import { requireTenant } from '../../lib/middleware/tenant.js';
 import { validateBody, validateParams } from '../../lib/middleware/validate.js';
@@ -25,13 +26,13 @@ export function registerRoutes(app: FastifyInstance) {
   });
 
   app.patch('/rules/:id', { preHandler: [validateParams(idParamsSchema), validateBody(automationRuleUpdateSchema)] }, async (request) => {
-    const { id } = (request as any).validatedParams as { id: string };
+    const { id } = request.validatedParams as z.infer<typeof idParamsSchema>;
     return {
       data: await service.updateAutomationRule(
         request.ctx.tenant!.organizationId,
         request.ctx.user.id,
         id,
-        (request as any).validatedBody,
+        request.validatedBody as z.infer<typeof automationRuleUpdateSchema>,
       ),
     };
   });
@@ -41,7 +42,7 @@ export function registerRoutes(app: FastifyInstance) {
       data: await service.evaluateAutomationRules(
         request.ctx.tenant!.organizationId,
         request.ctx.user.id,
-        (request as any).validatedBody,
+        request.validatedBody as z.infer<typeof automationEvaluateSchema>,
       ),
     };
   });
@@ -52,13 +53,13 @@ export function registerRoutes(app: FastifyInstance) {
   });
 
   app.patch('/runs/:id', { preHandler: [validateParams(idParamsSchema), validateBody(automationRunUpdateSchema)] }, async (request) => {
-    const { id } = (request as any).validatedParams as { id: string };
+    const { id } = request.validatedParams as z.infer<typeof idParamsSchema>;
     return {
       data: await service.updateAutomationRun(
         request.ctx.tenant!.organizationId,
         request.ctx.user.id,
         id,
-        (request as any).validatedBody,
+        request.validatedBody as z.infer<typeof automationRunUpdateSchema>,
       ),
     };
   });
@@ -68,7 +69,7 @@ export function registerRoutes(app: FastifyInstance) {
       data: await service.processAutomationRuns(
         request.ctx.tenant!.organizationId,
         request.ctx.user.id,
-        (request as any).validatedBody,
+        request.validatedBody as z.infer<typeof automationProcessSchema>,
       ),
     };
   });

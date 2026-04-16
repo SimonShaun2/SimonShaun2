@@ -21,7 +21,7 @@ export function registerRoutes(app: FastifyInstance) {
 
     const result = await service.generateGrowthAdvisorPlan(
       organizationId,
-      (request as any).validatedBody,
+      request.validatedBody,
     );
 
     return { data: result };

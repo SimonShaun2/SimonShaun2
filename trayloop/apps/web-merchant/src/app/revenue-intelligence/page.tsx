@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchCustomers, fetchOrderStats, type MerchantCustomerSummary, type MerchantOrderStats } from '../../lib/api';
 import { hasMerchantSession } from '../../lib/session';
+import { daysSince, formatDate, formatMoney } from '../../lib/format';
 
 export default function RevenueIntelligencePage() {
   const [customers, setCustomers] = useState<MerchantCustomerSummary[]>([]);
@@ -228,21 +229,8 @@ export default function RevenueIntelligencePage() {
   );
 }
 
-function daysSince(dateStr: string | null) {
-  if (!dateStr) return null;
-  return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
-}
-
-function formatMoney(cents: number) {
-  return `$${(cents / 100).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
-}
-
 function formatPercent(value: number) {
   return `${Math.round(value * 100)}%`;
-}
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function Banner({ tone, title, body }: { tone: 'neutral' | 'danger'; title: string; body: string }) {

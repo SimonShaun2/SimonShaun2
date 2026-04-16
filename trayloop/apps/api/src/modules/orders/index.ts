@@ -4,5 +4,5 @@ import { registerEventHandlers } from './orders.events.js';
 
 export async function ordersModule(app: FastifyInstance) {
   registerRoutes(app);
-  registerEventHandlers((app as any).eventBus);
+  registerEventHandlers(app.eventBus);
 }

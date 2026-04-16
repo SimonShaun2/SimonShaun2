@@ -4,5 +4,5 @@ import { registerEventHandlers } from './notifications.events.js';
 
 export async function notificationsModule(app: FastifyInstance) {
   registerRoutes(app);
-  registerEventHandlers((app as any).eventBus);
+  registerEventHandlers(app.eventBus);
 }

@@ -14,23 +14,12 @@ import {
   updateMemberRole,
   type MerchantBillingSubscription,
   type MerchantMembership,
+  type MerchantOrderStats,
+  type MerchantPaymentStatus,
   type MerchantStorefrontContext,
 } from '../../lib/api';
 import { clearMerchantSession, hasMerchantSession, merchantResetHref } from '../../lib/session';
-import { useMobile } from '../../lib/use-mobile';
-
-interface PaymentStatus {
-  stripeAccountId: string | null;
-  chargesEnabled: boolean;
-  payoutsEnabled: boolean;
-  detailsSubmitted: boolean;
-  onboardingComplete: boolean;
-  status: 'not_started' | 'in_progress' | 'action_required' | 'ready';
-  disabledReason: string | null;
-  requirementsCurrentlyDue: string[];
-  requirementsPastDue: string[];
-  requirementsEventuallyDue: string[];
-}
+import { useMobile } from '@trayloop/ui';
 
 interface Organization {
   id: string;
@@ -63,18 +52,6 @@ interface SetupStatus {
   };
 }
 
-interface OrderStats {
-  totalOrders: number;
-  totalRevenue: number;
-  last7DaysRevenue: number;
-  last7DaysOrders: number;
-  last30DaysRevenue: number;
-  completedOrders: number;
-  activeOrders: number;
-  avgOrderValue: number;
-  totalCustomers: number;
-  repeatCustomers: number;
-}
 
 interface Location {
   id: string;
@@ -127,7 +104,7 @@ interface LocationFormState {
 
 type SetupState = 'loading' | 'not_started' | 'in_progress' | 'action_required' | 'active';
 
-const DEFAULTS: PaymentStatus = {
+const DEFAULTS: MerchantPaymentStatus = {
   stripeAccountId: null,
   chargesEnabled: false,
   payoutsEnabled: false,
@@ -184,9 +161,9 @@ function SettingsContent() {
   const billingParam = searchParams.get('billing');
 
   const [organization, setOrganization] = useState<Organization | null>(null);
-  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>(DEFAULTS);
+  const [paymentStatus, setPaymentStatus] = useState<MerchantPaymentStatus>(DEFAULTS);
   const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null);
-  const [stats, setStats] = useState<OrderStats | null>(null);
+  const [stats, setStats] = useState<MerchantOrderStats | null>(null);
   const [locations, setLocations] = useState<Location[]>([]);
   const [storefrontContext, setStorefrontContext] = useState<MerchantStorefrontContext | null>(null);
   const [billingSubscription, setBillingSubscription] = useState<MerchantBillingSubscription | null>(null);
@@ -332,7 +309,7 @@ function SettingsContent() {
     }
   }
 
-  function applyStatus(status: PaymentStatus) {
+  function applyStatus(status: MerchantPaymentStatus) {
     setPaymentStatus(status);
     if (status.status === 'ready' || status.onboardingComplete) {
       setSetupState('active');

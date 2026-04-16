@@ -15,7 +15,8 @@ import {
   type AiSalesReactivationSummary,
   type AiSalesTarget,
 } from '../lib/api';
-import { useMobile } from '../lib/use-mobile';
+import { useMobile } from '@trayloop/ui';
+import { formatCurrency } from '../lib/format';
 
 type BuilderSegment = 'all' | 'frequent' | 'at_risk' | 'dormant';
 type CampaignKind = 'reactivation' | 'reorder_reminder';
@@ -45,14 +46,6 @@ const SEGMENT_COPY: Record<
     empty: 'No dormant repeat customers right now.',
   },
 };
-
-function formatCurrency(cents: number) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
-}
 
 function formatDate(value: string | null) {
   if (!value) return 'Not sent';

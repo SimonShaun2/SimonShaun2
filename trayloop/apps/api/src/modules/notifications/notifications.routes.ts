@@ -14,7 +14,7 @@ export function registerRoutes(app: FastifyInstance) {
   });
 
   app.patch('/:id/read', { preHandler: [validateParams(idParamsSchema)] }, async (request, reply) => {
-    const { id } = (request as any).validatedParams as { id: string };
+    const { id } = request.validatedParams as { id: string };
     await service.markRead(id);
     return reply.send({ data: { message: 'Marked as read' } });
   });

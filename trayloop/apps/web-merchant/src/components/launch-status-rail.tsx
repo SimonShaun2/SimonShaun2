@@ -1,7 +1,7 @@
 'use client';
 
 import { useLaunchStatus } from '../lib/use-launch-status';
-import { useMobile } from '../lib/use-mobile';
+import { useMobile } from '@trayloop/ui';
 import { getLaunchHealthLine, getLaunchRailSummary, getLaunchReadinessRows } from '../lib/launch-story';
 
 function statusTone(ready: boolean) {

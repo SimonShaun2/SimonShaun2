@@ -4,6 +4,7 @@ import { requireTenant } from '../../lib/middleware/tenant.js';
 import { validateBody, validateParams } from '../../lib/middleware/validate.js';
 import { requireIdempotency } from '../../lib/middleware/idempotency.js';
 import { customerIdParamsSchema, idParamsSchema } from '../../lib/params.js';
+import type { z } from 'zod';
 import {
   createOrderSchema,
   updateOrderStatusSchema,
@@ -26,7 +27,7 @@ export function registerRoutes(app: FastifyInstance) {
 
   // List orders by customer
   app.get('/customer/:customerId', { preHandler: [validateParams(customerIdParamsSchema)] }, async (request) => {
-    const { customerId } = (request as any).validatedParams as { customerId: string };
+    const { customerId } = request.validatedParams as { customerId: string };
     const result = await service.listByCustomer(customerId);
     return { data: result };
   });
@@ -40,7 +41,7 @@ export function registerRoutes(app: FastifyInstance) {
 
   // Get order detail
   app.get('/:id', { preHandler: [validateParams(idParamsSchema)] }, async (request) => {
-    const { id } = (request as any).validatedParams as { id: string };
+    const { id } = request.validatedParams as { id: string };
     const order = await service.getById(id, request.ctx.tenant!.organizationId);
     return { data: order };
   });
@@ -49,68 +50,68 @@ export function registerRoutes(app: FastifyInstance) {
   app.post('/', { preHandler: [requireIdempotency(), validateBody(createOrderSchema)] }, async (request, reply) => {
     const result = await service.create(
       request.ctx.tenant!.organizationId,
-      (request as any).validatedBody,
-      (app as any).eventBus,
+      request.validatedBody as z.infer<typeof createOrderSchema>,
+      app.eventBus,
     );
     return reply.status(201).send({ data: result });
   });
 
   // Update order status
   app.patch('/:id/status', { preHandler: [validateParams(idParamsSchema), validateBody(updateOrderStatusSchema)] }, async (request, reply) => {
-    const { id } = (request as any).validatedParams as { id: string };
+    const { id } = request.validatedParams as { id: string };
     const result = await service.updateStatus(
       id,
       request.ctx.tenant!.organizationId,
-      (request as any).validatedBody,
-      (app as any).eventBus,
+      request.validatedBody as z.infer<typeof updateOrderStatusSchema>,
+      app.eventBus,
     );
     return reply.send({ data: result });
   });
 
   // Send deposit link
   app.post('/:id/send-deposit-link', { preHandler: [validateParams(idParamsSchema)] }, async (request, reply) => {
-    const { id } = (request as any).validatedParams as { id: string };
+    const { id } = request.validatedParams as { id: string };
     const body = sendDepositLinkSchema.parse(request.body ?? {});
     const result = await service.sendDepositLink(
       id,
       request.ctx.tenant!.organizationId,
       body,
-      (app as any).eventBus,
+      app.eventBus,
     );
     return reply.status(201).send({ data: result });
   });
 
   // Mark order as paid
   app.patch('/:id/mark-paid', { preHandler: [validateParams(idParamsSchema)] }, async (request, reply) => {
-    const { id } = (request as any).validatedParams as { id: string };
+    const { id } = request.validatedParams as { id: string };
     const result = await service.markPaid(
       id,
       request.ctx.tenant!.organizationId,
-      (app as any).eventBus,
+      app.eventBus,
     );
     return reply.send({ data: result });
   });
 
   // Reorder from existing order (idempotent)
   app.post('/:id/reorder', { preHandler: [validateParams(idParamsSchema), requireIdempotency()] }, async (request, reply) => {
-    const { id } = (request as any).validatedParams as { id: string };
+    const { id } = request.validatedParams as { id: string };
     const body = reorderSchema.parse(request.body);
     const result = await service.reorder(
       id,
       request.ctx.tenant!.organizationId,
       body,
-      (app as any).eventBus,
+      app.eventBus,
     );
     return reply.status(201).send({ data: result });
   });
 
   // Refund deposit
   app.post('/:id/refund-deposit', { preHandler: [validateParams(idParamsSchema)] }, async (request, reply) => {
-    const { id } = (request as any).validatedParams as { id: string };
+    const { id } = request.validatedParams as { id: string };
     const result = await service.refundDeposit(
       id,
       request.ctx.tenant!.organizationId,
-      (app as any).eventBus,
+      app.eventBus,
     );
     return reply.send({ data: result });
   });

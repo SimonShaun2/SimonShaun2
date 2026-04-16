@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useMobile } from '../../lib/use-mobile';
+import { useMobile } from '@trayloop/ui';
 import { growthAdvisorEnabled } from '../../lib/features';
 import {
   createBillingCheckout,

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import LaunchStatusRail from '@/components/launch-status-rail';
 import { fetchCurrentOrganization, updateCurrentOrganization, type MerchantOrganization } from '@/lib/api';
-import { useMobile } from '@/lib/use-mobile';
+import { useMobile } from '@trayloop/ui';
 
 const SWATCHES = ['#E85618', '#D97706', '#0F766E', '#1D4ED8', '#7C3AED', '#BE123C'];
 const FONT_OPTIONS = [

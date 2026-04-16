@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../lib/api';
 import { hasMerchantSession } from '../../lib/session';
-import { useMobile } from '../../lib/use-mobile';
+import { useMobile } from '@trayloop/ui';
 
 interface Package {
   id: string;

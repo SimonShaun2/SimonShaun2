@@ -119,7 +119,7 @@ export function registerRoutes(app: FastifyInstance) {
     const { slug } = storefrontSlugParamsSchema.parse(request.params);
     const body = createOrderSchema.parse(request.body);
     const customerUserId = request.ctx?.user?.role === 'customer' ? request.ctx.user.id : undefined;
-    const result = await service.submitPublicOrder(slug, body, (app as any).eventBus, customerUserId);
+    const result = await service.submitPublicOrder(slug, body, app.eventBus, customerUserId);
     return reply.status(201).send({ data: result });
   });
 
@@ -158,13 +158,13 @@ export function registerRoutes(app: FastifyInstance) {
 
   app.post('/:slug/orders/:orderId/checkout', async (request, reply) => {
     const { slug, orderId } = storefrontOrderParamsSchema.parse(request.params);
-    const result = await service.restartPublicOrderCheckout(slug, orderId, (app as any).eventBus);
+    const result = await service.restartPublicOrderCheckout(slug, orderId, app.eventBus);
     return reply.status(201).send({ data: result });
   });
 
   app.post('/:slug/orders/:orderId/deposit-checkout', async (request, reply) => {
     const { slug, orderId } = storefrontOrderParamsSchema.parse(request.params);
-    const result = await service.restartPublicOrderCheckout(slug, orderId, (app as any).eventBus);
+    const result = await service.restartPublicOrderCheckout(slug, orderId, app.eventBus);
     return reply.status(201).send({ data: result });
   });
 }

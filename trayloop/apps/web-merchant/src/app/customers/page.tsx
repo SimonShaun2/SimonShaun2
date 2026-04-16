@@ -10,6 +10,7 @@ import {
   type MerchantOrderStats,
 } from '../../lib/api';
 import { hasMerchantSession } from '../../lib/session';
+import { daysSince, formatDate, formatMoney } from '../../lib/format';
 
 type View = 'reorder' | 'risk' | 'value' | 'all';
 
@@ -349,19 +350,6 @@ function matchesSearch(customer: MerchantCustomerSummary, search: string) {
   return customer.name.toLowerCase().includes(q)
     || customer.email.toLowerCase().includes(q)
     || (customer.company?.toLowerCase().includes(q) ?? false);
-}
-
-function daysSince(dateStr: string | null) {
-  if (!dateStr) return null;
-  return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
-}
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-function formatMoney(cents: number) {
-  return `$${(cents / 100).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 }
 
 function formatPercent(value: number) {

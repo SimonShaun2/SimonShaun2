@@ -8,7 +8,7 @@ import { clearMerchantSession, hasMerchantSession } from '../lib/session';
 import { apiFetch, fetchStorefrontContext, type MerchantStorefrontContext } from '../lib/api';
 import { automationsEnabled, growthAdvisorEnabled } from '../lib/features';
 import { usePlanAccess } from './plan-access-provider';
-import { useMobile } from '../lib/use-mobile';
+import { useMobile } from '@trayloop/ui';
 import { getMerchantPlanDisplay } from '../lib/plan-copy';
 
 const NAV_ITEMS = [

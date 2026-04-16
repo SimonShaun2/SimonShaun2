@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useMobile } from '../lib/use-mobile';
+import { useMobile } from '@trayloop/ui';
 import LaunchApprovalCard from './launch-approval-card';
 import {
   createBillingCheckout,

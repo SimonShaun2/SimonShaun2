@@ -27,8 +27,8 @@ export interface IdempotencyMeta {
 declare module 'fastify' {
   interface FastifyRequest {
     ctx: RequestContext;
-    validatedBody: unknown;
-    validatedParams: unknown;
+    validatedBody: any;
+    validatedParams: any;
     requestId: string;
     startTime: number;
     idempotencyMeta?: IdempotencyMeta;

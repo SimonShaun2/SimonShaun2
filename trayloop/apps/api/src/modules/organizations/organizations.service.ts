@@ -1,6 +1,7 @@
 import { db } from '@trayloop/database';
 import { organizations, organizationMemberships, locations, catalogs, packages } from '@trayloop/database';
 import { eq, and, sql } from 'drizzle-orm';
+import { logger } from '@trayloop/utils';
 import { NotFoundError, ValidationError } from '../../lib/errors.js';
 import type { CreateOrganizationInput, UpdateOrganizationInput } from './organizations.schema.js';
 import { getConnectStatus } from '../../lib/stripe-connect.js';
@@ -188,13 +189,15 @@ export async function getSetupStatus(orgId: string) {
   const hasPackages = packageCount.count > 0;
   const hasOffering = hasCatalog && hasPackages;
 
-  // Check payment setup via stripeAccountId
   let hasPayments = false;
   try {
     const [orgFull] = await db.select({ stripeAccountId: organizations.stripeAccountId })
       .from(organizations).where(eq(organizations.id, orgId)).limit(1);
     hasPayments = !!orgFull?.stripeAccountId;
-  } catch { hasPayments = false; }
+  } catch (err) {
+    logger.error('Failed to check payment setup status', { orgId, error: (err as Error).message });
+    hasPayments = false;
+  }
 
   const isComplete = hasProfile && hasLocation && hasOffering;
 

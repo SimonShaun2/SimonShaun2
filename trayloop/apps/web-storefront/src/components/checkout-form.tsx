@@ -25,7 +25,7 @@ import {
   trackStorefrontUpsell,
   OrderError,
 } from '../lib/api';
-import { useMobile } from '../lib/use-mobile';
+import { useMobile } from '@trayloop/ui';
 import StorefrontAuthNav from './storefront-auth-nav';
 
 interface Props {

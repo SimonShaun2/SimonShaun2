@@ -44,7 +44,7 @@ export function registerRoutes(app: FastifyInstance) {
     async (request) => {
       const result = await service.generateMessageForTargets(
         request.ctx.tenant!.organizationId,
-        (request as any).validatedBody,
+        request.validatedBody,
       );
       return { data: result };
     },
@@ -62,7 +62,7 @@ export function registerRoutes(app: FastifyInstance) {
       const result = await service.createCampaign(
         request.ctx.tenant!.organizationId,
         request.ctx.user.id,
-        (request as any).validatedBody,
+        request.validatedBody,
       );
       return reply.status(201).send({ data: result });
     },

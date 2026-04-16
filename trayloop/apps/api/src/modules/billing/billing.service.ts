@@ -241,8 +241,8 @@ async function syncSubscriptionSnapshot(
 ) {
   const resolvedPlan = resolvePlanStateFromSubscription(subscription, fallbackPlan, fallbackCycle);
   const primaryItem = resolvedPlan.basePlanItem ?? subscription.items.data[0];
-  const rawPeriodStart = (subscription as any).current_period_start ?? (primaryItem as any)?.current_period_start ?? null;
-  const rawPeriodEnd = (subscription as any).current_period_end ?? (primaryItem as any)?.current_period_end ?? null;
+  const rawPeriodStart = subscription.current_period_start ?? (primaryItem as any)?.current_period_start ?? null;
+  const rawPeriodEnd = subscription.current_period_end ?? (primaryItem as any)?.current_period_end ?? null;
   const currentPeriodStart = typeof rawPeriodStart === 'number' ? new Date(rawPeriodStart * 1000) : null;
   const currentPeriodEnd = typeof rawPeriodEnd === 'number' ? new Date(rawPeriodEnd * 1000) : null;
 

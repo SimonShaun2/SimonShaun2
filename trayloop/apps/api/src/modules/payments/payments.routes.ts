@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import type { z } from 'zod';
 import { requireAuth } from '../../lib/middleware/auth.js';
 import { requireTenant } from '../../lib/middleware/tenant.js';
 import { validateBody } from '../../lib/middleware/validate.js';
@@ -7,8 +8,8 @@ import * as service from './payments.service.js';
 
 export function registerRoutes(app: FastifyInstance) {
   app.post('/checkout', { preHandler: [requireAuth, requireTenant, validateBody(paymentCheckoutSchema)] }, async (request, reply) => {
-    const { orderId } = (request as any).validatedBody as { orderId: string };
-    const result = await service.createCheckout(orderId, (app as any).eventBus);
+    const { orderId } = request.validatedBody as z.infer<typeof paymentCheckoutSchema>;
+    const result = await service.createCheckout(orderId, app.eventBus);
     return reply.send({ data: result });
   });
 

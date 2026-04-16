@@ -14,7 +14,7 @@ export function registerRoutes(app: FastifyInstance) {
   app.post('/checkout', { preHandler: [requireAuth, requireTenant, requireOrgAdmin, validateBody(billingCheckoutSchema)] }, async (request, reply) => {
     const result = await service.createCheckoutSession(
       request.ctx.tenant!.organizationId,
-      (request as any).validatedBody,
+      request.validatedBody,
     );
     return reply.status(201).send({ data: result });
   });
@@ -22,7 +22,7 @@ export function registerRoutes(app: FastifyInstance) {
   app.post('/portal', { preHandler: [requireAuth, requireTenant, requireOrgAdmin, validateBody(billingPortalSchema)] }, async (request, reply) => {
     const result = await service.createPortalSession(
       request.ctx.tenant!.organizationId,
-      (request as any).validatedBody,
+      request.validatedBody,
     );
     return reply.status(201).send({ data: result });
   });

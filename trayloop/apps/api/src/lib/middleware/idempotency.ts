@@ -21,7 +21,6 @@ export function requireIdempotency() {
 
     const route = `${request.method} ${request.routeOptions.url}`;
 
-    // Check for existing record
     const [existing] = await db
       .select()
       .from(idempotencyKeys)
@@ -43,7 +42,7 @@ export function requireIdempotency() {
     }
 
     // Store key info on request for post-response caching
-    (request as any).idempotencyMeta = { key, route, orgId };
+    request.idempotencyMeta = { key, route, orgId };
   };
 }
 
@@ -53,7 +52,7 @@ export function requireIdempotency() {
  */
 export function registerIdempotencyHook(app: { addHook: Function }) {
   app.addHook('onSend', async (request: FastifyRequest, reply: FastifyReply, payload: string) => {
-    const meta = (request as any).idempotencyMeta;
+    const meta = request.idempotencyMeta;
     if (!meta) return payload;
 
     // Only cache successful responses (2xx)

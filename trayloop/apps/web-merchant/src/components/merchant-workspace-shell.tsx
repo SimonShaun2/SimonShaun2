@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useMobile } from '../lib/use-mobile';
+import { useMobile } from '@trayloop/ui';
 import { useLaunchStatus } from '../lib/use-launch-status';
 import LaunchShellAside from './launch-shell-aside';
 

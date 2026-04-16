@@ -17,7 +17,6 @@
     "@trayloop/ui": "*",
     "@trayloop/types": "*",
     "@trayloop/config": "*",
-    "@trayloop/auth": "*",
     "@vercel/analytics": "^1.5.0",
     "@vercel/speed-insights": "^1.2.0"
   },

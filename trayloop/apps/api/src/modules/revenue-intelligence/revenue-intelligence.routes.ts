@@ -26,7 +26,7 @@ export function registerRoutes(app: FastifyInstance) {
     await service.trackRevenueInsightEvent(
       request.ctx.tenant!.organizationId,
       request.ctx.user.id,
-      (request as any).validatedBody,
+      request.validatedBody,
     );
     return reply.status(201).send({ ok: true });
   });

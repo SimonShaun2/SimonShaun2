@@ -18,13 +18,13 @@ export function registerRoutes(app: FastifyInstance) {
   });
 
   app.post('/', { preHandler: [validateBody(createCatalogSchema)] }, async (request, reply) => {
-    const result = await service.createCatalog(request.ctx.tenant!.organizationId, (request as any).validatedBody);
+    const result = await service.createCatalog(request.ctx.tenant!.organizationId, request.validatedBody);
     return reply.status(201).send({ data: result });
   });
 
   app.patch('/:id', { preHandler: [validateParams(idParamsSchema), validateBody(updateCatalogSchema)] }, async (request, reply) => {
-    const { id } = (request as any).validatedParams as { id: string };
-    const result = await service.updateCatalog(request.ctx.tenant!.organizationId, id, (request as any).validatedBody);
+    const { id } = request.validatedParams as { id: string };
+    const result = await service.updateCatalog(request.ctx.tenant!.organizationId, id, request.validatedBody);
     return reply.send({ data: result });
   });
 
@@ -36,13 +36,13 @@ export function registerRoutes(app: FastifyInstance) {
   });
 
   app.post('/categories', { preHandler: [validateBody(createCategorySchema)] }, async (request, reply) => {
-    const result = await service.createCategory(request.ctx.tenant!.organizationId, (request as any).validatedBody);
+    const result = await service.createCategory(request.ctx.tenant!.organizationId, request.validatedBody);
     return reply.status(201).send({ data: result });
   });
 
   app.patch('/categories/:id', { preHandler: [validateParams(idParamsSchema), validateBody(updateCategorySchema)] }, async (request, reply) => {
-    const { id } = (request as any).validatedParams as { id: string };
-    const result = await service.updateCategory(request.ctx.tenant!.organizationId, id, (request as any).validatedBody);
+    const { id } = request.validatedParams as { id: string };
+    const result = await service.updateCategory(request.ctx.tenant!.organizationId, id, request.validatedBody);
     return reply.send({ data: result });
   });
 

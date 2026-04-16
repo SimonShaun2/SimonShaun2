@@ -5,14 +5,7 @@ import AutomationEnginePanel, { type SummaryMetric } from '../../components/auto
 import AiCampaignSuggestionsPanel, { type AiSalesSuggestion } from '../../components/ai-campaign-suggestions-panel';
 import { fetchMerchantCustomers, fetchMerchantFollowUps, type MerchantCustomerSummary } from '../../lib/api';
 import { hasMerchantSession } from '../../lib/session';
-
-function formatCurrency(cents: number) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
-}
+import { formatCurrency } from '../../lib/format';
 
 function daysSince(dateString: string | null) {
   if (!dateString) return Number.POSITIVE_INFINITY;

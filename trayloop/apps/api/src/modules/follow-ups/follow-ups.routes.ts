@@ -17,13 +17,13 @@ export function registerRoutes(app: FastifyInstance) {
   });
 
   app.post('/', { preHandler: [validateBody(createFollowUpSchema)] }, async (request, reply) => {
-    const result = await service.create(request.ctx.tenant!.organizationId, (request as any).validatedBody);
+    const result = await service.create(request.ctx.tenant!.organizationId, request.validatedBody);
     return reply.status(201).send({ data: result });
   });
 
   app.patch('/:id', { preHandler: [validateParams(idParamsSchema), validateBody(updateFollowUpSchema)] }, async (request, reply) => {
-    const { id } = (request as any).validatedParams as { id: string };
-    const result = await service.update(id, request.ctx.tenant!.organizationId, (request as any).validatedBody);
+    const { id } = request.validatedParams as { id: string };
+    const result = await service.update(id, request.ctx.tenant!.organizationId, request.validatedBody);
     return reply.send({ data: result });
   });
 }

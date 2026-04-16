@@ -5,11 +5,12 @@ import {
   apiFetch,
   fetchStorefrontContext,
   type MerchantStorefrontContext,
+  type PaginationMeta,
 } from '../lib/api';
 import SetupChecklist from '../components/setup-checklist';
 import { usePlanAccess } from '../components/plan-access-provider';
 import { hasMerchantSession } from '../lib/session';
-import { useMobile } from '../lib/use-mobile';
+import { useMobile } from '@trayloop/ui';
 import {
   getMerchantPlanDisplay,
   getMerchantPlanPriceLabel,
@@ -34,12 +35,6 @@ interface Order {
   timestamps: { created: string; updated: string; completed: string | null };
 }
 
-interface Pagination {
-  page: number;
-  pageSize: number;
-  total: number;
-  totalPages: number;
-}
 
 interface DailyRevenue {
   date: string;
@@ -300,7 +295,7 @@ export default function DashboardPage() {
   const isMobile = useMobile();
   const planAccess = usePlanAccess();
   const [orders, setOrders] = useState<Order[]>([]);
-  const [pagination, setPagination] = useState<Pagination | null>(null);
+  const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const [statusFilter, setStatusFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
   const [loading, setLoading] = useState(true);

@@ -11,6 +11,7 @@ import {
   type GrowthAdvisorSnapshot,
 } from '../../lib/api';
 import { growthAdvisorEnabled } from '../../lib/features';
+import { formatCurrency } from '../../lib/format';
 
 const PROMPT_IDEAS = [
   'We are new to catering and need our first 3 offers.',
@@ -38,15 +39,6 @@ function readSavedRun(value: string | null): SavedGrowthAdvisorRun | null {
   } catch {
     return null;
   }
-}
-
-function formatCurrency(cents: number | null) {
-  if (cents == null) return '--';
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
 }
 
 function SnapshotStat({

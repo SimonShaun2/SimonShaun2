@@ -4,6 +4,7 @@ import type {
   FeatureKey,
   PlanKey,
 } from '@trayloop/types/plan-access';
+import type { PaginationMeta } from '@trayloop/types';
 import { clearMerchantSession, ensureMerchantSession } from './session';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -994,9 +995,4 @@ export async function removeMember(memberId: string): Promise<void> {
   });
 }
 
-interface PaginationMeta {
-  page: number;
-  pageSize: number;
-  total: number;
-  totalPages: number;
-}
+export type { PaginationMeta };

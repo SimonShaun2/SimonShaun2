@@ -108,7 +108,6 @@ export async function create(orgId: string, input: CreateFollowUpInput) {
     })
     .returning();
 
-  // Return with order context
   return getById(followUp.id, orgId);
 }
 

@@ -1,6 +1,7 @@
 'use client';
 
 import type { SummaryMetric } from './automation-engine-panel';
+import { formatCurrency } from '../lib/format';
 
 export interface AiSalesSuggestion {
   id: string;
@@ -25,14 +26,6 @@ export interface AiSalesPanelProps {
   suggestions: AiSalesSuggestion[];
   engineRequiredLabel: string;
   engineRequiredNote: string;
-}
-
-function formatCurrency(cents: number) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
 }
 
 function copyToClipboard(text: string) {

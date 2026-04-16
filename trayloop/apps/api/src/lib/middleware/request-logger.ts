@@ -3,13 +3,11 @@ import { logger } from '@trayloop/utils';
 import crypto from 'crypto';
 
 export function registerRequestLogger(app: FastifyInstance) {
-  // Assign request ID and start timer
   app.addHook('onRequest', async (request) => {
     request.requestId = request.headers['x-request-id'] as string ?? crypto.randomUUID();
     request.startTime = Date.now();
   });
 
-  // Log after response is sent
   app.addHook('onResponse', async (request, reply) => {
     const durationMs = Date.now() - (request.startTime ?? Date.now());
     const requestId = request.requestId;
@@ -23,7 +21,6 @@ export function registerRequestLogger(app: FastifyInstance) {
     });
   });
 
-  // Log errors with request context
   app.addHook('onError', async (request, _reply, error) => {
     const requestId = request.requestId;
 

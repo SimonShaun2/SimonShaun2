@@ -10,6 +10,7 @@ import {
   type MerchantFollowUpSummary,
 } from '../../lib/api';
 import { hasMerchantSession } from '../../lib/session';
+import { formatCurrency } from '../../lib/format';
 
 type QueueFilter = 'all' | 'pending' | 'overdue' | 'completed';
 
@@ -19,14 +20,6 @@ const FILTERS: Array<{ value: QueueFilter; label: string }> = [
   { value: 'overdue', label: 'Overdue' },
   { value: 'completed', label: 'Done' },
 ];
-
-function formatCurrency(cents: number) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
-}
 
 function formatShortDate(dateString: string | null) {
   if (!dateString) return '—';

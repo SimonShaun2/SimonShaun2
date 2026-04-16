@@ -4,5 +4,5 @@ import { registerEventHandlers } from './follow-ups.events.js';
 
 export async function followUpsModule(app: FastifyInstance) {
   registerRoutes(app);
-  registerEventHandlers((app as any).eventBus);
+  registerEventHandlers(app.eventBus);
 }
