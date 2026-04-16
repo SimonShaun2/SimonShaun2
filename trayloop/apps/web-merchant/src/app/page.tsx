@@ -983,24 +983,27 @@ export default function DashboardPage() {
         <QuickAccessCard eyebrow="Customers" title="Customer intelligence" href="/customers" linkText="Open Customers →" stats={[{ label: 'Total customers', value: String(stats?.totalCustomers ?? 0) }, { label: 'Repeat customers', value: String(stats?.repeatCustomers ?? 0) }]} />
       </div>
 
-      {/* 4. Command Shelf | Storefront Live + Plan Lane */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1.4fr) minmax(0, 1fr)', gap: 16, alignItems: 'start' }}>
-        <div style={{ display: 'grid', gap: 16 }}>
-          <SetupChecklist />
-          {currentPlanDisplay ? (
-            <section style={{ border: '1px solid #E7E5E4', borderRadius: 16, background: '#FFFFFF', padding: 20 }}>
+      {/* 4. Storefront Live → Plan Lane → Command Shelf (all full-width) */}
+      <SetupChecklist />
+
+      {currentPlanDisplay ? (
+        <section style={{ border: '1px solid #E7E5E4', borderRadius: 16, background: '#FFFFFF', padding: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
+            <div>
               <div style={sectionEyebrowStyle}>Plan lane</div>
-              <h2 style={{ fontSize: 18, fontWeight: 800, color: '#1C1917', margin: '4px 0 6px' }}>{currentPlanDisplay.label} is active</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8, marginTop: 12 }}>
-                <PlanSummaryCard label="Included now" title={currentPlanDisplay.label} body={currentPlanDisplay.highlights.join(' | ')} />
-                <PlanSummaryCard label="Next unlock" title={nextPlanDisplay?.label ?? 'Top plan active'} body={nextPlanDisplay ? nextPlanDisplay.highlights.join(' | ') : 'Highest plan features available.'} />
-              </div>
-              <a href="/billing" style={{ ...inlineLinkStyle, display: 'inline-block', marginTop: 12 }}>Open billing and plan</a>
-            </section>
-          ) : null}
-        </div>
-        <ActionShelf storefrontUrl={storefrontContext?.storefrontUrl ?? null} totalRevenue={stats?.last30DaysRevenue ?? 0} last7DaysOrders={stats?.last7DaysOrders ?? 0} repeatCustomers={stats?.repeatCustomers ?? 0} />
-      </div>
+              <h2 style={{ fontSize: 20, fontWeight: 800, color: '#1C1917', margin: '4px 0 0' }}>{currentPlanDisplay.label} is active</h2>
+            </div>
+            <a href="/billing" style={inlineLinkStyle}>Open billing and plan</a>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 12 }}>
+            <PlanSummaryCard label="Included now" title={currentPlanDisplay.label} body={currentPlanDisplay.highlights.join(' | ')} />
+            <PlanSummaryCard label="Next unlock" title={nextPlanDisplay?.label ?? 'Top plan active'} body={nextPlanDisplay ? nextPlanDisplay.highlights.join(' | ') : 'Highest plan features available.'} />
+            <PlanSummaryCard label="Plan price" title={currentPlanPriceLabel} body="Billing controls upgrades, downgrades, and add-on access from one place." />
+          </div>
+        </section>
+      ) : null}
+
+      <ActionShelf storefrontUrl={storefrontContext?.storefrontUrl ?? null} totalRevenue={stats?.last30DaysRevenue ?? 0} last7DaysOrders={stats?.last7DaysOrders ?? 0} repeatCustomers={stats?.repeatCustomers ?? 0} />
 
       {/* 5. Growth Copilot — horizontal bar */}
       <section style={{ border: '1px solid #E7E5E4', borderRadius: 16, background: 'linear-gradient(135deg, #1C1917 0%, #292524 55%, #44403C 100%)', color: '#FAFAF9', padding: 20 }}>
