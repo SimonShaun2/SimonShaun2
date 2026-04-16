@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import type { z } from 'zod';
 import { requireAuth } from '../../lib/middleware/auth.js';
 import { idParamsSchema } from '../../lib/params.js';
 import { validateParams } from '../../lib/middleware/validate.js';
@@ -14,7 +15,7 @@ export function registerRoutes(app: FastifyInstance) {
   });
 
   app.patch('/:id/read', { preHandler: [validateParams(idParamsSchema)] }, async (request, reply) => {
-    const { id } = request.validatedParams as { id: string };
+    const { id } = request.validatedParams as z.infer<typeof idParamsSchema>;
     await service.markRead(id);
     return reply.send({ data: { message: 'Marked as read' } });
   });

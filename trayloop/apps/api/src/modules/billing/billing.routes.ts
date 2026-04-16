@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import type { z } from 'zod';
 import { requireAuth } from '../../lib/middleware/auth.js';
 import { requireOrgAdmin, requireTenant } from '../../lib/middleware/tenant.js';
 import { validateBody } from '../../lib/middleware/validate.js';
@@ -14,7 +15,7 @@ export function registerRoutes(app: FastifyInstance) {
   app.post('/checkout', { preHandler: [requireAuth, requireTenant, requireOrgAdmin, validateBody(billingCheckoutSchema)] }, async (request, reply) => {
     const result = await service.createCheckoutSession(
       request.ctx.tenant!.organizationId,
-      request.validatedBody,
+      request.validatedBody as z.infer<typeof billingCheckoutSchema>,
     );
     return reply.status(201).send({ data: result });
   });
@@ -22,7 +23,7 @@ export function registerRoutes(app: FastifyInstance) {
   app.post('/portal', { preHandler: [requireAuth, requireTenant, requireOrgAdmin, validateBody(billingPortalSchema)] }, async (request, reply) => {
     const result = await service.createPortalSession(
       request.ctx.tenant!.organizationId,
-      request.validatedBody,
+      request.validatedBody as z.infer<typeof billingPortalSchema>,
     );
     return reply.status(201).send({ data: result });
   });

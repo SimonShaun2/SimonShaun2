@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import type { z } from 'zod';
 import { requireAuth } from '../../lib/middleware/auth.js';
 import { requireFeature } from '../../lib/feature-access.js';
 import { requireTenant } from '../../lib/middleware/tenant.js';
@@ -26,7 +27,7 @@ export function registerRoutes(app: FastifyInstance) {
     await service.trackRevenueInsightEvent(
       request.ctx.tenant!.organizationId,
       request.ctx.user.id,
-      request.validatedBody,
+      request.validatedBody as z.infer<typeof revenueInsightEventSchema>,
     );
     return reply.status(201).send({ ok: true });
   });

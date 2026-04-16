@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import type { z } from 'zod';
 import { requireAuth } from '../../lib/middleware/auth.js';
 import { requireAnyFeature, requireFeature } from '../../lib/feature-access.js';
 import { requireTenant } from '../../lib/middleware/tenant.js';
@@ -44,7 +45,7 @@ export function registerRoutes(app: FastifyInstance) {
     async (request) => {
       const result = await service.generateMessageForTargets(
         request.ctx.tenant!.organizationId,
-        request.validatedBody,
+        request.validatedBody as z.infer<typeof generateCampaignMessageSchema>,
       );
       return { data: result };
     },
@@ -62,7 +63,7 @@ export function registerRoutes(app: FastifyInstance) {
       const result = await service.createCampaign(
         request.ctx.tenant!.organizationId,
         request.ctx.user.id,
-        request.validatedBody,
+        request.validatedBody as z.infer<typeof createCampaignSchema>,
       );
       return reply.status(201).send({ data: result });
     },

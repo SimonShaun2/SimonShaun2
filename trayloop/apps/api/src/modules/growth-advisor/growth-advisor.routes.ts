@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import type { z } from 'zod';
 import { requireAuth } from '../../lib/middleware/auth.js';
 import { requireTenant } from '../../lib/middleware/tenant.js';
 import { validateBody } from '../../lib/middleware/validate.js';
@@ -21,7 +22,7 @@ export function registerRoutes(app: FastifyInstance) {
 
     const result = await service.generateGrowthAdvisorPlan(
       organizationId,
-      request.validatedBody,
+      request.validatedBody as z.infer<typeof analyzeGrowthAdvisorSchema>,
     );
 
     return { data: result };

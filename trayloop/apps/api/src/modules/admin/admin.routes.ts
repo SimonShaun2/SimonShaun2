@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { z } from 'zod';
 import { createToken } from '@trayloop/auth';
 import { requireAuth } from '../../lib/middleware/auth.js';
 import { ForbiddenError, NotFoundError } from '../../lib/errors.js';
@@ -70,7 +71,7 @@ export function registerRoutes(app: FastifyInstance) {
   });
 
   app.post('/test-accounts', { preHandler: [validateBody(adminCreateTestAccountSchema)] }, async (request, reply) => {
-    const result = await service.createTestAccount(request.validatedBody);
+    const result = await service.createTestAccount(request.validatedBody as z.infer<typeof adminCreateTestAccountSchema>);
     return reply.status(201).send({ data: result });
   });
 
