@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
     title: 'TrayLoop Blog - Restaurant Catering Tips and Industry Insights',
     description: 'Expert guides on growing restaurant catering revenue, building direct ordering channels, reducing commissions, and using AI to retain catering accounts.',
