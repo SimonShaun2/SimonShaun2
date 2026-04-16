@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useMobile } from '../../lib/use-mobile';
 import { growthAdvisorEnabled } from '../../lib/features';
@@ -24,6 +24,7 @@ type BannerTone = 'success' | 'warning' | 'error';
 function MerchantOnboardingPageContent() {
   const searchParams = useSearchParams();
   const isMobile = useMobile();
+  const checkoutInFlight = useRef(false);
   const stripeState = searchParams.get('stripe');
   const billingStateParam = searchParams.get('billing');
   const welcomeState = searchParams.get('welcome');
@@ -153,6 +154,8 @@ function MerchantOnboardingPageContent() {
   }
 
   async function handleStartSubscription() {
+    if (checkoutInFlight.current) return;
+    checkoutInFlight.current = true;
     setBillingAction('checkout');
     setError('');
     try {
@@ -167,6 +170,7 @@ function MerchantOnboardingPageContent() {
       setError(err instanceof Error ? err.message : 'Failed to start TrayLoop plan checkout');
     } finally {
       setBillingAction(null);
+      checkoutInFlight.current = false;
     }
   }
 

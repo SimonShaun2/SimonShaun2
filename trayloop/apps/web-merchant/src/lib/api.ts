@@ -499,7 +499,21 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
   const orgId = typeof window !== 'undefined' ? localStorage.getItem('orgId') : null;
   if (orgId) headers['x-organization-id'] = orgId;
 
-  const res = await fetch(`${API_URL}${path}`, { ...options, headers, credentials: 'include' });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30_000);
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, { ...options, headers, credentials: 'include', signal: options.signal ?? controller.signal });
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new Error('Request timed out. Please check your connection and try again.');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (res.status === 401) {
     if (typeof window !== 'undefined') {

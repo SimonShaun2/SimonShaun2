@@ -69,7 +69,7 @@ export async function listByOrg(orgId: string, query: CustomerListQuery) {
   };
 }
 
-export async function getById(id: string) {
+export async function getById(id: string, orgId: string) {
   const [customer] = await db
     .select({
       id: customers.id,
@@ -84,7 +84,7 @@ export async function getById(id: string) {
       updatedAt: customers.updatedAt,
     })
     .from(customers)
-    .where(eq(customers.id, id))
+    .where(and(eq(customers.id, id), eq(customers.organizationId, orgId)))
     .limit(1);
 
   if (!customer) throw new NotFoundError('Customer');
@@ -147,11 +147,11 @@ export async function create(orgId: string, input: CreateCustomerInput) {
   };
 }
 
-export async function update(id: string, input: UpdateCustomerInput) {
+export async function update(id: string, orgId: string, input: UpdateCustomerInput) {
   const [updated] = await db
     .update(customers)
     .set({ ...input, updatedAt: new Date() })
-    .where(eq(customers.id, id))
+    .where(and(eq(customers.id, id), eq(customers.organizationId, orgId)))
     .returning();
 
   if (!updated) throw new NotFoundError('Customer');

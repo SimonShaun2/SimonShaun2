@@ -27,7 +27,7 @@ export function registerRoutes(app: FastifyInstance) {
 
   app.get('/:id', { preHandler: [validateParams(idParamsSchema)] }, async (request) => {
     const { id } = (request as any).validatedParams as { id: string };
-    const customer = await service.getById(id);
+    const customer = await service.getById(id, request.ctx.tenant!.organizationId);
     return { data: customer };
   });
 
@@ -38,7 +38,7 @@ export function registerRoutes(app: FastifyInstance) {
 
   app.patch('/:id', { preHandler: [validateParams(idParamsSchema), validateBody(updateCustomerSchema)] }, async (request, reply) => {
     const { id } = (request as any).validatedParams as { id: string };
-    const result = await service.update(id, (request as any).validatedBody);
+    const result = await service.update(id, request.ctx.tenant!.organizationId, (request as any).validatedBody);
     return reply.send({ data: result });
   });
 }

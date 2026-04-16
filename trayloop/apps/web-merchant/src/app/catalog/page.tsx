@@ -156,6 +156,7 @@ const EMPTY_ADDON_FORM: AddOnFormState = {
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_UPLOAD_BYTES = 6 * 1024 * 1024;
 const MAX_IMAGE_DIMENSION = 1600;
+const MAX_SOURCE_DIMENSION = 4096;
 
 async function readFileAsDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -182,6 +183,12 @@ async function optimizeImageFile(file: File) {
     next.onerror = () => reject(new Error('Unable to process this image.'));
     next.src = sourceUrl;
   });
+
+  if (image.width > MAX_SOURCE_DIMENSION || image.height > MAX_SOURCE_DIMENSION) {
+    throw new Error(
+      `Image dimensions (${image.width}x${image.height}) exceed the maximum allowed size of ${MAX_SOURCE_DIMENSION}x${MAX_SOURCE_DIMENSION} pixels. Please resize the image and try again.`,
+    );
+  }
 
   const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(image.width, image.height));
   const width = Math.max(1, Math.round(image.width * scale));

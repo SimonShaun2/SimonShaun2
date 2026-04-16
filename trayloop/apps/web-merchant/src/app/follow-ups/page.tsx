@@ -94,9 +94,15 @@ export default function FollowUpsPage() {
     setSavingId(item.id);
     setError('');
     try {
-      await updateMerchantFollowUp(item.id, {
-        status: item.status === 'completed' ? 'pending' : 'completed',
-      });
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Request timed out')), 30_000),
+      );
+      await Promise.race([
+        updateMerchantFollowUp(item.id, {
+          status: item.status === 'completed' ? 'pending' : 'completed',
+        }),
+        timeout,
+      ]);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Action failed');

@@ -190,14 +190,18 @@ export async function createDepositCheckoutForOrder(
       'deposit_link_sent',
       `Deposit link sent to ${customer.email} for $${(depositBreakdown.customerChargeAmount / 100).toFixed(2)}`,
     );
-  } catch {}
+  } catch (err) {
+    logger.error('Failed to record deposit_link_sent event', { orderId: order.id, error: (err as Error).message });
+  }
   try {
     await eventBus.emit('order.status_updated', {
       orderId: order.id,
       oldStatus: order.status,
       newStatus: 'awaiting_deposit',
     });
-  } catch {}
+  } catch (err) {
+    logger.error('Failed to emit order.status_updated event', { orderId: order.id, error: (err as Error).message });
+  }
 
   return {
     orderId: result.order.id,
@@ -780,7 +784,9 @@ export async function updateStatus(id: string, orgId: string, input: UpdateOrder
           note: 'Auto-created: check in with customer after completed order',
         });
       }
-    } catch {}
+    } catch (err) {
+      logger.error('Failed to auto-create follow-up on order completion', { orderId: id, error: (err as Error).message });
+    }
   }
 
   return {
@@ -902,7 +908,7 @@ export async function sendDepositLink(orderId: string, orgId: string, input: Sen
     return { deposit, order: updated };
   });
 
-  try { await recordOrderEvent(order.id, 'deposit_link_sent', `Deposit link sent to ${customer.email} for $${(depositBreakdown.customerChargeAmount / 100).toFixed(2)}`); } catch {}
+  try { await recordOrderEvent(order.id, 'deposit_link_sent', `Deposit link sent to ${customer.email} for $${(depositBreakdown.customerChargeAmount / 100).toFixed(2)}`); } catch (err) { logger.error('Failed to record deposit_link_sent event', { orderId: order.id, error: (err as Error).message }); }
   try {
     const { notifyCustomerEmail, notifyCustomerSms } = await import('../../lib/notifications.js');
     await notifyCustomerEmail({
@@ -933,7 +939,7 @@ export async function sendDepositLink(orderId: string, orgId: string, input: Sen
       error: (err as Error).message,
     });
   }
-  try { await eventBus.emit('order.status_updated', { orderId: order.id, oldStatus: order.status, newStatus: 'awaiting_deposit' }); } catch {}
+  try { await eventBus.emit('order.status_updated', { orderId: order.id, oldStatus: order.status, newStatus: 'awaiting_deposit' }); } catch (err) { logger.error('Failed to emit order.status_updated event', { orderId: order.id, error: (err as Error).message }); }
 
   return {
     orderId: result.order.id, status: result.order.status, depositId: result.deposit.id,
@@ -991,10 +997,10 @@ export async function markPaid(orderId: string, orgId: string, eventBus: EventBu
     return { deposit: updatedDeposit, order: updatedOrder };
   });
 
-  try { await recordOrderEvent(order.id, 'deposit_paid', `Deposit of $${(result.deposit.amount / 100).toFixed(2)} marked as paid`); } catch {}
-  try { await recordOrderEvent(order.id, 'status_changed', 'Status changed to confirmed'); } catch {}
-  try { await eventBus.emit('payment.completed', { paymentId: result.deposit.id, orderId: order.id, amount: result.deposit.amount }); } catch {}
-  try { await eventBus.emit('order.status_updated', { orderId: order.id, oldStatus: 'awaiting_deposit', newStatus: 'confirmed' }); } catch {}
+  try { await recordOrderEvent(order.id, 'deposit_paid', `Deposit of $${(result.deposit.amount / 100).toFixed(2)} marked as paid`); } catch (err) { logger.error('Failed to record deposit_paid event', { orderId: order.id, error: (err as Error).message }); }
+  try { await recordOrderEvent(order.id, 'status_changed', 'Status changed to confirmed'); } catch (err) { logger.error('Failed to record status_changed event', { orderId: order.id, error: (err as Error).message }); }
+  try { await eventBus.emit('payment.completed', { paymentId: result.deposit.id, orderId: order.id, amount: result.deposit.amount }); } catch (err) { logger.error('Failed to emit payment.completed event', { orderId: order.id, error: (err as Error).message }); }
+  try { await eventBus.emit('order.status_updated', { orderId: order.id, oldStatus: 'awaiting_deposit', newStatus: 'confirmed' }); } catch (err) { logger.error('Failed to emit order.status_updated event', { orderId: order.id, error: (err as Error).message }); }
   try {
     const { notifyDepositPaid } = await import('../../lib/notifications.js');
     const [[customer], [org], [fullOrder]] = await Promise.all([
@@ -1303,8 +1309,8 @@ export async function create(orgId: string, input: CreateOrderInput, eventBus: E
   });
 
   // 6. Non-critical post-commit side effects
-  try { await recordOrderEvent(result.order.id, 'order_created', `Order ${result.order.orderNumber} submitted`); } catch {}
-  try { await eventBus.emit('order.created', { orderId: result.order.id, customerId: result.customerId, orgId }); } catch {}
+  try { await recordOrderEvent(result.order.id, 'order_created', `Order ${result.order.orderNumber} submitted`); } catch (err) { logger.error('Failed to record order_created event', { orderId: result.order.id, error: (err as Error).message }); }
+  try { await eventBus.emit('order.created', { orderId: result.order.id, customerId: result.customerId, orgId }); } catch (err) { logger.error('Failed to emit order.created event', { orderId: result.order.id, error: (err as Error).message }); }
 
   // 7. Return order summary
   return {
@@ -1472,9 +1478,9 @@ export async function reorder(sourceOrderId: string, orgId: string, input: Reord
     return newOrder;
   });
 
-  try { await recordOrderEvent(result.id, 'order_created', `Order ${result.orderNumber} created (reorder)`); } catch {}
-  try { await recordOrderEvent(sourceOrderId, 'reorder_created', `Reorder created: ${result.orderNumber}`); } catch {}
-  try { await eventBus.emit('order.created', { orderId: result.id, customerId: sourceOrder.customerId, orgId }); } catch {}
+  try { await recordOrderEvent(result.id, 'order_created', `Order ${result.orderNumber} created (reorder)`); } catch (err) { logger.error('Failed to record order_created event for reorder', { orderId: result.id, error: (err as Error).message }); }
+  try { await recordOrderEvent(sourceOrderId, 'reorder_created', `Reorder created: ${result.orderNumber}`); } catch (err) { logger.error('Failed to record reorder_created event', { orderId: sourceOrderId, error: (err as Error).message }); }
+  try { await eventBus.emit('order.created', { orderId: result.id, customerId: sourceOrder.customerId, orgId }); } catch (err) { logger.error('Failed to emit order.created event for reorder', { orderId: result.id, error: (err as Error).message }); }
 
   const depositRequired = await getDepositRequired(sourceOrder.locationId);
   const [customer] = await db
@@ -1561,10 +1567,12 @@ export async function refundDeposit(orderId: string, orgId: string, eventBus: Ev
   try {
     await recordOrderEvent(orderId, 'deposit_refunded', `Deposit of $${(deposit.amount / 100).toFixed(2)} refunded${stripeRefundId ? ' via Stripe' : ''}`);
     await recordOrderEvent(orderId, 'status_changed', 'Order cancelled (deposit refunded)');
-  } catch {}
+  } catch (err) {
+    logger.error('Failed to record deposit refund timeline events', { orderId, error: (err as Error).message });
+  }
 
   // Events
-  try { await eventBus.emit('order.status_updated', { orderId, oldStatus: order.status, newStatus: 'cancelled', reason: 'Deposit refunded by merchant' }); } catch {}
+  try { await eventBus.emit('order.status_updated', { orderId, oldStatus: order.status, newStatus: 'cancelled', reason: 'Deposit refunded by merchant' }); } catch (err) { logger.error('Failed to emit order.status_updated event for refund', { orderId, error: (err as Error).message }); }
 
   // Notifications
   try {
