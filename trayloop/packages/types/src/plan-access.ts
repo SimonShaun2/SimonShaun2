@@ -102,6 +102,7 @@ export const PLAN_FEATURES: Record<PlanKey, readonly FeatureKey[]> = {
     'orders.future_schedule_basic',
     'deposits.enabled',
     'reporting.basic',
+    'upsells.basic',
   ],
   pro: [
     'storefront.basic',

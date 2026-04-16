@@ -244,7 +244,10 @@ function SettingsContent() {
             }).catch(() => initialPaymentRes)
           : initialPaymentRes;
 
-      const nextOrganization = orgRes.data as Organization;
+      const nextOrganization = orgRes?.data as Organization | undefined;
+      if (!nextOrganization) {
+        throw new Error('Unable to load your organization. Please sign in again.');
+      }
       const nextLocations = (locationsRes.data ?? []) as Location[];
 
       setOrganization(nextOrganization);
@@ -256,8 +259,10 @@ function SettingsContent() {
       setBillingSubscription(billingRes);
       applyStatus(paymentRes.data ?? DEFAULTS);
 
-      localStorage.setItem('orgSlug', storefrontRes?.organization.slug ?? setupRes.data?.slug ?? nextOrganization.slug);
-      localStorage.setItem('orgName', nextOrganization.name);
+      const resolvedSlug =
+        storefrontRes?.organization?.slug ?? setupRes.data?.slug ?? nextOrganization.slug;
+      if (resolvedSlug) localStorage.setItem('orgSlug', resolvedSlug);
+      if (nextOrganization.name) localStorage.setItem('orgName', nextOrganization.name);
 
       if (nextLocations.length > 0) {
         const locationToUse =
@@ -501,8 +506,23 @@ function SettingsContent() {
           ? `Resubscribe to reactivate ${billingSubscription?.planName ?? 'your plan'}.`
           : 'Billing setup must be completed during signup before this workspace can launch.';
 
-  if (loading && !organization) {
-    return <p style={{ color: '#6b7280' }}>Loading settings...</p>;
+  if (!organization) {
+    if (loading) {
+      return <p style={{ color: '#6b7280' }}>Loading settings...</p>;
+    }
+    return (
+      <div>
+        <Banner
+          bg="#FEF2F2"
+          border="#FECACA"
+          color="#DC2626"
+          text={bannerMessage || 'Failed to load your settings. Try refreshing the page.'}
+        />
+        <button type="button" onClick={() => loadSettings()} style={primaryButtonStyle}>
+          Retry
+        </button>
+      </div>
+    );
   }
 
   return (

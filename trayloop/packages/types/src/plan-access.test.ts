@@ -22,9 +22,9 @@ runTest('Launch, Momentum, and Engine expose the expected public pricing', () =>
   assert.equal(PLAN_DEFINITIONS.growth.monthlyPriceCents, 14900);
 });
 
-runTest('Launch blocks recurring and upsells, Momentum unlocks recurring/basic upsells, Engine unlocks all growth features', () => {
+runTest('Launch includes basic upsells, Momentum unlocks recurring schedules, Engine unlocks all growth features', () => {
   assert.equal(planIncludesFeature('starter', 'orders.recurring_schedule'), false);
-  assert.equal(planIncludesFeature('starter', 'upsells.basic'), false);
+  assert.equal(planIncludesFeature('starter', 'upsells.basic'), true);
 
   assert.equal(planIncludesFeature('pro', 'orders.recurring_schedule'), true);
   assert.equal(planIncludesFeature('pro', 'upsells.basic'), true);
