@@ -1,9 +1,9 @@
 import { db } from '@trayloop/database';
-import { customers, deposits, orders, organizationMemberships, organizations, payments, recurringOrders, subscriptions, users } from '@trayloop/database';
+import { catalogs, catalogCategories, packages, addOns, customers, deposits, followUps, locations, orders, orderItems, organizationMemberships, organizations, organizationFeatures, payments, recurringOrders, subscriptions, users } from '@trayloop/database';
 import { hashPassword } from '@trayloop/auth';
 import { and, asc, desc, eq, gte, inArray, sql } from 'drizzle-orm';
 import { randomBytes } from 'node:crypto';
-import { ValidationError } from '../../lib/errors.js';
+import { ValidationError, NotFoundError } from '../../lib/errors.js';
 import { getPlatformAutomationIntelligence } from '../automations/automations.service.js';
 import { getPlatformRevenueIntelligence } from '../revenue-intelligence/revenue-intelligence.service.js';
 import type { RevenueRange } from '../revenue-intelligence/revenue-intelligence.schema.js';
@@ -239,6 +239,7 @@ export async function createTestAccount(input: AdminCreateTestAccountInput) {
           name: organizationName,
           slug: organizationSlug,
           ownerId: user.id,
+          isTestAccount: true,
         })
         .returning({
           id: organizations.id,
@@ -289,6 +290,111 @@ export async function createTestAccount(input: AdminCreateTestAccountInput) {
     password,
     user,
   };
+}
+
+export async function listTestAccounts() {
+  const rows = await db
+    .select({
+      orgId: organizations.id,
+      orgName: organizations.name,
+      email: users.email,
+      createdAt: organizations.createdAt,
+    })
+    .from(organizations)
+    .innerJoin(users, eq(users.id, organizations.ownerId))
+    .where(eq(organizations.isTestAccount, true))
+    .orderBy(desc(organizations.createdAt));
+
+  const locationCounts = rows.length > 0
+    ? await db
+        .select({
+          organizationId: locations.organizationId,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(locations)
+        .where(inArray(locations.organizationId, rows.map((r) => r.orgId)))
+        .groupBy(locations.organizationId)
+    : [];
+
+  const catalogCounts = rows.length > 0
+    ? await db
+        .select({
+          organizationId: catalogs.organizationId,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(catalogs)
+        .where(inArray(catalogs.organizationId, rows.map((r) => r.orgId)))
+        .groupBy(catalogs.organizationId)
+    : [];
+
+  const locMap = new Map(locationCounts.map((r) => [r.organizationId, r.count]));
+  const catMap = new Map(catalogCounts.map((r) => [r.organizationId, r.count]));
+
+  return rows.map((r) => ({
+    orgId: r.orgId,
+    orgName: r.orgName,
+    email: r.email,
+    createdAt: r.createdAt,
+    brandCount: catMap.get(r.orgId) ?? 0,
+    nodeCount: locMap.get(r.orgId) ?? 0,
+  }));
+}
+
+export async function deleteTestAccount(orgId: string) {
+  const [org] = await db
+    .select({ id: organizations.id, isTestAccount: organizations.isTestAccount, ownerId: organizations.ownerId })
+    .from(organizations)
+    .where(eq(organizations.id, orgId))
+    .limit(1);
+
+  if (!org) throw new NotFoundError('Organization');
+  if (!org.isTestAccount) throw new ValidationError('Cannot delete a production organization via this endpoint.');
+
+  await db.transaction(async (tx) => {
+    await tx.delete(payments).where(
+      inArray(payments.orderId, tx.select({ id: orders.id }).from(orders).where(eq(orders.organizationId, orgId)))
+    );
+    await tx.delete(deposits).where(
+      inArray(deposits.orderId, tx.select({ id: orders.id }).from(orders).where(eq(orders.organizationId, orgId)))
+    );
+    await tx.delete(followUps).where(eq(followUps.organizationId, orgId));
+    await tx.delete(recurringOrders).where(eq(recurringOrders.organizationId, orgId));
+    await tx.delete(orders).where(eq(orders.organizationId, orgId));
+    await tx.delete(organizations).where(eq(organizations.id, orgId));
+    await tx.delete(users).where(eq(users.id, org.ownerId));
+  });
+
+  return { deleted: true, orgId };
+}
+
+export async function resetTestAccount(orgId: string) {
+  const [org] = await db
+    .select({ id: organizations.id, isTestAccount: organizations.isTestAccount })
+    .from(organizations)
+    .where(eq(organizations.id, orgId))
+    .limit(1);
+
+  if (!org) throw new NotFoundError('Organization');
+  if (!org.isTestAccount) throw new ValidationError('Cannot reset a production organization via this endpoint.');
+
+  await db.transaction(async (tx) => {
+    await tx.delete(payments).where(
+      inArray(payments.orderId, tx.select({ id: orders.id }).from(orders).where(eq(orders.organizationId, orgId)))
+    );
+    await tx.delete(deposits).where(
+      inArray(deposits.orderId, tx.select({ id: orders.id }).from(orders).where(eq(orders.organizationId, orgId)))
+    );
+    await tx.delete(followUps).where(eq(followUps.organizationId, orgId));
+    await tx.delete(recurringOrders).where(eq(recurringOrders.organizationId, orgId));
+    await tx.delete(orders).where(eq(orders.organizationId, orgId));
+    await tx.delete(catalogs).where(eq(catalogs.organizationId, orgId));
+    await tx.delete(locations).where(eq(locations.organizationId, orgId));
+    await tx.delete(customers).where(eq(customers.organizationId, orgId));
+    await tx.delete(subscriptions).where(eq(subscriptions.organizationId, orgId));
+    await tx.delete(organizationFeatures).where(eq(organizationFeatures.organizationId, orgId));
+  });
+
+  return { reset: true, orgId };
 }
 
 export async function listUsers() {

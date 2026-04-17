@@ -75,6 +75,23 @@ export function registerRoutes(app: FastifyInstance) {
     return reply.status(201).send({ data: result });
   });
 
+  app.get('/test-accounts', async () => {
+    const accounts = await service.listTestAccounts();
+    return { data: accounts };
+  });
+
+  app.delete('/test-accounts/:id', async (request, reply) => {
+    const { id } = adminStatusParamsSchema.parse(request.params);
+    const result = await service.deleteTestAccount(id);
+    return reply.send({ data: result });
+  });
+
+  app.post('/test-accounts/:id/reset', async (request, reply) => {
+    const { id } = adminStatusParamsSchema.parse(request.params);
+    const result = await service.resetTestAccount(id);
+    return reply.send({ data: result });
+  });
+
   app.get('/stats', async () => {
     const stats = await service.getPlatformStats();
     return { data: stats };
