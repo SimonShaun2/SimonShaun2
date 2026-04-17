@@ -620,6 +620,8 @@ export default function PricingPage() {
           </div>
         </div>
       </section>
+      {/* Thin cream divider so the dark closing CTA doesn't fuse with the dark footer pre-footer section */}
+      <div aria-hidden="true" style={{ height: 3, backgroundColor: '#F9F5EF' }} />
     </main>
   );
 }
