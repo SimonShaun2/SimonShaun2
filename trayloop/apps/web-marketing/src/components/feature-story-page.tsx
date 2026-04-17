@@ -526,6 +526,7 @@ export default function FeatureStoryPage({ story }: { story: FeatureStory }) {
           </div>
         </div>
       </section>
+      <div aria-hidden="true" style={{ height: 3, backgroundColor: '#F9F5EF' }} />
     </main>
   );
 }
