@@ -1,0 +1,2 @@
+ALTER TABLE organizations
+ADD COLUMN IF NOT EXISTS is_test_account BOOLEAN NOT NULL DEFAULT false;

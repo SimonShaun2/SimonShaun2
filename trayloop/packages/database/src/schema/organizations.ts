@@ -18,6 +18,7 @@ export const organizations = pgTable('organizations', {
   stripePayoutsEnabled: boolean('stripe_payouts_enabled').notNull().default(false),
   stripeDetailsSubmitted: boolean('stripe_details_submitted').notNull().default(false),
   stripeOnboardingComplete: boolean('stripe_onboarding_complete').notNull().default(false),
+  isTestAccount: boolean('is_test_account').notNull().default(false),
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
