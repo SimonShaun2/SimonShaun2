@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { identifyAnalytics, trackEvent } from '@trayloop/analytics';
 import { createBillingCheckout } from '../../lib/api';
 import { growthAdvisorEnabled } from '../../lib/features';
@@ -12,6 +12,7 @@ import { getMerchantPlanDisplay, getMerchantPlanPriceLabel } from '../../lib/pla
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const DEFAULT_PLAN: PlanKey = 'starter';
 const PLAN_OPTIONS: PlanKey[] = ['starter', 'pro', 'growth'];
+const GROWTH_ADVISOR_SELECTION_KEY = 'trayloop-growth-advisor-selected';
 
 type StepId = 'organization' | 'model' | 'plan' | 'payment' | 'subscription' | 'brand' | 'node';
 
@@ -81,6 +82,19 @@ function RegisterContent() {
   const [kitchenZip, setKitchenZip] = useState('');
 
   const stepIndex = STEPS.findIndex((s) => s.id === currentStep);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIncludeGrowthAdvisor(window.localStorage.getItem(GROWTH_ADVISOR_SELECTION_KEY) === 'true');
+    }
+  }, []);
+
+  function toggleGrowthAdvisor(next: boolean) {
+    setIncludeGrowthAdvisor(next);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(GROWTH_ADVISOR_SELECTION_KEY, String(next));
+    }
+  }
 
   function markComplete(id: StepId) {
     setCompletedSteps((prev) => new Set([...prev, id]));
@@ -412,7 +426,7 @@ function RegisterContent() {
             </div>
             {growthAdvisorEnabled ? (
               <label style={{ display: 'flex', gap: 12, alignItems: 'flex-start', cursor: 'pointer', border: `1px solid ${includeGrowthAdvisor ? '#1D7A55' : '#E7E5E4'}`, borderRadius: 12, padding: '14px 16px', background: includeGrowthAdvisor ? '#F0FDF4' : '#FFFFFF' }}>
-                <input type="checkbox" checked={includeGrowthAdvisor} onChange={(e) => setIncludeGrowthAdvisor(e.target.checked)} style={{ marginTop: 3 }} />
+                <input type="checkbox" checked={includeGrowthAdvisor} onChange={(e) => toggleGrowthAdvisor(e.target.checked)} style={{ marginTop: 3 }} />
                 <div>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4 }}>
                     <span style={{ fontSize: 14, fontWeight: 700, color: '#1C1917' }}>Add Growth Advisor</span>
