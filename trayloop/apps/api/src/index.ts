@@ -17,7 +17,6 @@ import { addOnsModule } from './modules/add-ons/index.js';
 import { customersModule } from './modules/customers/index.js';
 import { ordersModule } from './modules/orders/index.js';
 import { recurringOrdersModule } from './modules/recurring-orders/index.js';
-import { paymentsModule } from './modules/payments/index.js';
 import { billingModule } from './modules/billing/index.js';
 import { followUpsModule } from './modules/follow-ups/index.js';
 import { notificationsModule } from './modules/notifications/index.js';
@@ -83,7 +82,6 @@ export async function buildApp() {
   // Public + route-scoped auth modules
   await app.register(organizationsModule, { prefix: '/api/organizations' });
 
-  await app.register(paymentsModule, { prefix: '/api/payments' });
   await app.register(billingModule, { prefix: '/api/billing' });
 
   // Webhooks (raw body parsing — must be in own scope)
