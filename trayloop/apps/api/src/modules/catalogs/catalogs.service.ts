@@ -165,6 +165,9 @@ export async function getFullMenu(orgId: string) {
       price: packages.price, currency: packages.currency, pricing: packages.pricing,
       minHeadCount: packages.minHeadCount, maxHeadCount: packages.maxHeadCount,
       imageUrl: packages.imageUrl,
+      upsellEligible: packages.upsellEligible,
+      upsellFeatured: packages.upsellFeatured,
+      upsellPriority: packages.upsellPriority,
       isActive: packages.isActive, sortOrder: packages.sortOrder,
     }).from(packages)
       .innerJoin(catalogs, eq(catalogs.id, packages.catalogId))
@@ -174,6 +177,9 @@ export async function getFullMenu(orgId: string) {
       name: addOns.name, description: addOns.description,
       imageUrl: addOns.imageUrl,
       price: addOns.price, currency: addOns.currency,
+      upsellEligible: addOns.upsellEligible,
+      upsellFeatured: addOns.upsellFeatured,
+      upsellPriority: addOns.upsellPriority,
       isActive: addOns.isActive, sortOrder: addOns.sortOrder,
     }).from(addOns)
       .innerJoin(catalogs, eq(catalogs.id, addOns.catalogId))
@@ -207,6 +213,9 @@ export async function getFullMenu(orgId: string) {
             pricePerHead: p.price, currency: p.currency, pricing: p.pricing,
             minHeadCount: p.minHeadCount, maxHeadCount: p.maxHeadCount,
             imageUrl: p.imageUrl,
+            upsellEligible: p.upsellEligible,
+            upsellFeatured: p.upsellFeatured,
+            upsellPriority: p.upsellPriority,
             isActive: p.isActive,
           })),
       })),
@@ -222,6 +231,9 @@ export async function getFullMenu(orgId: string) {
         pricePerHead: p.price, currency: p.currency, pricing: p.pricing,
         minHeadCount: p.minHeadCount, maxHeadCount: p.maxHeadCount,
         imageUrl: p.imageUrl,
+        upsellEligible: p.upsellEligible,
+        upsellFeatured: p.upsellFeatured,
+        upsellPriority: p.upsellPriority,
         isActive: p.isActive,
       })),
     addOns: addOnRows
@@ -235,6 +247,9 @@ export async function getFullMenu(orgId: string) {
         imageUrl: a.imageUrl,
         price: a.price,
         currency: a.currency,
+        upsellEligible: a.upsellEligible,
+        upsellFeatured: a.upsellFeatured,
+        upsellPriority: a.upsellPriority,
         sortOrder: a.sortOrder,
         isActive: a.isActive,
       })),
