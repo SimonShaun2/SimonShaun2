@@ -16,7 +16,6 @@ import { packagesModule } from './modules/packages/index.js';
 import { addOnsModule } from './modules/add-ons/index.js';
 import { customersModule } from './modules/customers/index.js';
 import { ordersModule } from './modules/orders/index.js';
-import { recurringOrdersModule } from './modules/recurring-orders/index.js';
 import { billingModule } from './modules/billing/index.js';
 import { followUpsModule } from './modules/follow-ups/index.js';
 import { notificationsModule } from './modules/notifications/index.js';
@@ -99,7 +98,6 @@ export async function buildApp() {
     await protectedApp.register(addOnsModule, { prefix: '/api/add-ons' });
     await protectedApp.register(customersModule, { prefix: '/api/customers' });
     await protectedApp.register(ordersModule, { prefix: '/api/orders' });
-    await protectedApp.register(recurringOrdersModule, { prefix: '/api/recurring-orders' });
     await protectedApp.register(followUpsModule, { prefix: '/api/follow-ups' });
     await protectedApp.register(notificationsModule, { prefix: '/api/notifications' });
     await protectedApp.register(aiSalesModule, { prefix: '/api/ai-sales' });
