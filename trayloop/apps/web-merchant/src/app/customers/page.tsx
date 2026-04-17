@@ -176,7 +176,7 @@ export default function CustomersPage() {
         </div>
       </section>
 
-      <section style={workspaceStyle}>
+      <section className="tl-split-main">
         <div style={{ minWidth: 0, display: 'grid', gap: 12 }}>
           <div style={toolbarStyle}>
             <div style={tabRowStyle}>
@@ -583,9 +583,10 @@ const metricGridStyle: React.CSSProperties = {
 
 const workspaceStyle: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'minmax(0, 1.4fr) 360px',
+  gridTemplateColumns: 'minmax(0, 1.4fr) minmax(280px, 360px)',
   gap: 20,
   alignItems: 'start',
+  width: '100%',
 };
 
 const toolbarStyle: React.CSSProperties = {

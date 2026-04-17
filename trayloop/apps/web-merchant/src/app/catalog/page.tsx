@@ -676,7 +676,7 @@ export default function CatalogPage() {
                         {category.packages.length === 0 ? (
                           <p style={hintStyle}>No packages in this category yet.</p>
                         ) : (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
                             {category.packages.map((pkg) => (
                               <PackageRow key={pkg.id} pkg={pkg} onEdit={() => openEditPackage(pkg)} />
                             ))}
@@ -695,7 +695,7 @@ export default function CatalogPage() {
                       {catalog.uncategorizedPackages.length === 0 ? (
                         <p style={hintStyle}>No uncategorized packages.</p>
                       ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
                           {catalog.uncategorizedPackages.map((pkg) => (
                             <PackageRow key={pkg.id} pkg={pkg} onEdit={() => openEditPackage(pkg)} />
                           ))}
@@ -1471,10 +1471,12 @@ const rowStyle: React.CSSProperties = {
   justifyContent: 'space-between',
   alignItems: 'center',
   gap: 12,
-  padding: '10px 12px',
+  padding: '12px 14px',
   border: '1px solid #E7E5E4',
-  borderRadius: 10,
+  borderRadius: 12,
   background: '#FFFFFF',
+  minWidth: 0,
+  height: '100%',
 };
 
 const addOnCardStyle: React.CSSProperties = {

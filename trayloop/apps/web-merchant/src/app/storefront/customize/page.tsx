@@ -305,7 +305,7 @@ export default function StorefrontCustomizePage() {
   }
 
   return (
-    <div style={{ maxWidth: 1240, margin: '0 auto', padding: '20px 0 42px', display: 'grid', gap: 22 }}>
+    <div style={{ width: '100%', padding: '20px 0 42px', display: 'grid', gap: 22 }}>
       <LaunchStatusRail contextLabel="Branding affects launch confidence, package conversion, and how premium the storefront feels to customers." />
 
       <div>

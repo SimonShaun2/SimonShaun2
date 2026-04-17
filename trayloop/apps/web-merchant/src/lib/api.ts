@@ -5,7 +5,7 @@ import type {
   PlanKey,
 } from '@trayloop/types/plan-access';
 import type { PaginationMeta } from '@trayloop/types';
-import { clearMerchantSession, ensureMerchantSession } from './session';
+import { clearMerchantSession, ensureMerchantSession, hasMerchantSession } from './session';
 
 declare global {
   interface Window {
@@ -523,17 +523,34 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
   }
 
   if (res.status === 401) {
+    // Parse body for diagnostic info before deciding on redirect.
+    let code: string | undefined;
+    let message = 'Unauthorized';
+    try {
+      const body = await res.clone().json();
+      code = body?.error?.code;
+      message = body?.error?.message ?? message;
+    } catch {
+      // Ignore body parse errors.
+    }
+
     if (typeof window !== 'undefined') {
-      // Only redirect once — avoid cascade where concurrent requests all
-      // nuke the token and trigger multiple redirects.
-      const alreadyRedirecting = window.__trayloop_auth_redirect;
-      if (!alreadyRedirecting) {
-        window.__trayloop_auth_redirect = true;
-        clearMerchantSession();
-        window.location.href = '/login';
+      // Log the failing endpoint so misbehaving calls stop silently nuking sessions.
+      console.warn('[trayloop] 401 from', path, '-', code ?? 'UNKNOWN', '-', message);
+
+      // Redirect only when the session is truly gone. A 401 with an active
+      // session marker usually means a transient server/credential issue on a
+      // single endpoint — don't cascade a sign-out for that.
+      if (!hasMerchantSession()) {
+        const alreadyRedirecting = window.__trayloop_auth_redirect;
+        if (!alreadyRedirecting) {
+          window.__trayloop_auth_redirect = true;
+          clearMerchantSession();
+          window.location.href = '/login';
+        }
       }
     }
-    throw new Error('Unauthorized');
+    throw new ApiError(message, { code: code ?? 'UNAUTHORIZED', status: 401 });
   }
 
   const json = await res.json();

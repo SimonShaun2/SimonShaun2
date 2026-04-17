@@ -52,6 +52,96 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         ['--muted' as string]: '#78716C',
       }}>
         <style>{`
+          .tl-grid-auto {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            width: 100%;
+          }
+          .tl-grid-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+            width: 100%;
+          }
+          .tl-grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+            width: 100%;
+          }
+          .tl-grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 16px;
+            width: 100%;
+          }
+          .tl-grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 16px;
+            width: 100%;
+          }
+          .tl-row-scroll {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            scrollbar-width: thin;
+            padding-bottom: 4px;
+          }
+          .tl-row-scroll > * {
+            flex: 0 0 auto;
+          }
+          .tl-split-main {
+            display: grid;
+            grid-template-columns: minmax(0, 1.4fr) minmax(300px, 380px);
+            gap: 20px;
+            align-items: start;
+            width: 100%;
+          }
+          @media (max-width: 1023px) {
+            .tl-split-main {
+              grid-template-columns: 1fr;
+            }
+          }
+          .tl-dash-3col {
+            display: grid;
+            grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 0.95fr);
+            gap: 20px;
+            width: 100%;
+            align-items: start;
+          }
+          @media (max-width: 1279px) {
+            .tl-dash-3col {
+              grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            }
+            .tl-dash-3col > :nth-child(3) {
+              grid-column: 1 / -1;
+            }
+          }
+          @media (max-width: 767px) {
+            .tl-dash-3col {
+              grid-template-columns: 1fr;
+            }
+            .tl-dash-3col > :nth-child(3) {
+              grid-column: auto;
+            }
+          }
+          @media (max-width: 1023px) {
+            .tl-grid-4 {
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .tl-grid-3 {
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+          }
+          @media (max-width: 767px) {
+            .tl-grid-2,
+            .tl-grid-3,
+            .tl-grid-4 {
+              grid-template-columns: 1fr;
+            }
+          }
           @media (max-width: 960px) {
             .merchant-shell {
               flex-direction: column;
@@ -84,8 +174,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <PlanAccessProvider>
           <div className="merchant-shell" style={{ display: 'flex', minHeight: '100vh' }}>
             <NavBar />
-            <main className="merchant-main" style={{ flex: 1, minWidth: 0, padding: '28px 32px', maxWidth: 'calc(100vw - 236px)' }}>
-              <div className="merchant-main-inner" style={{ maxWidth: 1180 }}>
+            <main className="merchant-main" style={{ flex: 1, minWidth: 0, padding: '28px 32px', width: '100%' }}>
+              <div className="merchant-main-inner" style={{ width: '100%', maxWidth: '100%' }}>
                 {children}
               </div>
             </main>

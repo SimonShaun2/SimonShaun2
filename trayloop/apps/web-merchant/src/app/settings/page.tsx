@@ -1551,11 +1551,11 @@ function SummaryCard({ label, value, sub, accent }: { label: string; value: stri
 
 function KeyValueGrid({ items }: { items: Array<[string, string]> }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
       {items.map(([label, value]) => (
-        <div key={label} style={{ padding: '12px 14px', borderRadius: 10, background: '#FAFAF9', border: '1px solid #E7E5E4' }}>
+        <div key={label} style={{ padding: '12px 14px', borderRadius: 10, background: '#FAFAF9', border: '1px solid #E7E5E4', minWidth: 0 }}>
           <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#78716C', marginBottom: 6 }}>{label}</div>
-          <div style={{ fontSize: 14, color: '#1C1917', lineHeight: 1.5 }}>{value}</div>
+          <div style={{ fontSize: 14, color: '#1C1917', lineHeight: 1.5, overflowWrap: 'anywhere' }}>{value}</div>
         </div>
       ))}
     </div>
