@@ -74,49 +74,6 @@ const headingStyle: CSSProperties = {
 export default function Footer() {
   return (
     <footer>
-      {/* Pre-footer CTA */}
-      <section
-        style={{
-          backgroundColor: C.ink,
-          padding: '80px 32px',
-          textAlign: 'center',
-        }}
-      >
-        <div style={{ maxWidth: 700, margin: '0 auto' }}>
-          <h2
-            style={{
-              fontSize: 36,
-              fontWeight: 800,
-              color: C.white,
-              lineHeight: 1.2,
-              marginBottom: 16,
-            }}
-          >
-            Every order you take through a marketplace is money you give away.
-          </h2>
-          <p
-            style={{
-              fontSize: 16,
-              color: C.muted,
-              marginBottom: 32,
-            }}
-          >
-            $29/month. No commissions. No contracts. The longer you wait, the more you lose.
-          </p>
-          <div
-            style={{
-              display: 'flex',
-              gap: 16,
-              justifyContent: 'center',
-              flexWrap: 'wrap',
-            }}
-          >
-            <PillButton text="Start Keeping Your Revenue Today →" href="https://dashboard.trayloophq.com/register" variant="primary" />
-            <PillButton text="See the System →" href="/product" variant="ghost" />
-          </div>
-        </div>
-      </section>
-
       {/* Mega footer */}
       <div
         style={{

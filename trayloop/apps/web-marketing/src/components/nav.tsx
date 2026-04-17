@@ -128,6 +128,14 @@ export default function Nav() {
             Login
           </a>
           <PillButton
+            text="Get Started"
+            href="https://dashboard.trayloophq.com/register"
+            variant="secondary"
+            size="sm"
+            analyticsEvent="marketing_register_click"
+            analyticsProperties={{ placement: 'nav_desktop' }}
+          />
+          <PillButton
             text="Book a free Demo ->"
             href="/demo"
             variant="primary"
@@ -201,7 +209,15 @@ export default function Nav() {
         >
           Login
         </a>
-        <div style={{ marginTop: '8px' }}>
+        <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <PillButton
+            text="Get Started"
+            href="https://dashboard.trayloophq.com/register"
+            variant="secondary"
+            size="md"
+            analyticsEvent="marketing_register_click"
+            analyticsProperties={{ placement: 'nav_mobile' }}
+          />
           <PillButton
             text="Book a free Demo ->"
             href="/demo"
