@@ -368,6 +368,7 @@ async function buildSubscriptionResponse(record: Awaited<ReturnType<typeof getBi
           updatedAt: formatIso(record.updatedAt),
         }
       : null,
+    isTestAccount: false,
   };
 }
 
@@ -634,6 +635,7 @@ export async function getSubscription(orgId: string) {
       trialDaysRemaining: null,
       features,
       subscription: null,
+      isTestAccount: true,
     };
   }
 

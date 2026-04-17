@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import NavBar from '../components/nav-bar';
 import { MerchantAnalytics, MerchantSpeedInsights } from '../components/observability';
 import { PlanAccessProvider } from '../components/plan-access-provider';
+import TestAccountBanner from '../components/test-account-banner';
 import { showStagingBanner } from '../lib/features';
 import { AnalyticsProvider } from '@trayloop/analytics';
 import { Bricolage_Grotesque, Fraunces, Inter } from 'next/font/google';
@@ -172,6 +173,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </div>
         ) : null}
         <PlanAccessProvider>
+          <TestAccountBanner />
           <div className="merchant-shell" style={{ display: 'flex', minHeight: '100vh' }}>
             <NavBar />
             <main className="merchant-main" style={{ flex: 1, minWidth: 0, padding: '28px 32px', width: '100%' }}>

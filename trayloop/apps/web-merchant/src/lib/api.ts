@@ -88,6 +88,7 @@ export interface MerchantBillingSubscription {
     createdAt: string | null;
     updatedAt: string | null;
   };
+  isTestAccount?: boolean;
 }
 
 export interface MerchantFeatureAccessState {
