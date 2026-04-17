@@ -24,6 +24,7 @@ import {
   resolveUpgradePlan,
 } from './plan-access.js';
 import { getConfiguredSharedEntitlementPriceIds, getPlanForStripePriceId } from './stripe.js';
+import { isTestAccount } from './test-account.js';
 
 export const GROWTH_ADVISOR_FEATURE_KEY = 'growth_advisor' as const;
 
@@ -109,6 +110,22 @@ async function getOrganizationPlanState(orgId: string) {
 }
 
 export async function getOrganizationFeatureEntitlements(orgId: string): Promise<OrganizationFeatureEntitlements> {
+  if (await isTestAccount(orgId)) {
+    const testPlan: PlanKey = 'growth';
+    const testCycle: BillingCycleKey = 'monthly';
+    const testMap = buildFeatureMap(testPlan);
+    for (const key of FEATURE_KEYS) {
+      testMap[key] = { ...testMap[key], enabled: true, included: true, source: 'manual' };
+    }
+    return {
+      currentPlan: testPlan,
+      billingCycle: testCycle,
+      includedFeatures: FEATURE_KEYS,
+      byKey: testMap,
+      growthAdvisor: testMap.growth_advisor,
+    };
+  }
+
   const { currentPlan, billingCycle } = await getOrganizationPlanState(orgId);
 
   const rows = await db

@@ -11,6 +11,7 @@ import {
   isStripeEnabled,
 } from '../../lib/stripe.js';
 import { getOrganizationFeatureEntitlements, syncSubscriptionFeatureEntitlements } from '../../lib/organization-features.js';
+import { isTestAccount } from '../../lib/test-account.js';
 import { logger } from '@trayloop/utils';
 import type { BillingCheckoutInput, BillingPortalInput } from './billing.schema.js';
 import Stripe from 'stripe';
@@ -505,6 +506,13 @@ async function updateBasePlanOnExistingSubscription(
 }
 
 export async function createCheckoutSession(orgId: string, input: BillingCheckoutInput) {
+  if (await isTestAccount(orgId)) {
+    return {
+      url: input.successUrl ?? `${getMerchantBaseUrl()}/settings?billing=success`,
+      sessionId: 'test_cs_mock',
+    };
+  }
+
   if (!isStripeEnabled()) {
     throw new ValidationError('Stripe is not configured. Contact support.');
   }
@@ -609,6 +617,26 @@ export async function createCheckoutSession(orgId: string, input: BillingCheckou
 }
 
 export async function getSubscription(orgId: string) {
+  if (await isTestAccount(orgId)) {
+    const features = await getOrganizationFeatureEntitlements(orgId);
+    const planDisplay = getPlanDisplay(features.currentPlan, features.billingCycle);
+    return {
+      organizationId: orgId,
+      organizationName: 'Test Account',
+      currentPlan: features.currentPlan,
+      billingCycle: features.billingCycle,
+      planName: planDisplay.name,
+      priceCents: planDisplay.priceCents,
+      interval: planDisplay.interval,
+      state: 'active' as BillingState,
+      canCheckout: false,
+      canManage: false,
+      trialDaysRemaining: null,
+      features,
+      subscription: null,
+    };
+  }
+
   const persisted = await getBillingRecord(orgId);
   const shouldRefreshFromStripe = Boolean(
     persisted.stripeCustomerId &&
@@ -626,6 +654,10 @@ export async function getSubscription(orgId: string) {
 }
 
 export async function createPortalSession(orgId: string, input: BillingPortalInput) {
+  if (await isTestAccount(orgId)) {
+    return { url: buildPortalReturnUrl(input) };
+  }
+
   if (!isStripeEnabled()) {
     throw new ValidationError('Stripe is not configured. Contact support.');
   }
