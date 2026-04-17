@@ -1252,7 +1252,7 @@ function TeamSection({ isMobile }: { isMobile: boolean }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {members.map((member) => {
             const isOwner = member.role === 'owner';
-            const badgeColors = ROLE_BADGE_COLORS[member.role];
+            const badgeColors = ROLE_BADGE_COLORS[member.role] ?? { bg: '#F5F5F4', color: '#57534E' };
             const isConfirmingRemove = confirmRemoveId === member.id;
 
             return (
