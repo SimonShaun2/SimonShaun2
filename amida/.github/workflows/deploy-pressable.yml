@@ -1,0 +1,201 @@
+name: Deploy to Pressable
+
+# Sync wp-content (theme + plugins + mu-plugins) and scripts to Pressable
+# via SFTP, then run post-deploy seeders over SSH using WP-CLI.
+#
+# Required GitHub secrets (repo → Settings → Secrets and variables → Actions):
+#   PRESSABLE_SFTP_HOST       e.g. sftp.pressable.com
+#   PRESSABLE_SFTP_USER       SFTP username from Pressable dashboard
+#   PRESSABLE_SFTP_PASSWORD   SFTP password from Pressable dashboard
+#   PRESSABLE_SFTP_PORT       (optional — defaults to 22)
+#   PRESSABLE_SSH_HOST        Usually same as SFTP host
+#   PRESSABLE_SSH_USER        SSH username (often same as SFTP user on Pressable)
+#   PRESSABLE_SSH_KEY         Private key (full PEM contents, not a path)
+#   PRESSABLE_SSH_PORT        (optional — defaults to 22)
+#   PRESSABLE_REMOTE_ROOT     (optional — defaults to /htdocs)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      run_seeders:
+        description: 'Run WP-CLI seeders after sync'
+        type: boolean
+        default: true
+
+concurrency:
+  group: pressable-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Sync + seed
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      SFTP_HOST: ${{ secrets.PRESSABLE_SFTP_HOST }}
+      SFTP_USER: ${{ secrets.PRESSABLE_SFTP_USER }}
+      SFTP_PASSWORD: ${{ secrets.PRESSABLE_SFTP_PASSWORD }}
+      SFTP_PORT: ${{ secrets.PRESSABLE_SFTP_PORT || '22' }}
+      SSH_HOST: ${{ secrets.PRESSABLE_SSH_HOST }}
+      SSH_USER: ${{ secrets.PRESSABLE_SSH_USER }}
+      SSH_PORT: ${{ secrets.PRESSABLE_SSH_PORT || '22' }}
+      REMOTE_ROOT: ${{ secrets.PRESSABLE_REMOTE_ROOT || '/htdocs' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Validate required secrets
+        run: |
+          missing=0
+          for var in SFTP_HOST SFTP_USER SFTP_PASSWORD SSH_HOST SSH_USER; do
+            if [ -z "${!var}" ]; then
+              echo "::error::Required secret $var is not set"
+              missing=1
+            fi
+          done
+          if [ -z "${{ secrets.PRESSABLE_SSH_KEY }}" ]; then
+            echo "::error::Required secret PRESSABLE_SSH_KEY is not set"
+            missing=1
+          fi
+          exit $missing
+
+      - name: Install lftp and openssh-client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends lftp openssh-client
+
+      - name: Write SSH key and known_hosts
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "${{ secrets.PRESSABLE_SSH_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Verify SSH connectivity
+        run: |
+          ssh -i ~/.ssh/id_deploy \
+              -p "$SSH_PORT" \
+              -o BatchMode=yes \
+              -o StrictHostKeyChecking=accept-new \
+              -o ConnectTimeout=15 \
+              "$SSH_USER@$SSH_HOST" \
+              'echo "ssh ok: $(hostname) wp=$(command -v wp || echo missing)"'
+
+      - name: Build lftp exclude rules
+        run: |
+          cat > /tmp/lftp-exclude <<'EOF'
+          wp-config.php
+          wp-config-sample.php
+          .env
+          .env.local
+          .env.production
+          .env.staging
+          *.key
+          *.pem
+          *.p12
+          *.pfx
+          .git/
+          .github/
+          .gitignore
+          .gitattributes
+          node_modules/
+          .DS_Store
+          Thumbs.db
+          *.log
+          EOF
+
+      - name: Sync theme → wp-content/themes/amida
+        run: |
+          lftp -u "$SFTP_USER,$SFTP_PASSWORD" -p "$SFTP_PORT" "sftp://$SFTP_HOST" <<EOF
+          set sftp:auto-confirm yes
+          set net:max-retries 3
+          set net:timeout 30
+          set net:reconnect-interval-base 5
+          mirror -R --delete --parallel=4 --verbose=1 \
+            --exclude-rx-from=/tmp/lftp-exclude \
+            wp-content/themes/amida/ $REMOTE_ROOT/wp-content/themes/amida/
+          bye
+          EOF
+
+      - name: Sync compliance plugin → wp-content/plugins/amida-compliance
+        run: |
+          lftp -u "$SFTP_USER,$SFTP_PASSWORD" -p "$SFTP_PORT" "sftp://$SFTP_HOST" <<EOF
+          set sftp:auto-confirm yes
+          mirror -R --delete --parallel=4 --verbose=1 \
+            --exclude-rx-from=/tmp/lftp-exclude \
+            wp-content/plugins/amida-compliance/ $REMOTE_ROOT/wp-content/plugins/amida-compliance/
+          bye
+          EOF
+
+      - name: Sync catalog-seed plugin → wp-content/plugins/amida-catalog-seed
+        run: |
+          if [ ! -d wp-content/plugins/amida-catalog-seed ]; then
+            echo "::notice::wp-content/plugins/amida-catalog-seed not present — skipping"
+            exit 0
+          fi
+          lftp -u "$SFTP_USER,$SFTP_PASSWORD" -p "$SFTP_PORT" "sftp://$SFTP_HOST" <<EOF
+          set sftp:auto-confirm yes
+          mirror -R --delete --parallel=4 --verbose=1 \
+            --exclude-rx-from=/tmp/lftp-exclude \
+            wp-content/plugins/amida-catalog-seed/ $REMOTE_ROOT/wp-content/plugins/amida-catalog-seed/
+          bye
+          EOF
+
+      - name: Sync mu-plugins → wp-content/mu-plugins
+        run: |
+          if [ ! -d wp-content/mu-plugins ]; then
+            echo "::notice::wp-content/mu-plugins not present — skipping"
+            exit 0
+          fi
+          lftp -u "$SFTP_USER,$SFTP_PASSWORD" -p "$SFTP_PORT" "sftp://$SFTP_HOST" <<EOF
+          set sftp:auto-confirm yes
+          mirror -R --parallel=4 --verbose=1 \
+            --exclude-rx-from=/tmp/lftp-exclude \
+            wp-content/mu-plugins/ $REMOTE_ROOT/wp-content/mu-plugins/
+          bye
+          EOF
+
+      - name: Sync scripts/ (seeders, migrations)
+        run: |
+          if [ ! -d scripts ]; then
+            echo "::notice::scripts/ not present — skipping"
+            exit 0
+          fi
+          lftp -u "$SFTP_USER,$SFTP_PASSWORD" -p "$SFTP_PORT" "sftp://$SFTP_HOST" <<EOF
+          set sftp:auto-confirm yes
+          mirror -R --parallel=4 --verbose=1 \
+            --exclude-rx-from=/tmp/lftp-exclude \
+            scripts/ $REMOTE_ROOT/scripts/
+          bye
+          EOF
+
+      - name: Run WP-CLI seeders (idempotent)
+        if: github.event_name == 'push' || inputs.run_seeders == true
+        run: |
+          ssh -i ~/.ssh/id_deploy -p "$SSH_PORT" \
+              -o StrictHostKeyChecking=accept-new \
+              "$SSH_USER@$SSH_HOST" \
+              "cd $REMOTE_ROOT && \
+               wp eval-file scripts/seed-cartflows.php --skip-if-seeded || true; \
+               wp amida seed-catalog --skip-if-seeded || true; \
+               wp cache flush"
+
+      - name: Deployment summary
+        if: always()
+        run: |
+          echo "### Pressable deploy" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Host:   \`$SSH_HOST\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Root:   \`$REMOTE_ROOT\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: **${{ job.status }}**" >> $GITHUB_STEP_SUMMARY
+
+      - name: Cleanup
+        if: always()
+        run: rm -f ~/.ssh/id_deploy /tmp/lftp-exclude
