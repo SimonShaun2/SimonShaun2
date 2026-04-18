@@ -119,7 +119,7 @@ jobs:
           set net:reconnect-interval-base 5
           mirror -R --delete --parallel=4 --verbose=1 \
             --exclude-rx-from=/tmp/lftp-exclude \
-            wp-content/themes/amida/ $REMOTE_ROOT/wp-content/themes/amida/
+            amida/wp-content/themes/amida/ $REMOTE_ROOT/wp-content/themes/amida/
           bye
           EOF
 
@@ -129,49 +129,49 @@ jobs:
           set sftp:auto-confirm yes
           mirror -R --delete --parallel=4 --verbose=1 \
             --exclude-rx-from=/tmp/lftp-exclude \
-            wp-content/plugins/amida-compliance/ $REMOTE_ROOT/wp-content/plugins/amida-compliance/
+            amida/wp-content/plugins/amida-compliance/ $REMOTE_ROOT/wp-content/plugins/amida-compliance/
           bye
           EOF
 
       - name: Sync catalog-seed plugin → wp-content/plugins/amida-catalog-seed
         run: |
-          if [ ! -d wp-content/plugins/amida-catalog-seed ]; then
-            echo "::notice::wp-content/plugins/amida-catalog-seed not present — skipping"
+          if [ ! -d amida/wp-content/plugins/amida-catalog-seed ]; then
+            echo "::notice::amida/wp-content/plugins/amida-catalog-seed not present — skipping"
             exit 0
           fi
           lftp -u "$SFTP_USER,$SFTP_PASSWORD" -p "$SFTP_PORT" "sftp://$SFTP_HOST" <<EOF
           set sftp:auto-confirm yes
           mirror -R --delete --parallel=4 --verbose=1 \
             --exclude-rx-from=/tmp/lftp-exclude \
-            wp-content/plugins/amida-catalog-seed/ $REMOTE_ROOT/wp-content/plugins/amida-catalog-seed/
+            amida/wp-content/plugins/amida-catalog-seed/ $REMOTE_ROOT/wp-content/plugins/amida-catalog-seed/
           bye
           EOF
 
       - name: Sync mu-plugins → wp-content/mu-plugins
         run: |
-          if [ ! -d wp-content/mu-plugins ]; then
-            echo "::notice::wp-content/mu-plugins not present — skipping"
+          if [ ! -d amida/wp-content/mu-plugins ]; then
+            echo "::notice::amida/wp-content/mu-plugins not present — skipping"
             exit 0
           fi
           lftp -u "$SFTP_USER,$SFTP_PASSWORD" -p "$SFTP_PORT" "sftp://$SFTP_HOST" <<EOF
           set sftp:auto-confirm yes
           mirror -R --parallel=4 --verbose=1 \
             --exclude-rx-from=/tmp/lftp-exclude \
-            wp-content/mu-plugins/ $REMOTE_ROOT/wp-content/mu-plugins/
+            amida/wp-content/mu-plugins/ $REMOTE_ROOT/wp-content/mu-plugins/
           bye
           EOF
 
       - name: Sync scripts/ (seeders, migrations)
         run: |
-          if [ ! -d scripts ]; then
-            echo "::notice::scripts/ not present — skipping"
+          if [ ! -d amida/scripts ]; then
+            echo "::notice::amida/scripts not present — skipping"
             exit 0
           fi
           lftp -u "$SFTP_USER,$SFTP_PASSWORD" -p "$SFTP_PORT" "sftp://$SFTP_HOST" <<EOF
           set sftp:auto-confirm yes
           mirror -R --parallel=4 --verbose=1 \
             --exclude-rx-from=/tmp/lftp-exclude \
-            scripts/ $REMOTE_ROOT/scripts/
+            amida/scripts/ $REMOTE_ROOT/scripts/
           bye
           EOF
 
