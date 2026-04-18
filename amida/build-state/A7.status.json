@@ -1,0 +1,23 @@
+{
+  "agent": "A7",
+  "name": "Email Templates & CartFlows Seeder",
+  "status": "complete",
+  "artifacts": [
+    "wp-content/plugins/amida-compliance/emails/email-verification.php",
+    "wp-content/plugins/amida-compliance/emails/researcher-approved.php",
+    "wp-content/plugins/amida-compliance/emails/order-shipped.php",
+    "wp-content/plugins/amida-compliance/emails/account-created.php",
+    "wp-content/plugins/amida-compliance/emails/password-reset.php",
+    "wp-content/plugins/amida-compliance/emails/upsell-accepted.php",
+    "wp-content/plugins/amida-compliance/emails/admin-new-order.php",
+    "scripts/seed-cartflows.php"
+  ],
+  "contracts_published": {
+    "A7.email_templates.count": 8,
+    "A7.email_templates.complete": true,
+    "A7.cartflows.flow_seeded": true,
+    "A7.cartflows.steps.count": 8,
+    "A7.cartflows.upsells.count": 3,
+    "A7.cartflows.downsells.count": 2
+  }
+}
