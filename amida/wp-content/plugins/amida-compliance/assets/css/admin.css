@@ -1,0 +1,25 @@
+.amida-compl {
+	--sage: #4A5E4A;
+	--amber: #C17D3C;
+	--cream: #F5F0E8;
+}
+.amida-compl h1 { font-family: Georgia, serif; font-weight: 400; }
+.amida-compl__card {
+	background: #fff;
+	border: 1px solid #e0e0e0;
+	border-radius: 8px;
+	padding: 16px 18px;
+}
+.amida-compl__metric {
+	font-family: Georgia, serif;
+	font-size: 34px;
+	color: var(--sage);
+	line-height: 1;
+	margin-bottom: 4px;
+}
+.amida-compl__label {
+	font-size: 11px;
+	letter-spacing: 0.08em;
+	color: #666;
+	text-transform: uppercase;
+}

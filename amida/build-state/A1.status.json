@@ -1,0 +1,34 @@
+{
+  "agent": "A1",
+  "name": "Foundation",
+  "status": "complete",
+  "started_at": "2026-04-18T00:00:00Z",
+  "completed_at": "2026-04-18T00:00:00Z",
+  "artifacts": [
+    "wp-content/mu-plugins/amida-brand.php",
+    "wp-content/themes/amida/style.css",
+    "wp-content/themes/amida/functions.php",
+    "wp-content/themes/amida/header.php",
+    "wp-content/themes/amida/footer.php",
+    "wp-content/themes/amida/index.php",
+    "wp-content/themes/amida/assets/css/main.css",
+    "wp-content/themes/amida/inc/setup.php",
+    "wp-content/themes/amida/inc/enqueue.php",
+    "wp-content/themes/amida/inc/template-tags.php",
+    "wp-content/themes/amida/inc/woocommerce.php",
+    "wp-content/themes/amida/inc/pwa.php",
+    "wp-content/themes/amida/page-templates/landing.php",
+    "wp-content/themes/amida/page-templates/auth.php",
+    "wp-content/themes/amida/page-templates/catalog.php",
+    "wp-content/themes/amida/page-templates/account.php",
+    "wp-content/themes/amida/page-templates/legal.php"
+  ],
+  "contracts_published": {
+    "A1.theme.active": true,
+    "A1.brand.constants.loaded": true,
+    "A1.login_wall.active": true,
+    "A1.routing.complete": true,
+    "A1.wc.installed": true,
+    "A1.address.canonical": "30 N Gould Street, Sheridan, WY 82801"
+  }
+}

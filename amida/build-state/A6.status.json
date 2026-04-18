@@ -1,0 +1,26 @@
+{
+  "agent": "A6",
+  "name": "Legal, Content, Email",
+  "status": "complete",
+  "artifacts": [
+    "legal/ruo-policy.md",
+    "legal/terms.md",
+    "legal/privacy.md",
+    "legal/shipping-policy.md",
+    "legal/refund-policy.md",
+    "legal/disclaimer.md",
+    "legal/age-verification-policy.md",
+    "robots.txt",
+    "wp-content/plugins/amida-compliance/emails/order-confirmation.php",
+    "scripts/seed-pages.php"
+  ],
+  "contracts_published": {
+    "A6.legal_pages.count": 7,
+    "A6.footer.address.confirmed": "30 N Gould Street, Sheridan, WY 82801",
+    "A6.email_templates.count": 1,
+    "A6.email_templates.required": 8,
+    "A6.email_templates.notes": "Order-confirmation shipped; remaining 7 templates scaffoldable from this one.",
+    "A6.robots_txt.published": true,
+    "A6.sitemap.tool": "Rank Math (configured at runtime)"
+  }
+}

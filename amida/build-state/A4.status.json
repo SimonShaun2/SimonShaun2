@@ -1,0 +1,21 @@
+{
+  "agent": "A4",
+  "name": "Cart, Checkout, Upsells",
+  "status": "complete",
+  "artifacts": [
+    "wp-content/themes/amida/template-parts/cart/drawer.php",
+    "wp-content/themes/amida/template-parts/checkout/upsell-funnel.php",
+    "wp-content/themes/amida/woocommerce/checkout/form-checkout.php",
+    "wp-content/themes/amida/woocommerce/checkout/thankyou.php",
+    "wp-content/themes/amida/assets/js/cart-drawer.js"
+  ],
+  "contracts_published": {
+    "A4.cart_drawer.active": true,
+    "A4.checkout_steps.count": 4,
+    "A4.upsells.count": 3,
+    "A4.downsells.count": 2,
+    "A4.free_ship_threshold": 250,
+    "A4.processor.primary": "bankful",
+    "A4.billing_descriptor": "AMIDA RESEARCH"
+  }
+}

@@ -1,0 +1,28 @@
+User-agent: *
+Disallow: /wp-admin/
+Disallow: /catalog/
+Disallow: /product/
+Disallow: /category/
+Disallow: /cart/
+Disallow: /checkout/
+Disallow: /account/
+Disallow: /thank-you/
+Disallow: /compound-img/
+Disallow: /wp-content/uploads/compound-names/
+
+Allow: /
+Allow: /about/
+Allow: /contact/
+Allow: /login/
+Allow: /register/
+Allow: /ruo-policy/
+Allow: /terms/
+Allow: /privacy/
+Allow: /shipping-policy/
+Allow: /refund-policy/
+Allow: /disclaimer/
+Allow: /age-verification-policy/
+Allow: /manifest.json
+Allow: /sw.js
+
+Sitemap: https://amida.com/sitemap_index.xml

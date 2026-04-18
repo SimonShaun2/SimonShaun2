@@ -1,0 +1,20 @@
+{
+  "agent": "A5",
+  "name": "PWA & Frontend Polish",
+  "status": "complete",
+  "artifacts": [
+    "wp-content/themes/amida/assets/js/service-worker.js",
+    "wp-content/themes/amida/assets/js/pwa-register.js",
+    "wp-content/themes/amida/template-parts/mobile/tabbar.php",
+    "wp-content/themes/amida/template-parts/offline.php",
+    "wp-content/themes/amida/assets/images/README.md"
+  ],
+  "contracts_published": {
+    "A5.manifest.valid": true,
+    "A5.sw.registered": true,
+    "A5.install_banner.active": true,
+    "A5.bottom_nav.active": true,
+    "A5.ios_meta.active": true,
+    "A5.offline_fallback.ready": true
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "agent": "A2",
+  "name": "Compliance Plugin",
+  "status": "complete",
+  "artifacts": [
+    "wp-content/plugins/amida-compliance/amida-compliance.php",
+    "wp-content/plugins/amida-compliance/uninstall.php",
+    "wp-content/plugins/amida-compliance/includes/class-compliance-log.php",
+    "wp-content/plugins/amida-compliance/includes/class-roles.php",
+    "wp-content/plugins/amida-compliance/includes/class-age-gate.php",
+    "wp-content/plugins/amida-compliance/includes/class-login-gate.php",
+    "wp-content/plugins/amida-compliance/includes/class-checkout-attestation.php",
+    "wp-content/plugins/amida-compliance/includes/class-ny-enhanced.php",
+    "wp-content/plugins/amida-compliance/includes/class-image-masker.php",
+    "wp-content/plugins/amida-compliance/includes/class-rate-limiter.php",
+    "wp-content/plugins/amida-compliance/includes/class-batch-log.php",
+    "wp-content/plugins/amida-compliance/includes/class-admin.php",
+    "wp-content/plugins/amida-compliance/templates/age-gate-modal.php",
+    "wp-content/plugins/amida-compliance/assets/js/age-gate.js",
+    "wp-content/plugins/amida-compliance/assets/css/admin.css",
+    "wp-content/plugins/amida-compliance/admin/views/dashboard.php",
+    "wp-content/plugins/amida-compliance/admin/views/log.php",
+    "wp-content/plugins/amida-compliance/admin/views/batches.php",
+    "wp-content/plugins/amida-compliance/admin/views/exports.php",
+    "wp-content/plugins/amida-compliance/admin/views/ny-queue.php",
+    "wp-content/plugins/amida-compliance/admin/views/settings.php",
+    "wp-content/plugins/amida-compliance/emails/order-confirmation.php"
+  ],
+  "contracts_published": {
+    "A2.plugin.active": true,
+    "A2.tables.created": ["wp_amida_compliance_log", "wp_amida_batch_log"],
+    "A2.age_gate.active": true,
+    "A2.audit_log.active": true,
+    "A2.ny_enhanced.active": true,
+    "A2.event_types.count": 15,
+    "A2.image_masker.active": true,
+    "A2.rate_limiter.active": true,
+    "A2.penalty_of_perjury.enforced": true
+  }
+}
