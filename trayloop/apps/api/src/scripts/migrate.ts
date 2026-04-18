@@ -1,59 +1,64 @@
-import { db } from '@trayloop/database';
-import { sql } from 'drizzle-orm';
+import postgres from 'postgres';
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 // cwd is apps/api when run via npm workspace script
 const migrationsDir = resolve(process.cwd(), '../../packages/database/src/migrations');
 
-async function ensureMigrationsTable() {
-  await db.execute(sql`
-    CREATE TABLE IF NOT EXISTS schema_migrations (
-      filename TEXT PRIMARY KEY,
-      applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    )
-  `);
-}
-
-async function getAppliedMigrations(): Promise<Set<string>> {
-  const rows = await db.execute<{ filename: string }>(
-    sql`SELECT filename FROM schema_migrations ORDER BY filename`,
-  );
-  return new Set(rows.map((r) => r.filename));
-}
+const DATABASE_URL =
+  process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/trayloop';
 
 async function runMigrations() {
-  await ensureMigrationsTable();
+  const sql = postgres(DATABASE_URL, {
+    max: 1,
+    onnotice: () => {}, // suppress NOTICE/WARNING messages (e.g. "relation already exists")
+  });
 
-  const applied = await getAppliedMigrations();
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS schema_migrations (
+        filename TEXT PRIMARY KEY,
+        applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      )
+    `;
 
-  const files = readdirSync(migrationsDir)
-    .filter((f) => f.endsWith('.sql') && !f.endsWith('.rollback.sql'))
-    .sort();
+    const applied = await sql<{ filename: string }[]>`
+      SELECT filename FROM schema_migrations ORDER BY filename
+    `;
+    const appliedSet = new Set(applied.map((r) => r.filename));
 
-  const pending = files.filter((f) => !applied.has(f));
+    const files = readdirSync(migrationsDir)
+      .filter((f) => f.endsWith('.sql') && !f.endsWith('.rollback.sql'))
+      .sort();
 
-  if (pending.length === 0) {
-    console.log('No pending migrations.');
-    return;
+    let newCount = 0;
+
+    for (const filename of files) {
+      if (appliedSet.has(filename)) {
+        console.log(`skipping: ${filename} (already applied)`);
+        continue;
+      }
+
+      const sqlText = readFileSync(resolve(migrationsDir, filename), 'utf-8').trim();
+      console.log(`Applying migration: ${filename}`);
+
+      await sql.begin(async (tx) => {
+        await tx.unsafe(sqlText);
+        await tx`INSERT INTO schema_migrations (filename) VALUES (${filename})`;
+      });
+
+      console.log(`  done: ${filename}`);
+      newCount++;
+    }
+
+    if (newCount === 0) {
+      console.log('No pending migrations.');
+    } else {
+      console.log(`Applied ${newCount} migration(s).`);
+    }
+  } finally {
+    await sql.end();
   }
-
-  for (const filename of pending) {
-    const sqlText = readFileSync(resolve(migrationsDir, filename), 'utf-8').trim();
-
-    console.log(`Applying migration: ${filename}`);
-
-    await db.transaction(async (tx) => {
-      await tx.execute(sql.raw(sqlText));
-      await tx.execute(
-        sql`INSERT INTO schema_migrations (filename) VALUES (${filename})`,
-      );
-    });
-
-    console.log(`  done: ${filename}`);
-  }
-
-  console.log(`Applied ${pending.length} migration(s).`);
 }
 
 runMigrations().catch((err) => {
