@@ -55,7 +55,10 @@ export function errorHandler(error: FastifyError, request: FastifyRequest, reply
   }
 
   // Everything else — don't leak internals
-  request.log.error(error);
+  request.log.error(
+    { message: error.message, stack: error.stack, code: (error as any).code },
+    'Unhandled request error',
+  );
 
   return reply.status(500).send({
     error: {
