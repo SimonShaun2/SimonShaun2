@@ -43,6 +43,17 @@ add_action( 'wp_enqueue_scripts', function () {
 		AMIDA_THEME_VERSION,
 		true
 	);
+
+	// PDP interactions (thumbnail gallery, qty stepper, pack/mg pills)
+	if ( function_exists( 'is_product' ) && is_product() ) {
+		wp_enqueue_script(
+			'amida-pdp',
+			AMIDA_THEME_URI . '/assets/js/pdp.js',
+			[],
+			AMIDA_THEME_VERSION,
+			true
+		);
+	}
 }, 20 );
 
 /**
